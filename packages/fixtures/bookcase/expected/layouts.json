@@ -1,0 +1,175 @@
+{
+  "_note": "Efficiency on the 3/4\" sheets is 'about 46%' in the spec; stored as an approximation, not compared exactly.",
+  "_spec": {
+    "/inputs/kerf": "1/8\"",
+    "/sheets/0/contents/0/length": "72\"",
+    "/sheets/0/contents/0/width": "12\"",
+    "/sheets/0/contents/1/length": "35-1/16\"",
+    "/sheets/0/contents/1/width": "11-3/4\"",
+    "/sheets/0/cutSequence/0/sizes/0": "12\"",
+    "/sheets/0/cutSequence/0/sizes/1": "12\"",
+    "/sheets/0/cutSequence/0/sizes/2": "11-3/4\"",
+    "/sheets/0/cutSequence/0/sizes/3": "11-3/4\"",
+    "/sheets/0/cutSequence/1/sizes/0": "72\"",
+    "/sheets/0/cutSequence/2/sizes/0": "35-1/16\"",
+    "/sheets/0/cutSequence/2/sizes/1": "35-1/16\"",
+    "/sheets/0/largestOffcut/acrossGrain": "11-3/4\"",
+    "/sheets/0/largestOffcut/alongGrain": "25-5/8\"",
+    "/sheets/0/sheet/length": "96\"",
+    "/sheets/0/sheet/width": "48\"",
+    "/sheets/1/contents/0/length": "35-1/16\"",
+    "/sheets/1/contents/0/width": "11-3/4\"",
+    "/sheets/1/cutSequence/0/sizes/0": "11-3/4\"",
+    "/sheets/1/cutSequence/1/sizes/0": "35-1/16\"",
+    "/sheets/1/cutSequence/1/sizes/1": "35-1/16\"",
+    "/sheets/1/largestOffcut/acrossGrain": "36-1/8\"",
+    "/sheets/1/largestOffcut/alongGrain": "96\"",
+    "/sheets/1/sheet/length": "96\"",
+    "/sheets/1/sheet/width": "48\"",
+    "/sheets/2/contents/0/length": "72\"",
+    "/sheets/2/contents/0/width": "35-5/16\"",
+    "/sheets/2/cutSequence/0/sizes/0": "35-5/16\"",
+    "/sheets/2/cutSequence/1/sizes/0": "72\"",
+    "/sheets/2/largestOffcut/acrossGrain": "12-9/16\"",
+    "/sheets/2/largestOffcut/alongGrain": "96\"",
+    "/sheets/2/sheet/length": "96\"",
+    "/sheets/2/sheet/width": "48\""
+  },
+  "boards": [],
+  "efficiencyPercentApprox": {
+    "01K7M3Q8ZD00000000B1000001": 46
+  },
+  "inputs": {
+    "edgeTrim": 0,
+    "grain": "locked",
+    "kerf": 25400
+  },
+  "sheetCountByStock": {
+    "01K7M3Q8ZD00000000B1000001": 2,
+    "01K7M3Q8ZD00000000B1000002": 1
+  },
+  "sheets": [
+    {
+      "contents": [
+        {
+          "length": 14630400,
+          "quantity": 2,
+          "width": 2438400
+        },
+        {
+          "length": 7124700,
+          "quantity": 4,
+          "width": 2387600
+        }
+      ],
+      "cutSequence": [
+        {
+          "_text": "Rip 12, 12, 11-3/4, 11-3/4 strips (47-7/8\" incl. kerfs)",
+          "op": "rip",
+          "sizes": [
+            2438400,
+            2438400,
+            2387600,
+            2387600
+          ]
+        },
+        {
+          "_text": "crosscut sides at 72",
+          "op": "crosscut",
+          "sizes": [
+            14630400
+          ]
+        },
+        {
+          "_text": "crosscut two shelves per narrow strip",
+          "op": "crosscut",
+          "sizes": [
+            7124700,
+            7124700
+          ]
+        }
+      ],
+      "largestOffcut": {
+        "acrossGrain": 2387600,
+        "alongGrain": 5207000,
+        "count": 2
+      },
+      "sheet": {
+        "length": 19507200,
+        "width": 9753600
+      },
+      "stock": "01K7M3Q8ZD00000000B1000001"
+    },
+    {
+      "contents": [
+        {
+          "length": 7124700,
+          "quantity": 2,
+          "width": 2387600
+        }
+      ],
+      "cutSequence": [
+        {
+          "_text": "Rip one 11-3/4 strip",
+          "op": "rip",
+          "sizes": [
+            2387600
+          ]
+        },
+        {
+          "_text": "crosscut two shelves",
+          "op": "crosscut",
+          "sizes": [
+            7124700,
+            7124700
+          ]
+        }
+      ],
+      "largestOffcut": {
+        "acrossGrain": 7340600,
+        "alongGrain": 19507200,
+        "count": 1
+      },
+      "sheet": {
+        "length": 19507200,
+        "width": 9753600
+      },
+      "stock": "01K7M3Q8ZD00000000B1000001"
+    },
+    {
+      "contents": [
+        {
+          "length": 14630400,
+          "quantity": 1,
+          "width": 7175500
+        }
+      ],
+      "cutSequence": [
+        {
+          "_text": "Rip 35-5/16",
+          "op": "rip",
+          "sizes": [
+            7175500
+          ]
+        },
+        {
+          "_text": "crosscut 72",
+          "op": "crosscut",
+          "sizes": [
+            14630400
+          ]
+        }
+      ],
+      "largestOffcut": {
+        "acrossGrain": 2552700,
+        "alongGrain": 19507200,
+        "count": 1
+      },
+      "sheet": {
+        "length": 19507200,
+        "width": 9753600
+      },
+      "stock": "01K7M3Q8ZD00000000B1000002"
+    }
+  ]
+}

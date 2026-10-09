@@ -1,0 +1,54 @@
+# Kerf — free, open-source woodworking design tool
+# Copyright (C) 2026 Kerf contributors
+# SPDX-License-Identifier: GPL-3.0-only
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: depot-ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Biome, dependency-cruiser (core isolation) and the GPL-3.0 header check.
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Golden tests
+        run: pnpm test:golden
+
+      - name: Property tests
+        run: pnpm test:prop
+
+      - name: Benchmarks
+        run: pnpm bench
+
+      - name: Install browser
+        run: pnpm --filter @kerf/app exec playwright install --with-deps chromium
+
+      - name: End-to-end
+        run: pnpm e2e

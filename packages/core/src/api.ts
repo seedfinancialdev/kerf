@@ -66,7 +66,11 @@ export function dovetailLayout(_input: DovetailLayoutInput): DovetailLayout {
 export function deriveJointCuts(
   _project: Project,
   _jointId: Id,
-): { host: RemovalPrimitive[]; guest: RemovalPrimitive[]; guestCutLengthAdd: Len } {
+): {
+  host: RemovalPrimitive[];
+  guest: RemovalPrimitive[];
+  guestCutAdd: { length: Len; width: Len };
+} {
   return notImplemented("deriveJointCuts");
 }
 

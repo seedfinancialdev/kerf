@@ -41,6 +41,8 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: "node_modules" },
+    // dependency-cruiser does not support TypeScript 7 yet; swc parses the sources instead.
+    parser: "swc",
     tsConfig: { fileName: "tsconfig.base.json" },
     tsPreCompilationDeps: true,
     exclude: { path: "(^|/)(dist|playwright-report|test-results)(/|$)" },

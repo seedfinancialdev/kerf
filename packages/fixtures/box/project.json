@@ -1,0 +1,274 @@
+{
+  "instances": [
+    {
+      "def": "01K7M3Q8ZD00000000B2000014",
+      "id": "01K7M3Q8ZD00000000B2000028",
+      "mirrored": false,
+      "name": "Front",
+      "orientation": 0,
+      "position": {
+        "x": "0in",
+        "y": "0in",
+        "z": "0in"
+      }
+    },
+    {
+      "def": "01K7M3Q8ZD00000000B2000016",
+      "id": "01K7M3Q8ZD00000000B200002A",
+      "mirrored": false,
+      "name": "Side A",
+      "orientation": 0,
+      "position": {
+        "x": "0in",
+        "y": "0in",
+        "z": "0in"
+      }
+    },
+    {
+      "def": "01K7M3Q8ZD00000000B2000015",
+      "id": "01K7M3Q8ZD00000000B2000029",
+      "mirrored": false,
+      "name": "Back",
+      "orientation": 0,
+      "position": {
+        "x": "0in",
+        "y": "box_width - stock[\"4/4 walnut\"].thickness",
+        "z": "0in"
+      }
+    },
+    {
+      "def": "01K7M3Q8ZD00000000B2000016",
+      "id": "01K7M3Q8ZD00000000B200002B",
+      "mirrored": false,
+      "name": "Side B",
+      "orientation": 0,
+      "position": {
+        "x": "box_length - stock[\"4/4 walnut\"].thickness",
+        "y": "0in",
+        "z": "0in"
+      }
+    },
+    {
+      "def": "01K7M3Q8ZD00000000B2000017",
+      "id": "01K7M3Q8ZD00000000B200002C",
+      "mirrored": false,
+      "name": "Bottom",
+      "orientation": 0,
+      "position": {
+        "x": "stock[\"4/4 walnut\"].thickness - groove_depth",
+        "y": "stock[\"4/4 walnut\"].thickness - groove_depth",
+        "z": "1/4in"
+      }
+    }
+  ],
+  "joints": [
+    {
+      "guest": "01K7M3Q8ZD00000000B200002A",
+      "host": "01K7M3Q8ZD00000000B2000028",
+      "id": "01K7M3Q8ZD00000000B2000046",
+      "params": {
+        "pin": "pin_width",
+        "slope": "1:8",
+        "tails": "tails"
+      },
+      "type": "throughDovetail"
+    },
+    {
+      "guest": "01K7M3Q8ZD00000000B200002B",
+      "host": "01K7M3Q8ZD00000000B2000028",
+      "id": "01K7M3Q8ZD00000000B2000047",
+      "params": {
+        "pin": "pin_width",
+        "slope": "1:8",
+        "tails": "tails"
+      },
+      "type": "throughDovetail"
+    },
+    {
+      "guest": "01K7M3Q8ZD00000000B200002A",
+      "host": "01K7M3Q8ZD00000000B2000029",
+      "id": "01K7M3Q8ZD00000000B2000048",
+      "params": {
+        "pin": "pin_width",
+        "slope": "1:8",
+        "tails": "tails"
+      },
+      "type": "throughDovetail"
+    },
+    {
+      "guest": "01K7M3Q8ZD00000000B200002B",
+      "host": "01K7M3Q8ZD00000000B2000029",
+      "id": "01K7M3Q8ZD00000000B2000049",
+      "params": {
+        "pin": "pin_width",
+        "slope": "1:8",
+        "tails": "tails"
+      },
+      "type": "throughDovetail"
+    },
+    {
+      "guest": "01K7M3Q8ZD00000000B200002C",
+      "host": "01K7M3Q8ZD00000000B2000028",
+      "id": "01K7M3Q8ZD00000000B200004A",
+      "params": {
+        "depth": "groove_depth"
+      },
+      "type": "dado"
+    },
+    {
+      "guest": "01K7M3Q8ZD00000000B200002C",
+      "host": "01K7M3Q8ZD00000000B2000029",
+      "id": "01K7M3Q8ZD00000000B200004B",
+      "params": {
+        "depth": "groove_depth"
+      },
+      "type": "dado"
+    },
+    {
+      "guest": "01K7M3Q8ZD00000000B200002C",
+      "host": "01K7M3Q8ZD00000000B200002A",
+      "id": "01K7M3Q8ZD00000000B200004C",
+      "params": {
+        "depth": "groove_depth"
+      },
+      "type": "dado"
+    },
+    {
+      "guest": "01K7M3Q8ZD00000000B200002C",
+      "host": "01K7M3Q8ZD00000000B200002B",
+      "id": "01K7M3Q8ZD00000000B200004D",
+      "params": {
+        "depth": "groove_depth"
+      },
+      "type": "dado"
+    }
+  ],
+  "matchSets": [
+    {
+      "axis": "length",
+      "id": "01K7M3Q8ZD00000000B200005A",
+      "members": [
+        "01K7M3Q8ZD00000000B2000028",
+        "01K7M3Q8ZD00000000B200002A",
+        "01K7M3Q8ZD00000000B2000029",
+        "01K7M3Q8ZD00000000B200002B"
+      ],
+      "name": "Grain wraps the corners",
+      "type": "continuousGrain"
+    }
+  ],
+  "name": "Keepsake box",
+  "params": [
+    {
+      "expr": "10in",
+      "id": "01K7M3Q8ZD00000000B200000A",
+      "kind": "length",
+      "name": "box_length"
+    },
+    {
+      "expr": "6in",
+      "id": "01K7M3Q8ZD00000000B200000B",
+      "kind": "length",
+      "name": "box_width"
+    },
+    {
+      "expr": "4in",
+      "id": "01K7M3Q8ZD00000000B200000C",
+      "kind": "length",
+      "name": "box_height"
+    },
+    {
+      "expr": "1/4in",
+      "id": "01K7M3Q8ZD00000000B200000D",
+      "kind": "length",
+      "name": "groove_depth"
+    },
+    {
+      "expr": "3",
+      "id": "01K7M3Q8ZD00000000B200000E",
+      "kind": "count",
+      "name": "tails"
+    },
+    {
+      "expr": "1/4in",
+      "id": "01K7M3Q8ZD00000000B200000F",
+      "kind": "length",
+      "name": "pin_width"
+    }
+  ],
+  "parts": [
+    {
+      "grainLocked": true,
+      "id": "01K7M3Q8ZD00000000B2000014",
+      "length": "box_length",
+      "name": "Front",
+      "ops": [],
+      "stock": "01K7M3Q8ZD00000000B2000001",
+      "width": "box_height"
+    },
+    {
+      "grainLocked": true,
+      "id": "01K7M3Q8ZD00000000B2000015",
+      "length": "box_length",
+      "name": "Back",
+      "ops": [],
+      "stock": "01K7M3Q8ZD00000000B2000001",
+      "width": "box_height"
+    },
+    {
+      "grainLocked": true,
+      "id": "01K7M3Q8ZD00000000B2000016",
+      "length": "box_width",
+      "name": "Side",
+      "ops": [],
+      "stock": "01K7M3Q8ZD00000000B2000001",
+      "width": "box_height"
+    },
+    {
+      "grainLocked": true,
+      "id": "01K7M3Q8ZD00000000B2000017",
+      "length": "box_length - 2*stock[\"4/4 walnut\"].thickness",
+      "name": "Bottom",
+      "ops": [],
+      "stock": "01K7M3Q8ZD00000000B2000002",
+      "width": "box_width - 2*stock[\"4/4 walnut\"].thickness"
+    }
+  ],
+  "patterns": [],
+  "schemaVersion": 1,
+  "stock": [
+    {
+      "allowance": {
+        "length": 0,
+        "width": 50800
+      },
+      "id": "01K7M3Q8ZD00000000B2000001",
+      "kind": "solid",
+      "name": "4/4 walnut",
+      "solid": {
+        "maxWidth": 1625600,
+        "standardLengths": [
+          19507200
+        ]
+      },
+      "thickness": 101600
+    },
+    {
+      "allowance": {
+        "length": 0,
+        "width": 0
+      },
+      "id": "01K7M3Q8ZD00000000B2000002",
+      "kind": "sheet",
+      "name": "1/4 plywood",
+      "sheet": {
+        "grain": "along-length",
+        "length": 19507200,
+        "width": 9753600
+      },
+      "thickness": 50800
+    }
+  ],
+  "structures": [],
+  "units": "imperial"
+}

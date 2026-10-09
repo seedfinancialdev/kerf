@@ -85,7 +85,6 @@ export interface CutStep {
   op: "rip" | "crosscut";
   /** Strip widths for a rip, cut lengths for a crosscut, in order. */
   sizes: Len[];
-  text: string;
 }
 
 export interface SheetLayout {
@@ -96,8 +95,19 @@ export interface SheetLayout {
   largestOffcut: { alongGrain: Len; acrossGrain: Len; count: number };
 }
 
+/** A solid-stock board layout; only match-set boards are specified so far. */
+export interface BoardLayout {
+  stock: Id;
+  matchSet?: Id;
+  /** Parts joined end to end, plus kerfs and trim, cut from one board. */
+  composite?: { length: Len; width: Len; widthAllowance: Len };
+  minBoardLength?: Len;
+  sequence: Array<{ sequence: number; of: number; name: string }>;
+}
+
 export interface NestingResult {
   sheets: SheetLayout[];
+  boards: BoardLayout[];
   sheetCountByStock: Record<Id, number>;
 }
 

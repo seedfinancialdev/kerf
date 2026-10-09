@@ -12,17 +12,21 @@
     "e2e": "pnpm --filter @kerf/app e2e",
     "bench": "vitest run --project bench",
     "lint": "biome check . && pnpm lint:deps && pnpm lint:headers",
-    "lint:deps": "depcruise packages --config .dependency-cruiser.cjs",
+    "lint:deps": "node scripts/lint-deps.mjs",
     "lint:headers": "node scripts/check-headers.mjs",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
     "@playwright/test": "^1.64.0",
+    "@swc/core": "^1.16.13",
     "@types/node": "^26.6.5",
     "dependency-cruiser": "^18.5.0",
     "fast-check": "^4.10.2",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
+  },
+  "engines": {
+    "node": "^22 || ^24"
   }
 }

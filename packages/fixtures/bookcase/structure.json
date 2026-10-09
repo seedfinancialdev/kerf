@@ -1,0 +1,100 @@
+{
+  "instances": [],
+  "joints": [],
+  "matchSets": [],
+  "name": "Bookcase",
+  "params": [
+    {
+      "expr": "36in",
+      "id": "01K7M3Q8ZD00000000B100000A",
+      "kind": "length",
+      "name": "width"
+    },
+    {
+      "expr": "72in",
+      "id": "01K7M3Q8ZD00000000B100000B",
+      "kind": "length",
+      "name": "height"
+    },
+    {
+      "expr": "12in",
+      "id": "01K7M3Q8ZD00000000B100000C",
+      "kind": "length",
+      "name": "depth"
+    },
+    {
+      "expr": "4",
+      "id": "01K7M3Q8ZD00000000B100000D",
+      "kind": "count",
+      "name": "shelf_count"
+    }
+  ],
+  "parts": [],
+  "patterns": [],
+  "schemaVersion": 1,
+  "stock": [
+    {
+      "allowance": {
+        "length": 0,
+        "width": 0
+      },
+      "id": "01K7M3Q8ZD00000000B1000001",
+      "kind": "sheet",
+      "name": "3/4 plywood",
+      "sheet": {
+        "grain": "along-length",
+        "length": 19507200,
+        "width": 9753600
+      },
+      "thickness": 146050
+    },
+    {
+      "allowance": {
+        "length": 0,
+        "width": 0
+      },
+      "id": "01K7M3Q8ZD00000000B1000002",
+      "kind": "sheet",
+      "name": "1/4 plywood",
+      "sheet": {
+        "grain": "along-length",
+        "length": 19507200,
+        "width": 9753600
+      },
+      "thickness": 50800
+    }
+  ],
+  "structures": [
+    {
+      "id": "01K7M3Q8ZD00000000B1000050",
+      "openings": [
+        {
+          "children": [],
+          "division": {
+            "count": "shelf_count",
+            "spacing": "even",
+            "type": "shelves"
+          },
+          "id": "01K7M3Q8ZD00000000B1000051"
+        }
+      ],
+      "options": {
+        "back": "inset-rabbet",
+        "backRabbetDepth": "3/8in",
+        "backStock": "01K7M3Q8ZD00000000B1000002",
+        "carcaseStock": "01K7M3Q8ZD00000000B1000001",
+        "dadoDepth": "1/4in",
+        "rabbetDepth": "1/4in",
+        "shelfRoundover": "1/8in",
+        "topBottom": "between-sides"
+      },
+      "size": {
+        "d": "depth",
+        "h": "height",
+        "w": "width"
+      },
+      "type": "case"
+    }
+  ],
+  "units": "imperial"
+}

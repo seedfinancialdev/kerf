@@ -1,0 +1,65 @@
+/*
+ * Kerf — free, open-source woodworking design tool
+ * Copyright (C) 2026 Kerf contributors
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-panel);
+  font-variant-numeric: var(--font-numeric);
+}
+
+.window {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  height: var(--topbar-height);
+  padding: 0 var(--space-4);
+  background: var(--color-surface);
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.brand {
+  font-weight: var(--font-weight-strong);
+  color: var(--color-accent);
+}
+
+.modules {
+  display: flex;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.module {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-panel);
+}
+
+.workspace {
+  flex: 1;
+  background: var(--color-bg);
+}

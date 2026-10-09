@@ -1,0 +1,22 @@
+{
+  "_spec": {
+    "/input/boardWidth": "4\"",
+    "/input/matingThickness": "1/2\"",
+    "/input/pin": "1/4\"",
+    "/layout/narrowTailWidth": "7/8\"",
+    "/layout/slopeOffset": "1/16\"",
+    "/layout/wideTailWidth": "1\""
+  },
+  "input": {
+    "boardWidth": 812800,
+    "matingThickness": 101600,
+    "pin": 50800,
+    "slope": 8,
+    "tails": 3
+  },
+  "layout": {
+    "narrowTailWidth": 177800,
+    "slopeOffset": 12700,
+    "wideTailWidth": 203200
+  }
+}
