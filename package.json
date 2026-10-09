@@ -1,0 +1,28 @@
+{
+  "name": "kerf",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-only",
+  "packageManager": "pnpm@10.32.1",
+  "scripts": {
+    "test": "vitest run --project unit",
+    "test:golden": "vitest run --project golden",
+    "test:prop": "vitest run --project prop",
+    "e2e": "pnpm --filter @kerf/app e2e",
+    "bench": "vitest run --project bench",
+    "lint": "biome check . && pnpm lint:deps && pnpm lint:headers",
+    "lint:deps": "depcruise packages --config .dependency-cruiser.cjs",
+    "lint:headers": "node scripts/check-headers.mjs",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^26.6.5",
+    "dependency-cruiser": "^18.5.0",
+    "fast-check": "^4.10.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}
