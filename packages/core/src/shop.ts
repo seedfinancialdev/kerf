@@ -28,6 +28,17 @@ export function shopProblem(shop: unknown): Diagnostic | null {
   if (!isLength(kerf, 0))
     return problem("the saw kerf must be a whole number of units, zero or more");
   if (!Array.isArray(tools)) return problem("the list of tools is missing");
+  const settings: Array<[string, string]> = [
+    ["sheetTrim", "the sheet trim"],
+    ["solidTrim", "the board end trim"],
+    ["minOffcut", "the smallest offcut worth keeping"],
+  ];
+  for (const [key, label] of settings) {
+    const value = (shop as Record<string, unknown>)[key];
+    if (value !== undefined && !isLength(value, 0)) {
+      return problem(`${label} must be a whole number of units, zero or more`);
+    }
+  }
 
   for (const [i, tool] of tools.entries()) {
     if (typeof tool !== "object" || tool === null) return problem(`tool ${i + 1} is not an object`);

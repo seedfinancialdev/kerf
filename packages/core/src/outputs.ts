@@ -166,10 +166,25 @@ export interface BoardLayout {
   sequence: Array<{ sequence: number; of: number; name: string }>;
 }
 
+/**
+ * What one stock adds up to (Cut list & nesting, "Outputs"). Sheet goods carry `sheets`; solid
+ * stock carries `boards` bought, `boardFeet` of rough parts (rough length x rough width x the
+ * thickness rounded up to a quarter inch, over 144) and `linearFeet` of boards bought.
+ */
+export interface StockTotals {
+  stock: Id;
+  sheets?: number;
+  boards?: number;
+  boardFeet?: Rational;
+  linearFeet?: Rational;
+}
+
 export interface NestingResult {
   sheets: SheetLayout[];
   boards: BoardLayout[];
   sheetCountByStock: Record<Id, number>;
+  /** One entry per stock that has parts, in project stock order. */
+  totals: StockTotals[];
 }
 
 export interface MachiningSetup {

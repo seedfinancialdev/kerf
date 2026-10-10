@@ -146,17 +146,34 @@ sits in an edge rabbet.
 - **The overlap check's cap counts real overlaps**, not touching pairs, so a large well-built
   assembly is never called "piled up".
 
-## Not in M2
+## Follow-ups made after M2 (maintainer rulings)
 
-- Per-stock totals (sheets, board feet, linear feet), the shopping and milling lists, setup
-  checklists, offcut inventory (needs fields the schema does not have; build plan data, M5).
-- Adjustable edge trim and minimum offcut: they are constants (sheet 0, solid 1/2" per end,
-  6") because the project and shop schema have no field for them. The spec says both adjustable.
+- **Edge trim and the smallest offcut are shop settings** (`sheetTrim`, `solidTrim`, `minOffcut`,
+  all optional, defaults 0, 1/2" per end and 6"), because they belong to how the shop works, not
+  to one project.
+- **Totals per stock** are in `nesting.totals`: sheets for sheet goods; for solid stock, boards
+  bought, board feet of the rough parts (rough length x rough width x nominal thickness / 144) and
+  linear feet of boards bought. The nominal thickness is the stock's thickness rounded up to the
+  next quarter inch (13/16" counts as 4/4).
+- **A bookmatch thicker than the listed stock stays a warning**, though the cut-list spec says
+  "error": stock is normally listed at the part thickness, so an error would block almost every
+  bookmatch. The spec line is a known, accepted difference.
+- **An empty match set warns** (`match-set-empty`) instead of being ignored.
+- **Spec wording fixed:** a rabbet adds its depth to the dimension of the guest that runs into it
+  (its length where its end sits in the rabbet, its width where its edge does).
+
+## Not done
+
+- The shopping list net of inventory, offcut inventory and setup checklists: inventory is not in
+  the schema, and the checklist is an interface feature (M4/M5).
 - Nested assemblies (`Instance.parent` warns).
+- Reshaping the output types (machining setup, board layout, rule-id union) and trimming the
+  public exports of internal derivation types: they change the shape of the golden JSON and
+  many tests, so they wait for a decision.
 
 ## Consequences
 
 - The bookcase and box golden JSON match exactly; 1,000-run property tests hold, including that
   every display mesh is manifold and every part is placed exactly once.
 - The "solve in under 100 ms" benchmark is gated from M2, not M4, so a regression is caught early.
-- Not covered: see "Not in M2" above.
+- Not covered: see "Not done" above.

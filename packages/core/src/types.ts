@@ -118,6 +118,12 @@ export interface Opening {
 
 export interface ShopProfile {
   kerf: Len;
+  /** Edge trim removed from every side of a sheet; default 0. */
+  sheetTrim?: Len;
+  /** Trim left at each end of rough solid stock; default 1/2". */
+  solidTrim?: Len;
+  /** Offcuts smaller than this on either side are waste; default 6". */
+  minOffcut?: Len;
   tools: Array<
     | { type: "dadoStack"; maxWidth: Len }
     | { type: "router"; straightBits: Len[]; roundoverBits: Len[] }

@@ -35,7 +35,12 @@ import { invalidProjectModel, type SolvedModel, solveValidatedModel } from "./so
 import type { Id, Project, ShopProfile } from "./types";
 
 const NO_CUTS: CutList = { lines: [], blocks: [] };
-const NO_NESTING: NestingResult = { sheets: [], boards: [], sheetCountByStock: {} };
+const NO_NESTING: NestingResult = {
+  sheets: [],
+  boards: [],
+  sheetCountByStock: {},
+  totals: [],
+};
 
 export interface Pipeline {
   /** The validated project the stages read; undefined when the project is not valid. */

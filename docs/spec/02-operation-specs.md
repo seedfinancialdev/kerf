@@ -37,7 +37,7 @@ An L-shaped step along a named end or edge of the host, on a named face.
 | `width` | guest thickness | Measured across the host face, from the named end or edge |
 | `depth` | host thickness ÷ 2, snapped down | Error if ≥ host thickness |
 
-- **Effect on guest:** cut length (end rabbet) or cut width (edge rabbet) increases by `depth`.
+- **Effect on guest:** the guest's cut size increases by `depth` along the dimension that runs into the rabbet: its length where its end sits in the rabbet, its width where its edge does.
 - **Errors:** width greater than half the host's width or length; guest not seated against the rabbet.
 
 ## Roundover (user operation)

@@ -11,14 +11,14 @@ We implement a standard guillotine bin-packing heuristic in TypeScript rather th
 - **Parts:** from the solved part graph. Sheet goods use finished cut size; solid stock uses rough size (cut size + stock allowance).
 - **Stock to cut from:** standard sheets (default 96" × 48"), standard board lengths for solid stock, plus optional inventory (sheets, boards and offcuts on hand), which is always used first.
 - **Kerf:** default 1/8", set per project.
-- **Edge trim:** default 0 for sheet goods, 1/2" per end for rough solid stock; both adjustable.
+- **Edge trim:** default 0 for sheet goods, 1/2" per end for rough solid stock; both adjustable in the shop settings (`sheetTrim`, `solidTrim`).
 - **Grain:** a part with `grainLocked` keeps its length along the sheet's grain; unlocked parts may rotate 90°. Plywood face-grain parts default to locked; MDF and melamine default to unlocked.
 - **Match sets:** see below.
 
 ## Optimization order
 
 1. **Fewest sheets or boards.** Material cost is the user's real cost.
-2. **Largest usable offcut.** Waste concentrated in one big piece is reusable; the same waste in slivers isn't. Minimum useful offcut defaults to 6" × 6".
+2. **Largest usable offcut.** Waste concentrated in one big piece is reusable; the same waste in slivers isn't. Minimum useful offcut defaults to 6" × 6" and is adjustable in the shop settings (`minOffcut`).
 3. **Fewest cuts.** Less saw time, fewer errors.
 
 - **Guillotine only:** every cut runs edge to edge, so layouts work on a table saw, track saw or panel saw. Free-form CNC nesting is v2.
