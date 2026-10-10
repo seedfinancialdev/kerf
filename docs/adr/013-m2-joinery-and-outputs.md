@@ -61,6 +61,51 @@ implementation reads the spec more narrowly or more broadly than its text.
   its maximum width allows the cut, otherwise a router with a straight bit no wider than the cut,
   otherwise the setup is kept and marked `missing`.
 
+## Rulings made while fixing review findings (maintainer to confirm)
+
+Independent review found defects in the first M2 implementation; the fixes made these calls.
+
+- **Error blocks the solve.** `solve` returns `blocked: true` whenever any error exists, and the
+  cut list, layouts and setups are withheld when the error is in the assembly (steps 1-5). A
+  layout or shop error (a part larger than the sheet, an invalid shop profile) is reported without
+  withholding the cut list. Warnings and info never block. `buildCutList`, `nest` and
+  `machiningSetups` follow the same rule and never throw; `solve` is how to learn why one is empty.
+- **The shop profile is validated** (`invalid-shop`): kerf a whole number of units from 0, and every
+  tool well-formed.
+- **Diagnostics are bounded.** The same problem on the same field is reported once with a `count`;
+  no rule lists more than 25 entries; joint-level reports show the first 5 then "and N more".
+- **Joints between patterns find touching pairs with a sweep**, not every host against every
+  guest, so a 10,000 x 10,000 pattern joint stays tractable. A guest nothing joined and nothing
+  explained gets one aggregated `joint-no-contact`.
+- **Match sets nest as one unit and the rest pack around them:** other solid-stock parts may share a
+  match set's board (`alsoOnBoard`), and other sheet parts share a same-board set's sheet. A
+  continuous-grain set with `axis: "width"` is laid side by side. On sheet goods each member is
+  placed and labelled "n of m".
+- **A match-set member may not be the source of a pattern, and an instance may be in one set only**
+  (rejected when a file is read), because the copies of a repeated member cannot be listed.
+- **Rabbet `at` and `face`** may name where the rabbet goes; they must agree with where the guest
+  sits, and the rabbet must be exactly the guest's thickness wide, otherwise the guest is not seated.
+- **Roundover radius rule:** two opposite edges of one face, or both faces of one edge, may not
+  together exceed the thickness. Four rounded edges on a face are not a violation.
+- **Dovetail pin-board sockets are mapped into the pin board's own width direction**, which can be
+  the reverse of the tail board's; the groove warning uses the matching half-pin.
+- **Solving reads the validated copy of the project**, not the object passed in.
+- **Setups list the parts they cut and how many cuts each takes.** A cut-list line says
+  `visibleVaries` when merged parts have different visible sizes.
+
+Spec wording to fix rather than code: the spec says a rabbet adds to "cut length (end rabbet) or
+cut width (edge rabbet)"; the implementation adds to whichever dimension of the guest is seated,
+which agrees with the spec on both reference projects and is physically right when a guest's end
+sits in an edge rabbet.
+
+## Not in M2
+
+- Per-stock totals (sheets, board feet, linear feet), the shopping and milling lists, setup
+  checklists, offcut inventory (needs fields the schema does not have; build plan data, M5).
+- Adjustable edge trim and minimum offcut: they are constants (sheet 0, solid 1/2" per end,
+  6") because the project and shop schema have no field for them. The spec says both adjustable.
+- Bookmatch (planing allowance undefined, issue #42), nested assemblies (`Instance.parent` warns).
+
 ## Consequences
 
 - The bookcase and box golden JSON match exactly; 1,000-run property tests hold, including that
