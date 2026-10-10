@@ -155,7 +155,7 @@ function grooveHalfPinWarnings(derived: Derived, frames: Map<Id, Frame>): Diagno
       );
       for (const groove of grooves) {
         const g = groove.hostCuts[0];
-        if (!g || g.kind !== "box") continue;
+        if (g?.kind !== "box") continue;
         const W = facts.boardWidth;
         const T = frame.part.thickness;
         const lo = g.min[1];

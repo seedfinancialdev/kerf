@@ -70,6 +70,17 @@ describe("nestSheets: layouts", () => {
     expect(small.sheets[0]?.offcuts).toEqual([]); // 2-7/8" and 2-7/8" are waste
   });
 
+  it('counts a remainder of exactly 6" as an offcut and one a hair under as waste', () => {
+    // 96 - 89-7/8 - 1/8 kerf = 6" exactly along the strip: kept. 90" leaves 5-7/8": waste.
+    const exact = nestSheets([item("a", 89.875, 40)], sheet96x48, options).sheets[0];
+    expect(exact?.offcuts.some((o) => o.length === 6 * INCH && o.width === 40 * INCH)).toBe(true);
+    const under = nestSheets([item("a", 90, 40)], sheet96x48, options).sheets[0];
+    expect(under?.offcuts.some((o) => o.width === 40 * INCH)).toBe(false);
+    // The same boundary across the sheet: 48 - 41-7/8 - 1/8 = 6" exactly.
+    const across = nestSheets([item("b", 20, 41.875)], sheet96x48, options).sheets[0];
+    expect(across?.offcuts.some((o) => o.length === 96 * INCH && o.width === 6 * INCH)).toBe(true);
+  });
+
   it("subtracts edge trim from every side of the sheet", () => {
     const trimmed = { ...options, trim: 1 * INCH };
     expect(nestSheets([item("a", 95, 10)], sheet96x48, trimmed).tooLarge).toHaveLength(1); // usable 94

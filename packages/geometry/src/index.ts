@@ -175,7 +175,7 @@ export function buildDisplayMesh(blank: Blank, removals: readonly RemovalPrimiti
   if (removals.length > MAX_REMOVALS) {
     throw new MeshError(`The part has ${removals.length} cuts; at most ${MAX_REMOVALS} are drawn.`);
   }
-  removals.forEach((r, i) => check(blank, r, i));
+  for (const [i, r] of removals.entries()) check(blank, r, i);
 
   // Every engine object lives in WebAssembly memory and must be freed explicitly.
   const made: Manifold[] = [];

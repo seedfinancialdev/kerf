@@ -13,7 +13,6 @@ import {
   type Project,
   parseProject,
   type ShopProfile,
-  serializeProject,
   solve,
 } from "@kerf/core";
 import { describe, expect, it } from "vitest";

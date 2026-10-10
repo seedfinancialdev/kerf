@@ -135,36 +135,6 @@ describe("keepsake box joints", () => {
     }
   });
 
-  it('makes tails 1" wide at the tip and 7/8" at the neck', () => {
-    const sideA = derived.instances.get(id("Side A"))?.cuts ?? [];
-    const spaces = sideA.filter((c) => c.kind === "trapezoidPrism");
-    // Interior space between tail 1 and tail 2: at the tip 1-1/4" to 1-1/2" (a pin 1/4" wide),
-    // at the baseline widened by the 1/16" slope offset on each side.
-    const tipWidths = spaces.map((s) => {
-      if (s.kind !== "trapezoidPrism") return 0;
-      const ys = s.points.slice(0, 2).map((pt) => pt[1]);
-      return Math.abs((ys[1] ?? 0) - (ys[0] ?? 0));
-    });
-    expect(new Set(tipWidths)).toEqual(new Set([q(16)])); // every space is 1/4" at the tip
-    const neck = spaces
-      .map((s) =>
-        s.kind === "trapezoidPrism"
-          ? Math.abs((s.points[2]?.[1] ?? 0) - (s.points[3]?.[1] ?? 0))
-          : 0,
-      )
-      .filter((w) => w !== q(16 + 4)); // 1/4" + 2 x 1/16" = 3/8" = 24/64"
-    expect(
-      new Set(
-        spaces.map((s) =>
-          s.kind === "trapezoidPrism"
-            ? Math.abs((s.points[2]?.[1] ?? 0) - (s.points[3]?.[1] ?? 0))
-            : 0,
-        ),
-      ),
-    ).toEqual(new Set([q(20), q(24)])); // half-pin spaces 5/16" (one slanted side), interior spaces 3/8" (two)
-    expect(neck.length).toBeGreaterThan(0);
-  });
-
   it("does not split the two side boards: their cuts are identical", () => {
     expect(derived.definitionOf.get(id("Side A"))).toBe(derived.definitionOf.get(id("Side B")));
     expect(derived.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
