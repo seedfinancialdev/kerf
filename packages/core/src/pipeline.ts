@@ -62,7 +62,7 @@ export function runPipeline(project: Project): Pipeline {
   const diagnostics = [
     ...model.diagnostics,
     ...derived.diagnostics,
-    ...validateAssembly(project, model, derived),
+    ...validateAssembly(model, derived),
   ];
   return { model, derived, cutList, diagnostics, parts };
 }

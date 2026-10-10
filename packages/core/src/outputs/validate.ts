@@ -12,17 +12,13 @@ import type { Derived } from "../joints/derive";
 import type { Diagnostic } from "../outputs";
 import { boxOf, contactOf, type Frame, toParent } from "../solve/assembly";
 import type { SolvedModel } from "../solve/model";
-import type { Id, Project } from "../types";
+import type { Id } from "../types";
 
 function pairKey(a: Id, b: Id): string {
   return a < b ? `${a}|${b}` : `${b}|${a}`;
 }
 
-export function validateAssembly(
-  project: Project,
-  model: SolvedModel,
-  derived: Derived,
-): Diagnostic[] {
+export function validateAssembly(model: SolvedModel, derived: Derived): Diagnostic[] {
   const out: Diagnostic[] = [];
   const partById = new Map(model.parts.map((p) => [p.id, p]));
   const frames = new Map<Id, Frame>();
@@ -138,7 +134,7 @@ function grooveHalfPinWarnings(derived: Derived, frames: Map<Id, Frame>): Diagno
       );
       for (const groove of grooves) {
         const g = groove.hostCuts[0];
-        if (!g || g.kind !== "box") continue;
+        if (g?.kind !== "box") continue;
         const W = facts.boardWidth;
         const T = frame.part.thickness;
         const lo = g.min[1];

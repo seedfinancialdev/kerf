@@ -265,19 +265,15 @@ describe("outputs invariants", () => {
     });
   });
 
-  milestone(
-    "M2",
-    "sheet contents match placements, and efficiency is a fraction up to 1",
-    () => {
-      property(editedBookcase, (p) => {
-        for (const sheet of solve(p, shop).nesting.sheets) {
-          expect(sheet.efficiency.num).toBeGreaterThan(0n);
-          expect(sheet.efficiency.num <= sheet.efficiency.den).toBe(true);
-          expect(sheet.contents.reduce((n, c) => n + c.quantity, 0)).toBe(sheet.placements.length);
-        }
-      });
-    },
-  );
+  milestone("M2", "sheet contents match placements, and efficiency is a fraction up to 1", () => {
+    property(editedBookcase, (p) => {
+      for (const sheet of solve(p, shop).nesting.sheets) {
+        expect(sheet.efficiency.num).toBeGreaterThan(0n);
+        expect(sheet.efficiency.num <= sheet.efficiency.den).toBe(true);
+        expect(sheet.contents.reduce((n, c) => n + c.quantity, 0)).toBe(sheet.placements.length);
+      }
+    });
+  });
 
   milestone("M2", "cut size is visible size plus what joints add, never less", () => {
     property(editedBookcase, (p) => {

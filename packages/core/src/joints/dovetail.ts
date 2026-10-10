@@ -172,7 +172,7 @@ export function deriveDovetail(
   // The host face the tail tips finish flush with.
   const tipPlane = toParent(guest, [guestEnd === 0 ? 0 : Lg, 0, 0])[guestLength];
   const tipFace = faceAt(host, guestLength, tipPlane);
-  if (!tipFace || tipFace.axis !== 2) return notCorner();
+  if (tipFace?.axis !== 2) return notCorner();
 
   // Parameters.
   const slope = parseSlope(joint.params.slope);

@@ -29,8 +29,6 @@ export function nestProject(
   const sheetCountByStock: Record<Id, number> = {};
   const kerf = shop.kerf;
 
-  const setOf = new Map<Id, MatchSet>();
-  for (const set of project.matchSets) for (const id of set.members) setOf.set(id, set);
   const byInstance = new Map(parts.map((p) => [p.instance.id, p]));
 
   for (const set of project.matchSets) {
@@ -47,11 +45,11 @@ export function nestProject(
     const mine = parts.filter((p) => p.part.stock === stock.id);
     if (mine.length === 0) continue;
     if (stock.kind === "sheet" && stock.sheet) {
-      const layouts = nestSheetStock(project, stock, mine, kerf, setOf, byInstance, diagnostics);
+      const layouts = nestSheetStock(project, stock, mine, kerf, byInstance, diagnostics);
       sheets.push(...layouts);
       sheetCountByStock[stock.id] = layouts.length;
     } else if (stock.solid) {
-      boards.push(...nestSolidStock(project, stock, mine, kerf, setOf, byInstance, diagnostics));
+      boards.push(...nestSolidStock(project, stock, mine, kerf, byInstance, diagnostics));
     } else {
       diagnostics.push({
         severity: "warning",
@@ -68,7 +66,6 @@ function nestSheetStock(
   stock: Stock,
   mine: CutPart[],
   kerf: Len,
-  setOf: Map<Id, MatchSet>,
   byInstance: Map<Id, CutPart>,
   diagnostics: Diagnostic[],
 ): SheetLayout[] {
@@ -162,7 +159,6 @@ function nestSolidStock(
   stock: Stock,
   mine: CutPart[],
   kerf: Len,
-  setOf: Map<Id, MatchSet>,
   byInstance: Map<Id, CutPart>,
   diagnostics: Diagnostic[],
 ): BoardLayout[] {
