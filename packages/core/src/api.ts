@@ -12,46 +12,12 @@ import type {
   DovetailLayoutInput,
   MachiningSetup,
   NestingResult,
-  Rational,
   RemovalPrimitive,
   SolveResult,
 } from "./outputs";
 import type { Id, Len, PartDef, Project, ShopProfile } from "./types";
 
-// Units & expressions (M1)
-
-export type UnitSystem = Project["units"];
-
-export function parseLength(_source: string, _units: UnitSystem): Len {
-  return notImplemented("parseLength");
-}
-
-export function formatLength(_len: Len, _units: UnitSystem): string {
-  return notImplemented("formatLength");
-}
-
-export function snapToGrid(_value: Rational, _units: UnitSystem): Len {
-  return notImplemented("snapToGrid");
-}
-
-export type ExprScope = Record<string, unknown>;
-
-export function evaluateExpression(_source: string, _scope: ExprScope): Rational {
-  return notImplemented("evaluateExpression");
-}
-
-// Project file (M1)
-
-/** Canonical JSON: fixed key order, so load → save is byte-identical. */
-export function serializeProject(_project: Project): string {
-  return notImplemented("serializeProject");
-}
-
-export function parseProject(_json: string): Project {
-  return notImplemented("parseProject");
-}
-
-// Solve pipeline (M1–M2)
+// Solve pipeline (M2; steps 1-3 are solveModel)
 
 export function solve(_project: Project, _shop: ShopProfile): SolveResult {
   return notImplemented("solve");

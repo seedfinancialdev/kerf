@@ -24,10 +24,12 @@ Expected files may carry annotation keys that start with `_` (never compared by 
 
 ## Assumptions and gaps (the spec does not say; confirm or correct)
 
-1. **Orientation indices.** The spec stores orientation as 0-23 but never defines the table. All
-   instances use `0` and positions are expressions in an assumed frame. No golden depends on them.
-2. **Distribute spacing.** `Pattern.spacing.distribute` does not say whether `from`/`to` are the span
-   or the first/last positions. The bookcase uses the interior span between top and bottom.
+1. **Orientation indices.** Set from the table in ADR 003 so that each project assembles to its
+   overall size (bookcase 36 x 12 x 72 in, box 10 x 6 x 4 in): bookcase Side 17 and Back 16,
+   box Front and Back 1 and Side 8; everything else is 0 (identity). Positions are expressions in
+   the parent frame with X across, Y deep and Z up.
+2. **Distribute spacing.** `from`/`to` is the span being divided (decision D2); members are spaced
+   with equal air gaps inside it. The bookcase uses the interior span between top and bottom.
 3. **Pattern count.** `count` is taken as the total number of members, including the source instance.
 4. **Joints per mirrored side.** One joint per host instance (left and right side each host their own
    dados and rabbets), matching "12 cuts… on the 2 sides".

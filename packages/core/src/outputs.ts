@@ -8,18 +8,14 @@
 
 import type { Id, Len } from "./types";
 
-/** Exact rational used during expression evaluation; snapped to the grid once, at the end. */
-export interface Rational {
-  num: bigint;
-  den: bigint;
-}
-
 export interface Diagnostic {
   severity: "error" | "warning";
   rule: string;
   /** Shop-language message shown in the UI. */
   message: string;
   part?: Id;
+  /** The field the problem is on, e.g. a parameter name or "Side length". */
+  field?: string;
 }
 
 /** SPEC-GAP: the spec names these primitives but does not define their fields. */
