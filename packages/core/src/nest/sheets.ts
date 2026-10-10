@@ -156,6 +156,7 @@ function describeSheet(
   const offcuts: Offcut[] = [];
   const rips: Len[] = [];
   const crosscutPatterns: Len[][] = [];
+  const divisions: CutStep[] = [];
   const contents: SheetLayout["contents"] = [];
   let usedArea = 0n;
 
@@ -170,7 +171,7 @@ function describeSheet(
         // A composite is cut as one blank, then divided; show every member where it will end up.
         let cursor = 0;
         for (const [i, m] of members.entries()) {
-          const along = o.item.layout === "across" ? m.length : m.length;
+          const along = m.length;
           const across = m.width;
           placements.push({
             x: x + (o.item.layout === "across" ? 0 : cursor),
@@ -189,6 +190,21 @@ function describeSheet(
           cursor += (o.item.layout === "across" ? across : along) + kerf;
         }
         pattern.push(o.along);
+        // Once the blank is cut out, it is divided into its members.
+        const step: CutStep = {
+          op: o.item.layout === "across" ? "rip" : "crosscut",
+          sizes: members.map((m) => (o.item.layout === "across" ? m.width : m.length)),
+        };
+        if (
+          !divisions.some(
+            (d) =>
+              d.op === step.op &&
+              d.sizes.length === step.sizes.length &&
+              d.sizes.every((v, i) => v === step.sizes[i]),
+          )
+        ) {
+          divisions.push(step);
+        }
         x += o.along + kerf;
         continue;
       }
@@ -234,6 +250,7 @@ function describeSheet(
   const cutSequence: CutStep[] = [
     { op: "rip", sizes: rips },
     ...distinct.map((sizes): CutStep => ({ op: "crosscut", sizes })),
+    ...divisions,
   ];
 
   // Largest offcut by area; ties go to the first.
@@ -274,7 +291,7 @@ function score(sheets: Sheet[], usableL: Len, usableW: Len, kerf: Len, minOffcut
   for (const sheet of sheets) {
     cuts += sheet.strips.length;
     for (const strip of sheet.strips) {
-      cuts += strip.items.length;
+      cuts += strip.items.reduce((n, o) => n + (o.item.members?.length ?? 1), 0);
       const remainder = usableL - (strip.used + kerf);
       if (remainder >= minOffcut && strip.across >= minOffcut) {
         const area = BigInt(remainder) * BigInt(strip.across);
@@ -314,11 +331,22 @@ export function nestSheets(
   const groupsTooLarge: SheetItem[][] = [];
   const fit: SheetItem[] = [];
 
-  // Pack each group alone; a group that needs more than one sheet cannot satisfy its set.
+  // Pack each group alone; a group that needs more than one sheet cannot satisfy its set. A member
+  // that does not fit as drawn is turned if its grain allows; one that fits neither way sinks it.
   const seeds: Sheet[] = [];
   for (const group of groups) {
-    const oriented = group.map((i) => orient(i, "natural"));
-    const packed = pack(sortOrdered(oriented, "across"), usableL, usableW, options.kerf);
+    const oriented: Oriented[] = [];
+    for (const item of group) {
+      const natural = orient(item, "natural");
+      const turned: Oriented = { item, along: item.width, across: item.length, rotated: true };
+      const fits = (o: Oriented): boolean => o.along <= usableL && o.across <= usableW;
+      if (fits(natural)) oriented.push(natural);
+      else if (!item.locked && fits(turned)) oriented.push(turned);
+    }
+    const packed =
+      oriented.length === group.length
+        ? pack(sortOrdered(oriented, "across"), usableL, usableW, options.kerf)
+        : [];
     if (packed.length === 1 && packed[0]) seeds.push(packed[0]);
     else groupsTooLarge.push(group);
   }

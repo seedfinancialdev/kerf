@@ -65,6 +65,8 @@ function failed(model: SolvedModel): Pipeline {
 
 /** Steps 1-5 and the cut list. Never throws. */
 export function runPipeline(input: unknown): Pipeline {
+  // What was found before anything went wrong; an unexpected failure adds to it, never replaces it.
+  let gathered: Diagnostic[] = [];
   try {
     const checked = validateProject(input);
     if (checked.problem) {
@@ -72,6 +74,7 @@ export function runPipeline(input: unknown): Pipeline {
     }
     const project = checked.project;
     const model = solveValidatedModel(project);
+    gathered = model.diagnostics;
     if (model.diagnostics.some((d) => d.rule === "internal-error")) return failed(model);
 
     const derived = deriveJoints(project, model);
@@ -96,6 +99,7 @@ export function runPipeline(input: unknown): Pipeline {
       error instanceof Error ? `${error.name}: ${error.message}` : "an unexpected value";
     return failed({
       diagnostics: [
+        ...gathered,
         {
           severity: "error",
           rule: "internal-error",
@@ -128,20 +132,43 @@ function shapesOf(p: Pipeline): PartShape[] {
   return [...shapes.values()];
 }
 
+/**
+ * Reads the shop profile once, into a plain copy that is then validated and used, so a profile
+ * whose answers change between reads (or that throws when read) cannot be valid and then not.
+ */
+function readShop(shop: unknown): { shop?: ShopProfile; problem?: Diagnostic } {
+  let copy: unknown;
+  try {
+    const text = JSON.stringify(shop);
+    copy = text === undefined ? undefined : JSON.parse(text);
+  } catch {
+    return {
+      problem: {
+        severity: "error",
+        rule: "invalid-shop",
+        message: "The shop profile is not valid: it could not be read.",
+        field: "shop profile",
+      },
+    };
+  }
+  const problem = shopProblem(copy);
+  return problem ? { problem } : { shop: copy as ShopProfile };
+}
+
 /** The whole pipeline. Never throws: anything unexpected is an "internal-error" diagnostic. */
 export function solveProject(project: Project, shop: ShopProfile): SolveResult {
   const p = runPipeline(project);
-  const shopIssue = shopProblem(shop);
+  const { shop: copy, problem: shopIssue } = readShop(shop);
   const diagnostics: Diagnostic[] = [...p.diagnostics];
   if (shopIssue) diagnostics.push(shopIssue);
 
   let nesting: NestingResult = NO_NESTING;
   let setups: MachiningSetup[] = [];
-  if (!p.stopped && p.project && !shopIssue) {
+  if (!p.stopped && p.project && copy) {
     try {
-      const nested = nestProject(p.project, p.parts, shop);
+      const nested = nestProject(p.project, p.parts, copy);
       nesting = nested.result;
-      setups = buildSetups(p.project, p.parts, p.derived, shop);
+      setups = buildSetups(p.project, p.parts, p.derived, copy);
       diagnostics.push(...nested.diagnostics);
     } catch (error) {
       const reason =
@@ -154,12 +181,13 @@ export function solveProject(project: Project, shop: ShopProfile): SolveResult {
     }
   }
 
+  const blocked = hasError(diagnostics);
   return {
     diagnostics: condense(diagnostics),
     cutList: p.cutList,
     nesting,
     setups,
-    shapes: p.stopped ? [] : shapesOf(p),
-    blocked: hasError(diagnostics),
+    shapes: blocked ? [] : shapesOf(p),
+    blocked,
   };
 }

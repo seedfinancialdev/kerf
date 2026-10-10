@@ -128,36 +128,79 @@ function removal(
   return alongX ? prism(m, "yz", profile, [0, L], own) : prism(m, "xz", profile, [0, W], own);
 }
 
-function finite(...values: number[]): boolean {
-  return values.every((v) => Number.isFinite(v));
+const whole = (v: unknown): v is number => typeof v === "number" && Number.isSafeInteger(v);
+
+/** A list of exactly `n` whole numbers. */
+function numbers(v: unknown, n: number): v is number[] {
+  return Array.isArray(v) && v.length === n && v.every(whole);
 }
 
 const EDGE = /^(end0|end1|edge0|edge1)\/(face0|face1)$/;
+const PLANES: readonly string[] = ["xy", "xz", "yz"];
 
-/** Checks a primitive before it is handed to the engine; throws MeshError naming it. */
-function check(blank: Blank, p: RemovalPrimitive, index: number): void {
+/** Twice the signed area of a polygon, from whole-number points. */
+function area2(points: number[][]): number {
+  let sum = 0;
+  for (const [i, p] of points.entries()) {
+    const q = points[(i + 1) % points.length] as number[];
+    sum += (p[0] as number) * (q[1] as number) - (q[0] as number) * (p[1] as number);
+  }
+  return sum;
+}
+
+/**
+ * Checks a primitive before it is handed to the engine; throws MeshError naming it. The input is
+ * trusted by type only, so every shape the engine will read is checked here.
+ */
+function check(blank: Blank, p: unknown, index: number): asserts p is RemovalPrimitive {
   const at = `Removal ${index + 1}`;
-  if (p.kind === "box") {
-    const ok = finite(...p.min, ...p.max) && p.min.every((lo, k) => lo < (p.max[k] ?? Number.NaN));
-    if (!ok)
+  if (typeof p !== "object" || p === null) throw new MeshError(`${at} is not a cut.`);
+  const r = p as Record<string, unknown>;
+
+  if (r.kind === "box") {
+    const { min, max } = r;
+    if (!numbers(min, 3) || !numbers(max, 3)) {
+      throw new MeshError(`${at} is a box whose corners are not three whole numbers each.`);
+    }
+    if (!min.every((lo, k) => lo < (max[k] as number))) {
       throw new MeshError(`${at} is a box with no volume (its minimum is not below its maximum).`);
+    }
     return;
   }
-  if (p.kind === "trapezoidPrism") {
-    const ok =
-      p.points.length >= 3 &&
-      p.points.every(([a, b]) => finite(a, b)) &&
-      finite(...p.range) &&
-      p.range[0] < p.range[1];
-    if (!ok) throw new MeshError(`${at} is a prism with fewer than 3 points or no depth.`);
+  if (r.kind === "trapezoidPrism") {
+    const { plane, points, range } = r;
+    if (typeof plane !== "string" || !PLANES.includes(plane)) {
+      throw new MeshError(`${at} is a prism in a plane that does not exist: ${String(plane)}.`);
+    }
+    if (!Array.isArray(points) || points.length < 3 || !points.every((q) => numbers(q, 2))) {
+      throw new MeshError(
+        `${at} is a prism with fewer than 3 points, or points that are not whole numbers.`,
+      );
+    }
+    if (!numbers(range, 2) || (range[0] as number) >= (range[1] as number)) {
+      throw new MeshError(`${at} is a prism with no depth.`);
+    }
+    if (area2(points as number[][]) === 0) {
+      throw new MeshError(`${at} is a prism whose points enclose no area.`);
+    }
     return;
   }
-  const across = p.edge.startsWith("end") ? blank.length : blank.width;
-  if (!EDGE.test(p.edge))
-    throw new MeshError(`${at} names an edge that does not exist: ${p.edge}.`);
-  if (!(p.radius > 0) || p.radius > blank.thickness || p.radius > across) {
-    throw new MeshError(`${at} is a roundover whose radius does not fit the board.`);
+  if (r.kind === "quarterRoundSweep") {
+    const { edge, radius } = r;
+    if (typeof edge !== "string" || !EDGE.test(edge)) {
+      throw new MeshError(`${at} names an edge that does not exist: ${String(edge)}.`);
+    }
+    const across = edge.startsWith("end") ? blank.length : blank.width;
+    if (!whole(radius) || radius <= 0 || radius > blank.thickness || radius > across) {
+      throw new MeshError(`${at} is a roundover whose radius does not fit the board.`);
+    }
+    return;
   }
+  throw new MeshError(`${at} is a kind of cut that cannot be drawn: ${String(r.kind)}.`);
+}
+
+function finite(...values: number[]): boolean {
+  return values.every((v) => Number.isFinite(v));
 }
 
 /**

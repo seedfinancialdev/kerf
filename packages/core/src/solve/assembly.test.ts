@@ -138,3 +138,37 @@ describe("faceAt and boxToLocal", () => {
     expect(local).toEqual({ min: [q(912), q(16), 0], max: [q(912 + 46), q(768), 0] });
   });
 });
+
+// From the second M2 review: which way local Z points matters to where a region lands.
+describe("assembly + geometry", () => {
+  const part = {
+    id: "p",
+    name: "p",
+    stock: "s",
+    length: 10,
+    width: 6,
+    thickness: 2,
+    grainLocked: true,
+    ops: [],
+  };
+  const inst = (orientation: number, extent: [number, number, number]) => ({
+    instance: {
+      id: "i",
+      def: "p",
+      name: "i",
+      position: { x: 0, y: 0, z: 0 },
+      extent: { x: extent[0], y: extent[1], z: extent[2] },
+      orientation,
+      mirrored: false,
+    },
+    part,
+  });
+  it("[A6] a region's local z range is [0.5, 1.5] for an unrotated part", () => {
+    const b = boxToLocal(inst(0, [10, 6, 2]), { min: [1, 1, 0.5], max: [3, 2, 1.5] });
+    expect([b.min[2], b.max[2]]).toEqual([0.5, 1.5]);
+  });
+  it("[A5] and the same when local z points against the parent's x (orientation 17)", () => {
+    const b = boxToLocal(inst(17, [2, 6, 10]), { min: [0.5, 1, 1], max: [1.5, 2, 3] });
+    expect([b.min[2], b.max[2]]).toEqual([0.5, 1.5]);
+  });
+});

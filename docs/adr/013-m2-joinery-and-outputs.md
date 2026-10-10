@@ -84,7 +84,9 @@ Independent review found defects in the first M2 implementation; the fixes made 
 - **A match-set member may not be the source of a pattern, and an instance may be in one set only**
   (rejected when a file is read), because the copies of a repeated member cannot be listed.
 - **Rabbet `at` and `face`** may name where the rabbet goes; they must agree with where the guest
-  sits, and the rabbet must be exactly the guest's thickness wide, otherwise the guest is not seated.
+  sits. A rabbet is seated when the guest's footprint lies inside the step and its face is against
+  the shoulder: the step may be wider than the guest (for example a 1/4" back in a 3/8" rabbet)
+  but never narrower, and a gap at the shoulder means the guest is not seated.
 - **Roundover radius rule:** two opposite edges of one face, or both faces of one edge, may not
   together exceed the thickness. Four rounded edges on a face are not a violation.
 - **Dovetail pin-board sockets are mapped into the pin board's own width direction**, which can be
@@ -97,6 +99,28 @@ Spec wording to fix rather than code: the spec says a rabbet adds to "cut length
 cut width (edge rabbet)"; the implementation adds to whichever dimension of the guest is seated,
 which agrees with the spec on both reference projects and is physically right when a guest's end
 sits in an edge rabbet.
+
+## Further rulings from the second review pass (maintainer to confirm)
+
+- **Work is bounded.** A joint between patterns that would pair more than 100,000 touching
+  host/guest parts is one error (`joint-too-many-pairs`) instead of an enormous run; the overlap
+  check stops after a million touching pairs. Both say the parts are probably overlapping.
+- **Pattern joints say what is wrong, once.** A failing guest is counted once whether its message
+  was shown or folded into "and N more"; a guest that passes through another part is reported as
+  an `overlap`, not as "does not touch".
+- **Same-board sets are checked for fit member by member**, turning an unlocked member that fits
+  only the other way; a member that fits neither way is `match-set-too-large`.
+- **Two match sets may share one solid board** when they fit with a kerf between them. Each set
+  keeps its own layout; when a board carries several sets each layout names `boardIndex`.
+- **A composite blank is cut out, then divided.** The cut sequence lists the blank's crosscut (or
+  rip) first and then the crosscuts (or rips) that divide it into members; counts of cuts include
+  them. The spec describes the blank but not the division, so this is the physical reading.
+- **Stock sizes are bounded** like every other length (100,000 in) when a file is read.
+- **The shop profile is read once into a plain copy** and that copy is validated and used, so a
+  profile that changes between reads, or throws, is reported as `invalid-shop`.
+- **`nest` and `machiningSetups` are `solve(...)` projections**; they cannot disagree with it.
+- **The display mesh refuses unknown cuts** (an unknown kind or plane, non-whole coordinates) with
+  a `MeshError`, because the input arrives by type only.
 
 ## Not in M2
 

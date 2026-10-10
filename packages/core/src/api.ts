@@ -8,7 +8,6 @@
 import { notImplemented } from "./errors";
 import { deriveJoints } from "./joints/derive";
 import type { CutAdd } from "./joints/types";
-import { nestProject } from "./nest";
 import type {
   CutList,
   MachiningSetup,
@@ -16,9 +15,7 @@ import type {
   RemovalPrimitive,
   SolveResult,
 } from "./outputs";
-import { buildSetups } from "./outputs/machining";
 import { runPipeline, solveProject } from "./pipeline";
-import { shopProblem } from "./shop";
 import type { Id, PartDef, Project, ShopProfile } from "./types";
 
 // The whole pipeline (steps 1-6).
@@ -32,16 +29,21 @@ export function solve(project: Project, shop: ShopProfile): SolveResult {
 /**
  * What one joint does to its host and guest: removals in each part's definition space, and what it
  * adds to the guest's cut size. For a joint with a pattern on either side, `host`/`guest` collect
- * the removals of every pair and `guestCutAdd` is the add for one guest.
- * Throws RangeError for a joint id the project does not have; a joint that failed has no cuts and
- * its reasons are in `solve(...).diagnostics`.
+ * the removals of every pair and `guestCutAdd` is the add for the first guest (guests of one
+ * joint get the same add).
+ * Throws RangeError for a joint id the project does not have, and Error for a project that is not
+ * valid; a joint that failed has no cuts and its reasons are in `solve(...).diagnostics`.
  */
 export function deriveJointCuts(
   project: Project,
   jointId: Id,
 ): { host: RemovalPrimitive[]; guest: RemovalPrimitive[]; guestCutAdd: CutAdd } {
   const p = runPipeline(project);
-  if (!p.project?.joints.some((j) => j.id === jointId)) {
+  if (!p.project) {
+    const why = p.diagnostics.find((d) => d.severity === "error")?.message;
+    throw new Error(`The project is not valid${why ? `: ${why}` : "."}`);
+  }
+  if (!p.project.joints.some((j) => j.id === jointId)) {
     throw new RangeError(`The project has no joint "${jointId}".`);
   }
   const pairs = p.derived.pairs.filter((pair) => pair.joint === jointId);
@@ -63,25 +65,11 @@ export function buildCutList(project: Project): CutList {
 }
 
 export function nest(project: Project, shop: ShopProfile): NestingResult {
-  const p = runPipeline(project);
-  if (p.stopped || !p.project || shopProblem(shop)) {
-    return { sheets: [], boards: [], sheetCountByStock: {} };
-  }
-  try {
-    return nestProject(p.project, p.parts, shop).result;
-  } catch {
-    return { sheets: [], boards: [], sheetCountByStock: {} };
-  }
+  return solveProject(project, shop).nesting;
 }
 
 export function machiningSetups(project: Project, shop: ShopProfile): MachiningSetup[] {
-  const p = runPipeline(project);
-  if (p.stopped || !p.project || shopProblem(shop)) return [];
-  try {
-    return buildSetups(p.project, p.parts, p.derived, shop);
-  } catch {
-    return [];
-  }
+  return solveProject(project, shop).setups;
 }
 
 // Structures (M3)

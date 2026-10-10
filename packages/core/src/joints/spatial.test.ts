@@ -5,7 +5,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import type { Box } from "../solve/assembly";
-import { touchingPairs } from "./spatial";
+import { selfTouchingPairs, touchingPairs } from "./spatial";
 
 const box = (x: number, y: number, z: number, w: number): Box => ({
   min: [x, y, z],
@@ -51,7 +51,9 @@ describe("touchingPairs", () => {
         z: fc.integer({ min: 0, max: 60 }),
         w: fc.integer({ min: 1, max: 15 }),
       }),
-      { minLength: 0, maxLength: 40 },
+      // At least 17 each, so 17 x 17 > 256 candidate pairs and the sweep (not the small-set loop)
+      // always runs.
+      { minLength: 17, maxLength: 60 },
     );
     fc.assert(
       fc.property(arb, arb, (as, bs) => {
@@ -69,5 +71,77 @@ describe("touchingPairs", () => {
     const started = Date.now();
     touchingPairs(row(1000, 0), row(1000, 1));
     expect(Date.now() - started).toBeLessThan(500);
+  });
+});
+
+// From the second M2 review: the sweep path (more than 256 candidate pairs) must agree with
+// the all-pairs test, boundaries included.
+describe("touchingPairs (sweep path)", () => {
+  it("[P1,P2] touching boxes are found by the sweep (400 pairs tested): faces shared along x", () => {
+    const cube = (x: number): { min: [number, number, number]; max: [number, number, number] } => ({
+      min: [x, 0, 0],
+      max: [x + 10, 10, 10],
+    });
+    const a = Array.from({ length: 20 }, (_, i) => cube(20 * i));
+    const b = Array.from({ length: 20 }, (_, i) => cube(20 * i + 10));
+    const expected: Array<[number, number]> = [];
+    for (let i = 0; i < 20; i += 1) {
+      expected.push([i, i]);
+      if (i + 1 < 20) expected.push([i + 1, i]);
+    }
+    expected.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+    expect(touchingPairs(a, b)).toEqual(expected);
+  });
+  it("[P3] the sweep returns pairs ordered by i then j even when the boxes are listed backwards", () => {
+    const cube = (x: number): { min: [number, number, number]; max: [number, number, number] } => ({
+      min: [x, 0, 0],
+      max: [x + 10, 10, 10],
+    });
+    const a = Array.from({ length: 20 }, (_, i) => cube(20 * (19 - i)));
+    const b = Array.from({ length: 20 }, (_, i) => cube(20 * i + 10));
+    const out = touchingPairs(a, b);
+    const sorted = [...out].sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+    expect(out).toEqual(sorted);
+    expect(out).toHaveLength(39);
+  });
+});
+
+describe("selfTouchingPairs", () => {
+  const bruteSelf = (boxes: Box[]): Array<[number, number]> =>
+    brute(boxes, boxes).filter(([i, j]) => i < j);
+
+  it("finds the same pairs as testing every pair, above and below the sweep threshold", () => {
+    const arb = fc.array(
+      fc.record({
+        x: fc.integer({ min: 0, max: 60 }),
+        y: fc.integer({ min: 0, max: 60 }),
+        z: fc.integer({ min: 0, max: 60 }),
+        w: fc.integer({ min: 1, max: 15 }),
+      }),
+      { minLength: 0, maxLength: 80 },
+    );
+    fc.assert(
+      fc.property(arb, (rs) => {
+        const boxes = rs.map((r) => box(r.x, r.y, r.z, r.w));
+        expect(selfTouchingPairs(boxes)).toEqual(bruteSelf(boxes));
+      }),
+      { numRuns: 200 },
+    );
+  });
+
+  it("stops once more than `limit` pairs are found, and says so by returning more than the limit", () => {
+    const stacked = Array.from({ length: 40 }, () => box(0, 0, 0, 10)); // every pair overlaps
+    expect(selfTouchingPairs(stacked)).toHaveLength((40 * 39) / 2);
+    const capped = selfTouchingPairs(stacked, 100);
+    expect(capped.length).toBeGreaterThan(100);
+    expect(capped.length).toBeLessThan((40 * 39) / 2);
+  });
+
+  it("limits touchingPairs the same way", () => {
+    const a = Array.from({ length: 30 }, () => box(0, 0, 0, 10));
+    const b = Array.from({ length: 30 }, () => box(0, 0, 0, 10));
+    const capped = touchingPairs(a, b, 50);
+    expect(capped.length).toBeGreaterThan(50);
+    expect(capped.length).toBeLessThan(900);
   });
 });

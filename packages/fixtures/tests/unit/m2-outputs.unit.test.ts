@@ -141,10 +141,3 @@ describe("machining setups list their parts", () => {
     ]);
   });
 });
-
-describe("not a bug, but written down", () => {
-  it("keeps unused types out of the test", () => {
-    const p: Project | undefined = undefined;
-    expect(p).toBeUndefined();
-  });
-});

@@ -10,6 +10,7 @@
 // Overlap reporting is bounded: the first few are named, the rest are counted.
 
 import type { Derived } from "../joints/derive";
+import { selfTouchingPairs } from "../joints/spatial";
 import type { Diagnostic } from "../outputs";
 import { boxOf, contactOf, type Frame, toParent } from "../solve/assembly";
 import type { SolvedModel } from "../solve/model";
@@ -17,6 +18,9 @@ import type { Id } from "../types";
 
 /** How many overlapping pairs are named before the rest are only counted. */
 const OVERLAPS_SHOWN = 10;
+
+/** Touching or overlapping pairs examined; a real assembly has about as many as it has parts. */
+const MAX_TOUCHING_PAIRS = 1_000_000;
 
 function pairKey(a: Id, b: Id): string {
   return a < b ? `${a}|${b}` : `${b}|${a}`;
@@ -37,38 +41,53 @@ export function validateAssembly(model: SolvedModel, derived: Derived): Diagnost
   ]);
   const list = [...frames.values()];
 
-  // Overlaps: sweep along X so a project with thousands of parts stays fast.
-  const byX = list
-    .map((f) => ({ f, box: boxOf(f.instance) }))
-    .sort((a, b) => a.box.min[0] - b.box.min[0]);
+  // Overlaps, found with a sweep along the axis the parts are most spread over, so a project with
+  // thousands of parts stays fast.
+  const touching = selfTouchingPairs(
+    list.map((f) => boxOf(f.instance)),
+    MAX_TOUCHING_PAIRS,
+  );
+  const exhausted = touching.length > MAX_TOUCHING_PAIRS;
   let overlapping = 0;
-  for (let i = 0; i < byX.length; i += 1) {
-    const a = byX[i];
-    if (!a) continue;
-    for (let j = i + 1; j < byX.length; j += 1) {
-      const b = byX[j];
-      if (!b || b.box.min[0] >= a.box.max[0]) break;
-      const c = contactOf(a.box, b.box);
-      if (c.kind !== "overlap" || joined.has(pairKey(a.f.instance.id, b.f.instance.id))) continue;
-      overlapping += 1;
-      if (overlapping <= OVERLAPS_SHOWN) {
-        out.push({
-          severity: "error",
-          rule: "overlap",
-          message: `This part can't be built: ${a.f.instance.name} and ${b.f.instance.name} occupy the same space and are not joined.`,
-          part: a.f.part.id,
-          field: a.f.instance.name,
-        });
-      }
+  for (const [i, j] of touching) {
+    const a = list[i];
+    const b = list[j];
+    if (!a || !b) continue;
+    const c = contactOf(boxOf(a.instance), boxOf(b.instance));
+    if (c.kind !== "overlap" || joined.has(pairKey(a.instance.id, b.instance.id))) continue;
+    overlapping += 1;
+    if (overlapping <= OVERLAPS_SHOWN) {
+      out.push({
+        severity: "error",
+        rule: "overlap",
+        message: `This part can't be built: ${a.instance.name} and ${b.instance.name} occupy the same space and are not joined.`,
+        part: a.part.id,
+        field: a.instance.name,
+      });
     }
   }
-  if (overlapping > OVERLAPS_SHOWN) {
+  if (exhausted) {
+    out.push({
+      severity: "error",
+      rule: "overlap",
+      message: `More than ${MAX_TOUCHING_PAIRS.toLocaleString("en-US")} pairs of parts touch or overlap; the parts are piled on top of each other and were not checked further.`,
+    });
+  } else if (overlapping > OVERLAPS_SHOWN) {
     out.push({
       severity: "error",
       rule: "overlap",
       message: `${overlapping} pairs of parts occupy the same space and are not joined (the first ${OVERLAPS_SHOWN} are listed).`,
       count: overlapping,
     });
+  }
+
+  const pairsOf = new Map<Id, Derived["pairs"]>();
+  for (const pair of derived.pairs) {
+    for (const id of pair.host === pair.guest ? [pair.host] : [pair.host, pair.guest]) {
+      const list = pairsOf.get(id) ?? [];
+      list.push(pair);
+      pairsOf.set(id, list);
+    }
   }
 
   // Rounded edges hidden by a joint: the edge lies wholly inside a patch where a joined part sits.
@@ -100,7 +119,7 @@ export function validateAssembly(model: SolvedModel, derived: Derived): Diagnost
               ];
     const a = toParent(frame, p as [number, number, number]);
     const b = toParent(frame, q as [number, number, number]);
-    const hidden = derived.pairs.some((pair) => {
+    const hidden = (pairsOf.get(instance) ?? []).some((pair) => {
       const other =
         pair.host === instance ? pair.guest : pair.guest === instance ? pair.host : undefined;
       const otherFrame = other ? frames.get(other) : undefined;
@@ -124,7 +143,7 @@ export function validateAssembly(model: SolvedModel, derived: Derived): Diagnost
     }
   }
 
-  out.push(...grooveHalfPinWarnings(derived, frames));
+  out.push(...grooveHalfPinWarnings(derived, frames, pairsOf));
   return out;
 }
 
@@ -134,7 +153,11 @@ export function validateAssembly(model: SolvedModel, derived: Derived): Diagnost
  * The half-pin is narrowest where the tails are widest, so the groove is checked against the
  * half-pin width at the shallowest depth it reaches.
  */
-function grooveHalfPinWarnings(derived: Derived, frames: Map<Id, Frame>): Diagnostic[] {
+function grooveHalfPinWarnings(
+  derived: Derived,
+  frames: Map<Id, Frame>,
+  pairsOf: Map<Id, Derived["pairs"]>,
+): Diagnostic[] {
   const out: Diagnostic[] = [];
   const warned = new Set<Id>();
 
@@ -150,7 +173,7 @@ function grooveHalfPinWarnings(derived: Derived, frames: Map<Id, Frame>): Diagno
       if (warned.has(id)) continue;
       const frame = frames.get(id);
       if (!frame) continue;
-      const grooves = derived.pairs.filter(
+      const grooves = (pairsOf.get(id) ?? []).filter(
         (p) => p.host === id && p.kind === "dado" && p.machined[0]?.kind === "groove",
       );
       for (const groove of grooves) {

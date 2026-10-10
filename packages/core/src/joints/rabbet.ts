@@ -61,27 +61,7 @@ export function deriveRabbet(ctx: DeriveContext, joint: Joint, seat: Seat): Pair
     return notSeated(`it sits on ${hostFace.side === 0 ? "face0" : "face1"}, not ${faceParam}`);
   }
 
-  // Which boundary of the host face the patch runs up to, measured by the guest's thickness.
   const guestThickness = guest.part.thickness;
-  const a = hostPatch.max[0] - hostPatch.min[0];
-  const b = hostPatch.max[1] - hostPatch.min[1];
-  const candidates: Array<[Boundary, boolean]> = [
-    ["end0", hostPatch.min[0] === 0 && a === guestThickness],
-    ["end1", hostPatch.max[0] === L && a === guestThickness],
-    ["edge0", hostPatch.min[1] === 0 && b === guestThickness],
-    ["edge1", hostPatch.max[1] === W && b === guestThickness],
-  ];
-  const at = candidates.find(
-    ([name, fits]) => fits && (atParam === undefined || name === atParam),
-  )?.[0];
-  if (!at) {
-    return notSeated(
-      atParam === undefined
-        ? "it does not sit against an end or edge"
-        : `it does not sit against ${atParam}`,
-    );
-  }
-
   const width = ctx.length(joint, "width", guestThickness);
   const depth = ctx.length(joint, "depth", ctx.floorToGrid(rational(BigInt(T), 2n)));
   if (width === undefined || depth === undefined) return undefined;
@@ -95,6 +75,39 @@ export function deriveRabbet(ctx: DeriveContext, joint: Joint, seat: Seat): Pair
   };
   if (width <= 0) return bad("width", "must be greater than zero");
   if (depth <= 0) return bad("depth", "must be greater than zero");
+  // The board sits in the step against its shoulder, so the step is at least as wide as the board.
+  if (width < guestThickness) return notSeated("the rabbet is narrower than the board's thickness");
+
+  // The boundary the step runs up to. The guest's footprint must lie inside the step, between the
+  // boundary and the shoulder, and touch the shoulder (its far edge is exactly `width` in).
+  const dim = (name: Boundary): number => (name === "end0" || name === "end1" ? L : W);
+  const region: Array<[Boundary, boolean, boolean]> = [
+    ["end0", hostPatch.max[0] <= width, hostPatch.max[0] === width],
+    ["end1", hostPatch.min[0] >= L - width, hostPatch.min[0] === L - width],
+    ["edge0", hostPatch.max[1] <= width, hostPatch.max[1] === width],
+    ["edge1", hostPatch.min[1] >= W - width, hostPatch.min[1] === W - width],
+  ];
+  const inside = region.filter(
+    ([name, within]) => within && (atParam === undefined || name === atParam),
+  );
+  if (inside.length === 0) {
+    return notSeated(
+      atParam === undefined
+        ? "it does not sit in a step against an end or edge"
+        : `it does not sit in a step against ${atParam}`,
+    );
+  }
+  if (inside.every(([name]) => 2 * width > dim(name))) {
+    const alongLength = inside.every(([name]) => name === "end0" || name === "end1");
+    ctx.error(
+      "rabbet-too-wide",
+      `The rabbet in ${hostName} is wider than half the board's ${alongLength ? "length" : "width"}.`,
+      where,
+    );
+    return undefined;
+  }
+  const at = inside.find(([name, , shoulder]) => shoulder && 2 * width <= dim(name))?.[0];
+  if (!at) return notSeated("its face is not against the shoulder of the rabbet");
 
   if (depth >= T) {
     ctx.error(
@@ -103,21 +116,6 @@ export function deriveRabbet(ctx: DeriveContext, joint: Joint, seat: Seat): Pair
       where,
     );
     return undefined;
-  }
-  const alongLength = at === "end0" || at === "end1";
-  if (2 * width > (alongLength ? L : W)) {
-    ctx.error(
-      "rabbet-too-wide",
-      `The rabbet in ${hostName} is wider than half the board's ${alongLength ? "length" : "width"}.`,
-      where,
-    );
-    return undefined;
-  }
-  // The guest must fill the step exactly: the shoulder lines up with its face.
-  if (width !== guestThickness) {
-    return notSeated(
-      `the rabbet is ${width < guestThickness ? "narrower" : "wider"} than the board's thickness`,
-    );
   }
 
   const lo: [number, number, number] = [0, 0, hostFace.side === 0 ? 0 : T - depth];

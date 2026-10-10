@@ -26,15 +26,15 @@ export interface BoardSeed {
 export interface PackedBoard {
   length: Len;
   items: BoardItem[];
-  /** The seed this board was opened for, if any. */
-  seed?: Id;
+  /** The seeds (match-set composites) on this board, in the order they were placed. */
+  seeds: Id[];
 }
 
 type Strategy = "shortest" | "longest";
 
 interface Open {
   board: PackedBoard;
-  /** Length used by parts and kerfs, excluding trim; for a seed board, the composite is included. */
+  /** Length used by parts and kerfs, excluding trim; the composites are included. */
   used: Len;
 }
 
@@ -52,26 +52,39 @@ function packWith(
   const choose = (holding: Len[]): Len | undefined =>
     strategy === "shortest" ? holding[0] : holding.at(-1);
 
-  // Seeds: the composite already includes its own trim, so it counts without adding trim again.
-  for (const seed of seeds) {
+  // Seeds go first, longest first, sharing boards where they fit. The composite already includes
+  // its own trim, so it counts without adding trim again.
+  const ranked = seeds
+    .map((seed, index) => ({ seed, index }))
+    .sort((x, y) => y.seed.minLength - x.seed.minLength || x.index - y.index)
+    .map(({ seed }) => seed);
+  for (const seed of ranked) {
+    const size = seed.minLength - 2 * trim;
+    const home = open.find(({ board, used }) => {
+      const needed = used > 0 ? kerf + size : size;
+      return needed <= board.length - 2 * trim - used;
+    });
+    if (home) {
+      home.used += home.used > 0 ? kerf + size : size;
+      home.board.seeds.push(seed.id);
+      continue;
+    }
     const length = choose(lengths.filter((l) => seed.minLength <= l));
     if (length === undefined) {
       unplaced.push(seed);
       continue;
     }
-    open.push({ board: { length, items: [], seed: seed.id }, used: seed.minLength - 2 * trim });
+    open.push({ board: { length, items: [], seeds: [seed.id] }, used: size });
   }
 
   for (const item of ordered) {
     const home = open.find(({ board, used }) => {
-      const needed = used === 0 && board.items.length === 0 ? item.length : kerf + item.length;
+      const needed = used > 0 ? kerf + item.length : item.length;
       return needed <= board.length - 2 * trim - used;
     });
     if (home) {
-      const needed =
-        home.used === 0 && home.board.items.length === 0 ? item.length : kerf + item.length;
       home.board.items.push(item);
-      home.used += needed;
+      home.used += home.used > 0 ? kerf + item.length : item.length;
       continue;
     }
     const length = choose(lengths.filter((l) => item.length <= l - 2 * trim));
@@ -79,7 +92,7 @@ function packWith(
       tooLong.push(item);
       continue;
     }
-    open.push({ board: { length, items: [item] }, used: item.length });
+    open.push({ board: { length, items: [item], seeds: [] }, used: item.length });
   }
 
   // Buy no more length than each board's contents need.

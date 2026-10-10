@@ -7,7 +7,7 @@
 // length. Pure and deterministic: the same project always gives byte-identical results.
 
 import type { Diagnostic, RemovalPrimitive } from "../outputs";
-import { type Box, boxOf, type Frame } from "../solve/assembly";
+import { type Box, boxOf, contactOf, type Frame } from "../solve/assembly";
 import type { SolvedModel } from "../solve/model";
 import type { EdgeRef, Id, Joint, Len, Project } from "../types";
 import { deriveDado } from "./dado";
@@ -17,6 +17,9 @@ import { deriveRoundovers, type RoundedEdge } from "./roundover";
 import { seatOf } from "./seat";
 import { touchingPairs } from "./spatial";
 import { type CutAdd, type MachinedCut, makeContext, NO_ADD, type PairCut } from "./types";
+
+/** Most touching host/guest pairs one joint is derived for; beyond it the joint is an error. */
+export const MAX_JOINT_PAIRS = 100_000;
 
 export interface InstanceCuts {
   /** Removals in the part's definition space, in a fixed order. */
@@ -28,7 +31,7 @@ export interface InstanceCuts {
 
 export interface Derived {
   pairs: PairCut[];
-  /** Host/guest pairs a joint tried to join, whether or not the derivation succeeded. */
+  /** Host/guest pairs a joint tried to join and reported on (or suppressed reports on) when it failed. */
   attempted: Array<[Id, Id]>;
   instances: Map<Id, InstanceCuts>;
   /** The definition each instance belongs to; differs from its def when cuts forced a split. */
@@ -107,28 +110,46 @@ export function deriveJoints(project: Project, model: SolvedModel): Derived {
     const candidates = touchingPairs(
       hosts.map((h): Box => boxOf(h.instance)),
       guests.map((g): Box => boxOf(g.instance)),
+      MAX_JOINT_PAIRS,
     );
+    if (candidates.length > MAX_JOINT_PAIRS) {
+      diagnostics.push({
+        severity: "error",
+        rule: "joint-too-many-pairs",
+        message: `This joint would join more than ${MAX_JOINT_PAIRS.toLocaleString("en-US")} pairs of parts (${hosts.length} against ${guests.length}), which is more than Kerf will work out. The parts are probably overlapping by mistake.`,
+        joint: joint.id,
+        field: `${joint.type} between patterns`,
+      });
+      continue;
+    }
     const quiet = isPattern(joint.host) || isPattern(joint.guest);
     const joinedGuest = new Set<number>();
     const reportedGuest = new Set<number>();
+    const overlapGuest = new Set<number>();
 
     for (const [hi, gi] of candidates) {
       const host = hosts[hi] as Frame;
       const guest = guests[gi] as Frame;
       if (host.instance.id === guest.instance.id) continue;
-      attempted.push([host.instance.id, guest.instance.id]);
-      const before = diagnostics.length;
+      const before = ctx.reported();
       const pair = derivePair(ctx, joint, host, guest, quiet);
       if (pair) {
         pairs.push(pair);
         joinedGuest.add(gi);
-      } else if (diagnostics.length > before) {
+      } else if (ctx.reported() > before) {
+        // Said (or counted, past the limit on how many are said) by the joint itself.
         reportedGuest.add(gi);
+        attempted.push([host.instance.id, guest.instance.id]);
+      } else if (contactOf(boxOf(host.instance), boxOf(guest.instance)).kind === "overlap") {
+        // A quiet pair of patterns that interpenetrate; the assembly check names it as an overlap.
+        overlapGuest.add(gi);
       }
     }
 
     // A guest nothing joined, and nothing explained, does not touch what it should.
-    const lost = guests.filter((_, gi) => !joinedGuest.has(gi) && !reportedGuest.has(gi));
+    const lost = guests.filter(
+      (_, gi) => !joinedGuest.has(gi) && !reportedGuest.has(gi) && !overlapGuest.has(gi),
+    );
     if (lost.length > 0) {
       const first = lost[0] as Frame;
       diagnostics.push({

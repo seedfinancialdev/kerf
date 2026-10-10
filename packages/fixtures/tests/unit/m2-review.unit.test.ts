@@ -109,19 +109,25 @@ describe("dovetails line up when the pin board's width axis points the other way
     ]);
   });
 
-  it("warns identically for Front and Back, which have the same groove at the same height", () => {
+  // Lowering the bottom moves its groove toward the outside of the box; a board is warned once the
+  // groove leaves the half-pin. The warned boards (by instance name) at each height are exact.
+  const warnedAt = (z: string): string[] => {
     const lowered: Project = {
       ...tall,
       instances: tall.instances.map((i) =>
-        i.name === "Bottom" ? { ...i, position: { ...i.position, z: "3/64in" } } : i,
+        i.name === "Bottom" ? { ...i, position: { ...i.position, z } } : i,
       ),
     };
-    const warned = new Set(
-      issues(lowered)
-        .filter((d) => d.rule === "groove-outside-bottom-half-pin")
-        .map((d) => lowered.parts.find((p) => p.id === d.part)?.name),
-    );
-    expect(warned.has("Front")).toBe(warned.has("Back"));
+    const names = issues(lowered)
+      .filter((d) => d.rule === "groove-outside-bottom-half-pin")
+      .map((d) => (d.field ?? "?").replace(/ groove$/, ""));
+    return [...new Set(names)].sort();
+  };
+
+  it("warns for exactly the boards whose groove leaves the half-pin", () => {
+    expect(warnedAt("0in")).toEqual([]);
+    expect(warnedAt("3/64in")).toEqual(["Side A", "Side B"]);
+    expect(warnedAt("4/64in")).toEqual(["Back", "Front", "Side A", "Side B"]);
   });
 });
 
@@ -202,6 +208,14 @@ describe("rabbet placement and seating", () => {
     expect(rules(rabbet({ width: "1in" }))).toContain("error:rabbet-not-seated");
     expect(rules(rabbet({ width: "1/4in" }))).toContain("error:rabbet-not-seated");
     expect(rules(rabbet({ width: "1/2in" }))).toEqual([]);
+  });
+
+  it("cuts the step the whole length of the edge the guest stands against, on the face it stands on", () => {
+    // 12" x 6" x 3/4" host, 1/2" guest at y = 0 on the top: width 1/2", depth 3/4 / 2 = 3/8".
+    const model = solveModel(rabbet({}));
+    const host = model.instances.find((i) => i.name === "Host")?.id ?? "";
+    const cuts = deriveJoints(rabbet({}), model).instances.get(host)?.cuts;
+    expect(cuts).toEqual([{ kind: "box", min: [0, 0, q(24)], max: [q(768), q(32), q(48)] }]);
   });
 
   it("honours `at`, and rejects one that disagrees with where the guest sits", () => {

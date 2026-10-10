@@ -6,7 +6,7 @@
 
 import { ExpressionError } from "../expr/errors";
 import { evaluateQuantity, type Quantity } from "../expr/evaluate";
-import { gridSize, snapToGrid, type UnitSystem } from "../length";
+import { gridSize, LengthRangeError, snapToGrid, type UnitSystem } from "../length";
 import type { Diagnostic, RemovalPrimitive } from "../outputs";
 import { div, floor, type Rational, rational, toSafeInteger } from "../rational";
 import type { Frame } from "../solve/assembly";
@@ -74,6 +74,8 @@ export interface DeriveContext {
   warn(rule: string, message: string, extra?: Partial<Diagnostic>): void;
   /** Adds one "and N more" entry for each rule that hit the per-joint limit. Call once, at the end. */
   flush(): void;
+  /** How many problems have been raised so far, counting those too many to show. */
+  reported(): number;
   /** Rounds down to the grid. Defaults use this ("snapped down"). */
   floorToGrid(value: Rational): Len;
 }
@@ -95,7 +97,9 @@ export function makeContext(
   // a count, after showing the first few.
   const SHOWN = 5;
   const seen = new Map<string, { shown: number; hidden: number; sample: Diagnostic }>();
+  let raised = 0;
   const report = (d: Diagnostic): void => {
+    raised += 1;
     const key = `${d.severity}|${d.rule}|${d.joint ?? ""}`;
     const entry = seen.get(key);
     if (!entry) {
@@ -147,7 +151,19 @@ export function makeContext(
         });
         return undefined;
       }
-      return snapToGrid(q.value, units);
+      try {
+        return snapToGrid(q.value, units);
+      } catch (error) {
+        if (!(error instanceof LengthRangeError)) throw error;
+        report({
+          severity: "error",
+          rule: "out-of-range",
+          message: `${joint.type} ${key} is too large: the limit is 100,000 inches.`,
+          joint: joint.id,
+          field: `joint ${key}`,
+        });
+        return undefined;
+      }
     },
     error: (rule, message, extra = {}) => report({ severity: "error", rule, message, ...extra }),
     warn: (rule, message, extra = {}) => report({ severity: "warning", rule, message, ...extra }),
@@ -157,10 +173,11 @@ export function makeContext(
         sink.push({
           ...sample,
           message: `${sample.message} (and ${hidden} more like it)`,
-          count: hidden + 1,
+          count: hidden,
         });
       }
     },
+    reported: () => raised,
     floorToGrid: (value) => floorOnGrid(value, units),
   };
 }

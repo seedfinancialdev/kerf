@@ -226,7 +226,7 @@ describe("invalid input is a MeshError that names the problem", () => {
   const bad: Array<[string, RemovalPrimitive, RegExp]> = [
     ["a box with min above max", box([100, 0, 0], [50, 384, 16]), /Removal 1 .*no volume/],
     ["a flat box", box([0, 0, 0], [0, 384, 16]), /no volume/],
-    ["a box with NaN", { kind: "box", min: [Number.NaN, 0, 0], max: [1, 1, 1] }, /no volume/],
+    ["a box with NaN", { kind: "box", min: [Number.NaN, 0, 0], max: [1, 1, 1] }, /whole numbers/],
     [
       "a prism with two points",
       {
@@ -289,5 +289,121 @@ describe("invalid input is a MeshError that names the problem", () => {
     const cuts = Array.from({ length: 50 }, (_, i) => box([i * 8, 0, 0], [i * 8 + 4, 384, 16]));
     for (let i = 0; i < 200; i += 1) buildDisplayMesh(blank, cuts);
     expect(isManifold(buildDisplayMesh(blank, cuts))).toBe(true);
+  });
+});
+
+describe("exact boundaries (second M2 review)", () => {
+  it("[G9] an end1 roundover sits at the far end of the board", () => {
+    const mesh = buildDisplayMesh(blank, [
+      { kind: "quarterRoundSweep", edge: "end1/face0", radius: q(8) },
+    ]);
+    const pts: Array<[number, number, number]> = [];
+    for (let i = 0; i < mesh.positions.length; i += 3)
+      pts.push([
+        mesh.positions[i] as number,
+        mesh.positions[i + 1] as number,
+        mesh.positions[i + 2] as number,
+      ]);
+    expect(pts.some(([x, , z]) => Math.abs(x - 12) < 1e-4 && Math.abs(z - 0.125) < 1e-4)).toBe(
+      true,
+    );
+    expect(pts.some(([x, , z]) => Math.abs(x - 11.875) < 1e-4 && Math.abs(z) < 1e-4)).toBe(true);
+  });
+  it("[G11] a radius equal to the thickness is allowed", () => {
+    expect(() =>
+      buildDisplayMesh(blank, [{ kind: "quarterRoundSweep", edge: "edge1/face1", radius: q(48) }]),
+    ).not.toThrow();
+  });
+  it("[G12] a radius equal to the width is allowed; [G13] one beyond a 1/2in strip is not", () => {
+    const strip = { length: q(768), width: q(32), thickness: q(48) };
+    expect(() =>
+      buildDisplayMesh(strip, [{ kind: "quarterRoundSweep", edge: "edge0/face1", radius: q(32) }]),
+    ).not.toThrow();
+    expect(() =>
+      buildDisplayMesh(strip, [{ kind: "quarterRoundSweep", edge: "edge0/face1", radius: q(40) }]),
+    ).toThrow(MeshError);
+  });
+  it("[G19] exactly MAX_REMOVALS cuts are drawn", () => {
+    const cuts = Array.from({ length: MAX_REMOVALS }, (_, i) => ({
+      kind: "box" as const,
+      min: [(i % 100) * 6, Math.floor(i / 100) * 6, 0] as [number, number, number],
+      max: [(i % 100) * 6 + 3, Math.floor(i / 100) * 6 + 3, 16] as [number, number, number],
+    }));
+    expect(() => buildDisplayMesh(blank, cuts)).not.toThrow(/at most/);
+  });
+  it("[G27] a box with an infinite corner is a MeshError", () => {
+    expect(() =>
+      buildDisplayMesh(blank, [
+        { kind: "box", min: [Number.NEGATIVE_INFINITY, 0, 0], max: [0, 1, 1] },
+      ]),
+    ).toThrow(/whole numbers/);
+  });
+  it("[G28] a prism with a NaN point is a MeshError", () => {
+    expect(() =>
+      buildDisplayMesh(blank, [
+        {
+          kind: "trapezoidPrism",
+          plane: "xy",
+          points: [
+            [Number.NaN, 0],
+            [100, 0],
+            [0, 100],
+          ],
+          range: [0, 10],
+        },
+      ]),
+    ).toThrow(/whole numbers/);
+  });
+  it("[G30] a blank with a NaN length is a MeshError", () => {
+    expect(() => buildDisplayMesh({ ...blank, length: Number.NaN }, [])).toThrow(
+      /zero or negative/,
+    );
+  });
+});
+
+describe("isManifold on hand-made meshes", () => {
+  // A tetrahedron on (0,0,0), (1,0,0), (0,1,0), (0,0,1), triangles counter-clockwise from outside.
+  const positions = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
+  const faces = [0, 2, 1, 0, 1, 3, 1, 2, 3, 0, 3, 2];
+  const mesh = (indices: number[]): DisplayMesh => ({
+    positions,
+    indices: new Uint32Array(indices),
+  });
+
+  it("accepts a closed tetrahedron", () => {
+    expect(isManifold(mesh(faces))).toBe(true);
+  });
+
+  it("rejects an index list that is not whole triangles", () => {
+    expect(isManifold(mesh([...faces, 0]))).toBe(false);
+  });
+
+  it("rejects an index beyond the vertices", () => {
+    expect(isManifold(mesh([0, 2, 1, 0, 1, 3, 1, 2, 3, 0, 3, 9]))).toBe(false);
+  });
+
+  it("rejects a repeated triangle (an edge used twice in the same direction)", () => {
+    expect(isManifold(mesh([...faces, 0, 2, 1]))).toBe(false);
+  });
+
+  it("rejects a mesh with a hole, and a triangle with a repeated vertex", () => {
+    expect(isManifold(mesh(faces.slice(0, 9)))).toBe(false);
+    expect(isManifold(mesh([0, 0, 1]))).toBe(false);
+  });
+});
+
+describe("a prism must enclose an area", () => {
+  it("refuses points on one line", () => {
+    const flat: RemovalPrimitive = {
+      kind: "trapezoidPrism",
+      plane: "xy",
+      points: [
+        [0, 0],
+        [100, 0],
+        [200, 0],
+      ],
+      range: [0, 10],
+    };
+    expect(() => buildDisplayMesh(blank, [flat])).toThrow(/no area/);
   });
 });

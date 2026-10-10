@@ -268,17 +268,11 @@ function nestSolidStock(
   }
 
   const layouts: BoardLayout[] = [];
-  for (const board of packed.boards) {
-    const set = board.seed === undefined ? undefined : setLayouts.get(board.seed);
-    if (set) {
-      layouts.push({
-        ...set,
-        boardLength: board.length,
-        ...(board.items.length > 0
-          ? { alsoOnBoard: board.items.map((i) => ({ name: i.name, instance: i.instance })) }
-          : {}),
-      });
-    } else {
+  for (const [index, board] of packed.boards.entries()) {
+    const sets = board.seeds
+      .map((id) => setLayouts.get(id))
+      .filter((l): l is BoardLayout => l !== undefined);
+    if (sets.length === 0) {
       layouts.push({
         stock: stock.id,
         boardLength: board.length,
@@ -287,6 +281,19 @@ function nestSolidStock(
           of: board.items.length,
           name: it.name,
         })),
+      });
+      continue;
+    }
+    // One layout per match set; when several share a board each says which board it is, and the
+    // other parts that are cut from the board are listed with the first.
+    for (const [n, set] of sets.entries()) {
+      layouts.push({
+        ...set,
+        boardLength: board.length,
+        ...(sets.length > 1 ? { boardIndex: index } : {}),
+        ...(n === 0 && board.items.length > 0
+          ? { alsoOnBoard: board.items.map((i) => ({ name: i.name, instance: i.instance })) }
+          : {}),
       });
     }
   }

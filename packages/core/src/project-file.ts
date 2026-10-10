@@ -9,6 +9,7 @@
 // - Canonical form: keys sorted by code point, 2-space indent, trailing newline.
 // - Older schema versions migrate forward on load; the app never writes an older version.
 
+import { MAX_LENGTH } from "./length";
 import { isOrientationIndex } from "./solve/orientation";
 import type {
   EdgeRef,
@@ -187,15 +188,15 @@ function readStock(value: unknown, path: string): Stock {
     id: r.id("id"),
     name: r.string("name"),
     kind: r.oneOf("kind", ["sheet", "solid", "dimensional"] as const),
-    thickness: r.integer("thickness", 1),
+    thickness: r.integer("thickness", 1, MAX_LENGTH),
     allowance: { length: 0, width: 0 },
   };
 
   const sheet = r.optionalObject("sheet");
   if (sheet) {
     stock.sheet = {
-      length: sheet.integer("length", 1),
-      width: sheet.integer("width", 1),
+      length: sheet.integer("length", 1, MAX_LENGTH),
+      width: sheet.integer("width", 1, MAX_LENGTH),
       grain: sheet.oneOf("grain", ["along-length", "none"] as const),
     };
     sheet.done();
@@ -205,20 +206,25 @@ function readStock(value: unknown, path: string): Stock {
   if (solid) {
     stock.solid = {
       standardLengths: solid.array("standardLengths", (item, p) => {
-        if (typeof item !== "number" || !Number.isSafeInteger(item) || item < 1) {
+        if (
+          typeof item !== "number" ||
+          !Number.isSafeInteger(item) ||
+          item < 1 ||
+          item > MAX_LENGTH
+        ) {
           throw new ProjectFormatError(p, "expected a whole number of units");
         }
         return item;
       }),
-      maxWidth: solid.integer("maxWidth", 1),
+      maxWidth: solid.integer("maxWidth", 1, MAX_LENGTH),
     };
     solid.done();
   }
 
   const allowance = r.object("allowance");
   stock.allowance = {
-    length: allowance.integer("length", 0),
-    width: allowance.integer("width", 0),
+    length: allowance.integer("length", 0, MAX_LENGTH),
+    width: allowance.integer("width", 0, MAX_LENGTH),
   };
   allowance.done();
 

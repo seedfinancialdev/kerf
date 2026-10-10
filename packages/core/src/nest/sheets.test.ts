@@ -88,11 +88,35 @@ describe("nestSheets: layouts", () => {
     expect(fits.sheets[0]?.placements[0]).toMatchObject({ x: INCH, y: INCH });
   });
 
-  it("is deterministic and independent of how ties were typed", () => {
+  it("keeps the offcut across the sheet when the sheet is exactly the minimum offcut long", () => {
+    // 6" x 24" sheet, one 6" x 10" part: after the 10" rip and a 1/8" kerf, 13-7/8" is left across
+    // and the sheet is 6" long, which is not less than the 6" minimum.
+    const small: SheetSpec = { stock: "ply", length: 6 * INCH, width: 24 * INCH };
+    const { sheets } = nestSheets([item("a", 6, 10)], small, options);
+    expect(sheets[0]?.offcuts).toEqual([
+      { x: 0, y: 10 * INCH + kerf, length: 6 * INCH, width: 24 * INCH - 10 * INCH - kerf },
+    ]);
+  });
+
+  it("gives the same layout every time for the same input", () => {
     const parts = [item("a", 30, 10), item("b", 30, 10), item("c", 20, 15), item("d", 20, 15)];
     const first = nestSheets(parts, sheet96x48, options);
     const second = nestSheets(parts, sheet96x48, options);
     expect(second).toEqual(first);
+  });
+});
+
+describe("nestSheets: same-board groups", () => {
+  const tall: SheetSpec = { stock: "ply", length: 48 * INCH, width: 96 * INCH };
+
+  it("turns an unlocked member that fits only the other way, and refuses a locked one", () => {
+    const turned = nestSheets([], tall, options, [[item("p", 90, 40, false)]]);
+    expect(turned.groupsTooLarge).toEqual([]);
+    expect(turned.sheets[0]?.placements[0]).toMatchObject({ rotated: true, length: 40 * INCH });
+
+    const locked = nestSheets([], tall, options, [[item("p", 90, 40, true)]]);
+    expect(locked.groupsTooLarge).toHaveLength(1);
+    expect(locked.sheets).toEqual([]);
   });
 });
 

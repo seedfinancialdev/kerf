@@ -151,6 +151,8 @@ export interface BoardLayout {
   minBoardLength?: Len;
   /** The standard length of the board the parts are cut from. */
   boardLength?: Len;
+  /** Set only when several match sets are cut from one board: layouts with the same index share it. */
+  boardIndex?: number;
   /** Other parts cut from the same board, after the match set. */
   alsoOnBoard?: Array<{ name: string; instance: Id }>;
   sequence: Array<{ sequence: number; of: number; name: string }>;

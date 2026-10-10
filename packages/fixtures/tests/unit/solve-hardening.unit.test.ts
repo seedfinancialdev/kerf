@@ -584,7 +584,7 @@ describe("second review: fixed-step patterns, default thickness, limits", () => 
   milestone("M1", "a stock thickness beyond the length limit is an error, not a giant part", () => {
     const p = panelProject({ units: "imperial" });
     const huge: Project = { ...p, stock: p.stock.map((s) => ({ ...s, thickness: 2 ** 52 })) };
-    expect(rules(huge)).toContain("out-of-range");
+    expect(rules(huge)).toContain("invalid-project"); // the file reader bounds it like any length
   });
 
   milestone(
