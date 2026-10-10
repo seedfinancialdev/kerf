@@ -7,8 +7,9 @@
 // then the rest of the parts pack around it.
 
 import { formatLength, MAX_LENGTH } from "../length";
-import type { BoardLayout, Diagnostic, NestingResult, SheetLayout } from "../outputs";
+import type { BoardLayout, Diagnostic, NestingResult, SheetLayout, StockTotals } from "../outputs";
 import type { CutPart } from "../outputs/cutlist";
+import { rational } from "../rational";
 import type { Id, Len, MatchSet, Project, ShopProfile, Stock } from "../types";
 import { INCH } from "../units";
 import { type BoardItem, type BoardSeed, packBoards } from "./boards";
@@ -39,6 +40,14 @@ function setsOn(project: Project, stock: Stock, byInstance: Map<Id, CutPart>): S
   return out;
 }
 
+/** The shop's saw and trim settings, with the spec's defaults filled in. */
+interface NestSettings {
+  kerf: Len;
+  sheetTrim: Len;
+  solidTrim: Len;
+  minOffcut: Len;
+}
+
 export function nestProject(
   project: Project,
   parts: CutPart[],
@@ -48,18 +57,37 @@ export function nestProject(
   const sheets: SheetLayout[] = [];
   const boards: BoardLayout[] = [];
   const sheetCountByStock: Record<Id, number> = {};
-  const kerf = shop.kerf;
+  const settings: NestSettings = {
+    kerf: shop.kerf,
+    sheetTrim: shop.sheetTrim ?? SHEET_TRIM,
+    solidTrim: shop.solidTrim ?? SOLID_END_TRIM,
+    minOffcut: shop.minOffcut ?? DEFAULT_MIN_OFFCUT,
+  };
+  const totals: StockTotals[] = [];
+  for (const set of project.matchSets) {
+    if (set.members.length === 0) {
+      diagnostics.push({
+        severity: "warning",
+        rule: "match-set-empty",
+        message: `${set.name} has no parts, so it does nothing.`,
+        field: set.name,
+      });
+    }
+  }
   const byInstance = new Map(parts.map((p) => [p.instance.id, p]));
 
   for (const stock of project.stock) {
     const mine = parts.filter((p) => p.part.stock === stock.id);
     if (mine.length === 0) continue;
     if (stock.kind === "sheet" && stock.sheet) {
-      const layouts = nestSheetStock(project, stock, mine, kerf, byInstance, diagnostics);
+      const layouts = nestSheetStock(project, stock, mine, settings, byInstance, diagnostics);
       sheets.push(...layouts);
       sheetCountByStock[stock.id] = layouts.length;
+      totals.push({ stock: stock.id, sheets: layouts.length });
     } else if (stock.solid) {
-      boards.push(...nestSolidStock(project, stock, mine, kerf, byInstance, diagnostics));
+      const nested = nestSolidStock(project, stock, mine, settings, byInstance, diagnostics);
+      boards.push(...nested.layouts);
+      totals.push({ stock: stock.id, ...nested.totals });
     } else {
       diagnostics.push({
         severity: "warning",
@@ -69,7 +97,7 @@ export function nestProject(
       });
     }
   }
-  return { result: { sheets, boards, sheetCountByStock }, diagnostics };
+  return { result: { sheets, boards, sheetCountByStock, totals }, diagnostics };
 }
 
 function mixedStock(set: MatchSet, members: CutPart[], stock: Stock): boolean {
@@ -80,14 +108,15 @@ function nestSheetStock(
   project: Project,
   stock: Stock,
   mine: CutPart[],
-  kerf: Len,
+  settings: NestSettings,
   byInstance: Map<Id, CutPart>,
   diagnostics: Diagnostic[],
 ): SheetLayout[] {
+  const { kerf } = settings;
   const sheet = stock.sheet;
   if (!sheet) return [];
   const spec = { stock: stock.id, length: sheet.length, width: sheet.width };
-  const options = { kerf, trim: SHEET_TRIM, minOffcut: DEFAULT_MIN_OFFCUT };
+  const options = { kerf, trim: settings.sheetTrim, minOffcut: settings.minOffcut };
   const lockedFor = (p: CutPart): boolean => p.part.grainLocked && sheet.grain !== "none";
   const asItem = (p: CutPart): SheetItem => ({
     instance: p.instance.id,
@@ -178,12 +207,14 @@ function nestSolidStock(
   project: Project,
   stock: Stock,
   mine: CutPart[],
-  kerf: Len,
+  settings: NestSettings,
   byInstance: Map<Id, CutPart>,
   diagnostics: Diagnostic[],
-): BoardLayout[] {
+): { layouts: BoardLayout[]; totals: Omit<StockTotals, "stock"> } {
+  const { kerf, solidTrim } = settings;
+  const none = { layouts: [], totals: {} };
   const solid = stock.solid;
-  if (!solid) return [];
+  if (!solid) return none;
   const fmt = (n: Len): string => formatLength(n, project.units);
   const grouped = new Set<Id>();
   const seeds: BoardSeed[] = [];
@@ -241,7 +272,7 @@ function nestSolidStock(
         field: set.name,
       });
     }
-    const composite = length + 2 * SOLID_END_TRIM;
+    const composite = length + 2 * solidTrim;
     const minimum = Math.ceil(composite / INCH) * INCH;
 
     if (width + stock.allowance.width > solid.maxWidth) {
@@ -293,7 +324,7 @@ function nestSolidStock(
     });
   }
 
-  const packed = packBoards(items, solid.standardLengths, kerf, SOLID_END_TRIM, seeds);
+  const packed = packBoards(items, solid.standardLengths, kerf, solidTrim, seeds);
   for (const seed of packed.unplaced) {
     // The checks above make this unreachable; if they ever diverge it must not go quiet.
     diagnostics.push({
@@ -341,5 +372,31 @@ function nestSolidStock(
       });
     }
   }
-  return layouts;
+  return { layouts, totals: solidTotals(stock, mine, packed.boards) };
+}
+
+/**
+ * Board feet of the rough parts and linear feet of boards bought. The nominal thickness is the
+ * stock's thickness rounded up to a quarter inch (ADR 013).
+ */
+function solidTotals(
+  stock: Stock,
+  parts: CutPart[],
+  bought: Array<{ length: Len }>,
+): Omit<StockTotals, "stock"> {
+  const quarter = INCH / 4;
+  const nominal = Math.ceil(stock.thickness / quarter) * quarter;
+  let volume = 0n; // cubic units of rough parts at nominal thickness
+  for (const p of parts) {
+    const rough =
+      BigInt(p.length + stock.allowance.length) * BigInt(p.width + stock.allowance.width);
+    volume += rough * BigInt(nominal);
+  }
+  const cubicInch = BigInt(INCH) ** 3n;
+  const length = bought.reduce((sum, b) => sum + BigInt(b.length), 0n);
+  return {
+    boards: bought.length,
+    boardFeet: rational(volume, cubicInch * 144n),
+    linearFeet: rational(length, BigInt(INCH) * 12n),
+  };
 }

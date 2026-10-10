@@ -133,6 +133,9 @@ interface Opening {
 
 interface ShopProfile {                 // per user, not per project; projects reference it
   kerf: Len;
+  sheetTrim?: Len;                      // edge trim on sheet goods; default 0
+  solidTrim?: Len;                      // trim at each end of rough solid stock; default 1/2"
+  minOffcut?: Len;                      // smallest offcut worth keeping; default 6"
   tools: Array<
     | { type: "dadoStack"; maxWidth: Len }
     | { type: "router"; straightBits: Len[]; roundoverBits: Len[] }

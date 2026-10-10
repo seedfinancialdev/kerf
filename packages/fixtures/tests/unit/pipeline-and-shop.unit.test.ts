@@ -296,6 +296,7 @@ describe("solving does not mutate its input", () => {
           sheets: [],
           boards: [],
           sheetCountByStock: {},
+          totals: [],
         });
         expect(machiningSetups(bookcase, value as ShopProfile)).toEqual([]);
       },
