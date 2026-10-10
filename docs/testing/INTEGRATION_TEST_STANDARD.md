@@ -145,7 +145,7 @@ fails the run. Put them in an ordinary test.
 
 ## 9. Independent review
 
-Before a milestone is declared done, run an independent review that has not seen your reasoning:
+**Every milestone, without exception** (maintainer ruling), run an independent review before it is declared done. The reviewers must not have seen your reasoning:
 
 | Reviewer | Question |
 | --- | --- |

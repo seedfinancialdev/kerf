@@ -15,5 +15,10 @@
 - Order for every feature: spec → failing test/fixture → implementation → property test.
 - A PR is done when its milestone's acceptance tests pass in CI.
 
+## Testing
+- Read `docs/testing/UNIT_TEST_STANDARD.md` and `docs/testing/INTEGRATION_TEST_STANDARD.md` before writing a test.
+- Expected values come from the spec or a hand calculation, never from running the code. Show the test failing first.
+- Every milestone ends with the audit and an independent review before it is declared done.
+
 ## Commands
 - pnpm test | pnpm test:golden | pnpm test:prop | pnpm e2e | pnpm bench
