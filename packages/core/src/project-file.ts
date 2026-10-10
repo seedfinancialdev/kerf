@@ -481,14 +481,26 @@ function checkIntegrity(project: Project): void {
       throw new ProjectFormatError(`$.joints[${i}].guest`, "cannot be the same part as the host");
     }
   }
+  const repeated = new Set(project.patterns.map((p) => p.source));
+  const setOf = new Map<Id, string>();
   for (const [i, set] of project.matchSets.entries()) {
     const members = new Set<Id>();
     for (const [j, member] of set.members.entries()) {
-      need(instances.has(member), `$.matchSets[${i}].members[${j}]`, "an instance");
-      if (members.has(member)) {
-        throw new ProjectFormatError(`$.matchSets[${i}].members[${j}]`, "is listed twice");
+      const path = `$.matchSets[${i}].members[${j}]`;
+      need(instances.has(member), path, "an instance");
+      if (members.has(member)) throw new ProjectFormatError(path, "is listed twice");
+      if (repeated.has(member)) {
+        throw new ProjectFormatError(
+          path,
+          "is repeated by a pattern, so its copies cannot be listed",
+        );
+      }
+      const other = setOf.get(member);
+      if (other !== undefined) {
+        throw new ProjectFormatError(path, `is already in the match set "${other}"`);
       }
       members.add(member);
+      setOf.set(member, set.name);
     }
   }
 }

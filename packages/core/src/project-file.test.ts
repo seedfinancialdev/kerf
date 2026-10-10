@@ -51,6 +51,14 @@ const project: Project = {
       orientation: 7,
       mirrored: true,
     },
+    {
+      id: id(12),
+      def: id(3),
+      name: "Panel copy",
+      position: { x: "0mm", y: "400mm", z: "0mm" },
+      orientation: 0,
+      mirrored: false,
+    },
   ],
   patterns: [
     {
@@ -63,7 +71,7 @@ const project: Project = {
   ],
   joints: [{ id: id(7), type: "dado", host: id(5), guest: id(6), params: { depth: "6mm" } }],
   matchSets: [
-    { id: id(8), name: "Wrap", type: "continuousGrain", members: [id(5)], axis: "length" },
+    { id: id(8), name: "Wrap", type: "continuousGrain", members: [id(12)], axis: "length" },
   ],
   structures: [
     {

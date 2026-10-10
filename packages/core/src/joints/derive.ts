@@ -7,7 +7,7 @@
 // length. Pure and deterministic: the same project always gives byte-identical results.
 
 import type { Diagnostic, RemovalPrimitive } from "../outputs";
-import type { Frame } from "../solve/assembly";
+import { type Box, boxOf, type Frame } from "../solve/assembly";
 import type { SolvedModel } from "../solve/model";
 import type { EdgeRef, Id, Joint, Len, Project } from "../types";
 import { deriveDado } from "./dado";
@@ -15,6 +15,7 @@ import { deriveDovetail } from "./dovetail";
 import { deriveRabbet } from "./rabbet";
 import { deriveRoundovers, type RoundedEdge } from "./roundover";
 import { seatOf } from "./seat";
+import { touchingPairs } from "./spatial";
 import { type CutAdd, type MachinedCut, makeContext, NO_ADD, type PairCut } from "./types";
 
 export interface InstanceCuts {
@@ -27,6 +28,8 @@ export interface InstanceCuts {
 
 export interface Derived {
   pairs: PairCut[];
+  /** Host/guest pairs a joint tried to join, whether or not the derivation succeeded. */
+  attempted: Array<[Id, Id]>;
   instances: Map<Id, InstanceCuts>;
   /** The definition each instance belongs to; differs from its def when cuts forced a split. */
   definitionOf: Map<Id, Id>;
@@ -47,11 +50,23 @@ function sorted(list: RemovalPrimitive[]): RemovalPrimitive[] {
   });
 }
 
-function overlapInside(a: RemovalPrimitive, b: RemovalPrimitive): boolean {
+function boxesOverlap(a: RemovalPrimitive, b: RemovalPrimitive): boolean {
   if (a.kind !== "box" || b.kind !== "box") return false;
   return [0, 1, 2].every(
     (k) => Math.max(a.min[k] ?? 0, b.min[k] ?? 0) < Math.min(a.max[k] ?? 0, b.max[k] ?? 0),
   );
+}
+
+export function emptyDerived(): Derived {
+  return {
+    pairs: [],
+    attempted: [],
+    instances: new Map(),
+    definitionOf: new Map(),
+    machined: [],
+    roundedEdges: [],
+    diagnostics: [],
+  };
 }
 
 export function deriveJoints(project: Project, model: SolvedModel): Derived {
@@ -70,45 +85,64 @@ export function deriveJoints(project: Project, model: SolvedModel): Derived {
     }
   }
   const patternOfSource = new Map(project.patterns.map((p) => [p.source, p.id]));
-  const membersOf = (id: Id): Id[] => {
-    if (frames.has(id) && !patternOfSource.has(id)) return [id];
-    return membersOfPattern.get(patternOfSource.get(id) ?? id) ?? [];
+  const membersOf = (id: Id): Frame[] => {
+    const ids =
+      frames.has(id) && !patternOfSource.has(id)
+        ? [id]
+        : (membersOfPattern.get(patternOfSource.get(id) ?? id) ?? []);
+    return ids.map((i) => frames.get(i)).filter((f): f is Frame => f !== undefined);
   };
   const isPattern = (id: Id): boolean => patternOfSource.has(id) || membersOfPattern.has(id);
 
   const ctx = makeContext(model, project.units, frames, diagnostics);
   const pairs: PairCut[] = [];
+  const attempted: Array<[Id, Id]> = [];
 
   for (const joint of project.joints) {
     const hosts = membersOf(joint.host);
     const guests = membersOf(joint.guest);
     if (hosts.length === 0 || guests.length === 0) continue; // an upstream part failed; reported there
 
-    const touched = new Set<Id>();
-    const hostIsPattern = isPattern(joint.host);
-    for (const hostId of hosts) {
-      for (const guestId of guests) {
-        if (hostId === guestId) continue;
-        const host = frames.get(hostId);
-        const guest = frames.get(guestId);
-        if (!host || !guest) continue;
-        const pair = derivePair(ctx, joint, host, guest, hostIsPattern);
-        if (pair) {
-          pairs.push(pair);
-          touched.add(guestId);
-        }
+    // Only parts whose boxes touch can be joined; finding them must not cost hosts x guests.
+    const candidates = touchingPairs(
+      hosts.map((h): Box => boxOf(h.instance)),
+      guests.map((g): Box => boxOf(g.instance)),
+    );
+    const quiet = isPattern(joint.host) || isPattern(joint.guest);
+    const joinedGuest = new Set<number>();
+    const reportedGuest = new Set<number>();
+
+    for (const [hi, gi] of candidates) {
+      const host = hosts[hi] as Frame;
+      const guest = guests[gi] as Frame;
+      if (host.instance.id === guest.instance.id) continue;
+      attempted.push([host.instance.id, guest.instance.id]);
+      const before = diagnostics.length;
+      const pair = derivePair(ctx, joint, host, guest, quiet);
+      if (pair) {
+        pairs.push(pair);
+        joinedGuest.add(gi);
+      } else if (diagnostics.length > before) {
+        reportedGuest.add(gi);
       }
     }
-    if (!hostIsPattern) continue; // errors were reported pair by pair
-    for (const guestId of guests) {
-      if (!touched.has(guestId)) {
-        diagnostics.push({
-          severity: "error",
-          rule: "joint-no-contact",
-          message: `${frames.get(guestId)?.instance.name ?? "A part"} does not touch any of the parts it should be joined to.`,
-          joint: joint.id,
-        });
-      }
+
+    // A guest nothing joined, and nothing explained, does not touch what it should.
+    const lost = guests.filter((_, gi) => !joinedGuest.has(gi) && !reportedGuest.has(gi));
+    if (lost.length > 0) {
+      const first = lost[0] as Frame;
+      diagnostics.push({
+        severity: "error",
+        rule: "joint-no-contact",
+        message:
+          lost.length === 1
+            ? `${first.instance.name} does not touch ${hosts.length === 1 ? (hosts[0] as Frame).instance.name : "any of the parts it should be joined to"}, so there is nothing to join.`
+            : `${lost.length} parts (starting with ${first.instance.name}) do not touch any of the parts they should be joined to.`,
+        joint: joint.id,
+        part: first.part.id,
+        field: `${first.instance.name} ${joint.type}`,
+        ...(lost.length > 1 ? { count: lost.length } : {}),
+      });
     }
   }
 
@@ -122,6 +156,7 @@ export function deriveJoints(project: Project, model: SolvedModel): Derived {
     }
     return found;
   };
+  const byHost = new Map<Id, PairCut[]>();
   for (const pair of pairs) {
     const host = entry(pair.host);
     host.cuts.push(...pair.hostCuts);
@@ -135,27 +170,40 @@ export function deriveJoints(project: Project, model: SolvedModel): Derived {
       length: guest.add.length + pair.guestAdd.length,
       width: guest.add.width + pair.guestAdd.width,
     };
+    if (pair.kind === "dado") {
+      const list = byHost.get(pair.host) ?? [];
+      list.push(pair);
+      byHost.set(pair.host, list);
+    }
   }
 
-  // Overlapping channels on one host are an error (Operation specs, "Dado / groove").
-  for (const [id, cuts] of instances) {
-    const dados = pairs.filter((p) => p.host === id && p.kind === "dado");
-    for (let i = 0; i < dados.length; i += 1) {
-      for (let j = i + 1; j < dados.length; j += 1) {
-        const a = dados[i]?.hostCuts[0];
-        const b = dados[j]?.hostCuts[0];
-        if (a && b && overlapInside(a, b)) {
-          diagnostics.push({
-            severity: "error",
-            rule: "dado-overlap",
-            message: `Two dados on ${frames.get(id)?.instance.name ?? "a part"} overlap.`,
-            part: frames.get(id)?.part.id,
-          });
-        }
-      }
+  // Overlapping channels on one host are an error (Operation specs, "Dado / groove"). Sorted by
+  // where each starts, so only neighbours are compared.
+  for (const [id, dados] of byHost) {
+    const boxes = dados
+      .map((d) => d.hostCuts[0])
+      .filter((c): c is Extract<RemovalPrimitive, { kind: "box" }> => c?.kind === "box")
+      .sort((a, b) => a.min[0] - b.min[0] || a.min[1] - b.min[1]);
+    let overlaps = 0;
+    let active: Array<Extract<RemovalPrimitive, { kind: "box" }>> = [];
+    for (const b of boxes) {
+      active = active.filter((a) => a.max[0] > b.min[0]);
+      for (const a of active) if (boxesOverlap(a, b)) overlaps += 1;
+      active.push(b);
     }
-    cuts.cuts = sorted(cuts.cuts);
+    if (overlaps > 0) {
+      const frame = frames.get(id);
+      diagnostics.push({
+        severity: "error",
+        rule: "dado-overlap",
+        message: `${overlaps === 1 ? "Two dados" : `${overlaps} pairs of dados`} on ${frame?.instance.name ?? "a part"} overlap.`,
+        part: frame?.part.id,
+        field: `${frame?.instance.name ?? "part"} dado`,
+        ...(overlaps > 1 ? { count: overlaps } : {}),
+      });
+    }
   }
+  for (const cuts of instances.values()) cuts.cuts = sorted(cuts.cuts);
 
   // Roundovers are stored on the part, so every instance of it gets them.
   const roundedEdges: Derived["roundedEdges"] = [];
@@ -203,12 +251,14 @@ export function deriveJoints(project: Project, model: SolvedModel): Derived {
         rule: "definition-split",
         message: `The copies of ${name} get different cuts, so they are tracked as separate parts.`,
         part: defId,
+        field: name,
       });
     }
   }
 
+  ctx.flush();
   const machined = pairs.flatMap((p) => p.machined);
-  return { pairs, instances, definitionOf, machined, roundedEdges, diagnostics };
+  return { pairs, attempted, instances, definitionOf, machined, roundedEdges, diagnostics };
 }
 
 function derivePair(
@@ -218,7 +268,7 @@ function derivePair(
   guest: Frame,
   quiet: boolean,
 ): PairCut | undefined {
-  if (joint.type === "throughDovetail") return deriveDovetail(ctx, joint, host, guest);
+  if (joint.type === "throughDovetail") return deriveDovetail(ctx, joint, host, guest, quiet);
   const seat = seatOf(ctx, joint.id, host, guest, quiet);
   if (!seat) return undefined;
   return joint.type === "dado" ? deriveDado(ctx, joint, seat) : deriveRabbet(ctx, joint, seat);

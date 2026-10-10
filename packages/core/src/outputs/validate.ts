@@ -7,12 +7,16 @@
 //   - overlaps between parts that are not joined (ADR 013, decision D5: an error),
 //   - a rounded edge that a joint fully hides (a warning),
 //   - the box's groove that must land inside a half-pin (a warning).
+// Overlap reporting is bounded: the first few are named, the rest are counted.
 
 import type { Derived } from "../joints/derive";
 import type { Diagnostic } from "../outputs";
 import { boxOf, contactOf, type Frame, toParent } from "../solve/assembly";
 import type { SolvedModel } from "../solve/model";
 import type { Id } from "../types";
+
+/** How many overlapping pairs are named before the rest are only counted. */
+const OVERLAPS_SHOWN = 10;
 
 function pairKey(a: Id, b: Id): string {
   return a < b ? `${a}|${b}` : `${b}|${a}`;
@@ -26,13 +30,18 @@ export function validateAssembly(model: SolvedModel, derived: Derived): Diagnost
     const part = partById.get(instance.def);
     if (part) frames.set(instance.id, { instance, part });
   }
-  const joined = new Set(derived.pairs.map((p) => pairKey(p.host, p.guest)));
+  // Parts a joint tried to join may overlap where the joint says so, even if it failed.
+  const joined = new Set([
+    ...derived.pairs.map((p) => pairKey(p.host, p.guest)),
+    ...derived.attempted.map(([a, b]) => pairKey(a, b)),
+  ]);
   const list = [...frames.values()];
 
   // Overlaps: sweep along X so a project with thousands of parts stays fast.
   const byX = list
     .map((f) => ({ f, box: boxOf(f.instance) }))
     .sort((a, b) => a.box.min[0] - b.box.min[0]);
+  let overlapping = 0;
   for (let i = 0; i < byX.length; i += 1) {
     const a = byX[i];
     if (!a) continue;
@@ -40,15 +49,26 @@ export function validateAssembly(model: SolvedModel, derived: Derived): Diagnost
       const b = byX[j];
       if (!b || b.box.min[0] >= a.box.max[0]) break;
       const c = contactOf(a.box, b.box);
-      if (c.kind === "overlap" && !joined.has(pairKey(a.f.instance.id, b.f.instance.id))) {
+      if (c.kind !== "overlap" || joined.has(pairKey(a.f.instance.id, b.f.instance.id))) continue;
+      overlapping += 1;
+      if (overlapping <= OVERLAPS_SHOWN) {
         out.push({
           severity: "error",
           rule: "overlap",
           message: `This part can't be built: ${a.f.instance.name} and ${b.f.instance.name} occupy the same space and are not joined.`,
           part: a.f.part.id,
+          field: a.f.instance.name,
         });
       }
     }
+  }
+  if (overlapping > OVERLAPS_SHOWN) {
+    out.push({
+      severity: "error",
+      rule: "overlap",
+      message: `${overlapping} pairs of parts occupy the same space and are not joined (the first ${OVERLAPS_SHOWN} are listed).`,
+      count: overlapping,
+    });
   }
 
   // Rounded edges hidden by a joint: the edge lies wholly inside a patch where a joined part sits.
@@ -99,6 +119,7 @@ export function validateAssembly(model: SolvedModel, derived: Derived): Diagnost
         rule: "roundover-hidden",
         message: `The roundover on the ${edge.replace("/", " ")} edge of ${frame.instance.name} is hidden by a joint.`,
         part: frame.part.id,
+        field: `${frame.instance.name} roundover`,
       });
     }
   }
@@ -134,12 +155,13 @@ function grooveHalfPinWarnings(derived: Derived, frames: Map<Id, Frame>): Diagno
       );
       for (const groove of grooves) {
         const g = groove.hostCuts[0];
-        if (g?.kind !== "box") continue;
+        if (!g || g.kind !== "box") continue;
         const W = facts.boardWidth;
         const T = frame.part.thickness;
         const lo = g.min[1];
         const hi = g.max[1];
         const nearEdge0 = lo <= W - hi;
+        // Half-pins are listed from the tail board's edge0; the pin board may run the other way.
         const halfPin = (isHost ? facts.hostHalfPins : facts.halfPins)[nearEdge0 ? 0 : 1];
         // Depth from the tip face to the shallowest part of the groove (pin board only; on the
         // tail board the space is as wide as the half-pin at the tip along its whole length).
@@ -157,6 +179,7 @@ function grooveHalfPinWarnings(derived: Derived, frames: Map<Id, Frame>): Diagno
             rule: "groove-outside-bottom-half-pin",
             message: `The groove in ${frame.instance.name} does not land inside the half-pin of the dovetails, so it will show on the outside of the corner.`,
             part: frame.part.id,
+            field: `${frame.instance.name} groove`,
           });
           break;
         }

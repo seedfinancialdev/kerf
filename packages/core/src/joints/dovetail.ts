@@ -109,11 +109,13 @@ export function deriveDovetail(
   joint: Joint,
   host: Frame,
   guest: Frame,
+  quiet = false,
 ): PairCut | undefined {
   const where = { joint: joint.id, part: host.part.id, field: `${host.instance.name} dovetail` };
   const hostName = host.instance.name;
   const guestName = guest.instance.name;
   const notCorner = (): undefined => {
+    if (quiet) return undefined; // many candidate pairs between patterns: not every one is a corner
     ctx.error(
       "dovetail-not-corner",
       `${guestName} and ${hostName} do not meet at a right-angle corner, so they cannot be dovetailed.`,

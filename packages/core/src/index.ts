@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 export * from "./api";
+export { condense, RULE_LIMIT } from "./diagnostics";
 export * from "./errors";
 export type { Kind, Quantity, Scope } from "./expr";
 export { ExpressionError, evaluateExpression, evaluateQuantity } from "./expr";
@@ -21,6 +22,7 @@ export {
 } from "./project-file";
 export type { Rational } from "./rational";
 export { rational } from "./rational";
+export { shopProblem } from "./shop";
 export type { Box, Frame } from "./solve/assembly";
 export { boxOf, toLocal, toParent } from "./solve/assembly";
 export type { SolvedInstance, SolvedModel, SolvedOp, SolvedPart } from "./solve/model";

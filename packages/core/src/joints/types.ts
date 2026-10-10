@@ -72,6 +72,8 @@ export interface DeriveContext {
   expression(joint: Joint, key: string): Quantity | undefined;
   error(rule: string, message: string, extra?: Partial<Diagnostic>): void;
   warn(rule: string, message: string, extra?: Partial<Diagnostic>): void;
+  /** Adds one "and N more" entry for each rule that hit the per-joint limit. Call once, at the end. */
+  flush(): void;
   /** Rounds down to the grid. Defaults use this ("snapped down"). */
   floorToGrid(value: Rational): Len;
 }
@@ -89,6 +91,24 @@ export function makeContext(
   frames: Map<Id, Frame>,
   sink: Diagnostic[],
 ): DeriveContext {
+  // A joint between large patterns can fail the same way thousands of times; say it once, with
+  // a count, after showing the first few.
+  const SHOWN = 5;
+  const seen = new Map<string, { shown: number; hidden: number; sample: Diagnostic }>();
+  const report = (d: Diagnostic): void => {
+    const key = `${d.severity}|${d.rule}|${d.joint ?? ""}`;
+    const entry = seen.get(key);
+    if (!entry) {
+      seen.set(key, { shown: 1, hidden: 0, sample: d });
+      sink.push(d);
+    } else if (entry.shown < SHOWN) {
+      entry.shown += 1;
+      sink.push(d);
+    } else {
+      entry.hidden += 1;
+    }
+  };
+
   const evaluate = (joint: Joint, key: string): Quantity | undefined => {
     const source = joint.params[key];
     if (source === undefined) return undefined;
@@ -96,7 +116,7 @@ export function makeContext(
       return evaluateQuantity(source, model.scope);
     } catch (error) {
       if (error instanceof ExpressionError) {
-        sink.push({
+        report({
           severity: "error",
           rule: error.reason === "limit" ? "limit-exceeded" : "expression-syntax",
           message: `${joint.type} ${key}: ${error.message}.`,
@@ -118,7 +138,7 @@ export function makeContext(
       const q = evaluate(joint, key);
       if (!q) return fallback;
       if (q.kind !== "length") {
-        sink.push({
+        report({
           severity: "error",
           rule: "type-mismatch",
           message: `${joint.type} ${key} must be a length.`,
@@ -129,9 +149,18 @@ export function makeContext(
       }
       return snapToGrid(q.value, units);
     },
-    error: (rule, message, extra = {}) => sink.push({ severity: "error", rule, message, ...extra }),
-    warn: (rule, message, extra = {}) =>
-      sink.push({ severity: "warning", rule, message, ...extra }),
+    error: (rule, message, extra = {}) => report({ severity: "error", rule, message, ...extra }),
+    warn: (rule, message, extra = {}) => report({ severity: "warning", rule, message, ...extra }),
+    flush: () => {
+      for (const { hidden, sample } of seen.values()) {
+        if (hidden === 0) continue;
+        sink.push({
+          ...sample,
+          message: `${sample.message} (and ${hidden} more like it)`,
+          count: hidden + 1,
+        });
+      }
+    },
     floorToGrid: (value) => floorOnGrid(value, units),
   };
 }

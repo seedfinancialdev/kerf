@@ -755,34 +755,34 @@ function describe(error: unknown): string {
   }
 }
 
-/**
- * Steps 1-3 of the solve pipeline. Never throws: problems come back as diagnostics. A project
- * that is the wrong shape, reuses an id or has a dangling reference yields one "invalid-project"
- * error and an empty model. Solving reads a validated copy, never the object passed in.
- */
-export function solveModel(project: Project): SolvedModel {
-  const empty = (diagnostics: Diagnostic[]): SolvedModel => ({
-    diagnostics,
-    params: {},
-    scope: {},
-    parts: [],
-    instances: [],
-  });
+const emptyModel = (diagnostics: Diagnostic[]): SolvedModel => ({
+  diagnostics,
+  params: {},
+  scope: {},
+  parts: [],
+  instances: [],
+});
 
+/** The single "invalid-project" diagnostic for a project that failed validation. */
+export function invalidProjectModel(path: string, message: string): SolvedModel {
+  return emptyModel([
+    {
+      severity: "error",
+      rule: "invalid-project",
+      message: `The project file is not valid: ${message}.`,
+      field: path,
+    },
+  ]);
+}
+
+/**
+ * Steps 1-3 for a project that has already passed `validateProject`. Never throws: anything
+ * unexpected is an "internal-error" diagnostic.
+ */
+export function solveValidatedModel(project: Project): SolvedModel {
   let solver: Solver | undefined;
   try {
-    const checked = validateProject(project);
-    if (checked.problem) {
-      return empty([
-        {
-          severity: "error",
-          rule: "invalid-project",
-          message: `The project file is not valid: ${checked.problem.message}.`,
-          field: checked.problem.path,
-        },
-      ]);
-    }
-    solver = new Solver(checked.project, checked.project.units);
+    solver = new Solver(project, project.units);
     const { params, parts } = solver.solveFields();
     const instances = solver.expandInstances(parts);
     return {
@@ -793,8 +793,29 @@ export function solveModel(project: Project): SolvedModel {
       instances,
     };
   } catch (error) {
-    return empty([
+    return emptyModel([
       ...(solver?.diagnostics ?? []),
+      {
+        severity: "error",
+        rule: "internal-error",
+        message: `Kerf could not finish solving this project (${describe(error)}). This is a bug; please report it.`,
+      },
+    ]);
+  }
+}
+
+/**
+ * Steps 1-3 of the solve pipeline. Never throws: problems come back as diagnostics. A project
+ * that is the wrong shape, reuses an id or has a dangling reference yields one "invalid-project"
+ * error and an empty model. Solving reads a validated copy, never the object passed in.
+ */
+export function solveModel(project: Project): SolvedModel {
+  try {
+    const checked = validateProject(project);
+    if (checked.problem) return invalidProjectModel(checked.problem.path, checked.problem.message);
+    return solveValidatedModel(checked.project);
+  } catch (error) {
+    return emptyModel([
       {
         severity: "error",
         rule: "internal-error",

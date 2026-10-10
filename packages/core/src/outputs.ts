@@ -18,6 +18,8 @@ export interface Diagnostic {
   joint?: Id;
   /** The field the problem is on, e.g. a parameter name or "Side length". */
   field?: string;
+  /** How many times this same problem occurred, when it was reported once for all of them. */
+  count?: number;
 }
 
 export type Vec3 = readonly [Len, Len, Len];
@@ -185,6 +187,12 @@ export interface SolveResult {
   setups: MachiningSetup[];
   /** Distinct shapes with their removals. Empty when the project did not solve. */
   shapes: PartShape[];
+  /**
+   * True when any error exists (Operation specs: "Error blocks the solve"; Interaction spec: the
+   * build plan cannot be exported). An error in the assembly also withholds the cut list, layouts
+   * and setups; a layout or shop error leaves the cut list in place. Warnings and info never block.
+   */
+  blocked: boolean;
 }
 
 export interface BuildPlan {
