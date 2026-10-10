@@ -11,7 +11,7 @@
 
 import { MAX_LENGTH } from "./length";
 import { isOrientationIndex } from "./solve/orientation";
-import { withoutGenerated } from "./structures/generate";
+import { withoutGenerated } from "./structures/strip";
 import type {
   EdgeRef,
   GeneratedFrom,
