@@ -210,8 +210,7 @@ function nestSolidStock(
     // the members stacked in thickness from one board: its length and width are the largest's.
     const length =
       sideBySide || bookmatch ? Math.max(...lengths) : lengths.reduce((a, b) => a + b, 0) + kerfs;
-    const width =
-      sideBySide && !bookmatch ? widths.reduce((a, b) => a + b, 0) + kerfs : Math.max(...widths);
+    const width = sideBySide ? widths.reduce((a, b) => a + b, 0) + kerfs : Math.max(...widths);
     const compositeThickness = bookmatch
       ? members.reduce((sum, m) => sum + m.thickness, 0) +
         kerfs +

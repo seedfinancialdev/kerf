@@ -429,7 +429,9 @@ describe("third PR review: reading and bookmatch edges", () => {
       '"units": "imperial"',
       '"planingAllowance": -1,\n  "units": "imperial"',
     );
-    expect(() => parseProject(bad)).toThrow(/in\b/);
+    expect(() => parseProject(bad)).toThrow(
+      /planingAllowance: expected a value from 0 in to 100000 in/,
+    );
     expect(() => parseProject(bad)).not.toThrow(/20320000000/);
   });
 });

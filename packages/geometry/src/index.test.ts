@@ -407,3 +407,9 @@ describe("a prism must enclose an area", () => {
     expect(() => buildDisplayMesh(blank, [flat])).toThrow(/no area/);
   });
 });
+
+describe("the list of cuts", () => {
+  it("must be a list", () => {
+    expect(() => buildDisplayMesh(blank, {} as never)).toThrow(MeshError);
+  });
+});
