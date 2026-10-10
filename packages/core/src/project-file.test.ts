@@ -294,6 +294,9 @@ describe("integrity checks at load", () => {
       ];
       must(list(r, "patterns")[0]).spacing = { mode: "fixed", step: "10mm" };
       const stock = must(list(r, "stock")[0]);
+      // Board stock carries board sizes, not sheet sizes.
+      stock.kind = "solid";
+      delete stock.sheet;
       stock.solid = { standardLengths: [19507200], maxWidth: 1625600 };
       stock.price = { per: "boardFoot", cents: 1250 };
       const first = must(list(r, "instances")[0]);

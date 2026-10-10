@@ -4,7 +4,17 @@
 
 // Defects found by the second M2 review pass, each written to fail first.
 
-import { INCH, machiningSetups, nest, type Project, type ShopProfile, solve } from "@kerf/core";
+import {
+  INCH,
+  machiningSetups,
+  nest,
+  type Project,
+  parseProject,
+  type ShopProfile,
+  serializeProject,
+  solve,
+  validateProject,
+} from "@kerf/core";
 import { buildDisplayMesh, initGeometry, MeshError } from "@kerf/geometry";
 import { beforeAll, describe, expect, it } from "vitest";
 import { boards, type InstanceSpec, type PartSpec } from "../../src/builders";
@@ -365,5 +375,61 @@ describe("third review: joints that quietly do the wrong thing", () => {
       },
     );
     expect(rules(p)).toContain("warning:joint-host-unjoined");
+  });
+});
+
+describe("third PR review: reading and bookmatch edges", () => {
+  it("rejects a sheet stock that carries board sizes, and a board stock that carries sheet sizes", () => {
+    const base = loadProject("bookcase");
+    const sheet = base.stock.find((s) => s.kind === "sheet");
+    expect(sheet).toBeDefined();
+    const wrong: Project = {
+      ...base,
+      stock: base.stock.map((s) =>
+        s === sheet ? { ...s, solid: { standardLengths: [inch(96)], maxWidth: inch(8) } } : s,
+      ),
+    };
+    expect(rules(wrong)).toContain("error:invalid-project");
+  });
+
+  it("reports a project that throws when read, instead of throwing or blaming Kerf", () => {
+    const hostile = {
+      get name(): string {
+        throw new Error("boom");
+      },
+    };
+    const checked = validateProject(hostile);
+    expect(checked.problem?.message).toMatch(/plain data/);
+    expect(rules(hostile as unknown as Project)).not.toContain("error:internal-error");
+  });
+
+  it("says a bookmatch needs a pair, and refuses a thickness beyond the length limit", () => {
+    const wood = (name: string): PartSpec => ({
+      name,
+      length: "10in",
+      width: "4in",
+      thickness: "1/2in",
+      stock: "wood",
+    });
+    const single = boards([wood("A")], [at("A", "0in")], [], {
+      matchSets: [{ name: "Doors", type: "bookmatch", members: ["A"] }],
+    });
+    expect(rules(single)).toContain("warning:bookmatch-needs-pair");
+
+    const pair = boards([wood("A"), wood("B")], [at("A", "0in"), at("B", "5in")], [], {
+      matchSets: [{ name: "Doors", type: "bookmatch", members: ["A", "B"] }],
+    });
+    const huge: Project = { ...pair, planingAllowance: 100_000 * INCH };
+    expect(rules(huge)).toContain("error:out-of-range");
+  });
+
+  it("names a planing allowance out of range in inches, not internal units", () => {
+    const text = serializeProject(loadProject("box"));
+    const bad = text.replace(
+      '"units": "imperial"',
+      '"planingAllowance": -1,\n  "units": "imperial"',
+    );
+    expect(() => parseProject(bad)).toThrow(/in\b/);
+    expect(() => parseProject(bad)).not.toThrow(/20320000000/);
   });
 });

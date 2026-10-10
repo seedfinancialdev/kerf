@@ -30,7 +30,7 @@ We implement a standard guillotine bin-packing heuristic in TypeScript rather th
 | Type | Example | How it nests |
 | --- | --- | --- |
 | Continuous grain | Drawer fronts across a dresser; a box whose grain wraps all four corners | Members become one composite blank: lengths (or widths) in order, plus kerfs between, cut from one board or one strip of a sheet |
-| Bookmatch | Two door panels mirrored from one resawn board | Composite thickness = 2 × part thickness + kerf + planing allowance (per face, 4 faces for a pair; project setting, default 1/16"); one board, members flagged as a mirrored pair |
+| Bookmatch | Two door panels mirrored from one resawn board | Composite thickness = 2 × part thickness + kerf + 4 × planing allowance (the allowance is per face; a pair has 4 faces; project setting, default 1/16"); one board, members flagged as a mirrored pair |
 | Same board | Every part of a small tabletop from one board for color match | Members must come from one board or sheet; order is free |
 
 - A match set nests as one unit, then the rest of the parts pack around it to minimize waste as usual.

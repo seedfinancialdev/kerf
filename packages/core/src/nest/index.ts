@@ -6,7 +6,7 @@
 // units (Cut list & nesting, "Match sets: when design beats waste"). A match set nests as one unit,
 // then the rest of the parts pack around it.
 
-import { formatLength } from "../length";
+import { formatLength, MAX_LENGTH } from "../length";
 import type { BoardLayout, Diagnostic, NestingResult, SheetLayout } from "../outputs";
 import type { CutPart } from "../outputs/cutlist";
 import type { Id, Len, MatchSet, Project, ShopProfile, Stock } from "../types";
@@ -217,6 +217,23 @@ function nestSolidStock(
         kerfs +
         2 * members.length * (project.planingAllowance ?? DEFAULT_PLANING_ALLOWANCE)
       : undefined;
+    if (bookmatch && members.length < 2) {
+      diagnostics.push({
+        severity: "warning",
+        rule: "bookmatch-needs-pair",
+        message: `${set.name} is a bookmatch of one part; a bookmatch needs a pair opened like a book.`,
+        field: set.name,
+      });
+    }
+    if (compositeThickness !== undefined && compositeThickness > MAX_LENGTH) {
+      diagnostics.push({
+        severity: "error",
+        rule: "out-of-range",
+        message: `${set.name} would need a board thicker than the limit of 100,000 inches; check the planing allowance.`,
+        field: set.name,
+      });
+      continue;
+    }
     if (compositeThickness !== undefined && compositeThickness > stock.thickness) {
       diagnostics.push({
         severity: "warning",

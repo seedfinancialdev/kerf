@@ -131,7 +131,9 @@ export interface SheetLayout {
   sheet: { length: Len; width: Len };
   /** Distinct part sizes on this sheet, in order of first placement. */
   contents: Array<{ length: Len; width: Len; quantity: number }>;
-  /** Rips first, then crosscuts. */
+  /** Strip rips first, then the crosscuts (one per distinct strip pattern), then one step per distinct
+   * composite blank that divides it into members (a crosscut, or a rip when the members lie side by
+   * side). */
   cutSequence: CutStep[];
   /** The largest usable offcut and how many of that size the sheet has. */
   largestOffcut: { alongGrain: Len; acrossGrain: Len; count: number };
@@ -142,11 +144,14 @@ export interface SheetLayout {
   efficiency: Rational;
 }
 
-/** A solid-stock board layout; only match-set boards are specified so far. */
+/** A solid-stock board layout: one per board bought. Match-set boards also carry the composite blank. */
 export interface BoardLayout {
   stock: Id;
   matchSet?: Id;
-  /** Parts joined end to end, plus kerfs and trim, cut from one board. */
+  /**
+   * The blank a match set is cut from: members end to end (or side by side for axis "width", or the
+   * largest member's length and width for a bookmatch), plus kerfs and end trim.
+   */
   composite?: { length: Len; width: Len; widthAllowance: Len };
   minBoardLength?: Len;
   /** A bookmatch only: thickness of the resawn board (parts, saw gap and planing allowance). */

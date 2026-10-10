@@ -247,7 +247,7 @@ export function deriveJoints(project: Project, model: SolvedModel): Derived {
   }
 
   // Overlapping channels on one host are an error (Operation specs, "Dado / groove"). Sorted by
-  // where each starts, so only neighbours are compared.
+  // where each starts, so each box is only compared with those still open at its start.
   for (const [id, dados] of byHost) {
     const boxes = dados
       .map((d) => d.hostCuts[0])

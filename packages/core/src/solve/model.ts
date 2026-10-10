@@ -4,7 +4,7 @@
 
 // Solve pipeline steps 1-3 (Domain model v0, "Solve pipeline"):
 //   1. Parameters   2. Parts   3. Instances and patterns
-// Joints, validation and outputs belong to later stages (M2); this function does not apply
+// Joints, validation and outputs are steps 4-6 (see pipeline.ts); this function does not apply
 // joints, match sets or structures, and says so in its name.
 //
 // Rules (ADR 012):
@@ -118,11 +118,19 @@ class Solver {
     private readonly units: UnitSystem,
   ) {}
 
-  private error(rule: string, message: string, extra: Partial<Diagnostic> = {}): void {
+  private error(
+    rule: string,
+    message: string,
+    extra: Partial<Omit<Diagnostic, "severity" | "rule" | "message">> = {},
+  ): void {
     this.diagnostics.push({ severity: "error", rule, message, ...extra });
   }
 
-  private warn(rule: string, message: string, extra: Partial<Diagnostic> = {}): void {
+  private warn(
+    rule: string,
+    message: string,
+    extra: Partial<Omit<Diagnostic, "severity" | "rule" | "message">> = {},
+  ): void {
     this.diagnostics.push({ severity: "warning", rule, message, ...extra });
   }
 

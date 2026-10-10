@@ -29,8 +29,7 @@ export function solve(project: Project, shop: ShopProfile): SolveResult {
 /**
  * What one joint does to its host and guest: removals in each part's definition space, and what it
  * adds to the guest's cut size. For a joint with a pattern on either side, `host`/`guest` collect
- * the removals of every pair and `guestCutAdd` is the add for the first guest (guests of one
- * joint get the same add).
+ * the removals of every pair and `guestCutAdd` is the add for the first derived pair.
  * Throws RangeError for a joint id the project does not have, and Error for a project that is not
  * valid; a joint that failed has no cuts and its reasons are in `solve(...).diagnostics`.
  */

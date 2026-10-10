@@ -4,7 +4,7 @@
 
 // Diagnostics reach the user, so a flood of near-identical ones is itself a defect. After the whole
 // pipeline has run, the same problem on the same field is said once with a count, and no rule
-// shows more than a handful of entries.
+// shows more than RULE_LIMIT entries; the rest are summarised in one extra entry.
 
 import type { Diagnostic } from "./outputs";
 

@@ -44,8 +44,8 @@ export function faceName(face: LocalFace): string {
 }
 
 /**
- * Finds how the guest touches the host. Reports `joint-no-contact` or `joint-overlap` and returns
- * undefined when they do not meet as a seat; the caller decides whether that matters.
+ * Finds how the guest touches the host. Reports `joint-no-contact` or `joint-overlap` (unless `quiet`, used for joints between
+ * patterns) and returns undefined when they do not meet as a seat; the caller decides whether that matters.
  */
 export function seatOf(
   ctx: DeriveContext,

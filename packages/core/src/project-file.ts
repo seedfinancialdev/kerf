@@ -26,6 +26,7 @@ import type {
   Structure,
   UserOp,
 } from "./types";
+import { INCH } from "./units";
 
 export const CURRENT_SCHEMA_VERSION = 1;
 
@@ -96,7 +97,12 @@ class Reader {
       throw new ProjectFormatError(this.at(key), "expected a whole number (no floats are saved)");
     }
     if (value < min || value > max) {
-      throw new ProjectFormatError(this.at(key), `expected a value from ${min} to ${max}`);
+      const shown = (n: number): string =>
+        max === MAX_LENGTH && Math.abs(n) <= MAX_LENGTH ? `${n / INCH} in` : String(n);
+      throw new ProjectFormatError(
+        this.at(key),
+        `expected a value from ${shown(min)} to ${shown(max)}`,
+      );
     }
     return value;
   }
@@ -223,6 +229,13 @@ function readStock(value: unknown, path: string): Stock {
       maxWidth: solid.integer("maxWidth", 1, MAX_LENGTH),
     };
     solid.done();
+  }
+
+  if (stock.kind === "sheet" && stock.solid) {
+    throw new ProjectFormatError(`${path}.solid`, "sheet stock cannot have board sizes");
+  }
+  if (stock.kind !== "sheet" && stock.sheet) {
+    throw new ProjectFormatError(`${path}.sheet`, "only sheet stock has sheet sizes");
   }
 
   const allowance = r.object("allowance");
@@ -543,7 +556,7 @@ function readProject(value: unknown): Project {
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
-/** Orders by Unicode code point (not UTF-16 unit), as decision D3 specifies. */
+/** Orders by Unicode code point (not UTF-16 unit), as ADR 012, decision D3 specifies. */
 function compareCodePoints(a: string, b: string): number {
   const left = Array.from(a, (ch) => ch.codePointAt(0) ?? 0);
   const right = Array.from(b, (ch) => ch.codePointAt(0) ?? 0);
@@ -598,10 +611,9 @@ export function validateProject(
         problem: new ProjectFormatError("$", "the project is nested too deeply to be read"),
       };
     }
-    if (error instanceof SyntaxError || error instanceof TypeError) {
-      return { problem: new ProjectFormatError("$", "the project cannot be read as plain data") };
-    }
-    throw error;
+    // Anything else came from reading the caller's value (a getter that throws, a proxy), which
+    // is bad input, not a fault in Kerf.
+    return { problem: new ProjectFormatError("$", "the project cannot be read as plain data") };
   }
 }
 

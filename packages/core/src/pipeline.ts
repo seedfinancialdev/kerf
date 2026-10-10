@@ -45,7 +45,10 @@ export interface Pipeline {
   parts: CutPart[];
   cutList: CutList;
   diagnostics: Diagnostic[];
-  /** True when steps 1-5 found an error, so nothing was derived from the project. */
+  /**
+   * True when steps 1-5 found an error: the cut list is withheld and nesting and setups are
+   * skipped. `derived` and `parts` are still filled in unless the project was invalid.
+   */
   stopped: boolean;
 }
 

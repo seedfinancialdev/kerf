@@ -4,7 +4,7 @@
 
 // The reference projects must be built the way the spec describes: guests sit at the shoulder
 // (Domain model decision 3, "shoulder-to-shoulder"), the back sits at the back (`edge0`, since
-// `edge1` is the front), and a mirrored left side has its inside face as `face0` (ADR 012, D2).
+// `edge1` is the front), and a mirrored left side has its inside face as `face0` (ADR 013, D2).
 // Joinery is derived from contact between parts, so these placements are inputs to M2.
 // Ordinary tests, not milestone tests: they describe the fixtures, which exist today.
 

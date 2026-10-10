@@ -19,7 +19,7 @@ import type { Id } from "../types";
 /** How many overlapping pairs are named before the rest are only counted. */
 const OVERLAPS_SHOWN = 10;
 
-/** Overlapping pairs looked at; beyond this the parts are piled up and counting them is pointless. */
+/** Overlapping pairs examined, joined or not; beyond this the check stops. */
 const MAX_OVERLAPPING_PAIRS = 1_000_000;
 
 function pairKey(a: Id, b: Id): string {
@@ -72,7 +72,7 @@ export function validateAssembly(model: SolvedModel, derived: Derived): Diagnost
     out.push({
       severity: "error",
       rule: "overlap",
-      message: `More than ${MAX_OVERLAPPING_PAIRS.toLocaleString("en-US")} pairs of parts occupy the same space and are not joined; the parts are piled on top of each other and were not checked further.`,
+      message: `More than ${MAX_OVERLAPPING_PAIRS.toLocaleString("en-US")} pairs of parts occupy the same space; they are probably piled on top of each other and were not checked further.`,
     });
   } else if (overlapping > OVERLAPS_SHOWN) {
     out.push({
@@ -189,7 +189,8 @@ function grooveHalfPinWarnings(
         // Half-pins are listed from the tail board's edge0; the pin board may run the other way.
         const halfPin = (isHost ? facts.hostHalfPins : facts.halfPins)[nearEdge0 ? 0 : 1];
         // Depth from the tip face to the shallowest part of the groove (pin board only; on the
-        // tail board the space is as wide as the half-pin at the tip along its whole length).
+        // tail board the space is narrowest at the tip and widens toward the base, so the tip
+        // width is the binding limit).
         let allowedNumerator = halfPin * facts.hostThickness;
         if (isHost) {
           const tip = facts.hostTipSide === 0 ? 0 : T;

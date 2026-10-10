@@ -667,7 +667,7 @@ describe("second review: solveModel total on hostile objects", () => {
 
   milestone(
     "M1",
-    "a throwing getter or a thrown non-Error becomes internal-error, not an exception",
+    "a throwing getter or a thrown non-Error is reported as unreadable input, not an exception",
     () => {
       const getter = { ...bookcase } as Project;
       Object.defineProperty(getter, "name", {
@@ -676,7 +676,9 @@ describe("second review: solveModel total on hostile objects", () => {
         },
       });
       expect(() => solveModel(getter)).not.toThrow();
-      expect(rules(getter)).toContain("internal-error");
+      // Bad input, not a fault in Kerf: it must not be reported as a bug.
+      expect(rules(getter)).toContain("invalid-project");
+      expect(rules(getter)).not.toContain("internal-error");
     },
   );
 

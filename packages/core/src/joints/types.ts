@@ -19,7 +19,7 @@ export interface CutAdd {
   width: Len;
 }
 
-export const NO_ADD: CutAdd = { length: 0, width: 0 };
+export const NO_ADD: Readonly<CutAdd> = Object.freeze({ length: 0, width: 0 });
 
 /** One cut a shop makes, for machining setups (Cut list & nesting, "Machining by setup"). */
 export interface MachinedCut {
@@ -70,8 +70,16 @@ export interface DeriveContext {
   /** Evaluates a joint parameter; reports on failure and returns undefined. */
   length(joint: Joint, key: string, fallback?: Len): Len | undefined;
   expression(joint: Joint, key: string): Quantity | undefined;
-  error(rule: string, message: string, extra?: Partial<Diagnostic>): void;
-  warn(rule: string, message: string, extra?: Partial<Diagnostic>): void;
+  error(
+    rule: string,
+    message: string,
+    extra?: Partial<Omit<Diagnostic, "severity" | "rule" | "message">>,
+  ): void;
+  warn(
+    rule: string,
+    message: string,
+    extra?: Partial<Omit<Diagnostic, "severity" | "rule" | "message">>,
+  ): void;
   /** Adds one "and N more" entry for each rule that hit the per-joint limit. Call once, at the end. */
   flush(): void;
   /** How many problems have been raised so far, counting those too many to show. */
@@ -168,8 +176,10 @@ export function makeContext(
     error: (rule, message, extra = {}) => report({ severity: "error", rule, message, ...extra }),
     warn: (rule, message, extra = {}) => report({ severity: "warning", rule, message, ...extra }),
     flush: () => {
-      for (const { hidden, sample } of seen.values()) {
+      for (const entry of seen.values()) {
+        const { hidden, sample } = entry;
         if (hidden === 0) continue;
+        entry.hidden = 0; // so a second call says nothing more
         sink.push({
           ...sample,
           message: `${sample.message} (and ${hidden} more like it)`,

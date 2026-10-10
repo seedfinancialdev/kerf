@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-import { type Project, ProjectFormatError } from "@kerf/core";
+import { type Project, ProjectFormatError, serializeProject } from "@kerf/core";
 import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { KerfFormatError, type KerfMeta, readKerf, writeKerf } from "./index";
@@ -184,6 +184,28 @@ describe(".kerf archive: second review", () => {
 
   it("refuses to write a thumbnail it would later refuse to read", () => {
     expect(() => writeKerf(project, meta, new Uint8Array([1, 2, 3]))).toThrow(/PNG/);
+  });
+});
+
+describe(".kerf archive: damage is detected, not just luck", () => {
+  it("rejects an entry whose bytes changed but still read as valid JSON", () => {
+    // Stored (not compressed), so a changed letter cannot break the deflate stream by accident.
+    const bytes = zipSync(
+      {
+        "project.json": strToU8(serializeProject(project)),
+        "meta.json": strToU8(JSON.stringify(meta)),
+      },
+      { level: 0 },
+    );
+    const at = bytes.findIndex(
+      (_, i) => bytes[i] === 0x45 && bytes[i + 1] === 0x6d && bytes[i + 2] === 0x70, // "Emp"
+    );
+    expect(at).toBeGreaterThan(0);
+    const damaged = bytes.slice();
+    damaged[at + 3] = 0x69; // "Empty" -> "Empiy"
+    expect(() => readKerf(damaged)).toThrow(KerfFormatError);
+    expect(() => readKerf(damaged)).toThrow(/damaged/);
+    expect(readKerf(bytes).project.name).toBe("Empty");
   });
 });
 
