@@ -38,10 +38,12 @@ form screens are M4.
    generated project is valid, resize keeps every dado to its host's thickness rule).
 9. Audit with all milestones active, independent reviews, PR.
 
-## Decisions (maintainer, in plain language)
+## Decisions (maintainer rulings, 2026-10-10)
 
-- D1: the form's field names become official; depths: templates carry explicit depths, blank
-  forms use the spec's default rules.
-- D2: back styles built now.
-- D3: what a detached board's joints do.
-- D4: box corner joints built now.
+- **D1** The form's field names become official. Templates carry explicit depths (Bookcase: dado
+  1/4", rabbet 1/4", back rabbet 3/8"); a blank case uses the spec's default rules (a third of the
+  host for a dado, half for a rabbet) until changed.
+- **D2** Back styles built now: none and inset in rabbets. Applied back waits for a sizing rule.
+- **D3** A detached board keeps its joints; they are worked out from where it now sits. Only its
+  size and position stop following the form.
+- **D4** Box corners: through dovetails only. Other corner joints come later with their own rules.
