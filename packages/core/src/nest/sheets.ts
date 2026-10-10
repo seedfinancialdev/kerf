@@ -23,6 +23,12 @@ export interface SheetItem {
   width: Len;
   /** True when the grain pins the part's length along the sheet. */
   locked: boolean;
+  /**
+   * A composite blank (continuous grain): its members, in order, laid end to end along the grain
+   * ("along") or side by side across it ("across"), a kerf between each.
+   */
+  members?: Array<{ instance: Id; name: string; length: Len; width: Len }>;
+  layout?: "along" | "across";
 }
 
 export interface SheetSpec {
@@ -94,8 +100,17 @@ function sortOrdered(list: Oriented[], by: Ordering): Oriented[] {
     .map(({ o }) => o);
 }
 
-function pack(items: Oriented[], usableL: Len, usableW: Len, kerf: Len): Sheet[] {
-  const sheets: Sheet[] = [];
+function pack(
+  items: Oriented[],
+  usableL: Len,
+  usableW: Len,
+  kerf: Len,
+  seed: Sheet[] = [],
+): Sheet[] {
+  const sheets: Sheet[] = seed.map((sheet) => ({
+    used: sheet.used,
+    strips: sheet.strips.map((strip) => ({ ...strip, items: [...strip.items] })),
+  }));
   const fitsAlong = (strip: Strip, along: Len): boolean =>
     strip.items.length === 0 ? along <= usableL : strip.used + kerf + along <= usableL;
 
@@ -150,6 +165,33 @@ function describeSheet(
     const pattern: Len[] = [];
     let x = trim;
     for (const o of strip.items) {
+      const members = o.item.members;
+      if (members && members.length > 0) {
+        // A composite is cut as one blank, then divided; show every member where it will end up.
+        let cursor = 0;
+        for (const [i, m] of members.entries()) {
+          const along = o.item.layout === "across" ? m.length : m.length;
+          const across = m.width;
+          placements.push({
+            x: x + (o.item.layout === "across" ? 0 : cursor),
+            y: y + (o.item.layout === "across" ? cursor : 0),
+            length: along,
+            width: across,
+            instance: m.instance,
+            name: m.name,
+            rotated: false,
+            sequence: { n: i + 1, of: members.length },
+          });
+          usedArea += BigInt(along) * BigInt(across);
+          const found = contents.find((c) => c.length === along && c.width === across);
+          if (found) found.quantity += 1;
+          else contents.push({ length: along, width: across, quantity: 1 });
+          cursor += (o.item.layout === "across" ? across : along) + kerf;
+        }
+        pattern.push(o.along);
+        x += o.along + kerf;
+        continue;
+      }
       placements.push({
         x,
         y,
@@ -252,24 +294,40 @@ export interface SheetNesting {
   sheets: SheetLayout[];
   /** Items that cannot fit on one sheet at all, even rotated where allowed. */
   tooLarge: SheetItem[];
+  /** Same-board groups that do not fit on a single sheet. */
+  groupsTooLarge: SheetItem[][];
 }
 
-/** Nests the items onto sheets of one stock. */
+/**
+ * Nests the items onto sheets of one stock. Each of `groups` must end up on a single sheet (a
+ * "same board" match set); the items are then packed around them, sharing those sheets.
+ */
 export function nestSheets(
   items: SheetItem[],
   spec: SheetSpec,
   options: SheetOptions,
+  groups: SheetItem[][] = [],
 ): SheetNesting {
   const usableL = spec.length - 2 * options.trim;
   const usableW = spec.width - 2 * options.trim;
   const tooLarge: SheetItem[] = [];
+  const groupsTooLarge: SheetItem[][] = [];
   const fit: SheetItem[] = [];
+
+  // Pack each group alone; a group that needs more than one sheet cannot satisfy its set.
+  const seeds: Sheet[] = [];
+  for (const group of groups) {
+    const oriented = group.map((i) => orient(i, "natural"));
+    const packed = pack(sortOrdered(oriented, "across"), usableL, usableW, options.kerf);
+    if (packed.length === 1 && packed[0]) seeds.push(packed[0]);
+    else groupsTooLarge.push(group);
+  }
   for (const item of items) {
     const direct = item.length <= usableL && item.width <= usableW;
     const turned = !item.locked && item.width <= usableL && item.length <= usableW;
     (direct || turned ? fit : tooLarge).push(item);
   }
-  if (fit.length === 0) return { sheets: [], tooLarge };
+  if (fit.length === 0 && seeds.length === 0) return { sheets: [], tooLarge, groupsTooLarge };
 
   let best: Candidate | undefined;
   const orientations = ["natural", "long-along", "short-along"] as const;
@@ -285,7 +343,7 @@ export function nestSheets(
     );
     for (const by of orderings) {
       const candidate = score(
-        pack(sortOrdered(fixed, by), usableL, usableW, options.kerf),
+        pack(sortOrdered(fixed, by), usableL, usableW, options.kerf, seeds),
         usableL,
         usableW,
         options.kerf,
@@ -302,9 +360,10 @@ export function nestSheets(
       }
     }
   }
-  if (!best) return { sheets: [], tooLarge };
+  if (!best) return { sheets: [], tooLarge, groupsTooLarge };
   return {
     sheets: best.sheets.map((s) => describeSheet(s, spec, options, usableL, usableW)),
     tooLarge,
+    groupsTooLarge,
   };
 }

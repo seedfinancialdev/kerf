@@ -79,6 +79,9 @@ export function buildCutListFrom(project: Project, parts: CutPart[]): CutList {
       width: first.width,
       thickness: first.thickness,
       visible: { length: first.part.length, width: first.part.width },
+      ...(list.some((c) => c.part.length !== first.part.length || c.part.width !== first.part.width)
+        ? { visibleVaries: true as const }
+        : {}),
       quantity: list.length,
       parts: [...byDef.values()]
         .sort((a, b) => a.order - b.order)

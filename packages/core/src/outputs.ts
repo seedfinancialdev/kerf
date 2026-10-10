@@ -71,6 +71,8 @@ export interface CutListLine {
   thickness: Len;
   /** Visible size between joints, shown beside the cut size. */
   visible: { length: Len; width: Len };
+  /** Set when parts merged into this line have different visible sizes; `visible` is the first's. */
+  visibleVaries?: boolean;
   quantity: number;
   parts: CutListPart[];
 }
@@ -113,6 +115,8 @@ export interface Placement {
   name: string;
   /** True when the part is turned 90 degrees from its length-along-grain orientation. */
   rotated: boolean;
+  /** For a member of a continuous-grain run: its place in the run (1 of 4, 2 of 4...). */
+  sequence?: { n: number; of: number };
 }
 
 export interface Offcut {
@@ -145,8 +149,10 @@ export interface BoardLayout {
   /** Parts joined end to end, plus kerfs and trim, cut from one board. */
   composite?: { length: Len; width: Len; widthAllowance: Len };
   minBoardLength?: Len;
-  /** The standard length of the board the parts are cut from (ordinary boards). */
+  /** The standard length of the board the parts are cut from. */
   boardLength?: Len;
+  /** Other parts cut from the same board, after the match set. */
+  alsoOnBoard?: Array<{ name: string; instance: Id }>;
   sequence: Array<{ sequence: number; of: number; name: string }>;
 }
 
@@ -164,6 +170,8 @@ export interface MachiningSetup {
   depth?: Len;
   bit?: { type: "roundover"; radius: Len };
   cuts: number;
+  /** The parts this setup cuts, and how many cuts each takes. */
+  parts?: Array<{ name: string; cuts: number }>;
   /** True when the shop profile has no tool that can make these cuts (the tool named is the one needed). */
   missing?: boolean;
 }

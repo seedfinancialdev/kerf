@@ -48,6 +48,15 @@ export function buildSetups(
   }
   const defOrder = new Map(project.parts.map((p, i) => [p.id, i]));
   const partOf = new Map(parts.map((p) => [p.instance.id, p.part]));
+  const nameOf = new Map(parts.map((p) => [p.instance.id, p.instance.name]));
+  const note = (setup: MachiningSetup, instance: Id): void => {
+    const name = nameOf.get(instance) ?? "A part";
+    const list = setup.parts ?? [];
+    const found = list.find((x) => x.name === name);
+    if (found) found.cuts += 1;
+    else list.push({ name, cuts: 1 });
+    setup.parts = list;
+  };
 
   // Joint cuts in cut-list order: sheet goods first, then by part, then as listed in the project.
   const indexed = derived.machined.map((cut, i) => ({ cut, i }));
@@ -79,11 +88,12 @@ export function buildSetups(
       setups.push(setup);
     }
     setup.cuts += 1;
+    note(setup, cut.host);
   }
 
   // Edge profiles last, grouped by bit.
   const bits = new Map<Len, MachiningSetup>();
-  for (const { radius } of derived.roundedEdges) {
+  for (const { radius, instance } of derived.roundedEdges) {
     let setup = bits.get(radius);
     if (!setup) {
       const has = shop.tools.some((t) => t.type === "router" && t.roundoverBits.includes(radius));
@@ -98,6 +108,7 @@ export function buildSetups(
       setups.push(setup);
     }
     setup.cuts += 1;
+    note(setup, instance);
   }
   return setups;
 }

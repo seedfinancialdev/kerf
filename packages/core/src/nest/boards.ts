@@ -4,7 +4,8 @@
 
 // Solid stock: 1D length packing against standard board lengths (Cut list & nesting, "Inputs").
 // Rough size is cut size plus the stock allowance; every board loses its end trim and a kerf
-// separates neighbouring parts.
+// separates neighbouring parts. A match set's composite blank is placed first, as a seed; the
+// other parts then pack around it (Cut list & nesting, "Match sets").
 
 import type { Id, Len } from "../types";
 
@@ -15,71 +16,93 @@ export interface BoardItem {
   length: Len;
 }
 
+/** A blank already decided on: a match set's composite, which needs a board at least this long. */
+export interface BoardSeed {
+  id: Id;
+  /** Composite length, trim included. */
+  minLength: Len;
+}
+
 export interface PackedBoard {
   length: Len;
   items: BoardItem[];
-}
-
-/** Space a board still has, after trim and the parts already on it. */
-function room(board: PackedBoard, used: Len, trim: Len): Len {
-  return board.length - 2 * trim - used;
+  /** The seed this board was opened for, if any. */
+  seed?: Id;
 }
 
 type Strategy = "shortest" | "longest";
 
+interface Open {
+  board: PackedBoard;
+  /** Length used by parts and kerfs, excluding trim; for a seed board, the composite is included. */
+  used: Len;
+}
+
 function packWith(
   ordered: BoardItem[],
+  seeds: BoardSeed[],
   lengths: Len[],
   kerf: Len,
   trim: Len,
   strategy: Strategy,
-): { boards: PackedBoard[]; tooLong: BoardItem[] } {
-  const boards: PackedBoard[] = [];
-  const used: Len[] = [];
+): { boards: PackedBoard[]; tooLong: BoardItem[]; unplaced: BoardSeed[] } {
+  const open: Open[] = [];
+  const unplaced: BoardSeed[] = [];
   const tooLong: BoardItem[] = [];
+  const choose = (holding: Len[]): Len | undefined =>
+    strategy === "shortest" ? holding[0] : holding.at(-1);
+
+  // Seeds: the composite already includes its own trim, so it counts without adding trim again.
+  for (const seed of seeds) {
+    const length = choose(lengths.filter((l) => seed.minLength <= l));
+    if (length === undefined) {
+      unplaced.push(seed);
+      continue;
+    }
+    open.push({ board: { length, items: [], seed: seed.id }, used: seed.minLength - 2 * trim });
+  }
 
   for (const item of ordered) {
-    let placed = false;
-    for (const [i, board] of boards.entries()) {
-      const needed = board.items.length === 0 ? item.length : kerf + item.length;
-      if (needed <= room(board, used[i] ?? 0, trim)) {
-        board.items.push(item);
-        used[i] = (used[i] ?? 0) + needed;
-        placed = true;
-        break;
-      }
+    const home = open.find(({ board, used }) => {
+      const needed = used === 0 && board.items.length === 0 ? item.length : kerf + item.length;
+      return needed <= board.length - 2 * trim - used;
+    });
+    if (home) {
+      const needed =
+        home.used === 0 && home.board.items.length === 0 ? item.length : kerf + item.length;
+      home.board.items.push(item);
+      home.used += needed;
+      continue;
     }
-    if (placed) continue;
-
-    const holding = lengths.filter((l) => item.length <= l - 2 * trim);
-    const length = strategy === "shortest" ? holding[0] : holding.at(-1);
+    const length = choose(lengths.filter((l) => item.length <= l - 2 * trim));
     if (length === undefined) {
       tooLong.push(item);
       continue;
     }
-    boards.push({ length, items: [item] });
-    used.push(item.length);
+    open.push({ board: { length, items: [item] }, used: item.length });
   }
 
-  // Buy no more length than each board's parts need.
-  for (const [i, board] of boards.entries()) {
-    const shorter = lengths.find((l) => (used[i] ?? 0) <= l - 2 * trim);
+  // Buy no more length than each board's contents need.
+  for (const { board, used } of open) {
+    const shorter = lengths.find((l) => used <= l - 2 * trim);
     if (shorter !== undefined && shorter < board.length) board.length = shorter;
   }
-  return { boards, tooLong };
+  return { boards: open.map((o) => o.board), tooLong, unplaced };
 }
 
 /**
  * First-fit decreasing, tried two ways: every new board the shortest length that holds its first
- * part, or the longest standard length (then shrunk to what its parts need). Fewest boards wins,
- * then least length bought; ties go to the first. Returns the parts no standard length can hold.
+ * part, or the longest standard length (then shrunk to what its contents need). Fewest boards
+ * wins, then least length bought; ties go to the first. Returns the parts no standard length can
+ * hold and the seeds no board is long enough for.
  */
 export function packBoards(
   items: BoardItem[],
   standardLengths: Len[],
   kerf: Len,
   trim: Len,
-): { boards: PackedBoard[]; tooLong: BoardItem[] } {
+  seeds: BoardSeed[] = [],
+): { boards: PackedBoard[]; tooLong: BoardItem[]; unplaced: BoardSeed[] } {
   const lengths = [...standardLengths].sort((a, b) => a - b);
   const ordered = items
     .map((item, index) => ({ item, index }))
@@ -89,7 +112,7 @@ export function packBoards(
   const total = (r: { boards: PackedBoard[] }): number =>
     r.boards.reduce((sum, b) => sum + b.length, 0);
   const candidates = (["shortest", "longest"] as const).map((s) =>
-    packWith(ordered, lengths, kerf, trim, s),
+    packWith(ordered, seeds, lengths, kerf, trim, s),
   );
   return candidates.reduce((best, c) =>
     c.boards.length < best.boards.length ||

@@ -3,20 +3,36 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Nesting for a whole project: sheet goods onto sheets, solid stock onto boards, match sets as
-// units (Cut list & nesting, "Match sets: when design beats waste").
+// units (Cut list & nesting, "Match sets: when design beats waste"). A match set nests as one unit,
+// then the rest of the parts pack around it.
 
 import { formatLength } from "../length";
 import type { BoardLayout, Diagnostic, NestingResult, SheetLayout } from "../outputs";
 import type { CutPart } from "../outputs/cutlist";
 import type { Id, Len, MatchSet, Project, ShopProfile, Stock } from "../types";
 import { INCH } from "../units";
-import { type BoardItem, packBoards } from "./boards";
+import { type BoardItem, type BoardSeed, packBoards } from "./boards";
 import { DEFAULT_MIN_OFFCUT, nestSheets, type SheetItem } from "./sheets";
 
 /** Edge trim on rough solid stock: 1/2" per end (Cut list & nesting, "Inputs"). */
 export const SOLID_END_TRIM: Len = INCH / 2;
 /** Edge trim on sheet goods defaults to none. */
 export const SHEET_TRIM: Len = 0;
+
+interface SetMembers {
+  set: MatchSet;
+  members: CutPart[];
+}
+
+/** The match sets whose parts are of this stock, with their members found. */
+function setsOn(project: Project, stock: Stock, byInstance: Map<Id, CutPart>): SetMembers[] {
+  const out: SetMembers[] = [];
+  for (const set of project.matchSets) {
+    const members = set.members.map((id) => byInstance.get(id)).filter((m): m is CutPart => !!m);
+    if (members.length > 0 && members[0]?.part.stock === stock.id) out.push({ set, members });
+  }
+  return out;
+}
 
 export function nestProject(
   project: Project,
@@ -28,7 +44,6 @@ export function nestProject(
   const boards: BoardLayout[] = [];
   const sheetCountByStock: Record<Id, number> = {};
   const kerf = shop.kerf;
-
   const byInstance = new Map(parts.map((p) => [p.instance.id, p]));
 
   for (const set of project.matchSets) {
@@ -37,6 +52,7 @@ export function nestProject(
         severity: "warning",
         rule: "not-solved-yet",
         message: `${set.name} is a bookmatch; its composite thickness needs a planing allowance the spec does not define, so it is nested as ordinary parts.`,
+        field: set.name,
       });
     }
   }
@@ -55,10 +71,15 @@ export function nestProject(
         severity: "warning",
         rule: "no-stock-sizes",
         message: `${stock.name} has no sheet or board sizes, so its parts are not nested.`,
+        field: stock.name,
       });
     }
   }
   return { result: { sheets, boards, sheetCountByStock }, diagnostics };
+}
+
+function mixedStock(set: MatchSet, members: CutPart[], stock: Stock): boolean {
+  return members.some((m) => m.part.stock !== stock.id) || members.length !== set.members.length;
 }
 
 function nestSheetStock(
@@ -74,84 +95,80 @@ function nestSheetStock(
   const spec = { stock: stock.id, length: sheet.length, width: sheet.width };
   const options = { kerf, trim: SHEET_TRIM, minOffcut: DEFAULT_MIN_OFFCUT };
   const lockedFor = (p: CutPart): boolean => p.part.grainLocked && sheet.grain !== "none";
+  const asItem = (p: CutPart): SheetItem => ({
+    instance: p.instance.id,
+    name: p.part.name,
+    length: p.length,
+    width: p.width,
+    locked: lockedFor(p),
+  });
 
   const items: SheetItem[] = [];
-  const layouts: SheetLayout[] = [];
+  const groups: SheetItem[][] = [];
   const done = new Set<Id>();
 
-  for (const set of project.matchSets) {
-    const members = set.members.map((id) => byInstance.get(id)).filter((m): m is CutPart => !!m);
-    if (members.length === 0 || members[0]?.part.stock !== stock.id) continue;
+  for (const { set, members } of setsOn(project, stock, byInstance)) {
     if (set.type === "bookmatch") continue; // nested as ordinary parts (warned)
-    if (members.some((m) => m.part.stock !== stock.id)) {
+    if (mixedStock(set, members, stock)) {
       diagnostics.push({
         severity: "error",
         rule: "match-set-mixed-stock",
         message: `${set.name} mixes stock; all its parts must come from the same material.`,
+        field: set.name,
       });
       continue;
     }
     for (const m of members) done.add(m.instance.id);
 
     if (set.type === "continuousGrain") {
-      const alongLength = set.axis !== "width";
-      const along = alongLength
-        ? members.reduce((sum, m) => sum + m.length, 0) + kerf * (members.length - 1)
-        : Math.max(...members.map((m) => m.length));
-      const across = alongLength
-        ? Math.max(...members.map((m) => m.width))
-        : members.reduce((sum, m) => sum + m.width, 0) + kerf * (members.length - 1);
+      const across = set.axis === "width";
+      const along = across
+        ? Math.max(...members.map((m) => m.length))
+        : members.reduce((sum, m) => sum + m.length, 0) + kerf * (members.length - 1);
+      const wide = across
+        ? members.reduce((sum, m) => sum + m.width, 0) + kerf * (members.length - 1)
+        : Math.max(...members.map((m) => m.width));
       items.push({
         instance: set.id,
         name: set.name,
         length: along,
-        width: across,
+        width: wide,
         locked: true,
-      });
-    } else {
-      // sameBoard: members must share one sheet; pack them alone, then keep that sheet as is.
-      const alone = nestSheets(
-        members.map((m) => ({
+        layout: across ? "across" : "along",
+        members: members.map((m) => ({
           instance: m.instance.id,
           name: m.part.name,
           length: m.length,
           width: m.width,
-          locked: lockedFor(m),
         })),
-        spec,
-        options,
-      );
-      if (alone.sheets.length !== 1 || alone.tooLarge.length > 0) {
-        diagnostics.push({
-          severity: "error",
-          rule: "match-set-too-large",
-          message: `${set.name} needs all of its parts from one ${formatLength(sheet.length, project.units)} x ${formatLength(sheet.width, project.units)} sheet of ${stock.name}, and they do not fit on one.`,
-        });
-      }
-      layouts.push(...alone.sheets);
+      });
+    } else {
+      groups.push(members.map(asItem));
     }
   }
 
-  for (const p of mine) {
-    if (done.has(p.instance.id)) continue;
-    items.push({
-      instance: p.instance.id,
-      name: p.part.name,
-      length: p.length,
-      width: p.width,
-      locked: lockedFor(p),
-    });
-  }
+  for (const p of mine) if (!done.has(p.instance.id)) items.push(asItem(p));
 
-  const nested = nestSheets(items, spec, options);
+  const nested = nestSheets(items, spec, options, groups);
+  const size = `${formatLength(sheet.length, project.units)} x ${formatLength(sheet.width, project.units)}`;
   for (const item of nested.tooLarge) {
     diagnostics.push({
       severity: "error",
       rule: "part-too-large",
-      message: `${item.name} (${formatLength(item.length, project.units)} x ${formatLength(item.width, project.units)}) is larger than a ${formatLength(sheet.length, project.units)} x ${formatLength(sheet.width, project.units)} sheet of ${stock.name}.`,
+      message: `${item.name} (${formatLength(item.length, project.units)} x ${formatLength(item.width, project.units)}) is larger than a ${size} sheet of ${stock.name}.`,
+      field: item.name,
     });
   }
-  return [...layouts, ...nested.sheets];
+  for (const group of nested.groupsTooLarge) {
+    const set = project.matchSets.find((s) => s.members.includes(group[0]?.instance ?? ""));
+    diagnostics.push({
+      severity: "error",
+      rule: "match-set-too-large",
+      message: `${set?.name ?? "A match set"} needs all of its parts from one ${size} sheet of ${stock.name}, and they do not fit on one.`,
+      field: set?.name,
+    });
+  }
+  return nested.sheets;
 }
 
 function nestSolidStock(
@@ -164,47 +181,54 @@ function nestSolidStock(
 ): BoardLayout[] {
   const solid = stock.solid;
   if (!solid) return [];
-  const layouts: BoardLayout[] = [];
+  const fmt = (n: Len): string => formatLength(n, project.units);
   const grouped = new Set<Id>();
-  const needed = (set: MatchSet, minimum: Len): void => {
-    diagnostics.push({
-      severity: "error",
-      rule: "match-set-too-long",
-      message: `${set.name} needs a board at least ${formatLength(minimum, project.units)} long of ${stock.name}, and none of the standard lengths is that long.`,
-    });
-  };
+  const seeds: BoardSeed[] = [];
+  const setLayouts = new Map<Id, BoardLayout>();
 
-  for (const set of project.matchSets) {
-    const members = set.members.map((id) => byInstance.get(id)).filter((m): m is CutPart => !!m);
-    if (members.length === 0 || members[0]?.part.stock !== stock.id) continue;
+  for (const { set, members } of setsOn(project, stock, byInstance)) {
     if (set.type === "bookmatch") continue;
-    if (members.some((m) => m.part.stock !== stock.id)) {
+    if (mixedStock(set, members, stock)) {
       diagnostics.push({
         severity: "error",
         rule: "match-set-mixed-stock",
         message: `${set.name} mixes stock; all its parts must come from the same material.`,
+        field: set.name,
       });
       continue;
     }
     for (const m of members) grouped.add(m.instance.id);
 
     const lengths = members.map((m) => m.length + stock.allowance.length);
-    // Continuous grain runs end to end; same board only needs the parts to share a board.
-    const composite =
-      lengths.reduce((a, b) => a + b, 0) + kerf * (members.length - 1) + 2 * SOLID_END_TRIM;
-    const width = Math.max(...members.map((m) => m.width));
+    const widths = members.map((m) => m.width);
+    const sideBySide = set.type === "continuousGrain" && set.axis === "width";
+    const kerfs = kerf * (members.length - 1);
+    // End to end: lengths add; side by side: the widest length, and widths add.
+    const length = sideBySide ? Math.max(...lengths) : lengths.reduce((a, b) => a + b, 0) + kerfs;
+    const width = sideBySide ? widths.reduce((a, b) => a + b, 0) + kerfs : Math.max(...widths);
+    const composite = length + 2 * SOLID_END_TRIM;
     const minimum = Math.ceil(composite / INCH) * INCH;
 
     if (width + stock.allowance.width > solid.maxWidth) {
       diagnostics.push({
         severity: "error",
         rule: "part-too-wide",
-        message: `${set.name} is wider than the widest ${stock.name} board (${formatLength(solid.maxWidth, project.units)}).`,
+        message: `${set.name} is wider than the widest ${stock.name} board (${fmt(solid.maxWidth)}).`,
+        field: set.name,
       });
     }
-    if (!solid.standardLengths.some((l) => l >= composite)) needed(set, minimum);
+    if (!solid.standardLengths.some((l) => l >= composite)) {
+      diagnostics.push({
+        severity: "error",
+        rule: "match-set-too-long",
+        message: `${set.name} needs a board at least ${fmt(minimum)} long of ${stock.name}, and none of the standard lengths is that long.`,
+        field: set.name,
+      });
+      continue;
+    }
 
-    layouts.push({
+    seeds.push({ id: set.id, minLength: composite });
+    setLayouts.set(set.id, {
       stock: stock.id,
       matchSet: set.id,
       composite: { length: composite, width, widthAllowance: stock.allowance.width },
@@ -220,8 +244,9 @@ function nestSolidStock(
       diagnostics.push({
         severity: "error",
         rule: "part-too-wide",
-        message: `${p.part.name} is wider than the widest ${stock.name} board (${formatLength(solid.maxWidth, project.units)}).`,
+        message: `${p.part.name} is wider than the widest ${stock.name} board (${fmt(solid.maxWidth)}).`,
         part: p.part.id,
+        field: p.part.name,
       });
       continue;
     }
@@ -232,24 +257,38 @@ function nestSolidStock(
     });
   }
 
-  const packed = packBoards(items, solid.standardLengths, kerf, SOLID_END_TRIM);
+  const packed = packBoards(items, solid.standardLengths, kerf, SOLID_END_TRIM, seeds);
   for (const item of packed.tooLong) {
     diagnostics.push({
       severity: "error",
       rule: "part-too-long",
       message: `${item.name} is longer than any standard ${stock.name} board.`,
+      field: item.name,
     });
   }
+
+  const layouts: BoardLayout[] = [];
   for (const board of packed.boards) {
-    layouts.push({
-      stock: stock.id,
-      boardLength: board.length,
-      sequence: board.items.map((it, i) => ({
-        sequence: i + 1,
-        of: board.items.length,
-        name: it.name,
-      })),
-    });
+    const set = board.seed === undefined ? undefined : setLayouts.get(board.seed);
+    if (set) {
+      layouts.push({
+        ...set,
+        boardLength: board.length,
+        ...(board.items.length > 0
+          ? { alsoOnBoard: board.items.map((i) => ({ name: i.name, instance: i.instance })) }
+          : {}),
+      });
+    } else {
+      layouts.push({
+        stock: stock.id,
+        boardLength: board.length,
+        sequence: board.items.map((it, i) => ({
+          sequence: i + 1,
+          of: board.items.length,
+          name: it.name,
+        })),
+      });
+    }
   }
   return layouts;
 }

@@ -301,7 +301,7 @@ describe("nesting a project", () => {
     expect(result.nesting.boards[0]?.matchSet).toBeUndefined();
   });
 
-  it("a continuous-grain set on sheet goods nests as one composite strip", () => {
+  it("a continuous-grain set on sheet goods is cut as one strip and each member is placed in it", () => {
     const p = boards(
       [panel("A", "30in", "10in"), panel("B", "30in", "10in")],
       [at("A", "0in", "0in"), at("B", "0in", "12in")],
@@ -311,12 +311,12 @@ describe("nesting a project", () => {
       },
     );
     const sheet = stockOf(p).nesting.sheets[0];
-    expect(sheet?.placements).toHaveLength(1);
-    expect(sheet?.placements[0]).toMatchObject({
-      name: "Run",
-      length: inch(60.125),
-      width: inch(10),
-    });
+    // One strip 60-1/8" long (30 + 1/8 + 30) is ripped and crosscut once; A and B sit end to end.
+    expect(sheet?.cutSequence[0]).toEqual({ op: "rip", sizes: [inch(10)] });
+    expect(sheet?.placements.map((x) => [x.name, x.x, x.length])).toEqual([
+      ["A", 0, inch(30)],
+      ["B", inch(30.125), inch(30)],
+    ]);
   });
 
   it("keeps the wood stock id stable for the shopping list", () => {
