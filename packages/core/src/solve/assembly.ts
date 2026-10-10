@@ -40,14 +40,14 @@ function dimensions(part: SolvedPart): Vec3 {
   return [part.length, part.width, part.thickness];
 }
 
-interface AxisMap {
+export interface AxisMap {
   /** Parent axis this local axis lies along. */
   axis: ParentAxis;
   /** +1 when the local axis points along the parent axis, -1 when against it. */
   sign: 1 | -1;
 }
 
-function axisMaps(instance: SolvedInstance): [AxisMap, AxisMap, AxisMap] {
+export function axisMaps(instance: SolvedInstance): [AxisMap, AxisMap, AxisMap] {
   const o = orientationOf(instance.orientation);
   const mapOf = (image: readonly number[]): AxisMap => {
     for (const axis of AXES) {

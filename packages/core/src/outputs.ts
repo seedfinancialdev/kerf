@@ -9,7 +9,7 @@
 import type { EdgeRef, Id, Len } from "./types";
 
 export interface Diagnostic {
-  severity: "error" | "warning";
+  severity: "error" | "warning" | "info";
   rule: string;
   /** Shop-language message shown in the UI. */
   message: string;

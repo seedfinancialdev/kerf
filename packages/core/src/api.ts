@@ -8,8 +8,6 @@
 import { notImplemented } from "./errors";
 import type {
   CutList,
-  DovetailLayout,
-  DovetailLayoutInput,
   MachiningSetup,
   NestingResult,
   RemovalPrimitive,
@@ -24,10 +22,6 @@ export function solve(_project: Project, _shop: ShopProfile): SolveResult {
 }
 
 // Joinery (M2)
-
-export function dovetailLayout(_input: DovetailLayoutInput): DovetailLayout {
-  return notImplemented("dovetailLayout");
-}
 
 export function deriveJointCuts(
   _project: Project,

@@ -128,4 +128,3 @@ describe("which face is the show face", () => {
     }
   });
 });
-

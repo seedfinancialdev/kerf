@@ -74,6 +74,11 @@ export interface SolvedModel {
   diagnostics: Diagnostic[];
   /** Evaluated parameters by name; lengths are snapped integers in internal units. */
   params: Record<string, Quantity>;
+  /**
+   * Exact value of every name an expression may use: parameters, part properties
+   * (`side.thickness`) and stock thickness. Later stages evaluate joint parameters against this.
+   */
+  scope: Record<string, Quantity>;
   parts: SolvedPart[];
   instances: SolvedInstance[];
 }
@@ -122,6 +127,11 @@ class Solver {
   }
 
   // ───────── Steps 1 and 2: parameters and part sizes ─────────
+
+  /** Exact value of every solved name, for evaluating joint parameters later. */
+  exactScope(): Record<string, Quantity> {
+    return Object.fromEntries([...this.leaves, ...this.exact]);
+  }
 
   solveFields(): { params: Record<string, Quantity>; parts: SolvedPart[] } {
     this.collectStock();
@@ -754,6 +764,7 @@ export function solveModel(project: Project): SolvedModel {
   const empty = (diagnostics: Diagnostic[]): SolvedModel => ({
     diagnostics,
     params: {},
+    scope: {},
     parts: [],
     instances: [],
   });
@@ -774,7 +785,13 @@ export function solveModel(project: Project): SolvedModel {
     solver = new Solver(checked.project, checked.project.units);
     const { params, parts } = solver.solveFields();
     const instances = solver.expandInstances(parts);
-    return { diagnostics: solver.diagnostics, params, parts, instances };
+    return {
+      diagnostics: solver.diagnostics,
+      params,
+      scope: solver.exactScope(),
+      parts,
+      instances,
+    };
   } catch (error) {
     return empty([
       ...(solver?.diagnostics ?? []),
