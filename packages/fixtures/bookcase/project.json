@@ -17,7 +17,7 @@
       "id": "01K7M3Q8ZD00000000B1000029",
       "mirrored": true,
       "name": "Left side",
-      "orientation": 17,
+      "orientation": 23,
       "position": {
         "x": "width - stock[\"3/4 plywood\"].thickness",
         "y": "0in",
@@ -31,8 +31,8 @@
       "name": "Top",
       "orientation": 0,
       "position": {
-        "x": "stock[\"3/4 plywood\"].thickness - rabbet_depth",
-        "y": "0in",
+        "x": "stock[\"3/4 plywood\"].thickness",
+        "y": "stock[\"1/4 plywood\"].thickness",
         "z": "height - stock[\"3/4 plywood\"].thickness"
       }
     },
@@ -43,8 +43,8 @@
       "name": "Bottom",
       "orientation": 0,
       "position": {
-        "x": "stock[\"3/4 plywood\"].thickness - rabbet_depth",
-        "y": "0in",
+        "x": "stock[\"3/4 plywood\"].thickness",
+        "y": "stock[\"1/4 plywood\"].thickness",
         "z": "0in"
       }
     },
@@ -55,8 +55,8 @@
       "name": "Shelf",
       "orientation": 0,
       "position": {
-        "x": "stock[\"3/4 plywood\"].thickness - dado_depth",
-        "y": "0in",
+        "x": "stock[\"3/4 plywood\"].thickness",
+        "y": "stock[\"1/4 plywood\"].thickness",
         "z": "stock[\"3/4 plywood\"].thickness"
       }
     },
@@ -67,8 +67,8 @@
       "name": "Back",
       "orientation": 16,
       "position": {
-        "x": "stock[\"3/4 plywood\"].thickness - back_rabbet_depth",
-        "y": "depth - stock[\"1/4 plywood\"].thickness",
+        "x": "stock[\"3/4 plywood\"].thickness",
+        "y": "0in",
         "z": "0in"
       }
     }

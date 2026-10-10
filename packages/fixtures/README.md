@@ -24,10 +24,12 @@ Expected files may carry annotation keys that start with `_` (never compared by 
 
 ## Assumptions and gaps (the spec does not say; confirm or correct)
 
-1. **Orientation indices.** Set from the table in ADR 003 so that each project assembles to its
-   overall size (bookcase 36 x 12 x 72 in, box 10 x 6 x 4 in): bookcase Side 17 and Back 16,
-   box Front and Back 1 and Side 8; everything else is 0 (identity). Positions are expressions in
-   the parent frame with X across, Y deep and Z up.
+1. **Orientations and placement.** Orientations come from the table in ADR 003 so each project
+   assembles to its overall size (bookcase 36 x 12 x 72 in, box 10 x 6 x 4 in): bookcase right Side
+   17, left Side 23 (mirrored), Back 16; box Front and Back 1, Sides 8; everything else 0. Parts sit
+   at the shoulder (Domain model decision 3): shelves, top and bottom start at the side's inner face
+   and at the back rabbet width, the back panel sits at `y = 0` (`edge1` is the front), and the box
+   bottom starts at the walls' inner faces. X runs across, Y is depth (front at +Y), Z is up.
 2. **Distribute spacing.** `from`/`to` is the span being divided (decision D2); members are spaced
    with equal air gaps inside it. The bookcase uses the interior span between top and bottom.
 3. **Pattern count.** `count` is taken as the total number of members, including the source instance.
