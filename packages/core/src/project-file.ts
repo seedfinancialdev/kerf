@@ -467,7 +467,7 @@ function checkIntegrity(project: Project): void {
   for (const [i, instance] of project.instances.entries()) {
     need(parts.has(instance.def), `$.instances[${i}].def`, "a part");
     if (instance.parent !== undefined) {
-      need(instances.has(instance.parent), `$.instances[${i}].parent`, "an instance");
+      need(instances.has(instance.parent), `$.instances[${i}].parent`, "a placed part");
     }
   }
   const parentOf = new Map(project.instances.map((x) => [x.id, x.parent]));
@@ -481,12 +481,12 @@ function checkIntegrity(project: Project): void {
     }
   }
   for (const [i, pattern] of project.patterns.entries()) {
-    need(instances.has(pattern.source), `$.patterns[${i}].source`, "an instance");
+    need(instances.has(pattern.source), `$.patterns[${i}].source`, "a placed part");
   }
   for (const [i, joint] of project.joints.entries()) {
     const known = (id: Id): boolean => instances.has(id) || patterns.has(id);
-    need(known(joint.host), `$.joints[${i}].host`, "an instance or pattern");
-    need(known(joint.guest), `$.joints[${i}].guest`, "an instance or pattern");
+    need(known(joint.host), `$.joints[${i}].host`, "a placed part or pattern");
+    need(known(joint.guest), `$.joints[${i}].guest`, "a placed part or pattern");
     if (joint.host === joint.guest) {
       throw new ProjectFormatError(`$.joints[${i}].guest`, "cannot be the same part as the host");
     }
@@ -497,7 +497,7 @@ function checkIntegrity(project: Project): void {
     const members = new Set<Id>();
     for (const [j, member] of set.members.entries()) {
       const path = `$.matchSets[${i}].members[${j}]`;
-      need(instances.has(member), path, "an instance");
+      need(instances.has(member), path, "a placed part");
       if (members.has(member)) throw new ProjectFormatError(path, "is listed twice");
       if (repeated.has(member)) {
         throw new ProjectFormatError(

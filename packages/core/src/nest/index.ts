@@ -102,21 +102,21 @@ function nestSheetStock(
   const done = new Set<Id>();
 
   for (const { set, members } of setsOn(project, stock, byInstance)) {
+    if (mixedStock(set, members, stock)) {
+      diagnostics.push({
+        severity: "error",
+        rule: "match-set-mixed-stock",
+        message: `${set.name} mixes stock; all its parts must come from the same stock.`,
+        field: set.name,
+      });
+      continue;
+    }
     if (set.type === "bookmatch") {
       // A resawn board of solid wood only; on sheet goods the parts are nested as ordinary parts.
       diagnostics.push({
         severity: "warning",
         rule: "bookmatch-needs-solid-stock",
         message: `${set.name} is a bookmatch, which is cut from one resawn solid board; on ${stock.name} its parts are nested as ordinary parts.`,
-        field: set.name,
-      });
-      continue;
-    }
-    if (mixedStock(set, members, stock)) {
-      diagnostics.push({
-        severity: "error",
-        rule: "match-set-mixed-stock",
-        message: `${set.name} mixes stock; all its parts must come from the same material.`,
         field: set.name,
       });
       continue;
@@ -194,7 +194,7 @@ function nestSolidStock(
       diagnostics.push({
         severity: "error",
         rule: "match-set-mixed-stock",
-        message: `${set.name} mixes stock; all its parts must come from the same material.`,
+        message: `${set.name} mixes stock; all its parts must come from the same stock.`,
         field: set.name,
       });
       continue;

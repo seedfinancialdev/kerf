@@ -309,6 +309,37 @@ describe("nesting a project", () => {
     expect(layout?.sequence.map((m) => m.name)).toEqual(["A", "B"]);
   });
 
+  it("a bookmatch on sheet goods warns and nests as ordinary parts", () => {
+    const p = boards(
+      [panel("A", "20in", "10in"), panel("B", "20in", "10in")],
+      [at("A", "0in", "0in"), at("B", "0in", "12in")],
+      [],
+      { matchSets: [{ name: "Doors", type: "bookmatch", members: ["A", "B"] }] },
+    );
+    const result = stockOf(p);
+    expect(result.diagnostics.find((d) => d.rule === "bookmatch-needs-solid-stock")?.severity).toBe(
+      "warning",
+    );
+    expect(result.blocked).toBe(false);
+    expect(result.nesting.sheets[0]?.placements.map((x) => x.name).sort()).toEqual(["A", "B"]);
+    expect(result.nesting.boards).toEqual([]);
+  });
+
+  it.each([
+    ["solid member first", ["B", "A"]],
+    ["sheet member first", ["A", "B"]],
+  ])("a bookmatch mixing sheet and solid stock is an error, %s", (_label, members) => {
+    const p = boards(
+      [panel("A", "10in", "4in"), { ...panel("B", "10in", "4in"), stock: "wood" }],
+      [at("A", "0in", "0in"), at("B", "0in", "5in")],
+      [],
+      { matchSets: [{ name: "Doors", type: "bookmatch", members }] },
+    );
+    const result = stockOf(p);
+    expect(result.diagnostics.map((d) => d.rule)).toContain("match-set-mixed-stock");
+    expect(result.blocked).toBe(true);
+  });
+
   it("warns when the stock is thinner than the bookmatch's composite thickness", () => {
     const p = boards(
       [
