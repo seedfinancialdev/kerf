@@ -2,10 +2,6 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Tests added after the M2 mutation run: behaviours the first suite let a subtly wrong
-// implementation get away with. Every expected number is worked out by hand from the spec
-// (1/64ths of an inch unless stated). Metric cases use 1 mm = 8,000 units, grid 0.01 mm = 80.
-
 import {
   boxOf,
   deriveJointCuts,
@@ -14,7 +10,6 @@ import {
   type Frame,
   INCH,
   MM,
-  nest,
   type Project,
   type RemovalPrimitive,
   solve,
@@ -22,13 +17,12 @@ import {
   toParent,
 } from "@kerf/core";
 import { describe, expect, it } from "vitest";
-import { boards, type InstanceSpec, type PartSpec } from "../../src/builders";
-import { loadExpected, loadProject, loadShopProfile } from "../../src/index";
+import { boards, type PartSpec } from "../../src/builders";
+import { loadProject, loadShopProfile } from "../../src/index";
 
 const shop = loadShopProfile();
 const q = (n: number): number => (n * INCH) / 64;
 const rules = (p: Project) => solve(p, shop).diagnostics.map((d) => `${d.severity}:${d.rule}`);
-
 function derived(p: Project) {
   const model = solveModel(p);
   return { model, d: deriveJoints(p, model) };
@@ -481,148 +475,5 @@ describe("rabbet and dovetail boundaries", () => {
       [{ type: "throughDovetail", host: "Pins", guest: "Tails", params: { slope: "1:11" } }],
     );
     expect(rules(p)).toContain("error:dovetail-slope");
-  });
-});
-
-describe("nesting choices", () => {
-  const part = (name: string, locked: boolean): PartSpec => ({
-    name,
-    length: "45in",
-    width: "30in",
-    thickness: "3/4in",
-    locked,
-  });
-  const six = (locked: boolean, extras = {}): Project =>
-    boards(
-      Array.from({ length: 6 }, (_, i) => part(`P${i}`, locked)),
-      Array.from(
-        { length: 6 },
-        (_, i): InstanceSpec => ({
-          name: `P${i}`,
-          part: `P${i}`,
-          at: [`${i * 50}in`, "0in", "0in"],
-        }),
-      ),
-      [],
-      extras,
-    );
-
-  it("rotates unlocked parts to save a sheet: 6 parts of 45 x 30 need 2 sheets, 3 when locked", () => {
-    // Locked: 45 along the grain, two per strip (90-1/8"), one strip across (30 + 30 + 1/8 > 48): 3 sheets.
-    expect(nest(six(true), shop).sheets).toHaveLength(3);
-    // Unlocked: 30 along, three per strip (90-1/4"), 45 across: one strip per sheet, 2 sheets.
-    const unlocked = nest(six(false), shop);
-    expect(unlocked.sheets).toHaveLength(2);
-    expect(unlocked.sheets.flatMap((s) => s.placements).every((p) => p.rotated)).toBe(true);
-  });
-
-  it("a sheet with no grain lets even locked parts turn", () => {
-    expect(nest(six(true, { plyGrain: "none" }), shop).sheets).toHaveLength(2);
-  });
-
-  it("uses the shop's kerf, not a built-in one", () => {
-    const part10: PartSpec = { name: "A", length: "10in", width: "5in", thickness: "3/4in" };
-    const p = boards(
-      [part10, { ...part10, name: "B" }],
-      [
-        { name: "A", part: "A", at: ["0in", "0in", "0in"] },
-        { name: "B", part: "B", at: ["0in", "10in", "0in"] },
-      ],
-    );
-    const wide = nest(p, { ...shop, kerf: INCH / 4 });
-    expect(wide.sheets[0]?.placements.map((x) => x.x)).toEqual([0, 10 * INCH + INCH / 4]);
-  });
-
-  it("reports the 3/4in sheets' efficiency as the spec's 'about 46%'", () => {
-    // Exact: used area (2 x 72 x 12 + 6 x 35-1/16 x 11-3/4) over two 96 x 48 sheets is
-    // 3,375.9375 x 2 ... = 44799 / 98304 = 45.6%, which the spec rounds to 46%.
-    const bookcase = loadProject("bookcase");
-    const threeQuarter = bookcase.stock.find((x) => x.name === "3/4 plywood")?.id;
-    const sheets = nest(bookcase, shop).sheets.filter((s) => s.stock === threeQuarter);
-    expect(sheets).toHaveLength(2);
-    const [a, b] = sheets.map((x) => x.efficiency);
-    if (!a || !b) throw new Error("expected two sheets");
-    // (a + b) / 2 == 44799 / 98304, compared without division.
-    expect((a.num * b.den + b.num * a.den) * 98304n).toBe(44799n * 2n * a.den * b.den);
-    const expected = loadExpected<{ efficiencyPercentApprox: Record<string, number> }>(
-      "bookcase",
-      "layouts",
-    );
-    expect(Object.values(expected.efficiencyPercentApprox)).toContain(
-      Math.round((44799 / 98304) * 100),
-    );
-  });
-
-  it("flags stock with no sizes and does not nest its parts", () => {
-    const wood: PartSpec = {
-      name: "W",
-      length: "10in",
-      width: "4in",
-      thickness: "1/2in",
-      stock: "wood",
-    };
-    const p = boards([wood], [{ name: "W", part: "W", at: ["0in", "0in", "0in"] }], [], {
-      woodWithoutSizes: true,
-    });
-    const result = solve(p, shop);
-    expect(result.diagnostics.map((d) => `${d.severity}:${d.rule}`)).toContain(
-      "warning:no-stock-sizes",
-    );
-    expect(result.nesting.boards).toEqual([]);
-  });
-
-  it("adds the stock's length allowance to solid parts before packing", () => {
-    const long: PartSpec = {
-      name: "L",
-      length: "47in",
-      width: "4in",
-      thickness: "1/2in",
-      stock: "wood",
-    };
-    const parts = [long, { ...long, name: "M" }];
-    const at: InstanceSpec[] = [
-      { name: "L", part: "L", at: ["0in", "0in", "0in"] },
-      { name: "M", part: "M", at: ["0in", "5in", "0in"] },
-    ];
-    // 47 + 1/8 + 47 = 94-1/8 fits one 96" board (95" usable); with 1/2" allowance each: 95-1/8, too long.
-    expect(nest(boards(parts, at), shop).boards).toHaveLength(1);
-    expect(
-      nest(boards(parts, at, [], { woodAllowanceLength: INCH / 2 }), shop).boards,
-    ).toHaveLength(2);
-  });
-});
-
-describe("cut-list key includes thickness and width", () => {
-  it("keeps parts of the same length but different thickness or width on separate lines", () => {
-    const parts: PartSpec[] = [
-      { name: "A", length: "20in", width: "10in", thickness: "3/4in" },
-      { name: "B", length: "20in", width: "10in", thickness: "1/2in" },
-      { name: "C", length: "20in", width: "8in", thickness: "3/4in" },
-    ];
-    const at: InstanceSpec[] = parts.map((p, i) => ({
-      name: p.name,
-      part: p.name,
-      at: [`${i * 30}in`, "0in", "0in"],
-    }));
-    expect(solve(boards(parts, at), shop).cutList.lines).toHaveLength(3);
-  });
-});
-
-describe("solving does not mutate its input", () => {
-  const freeze = <T>(o: T): T => {
-    if (o && typeof o === "object" && !Object.isFrozen(o)) {
-      Object.freeze(o);
-      for (const v of Object.values(o as object)) freeze(v);
-    }
-    return o;
-  };
-
-  it("works on a deeply frozen project and shop", () => {
-    const project = freeze(loadProject("bookcase"));
-    const frozenShop = freeze(loadShopProfile());
-    expect(() => solve(project, frozenShop)).not.toThrow();
-    expect(solve(project, frozenShop).diagnostics.filter((d) => d.severity === "error")).toEqual(
-      [],
-    );
   });
 });

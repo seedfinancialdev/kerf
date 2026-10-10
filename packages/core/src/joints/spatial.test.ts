@@ -77,7 +77,7 @@ describe("touchingPairs", () => {
 // From the second M2 review: the sweep path (more than 256 candidate pairs) must agree with
 // the all-pairs test, boundaries included.
 describe("touchingPairs (sweep path)", () => {
-  it("[P1,P2] touching boxes are found by the sweep (400 pairs tested): faces shared along x", () => {
+  it("touching boxes are found by the sweep (400 pairs tested): faces shared along x", () => {
     const cube = (x: number): { min: [number, number, number]; max: [number, number, number] } => ({
       min: [x, 0, 0],
       max: [x + 10, 10, 10],
@@ -92,7 +92,7 @@ describe("touchingPairs (sweep path)", () => {
     expected.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
     expect(touchingPairs(a, b)).toEqual(expected);
   });
-  it("[P3] the sweep returns pairs ordered by i then j even when the boxes are listed backwards", () => {
+  it("the sweep returns pairs ordered by i then j even when the boxes are listed backwards", () => {
     const cube = (x: number): { min: [number, number, number]; max: [number, number, number] } => ({
       min: [x, 0, 0],
       max: [x + 10, 10, 10],

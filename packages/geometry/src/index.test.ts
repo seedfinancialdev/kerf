@@ -293,7 +293,7 @@ describe("invalid input is a MeshError that names the problem", () => {
 });
 
 describe("exact boundaries (second M2 review)", () => {
-  it("[G9] an end1 roundover sits at the far end of the board", () => {
+  it("an end1 roundover sits at the far end of the board", () => {
     const mesh = buildDisplayMesh(blank, [
       { kind: "quarterRoundSweep", edge: "end1/face0", radius: q(8) },
     ]);
@@ -309,12 +309,12 @@ describe("exact boundaries (second M2 review)", () => {
     );
     expect(pts.some(([x, , z]) => Math.abs(x - 11.875) < 1e-4 && Math.abs(z) < 1e-4)).toBe(true);
   });
-  it("[G11] a radius equal to the thickness is allowed", () => {
+  it("a radius equal to the thickness is allowed", () => {
     expect(() =>
       buildDisplayMesh(blank, [{ kind: "quarterRoundSweep", edge: "edge1/face1", radius: q(48) }]),
     ).not.toThrow();
   });
-  it("[G12] a radius equal to the width is allowed; [G13] one beyond a 1/2in strip is not", () => {
+  it("a radius equal to the width is allowed; [G13] one beyond a 1/2in strip is not", () => {
     const strip = { length: q(768), width: q(32), thickness: q(48) };
     expect(() =>
       buildDisplayMesh(strip, [{ kind: "quarterRoundSweep", edge: "edge0/face1", radius: q(32) }]),
@@ -323,7 +323,7 @@ describe("exact boundaries (second M2 review)", () => {
       buildDisplayMesh(strip, [{ kind: "quarterRoundSweep", edge: "edge0/face1", radius: q(40) }]),
     ).toThrow(MeshError);
   });
-  it("[G19] exactly MAX_REMOVALS cuts are drawn", () => {
+  it("exactly MAX_REMOVALS cuts are drawn", () => {
     const cuts = Array.from({ length: MAX_REMOVALS }, (_, i) => ({
       kind: "box" as const,
       min: [(i % 100) * 6, Math.floor(i / 100) * 6, 0] as [number, number, number],
@@ -331,14 +331,14 @@ describe("exact boundaries (second M2 review)", () => {
     }));
     expect(() => buildDisplayMesh(blank, cuts)).not.toThrow(/at most/);
   });
-  it("[G27] a box with an infinite corner is a MeshError", () => {
+  it("a box with an infinite corner is a MeshError", () => {
     expect(() =>
       buildDisplayMesh(blank, [
         { kind: "box", min: [Number.NEGATIVE_INFINITY, 0, 0], max: [0, 1, 1] },
       ]),
     ).toThrow(/whole numbers/);
   });
-  it("[G28] a prism with a NaN point is a MeshError", () => {
+  it("a prism with a NaN point is a MeshError", () => {
     expect(() =>
       buildDisplayMesh(blank, [
         {
@@ -354,7 +354,7 @@ describe("exact boundaries (second M2 review)", () => {
       ]),
     ).toThrow(/whole numbers/);
   });
-  it("[G30] a blank with a NaN length is a MeshError", () => {
+  it("a blank with a NaN length is a MeshError", () => {
     expect(() => buildDisplayMesh({ ...blank, length: Number.NaN }, [])).toThrow(
       /zero or negative/,
     );

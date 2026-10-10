@@ -10,13 +10,11 @@ import {
   machiningSetups,
   nest,
   type Project,
-  parseProject,
   type ShopProfile,
-  serializeProject,
   solve,
 } from "@kerf/core";
 import { describe, expect, it } from "vitest";
-import { boards, type InstanceSpec, type PartSpec, WOOD_ID } from "../../src/builders";
+import { boards, type InstanceSpec, type PartSpec } from "../../src/builders";
 import { loadProject, loadShopProfile } from "../../src/index";
 
 const shop = loadShopProfile();
