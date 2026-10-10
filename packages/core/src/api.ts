@@ -5,7 +5,6 @@
 // The core API. Functions here are thin wrappers over the pipeline in pipeline.ts; structures
 // (M3) are still typed stubs that throw NotImplemented.
 
-import { notImplemented } from "./errors";
 import { deriveJoints } from "./joints/derive";
 import type { CutAdd } from "./joints/types";
 import type {
@@ -16,6 +15,7 @@ import type {
   SolveResult,
 } from "./outputs";
 import { runPipeline, solveProject } from "./pipeline";
+import { detachedPart, generate } from "./structures";
 import type { Id, PartDef, Project, ShopProfile } from "./types";
 
 // The whole pipeline (steps 1-6).
@@ -73,12 +73,22 @@ export function machiningSetups(project: Project, shop: ShopProfile): MachiningS
 
 // Structures (M3)
 
-export function generateStructures(_project: Project, _shop: ShopProfile): Project {
-  return notImplemented("generateStructures");
+/**
+ * The project with everything its structures generate. Pure and deterministic: ids come from the
+ * structure and the part's role, so generating twice gives the same project. A detached part is
+ * kept exactly as saved. Joint choice follows the shop only through the machining setups (which
+ * name the tool you would need), so the shop does not change what is generated.
+ */
+export function generateStructures(project: Project, _shop: ShopProfile): Project {
+  return generate(project).project;
 }
 
-export function detachPart(_project: Project, _part: Id): PartDef {
-  return notImplemented("detachPart");
+/**
+ * The generated part as detached: only this part, with its role kept so the inspector can say where
+ * it came from. Throws RangeError for a part that does not exist or was not generated.
+ */
+export function detachPart(project: Project, part: Id): PartDef {
+  return detachedPart(project, part);
 }
 
 export { deriveJoints };

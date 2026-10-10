@@ -59,6 +59,12 @@ export interface PartDef {
   detached?: boolean;
 }
 
+/** Where a generated object came from: a structure and the part of it ("side", "shelf"). */
+export interface GeneratedFrom {
+  structure: Id;
+  role: string;
+}
+
 export interface Instance {
   id: Id;
   def: Id;
@@ -67,6 +73,7 @@ export interface Instance {
   orientation: number; // 0-23, right-angle rotations
   mirrored: boolean; // left side = mirrored right side
   parent?: Id; // assembly instance, optional
+  generatedBy?: GeneratedFrom; // set on instances a structure generated
 }
 
 export interface Pattern {
@@ -75,6 +82,7 @@ export interface Pattern {
   count: Expr; // kind "count"
   axis: "x" | "y" | "z";
   spacing: { mode: "fixed"; step: Expr } | { mode: "distribute"; from: Expr; to: Expr };
+  generatedBy?: GeneratedFrom;
 }
 
 export interface MatchSet {
@@ -83,6 +91,7 @@ export interface MatchSet {
   type: "continuousGrain" | "bookmatch" | "sameBoard";
   members: Id[]; // instance ids, in order (order matters for continuousGrain)
   axis?: "length" | "width"; // continuousGrain: end-to-end or side-by-side
+  generatedBy?: GeneratedFrom;
 }
 
 export interface Joint {
@@ -91,6 +100,7 @@ export interface Joint {
   host: Id;
   guest: Id; // instance or pattern ids
   params: Record<string, Expr>; // per-type, see Operation specs
+  generatedBy?: GeneratedFrom;
 }
 
 export type UserOp = { id: Id; type: "roundover"; edges: EdgeRef[]; radius: Expr };

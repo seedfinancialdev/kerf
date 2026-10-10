@@ -11,8 +11,10 @@
 
 import { MAX_LENGTH } from "./length";
 import { isOrientationIndex } from "./solve/orientation";
+import { withoutGenerated } from "./structures/generate";
 import type {
   EdgeRef,
+  GeneratedFrom,
   Id,
   Instance,
   Joint,
@@ -300,6 +302,15 @@ function readPartDef(value: unknown, path: string): PartDef {
   return part;
 }
 
+/** The optional `source` of a generated object. */
+function readGeneratedBy(r: Reader): GeneratedFrom | undefined {
+  const source = r.optionalObject("generatedBy");
+  if (!source) return undefined;
+  const from = { structure: source.id("structure"), role: source.string("role") };
+  source.done();
+  return from;
+}
+
 function readInstance(value: unknown, path: string): Instance {
   const r = new Reader(value, path);
   const position = r.object("position");
@@ -318,6 +329,8 @@ function readInstance(value: unknown, path: string): Instance {
   if (name !== undefined) instance.name = name;
   const parent = r.optionalId("parent");
   if (parent !== undefined) instance.parent = parent;
+  const from = readGeneratedBy(r);
+  if (from) instance.generatedBy = from;
   r.done();
   return instance;
 }
@@ -341,6 +354,8 @@ function readPattern(value: unknown, path: string): Pattern {
           spacing: { mode, from: spacing.string("from"), to: spacing.string("to") },
         };
   spacing.done();
+  const from = readGeneratedBy(r);
+  if (from) result.generatedBy = from;
   r.done();
   return result;
 }
@@ -358,6 +373,8 @@ function readMatchSet(value: unknown, path: string): MatchSet {
     }),
   };
   if (r.has("axis")) set.axis = r.oneOf("axis", ["length", "width"] as const);
+  const from = readGeneratedBy(r);
+  if (from) set.generatedBy = from;
   r.done();
   return set;
 }
@@ -371,6 +388,8 @@ function readJoint(value: unknown, path: string): Joint {
     guest: r.id("guest"),
     params: r.record("params", isString, "a string expression"),
   };
+  const from = readGeneratedBy(r);
+  if (from) joint.generatedBy = from;
   r.done();
   return joint;
 }
@@ -475,6 +494,23 @@ function checkIntegrity(project: Project): void {
     need(stock.has(part.stock), `$.parts[${i}].stock`, "stock");
     if (part.source !== undefined) {
       need(structures.has(part.source.structure), `$.parts[${i}].source.structure`, "a structure");
+    }
+  }
+  const sourced: Array<[string, Array<{ generatedBy?: GeneratedFrom }>]> = [
+    ["instances", project.instances],
+    ["patterns", project.patterns],
+    ["joints", project.joints],
+    ["matchSets", project.matchSets],
+  ];
+  for (const [key, list] of sourced) {
+    for (const [i, item] of list.entries()) {
+      if (item.generatedBy !== undefined) {
+        need(
+          structures.has(item.generatedBy.structure),
+          `$.${key}[${i}].generatedBy.structure`,
+          "a structure",
+        );
+      }
     }
   }
   for (const [i, instance] of project.instances.entries()) {
@@ -624,7 +660,9 @@ export function validateProject(
 export function serializeProject(project: Project): string {
   const checked = validateProject(project);
   if (checked.problem) throw checked.problem;
-  return `${canonicalJson(checked.project as unknown as Json)}\n`;
+  // What is saved is intent: structures, openings and hand-made or detached parts. Generated parts,
+  // placements, patterns, joints and match sets are re-derived on load.
+  return `${canonicalJson(withoutGenerated(checked.project) as unknown as Json)}\n`;
 }
 
 /** Reads project.json text, migrating older schema versions forward. Throws ProjectFormatError. */

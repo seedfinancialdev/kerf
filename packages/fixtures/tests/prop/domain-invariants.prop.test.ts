@@ -9,6 +9,7 @@
 import {
   buildCutList,
   deriveJointCuts,
+  generateStructures,
   INCH,
   layoutDovetail,
   MAX_LENGTH,
@@ -463,6 +464,64 @@ describe("bookmatch planing allowance", () => {
         const text = serializeProject({ ...box, planingAllowance: allowance });
         expect(parseProject(text).planingAllowance).toBe(allowance);
         expect(serializeProject(parseProject(text))).toBe(text);
+      });
+    },
+  );
+});
+
+describe("structure generation (M3)", () => {
+  const form = loadProject("bookcase", "structure");
+  const boxForm = loadProject("box", "structure");
+  const editedForm = bookcaseEdit.map((e) => applyBookcaseEdit(form, e));
+  const editedBoxForm = boxEdit.map((e) => applyBoxEdit(boxForm, e));
+  const anyForm = fc.oneof(editedForm, editedBoxForm);
+
+  milestone("M3", "generating is deterministic, idempotent and never throws, ids unique", () => {
+    property(anyForm, (project) => {
+      const once = generateStructures(project, shop);
+      expect(generateStructures(project, shop)).toEqual(once);
+      expect(generateStructures(once, shop)).toEqual(once);
+      const ids = [
+        ...once.parts,
+        ...once.instances,
+        ...once.patterns,
+        ...once.joints,
+        ...once.matchSets,
+      ].map((x) => x.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+  });
+
+  milestone(
+    "M3",
+    "for any size the form gives the cut list of the hand-built project of that size",
+    () => {
+      property(fc.tuple(bookcaseEdit, boxEdit), ([bc, bx]) => {
+        const noMatchSetIds = (list: ReturnType<typeof buildCutList>) => ({
+          ...list,
+          blocks: list.blocks.map((b) => ({ ...b, matchSet: "" })),
+        });
+        expect(noMatchSetIds(buildCutList(applyBookcaseEdit(form, bc)))).toEqual(
+          noMatchSetIds(buildCutList(applyBookcaseEdit(bookcase, bc))),
+        );
+        expect(noMatchSetIds(buildCutList(applyBoxEdit(boxForm, bx)))).toEqual(
+          noMatchSetIds(buildCutList(applyBoxEdit(box, bx))),
+        );
+      });
+    },
+  );
+
+  milestone(
+    "M3",
+    "the saved file holds the form, never the boards, and loads back the same",
+    () => {
+      property(anyForm, (project) => {
+        const text = serializeProject(generateStructures(project, shop));
+        const loaded = parseProject(text);
+        expect(loaded.parts).toEqual([]);
+        expect(loaded.joints).toEqual([]);
+        expect(serializeProject(loaded)).toBe(text);
+        expect(generateStructures(loaded, shop)).toEqual(generateStructures(project, shop));
       });
     },
   );

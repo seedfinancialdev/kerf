@@ -30,5 +30,14 @@ export type { SolvedInstance, SolvedModel, SolvedOp, SolvedPart } from "./solve/
 export { MAX_PATTERN_COUNT, solveModel } from "./solve/model";
 export type { Orientation } from "./solve/orientation";
 export { extentOf, ORIENTATION_COUNT, orientationOf } from "./solve/orientation";
+export {
+  attachPartIn,
+  detachPartIn,
+  generatedId,
+  projectFromTemplate,
+  STOCK_OPTIONS,
+  TEMPLATES,
+  withoutGenerated,
+} from "./structures";
 export * from "./types";
 export * from "./units";

@@ -32,6 +32,7 @@ import { validateAssembly } from "./outputs/validate";
 import { validateProject } from "./project-file";
 import { shopProblem } from "./shop";
 import { invalidProjectModel, type SolvedModel, solveValidatedModel } from "./solve/model";
+import { generate } from "./structures";
 import type { Id, Project, ShopProfile } from "./types";
 
 const NO_CUTS: CutList = { lines: [], blocks: [] };
@@ -80,8 +81,16 @@ export function runPipeline(input: unknown): Pipeline {
     if (checked.problem) {
       return failed(invalidProjectModel(checked.problem.path, checked.problem.message));
     }
-    const project = checked.project;
+    // Structures generate ordinary parts, joints and match sets on every solve; the generated
+    // project is validated like any other so nothing downstream can see an invalid object.
+    const generated = generate(checked.project);
+    const whole = validateProject(generated.project);
+    if (whole.problem) {
+      return failed(invalidProjectModel(whole.problem.path, whole.problem.message));
+    }
+    const project = whole.project;
     const model = solveValidatedModel(project);
+    model.diagnostics.unshift(...generated.diagnostics);
     gathered = model.diagnostics;
     if (model.diagnostics.some((d) => d.rule === "internal-error")) return failed(model);
 
