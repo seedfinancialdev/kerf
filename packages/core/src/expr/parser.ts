@@ -125,7 +125,12 @@ class Parser {
     const token = this.peek();
     this.depth += 1;
     if (this.depth > MAX_DEPTH) {
-      throw new ExpressionError("Expression is too deeply nested", this.source, token.position);
+      throw new ExpressionError(
+        "Expression is too deeply nested",
+        this.source,
+        token.position,
+        "limit",
+      );
     }
     try {
       if (token.type === "op" && token.op === "-") {
@@ -211,6 +216,7 @@ export function parseExpression(source: string): Node {
       `Expression is too long (the limit is ${MAX_EXPRESSION_LENGTH} characters)`,
       source,
       MAX_EXPRESSION_LENGTH,
+      "limit",
     );
   }
   return new Parser(source, tokenize(source)).parse();

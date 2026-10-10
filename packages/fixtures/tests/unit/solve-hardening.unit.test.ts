@@ -555,3 +555,142 @@ describe("hostile input is answered with diagnostics, never an exception", () =>
     expect(rules(p)).toContain("unknown-reference");
   });
 });
+
+describe("second review: fixed-step patterns, default thickness, limits", () => {
+  milestone("M1", "fixed pattern snaps each member once from the exact step (no drift)", () => {
+    // 1/3" is not on the 1/64" grid: members must sit at snap(i / 3 inch), not i × snap(1/3").
+    const p = panelProject({
+      units: "imperial",
+      pattern: { mode: "fixed", step: "1in / 3" },
+      count: "10",
+    });
+    const z = solveModel(p).instances.map((m) => Math.round(m.position.z / (INCH / 64)));
+    expect(z).toEqual([0, 21, 43, 64, 85, 107, 128, 149, 171, 192]);
+  });
+
+  milestone("M1", "a default thickness from stock is snapped to the project grid", () => {
+    // 18 mm stock in an imperial project: 18 mm = 45.35 steps of 1/64" -> 45 steps.
+    const imperial = { ...panelProject({ units: "imperial" }) };
+    expect(solveModel(imperial).parts[0]?.thickness).toBe(45 * 3175);
+    // 23/32" stock in a metric project: 146,050 units = 1825.6 steps of 0.01 mm -> 1826 steps.
+    const metric = panelProject({ units: "metric" });
+    const odd: Project = {
+      ...metric,
+      stock: metric.stock.map((s) => ({ ...s, thickness: 146050 })),
+    };
+    expect(solveModel(odd).parts[0]?.thickness).toBe(1826 * 80);
+  });
+
+  milestone("M1", "a stock thickness beyond the length limit is an error, not a giant part", () => {
+    const p = panelProject({ units: "imperial" });
+    const huge: Project = { ...p, stock: p.stock.map((s) => ({ ...s, thickness: 2 ** 52 })) };
+    expect(rules(huge)).toContain("out-of-range");
+  });
+
+  milestone(
+    "M1",
+    "a count parameter that is one huge number is a limit error on that parameter",
+    () => {
+      const p = withExtraParams(
+        bookcase,
+        ["big", "9".repeat(999), "count"],
+        ["b2", "big * 1", "count"],
+      );
+      const found = solveModel(p).diagnostics.filter((d) => d.rule === "limit-exceeded");
+      expect(found.map((d) => d.field)).toContain("big");
+    },
+  );
+
+  milestone("M1", "a very long decimal literal is a limit error", () => {
+    const p = withExtraParams(bookcase, ["r", `0.${"1".repeat(997)}`, "ratio"]);
+    expect(rules(p)).toContain("limit-exceeded");
+  });
+
+  milestone(
+    "M1",
+    "a declared kind is authoritative: a ratio parameter cannot scale a length",
+    () => {
+      const p = withExtraParams(bookcase, ["n", "3", "ratio"], ["scaled", "100mm * n", "length"]);
+      const model = solveModel(p);
+      expect(model.params.n?.kind).toBe("ratio");
+      expect(model.diagnostics.find((d) => d.field === "scaled")?.severity).toBe("error");
+    },
+  );
+
+  milestone("M1", "a long valid dependency chain solves (no recursion limit)", () => {
+    const chain: Array<[string, string, Param["kind"]]> = [];
+    for (let i = 10_000; i >= 1; i -= 1) chain.push([`p${i}`, `p${i - 1} + 0mm`, "length"]);
+    const p = withExtraParams(bookcase, ["p0", "1in", "length"], ...chain);
+    const model = solveModel(p);
+    expect(model.diagnostics).toEqual([]);
+    expect(model.params.p10000?.value).toEqual({ num: BigInt(INCH), den: 1n });
+  });
+
+  milestone("M1", "limits sit exactly where ADR 012 says", () => {
+    const len = (expr: string) => rules(withParam(bookcase, "width", expr));
+    expect(len("100000in")).toEqual([]);
+    expect(len("100000in + 1/64in")).toContain("out-of-range");
+    const padded = (n: number) => `36in${" ".repeat(n - 4)}`;
+    expect(len(padded(1000))).toEqual([]);
+    expect(len(padded(1001))).toContain("limit-exceeded");
+    expect(len(`${"(".repeat(63)}36in${")".repeat(63)}`)).toEqual([]);
+    expect(len(`${"(".repeat(64)}36in${")".repeat(64)}`)).toContain("limit-exceeded");
+    expect(rules(withParam(bookcase, "shelf_count", "10000"))).not.toContain("invalid-count");
+    expect(rules(withParam(bookcase, "shelf_count", "10001"))).toContain("invalid-count");
+  });
+
+  milestone("M1", "no solve ever falls back to the internal-error path on valid data", () => {
+    for (const p of [bookcase, loadProject("box"), panelProject()]) {
+      expect(rules(p)).not.toContain("internal-error");
+    }
+  });
+});
+
+describe("second review: solveModel total on hostile objects", () => {
+  milestone("M1", "50,000-deep openings are a diagnostic, not a stack overflow", () => {
+    let nested: Record<string, unknown> = { id: uid(70000), children: [] };
+    for (let i = 0; i < 50_000; i += 1) nested = { id: uid(i + 100), children: [nested] };
+    const hostile = {
+      ...bookcase,
+      structures: [
+        {
+          id: uid(60000),
+          type: "case",
+          size: { w: "1in", h: "1in", d: "1in" },
+          options: {},
+          openings: [nested],
+        },
+      ],
+    } as unknown as Project;
+    expect(rules(hostile)).toEqual(["invalid-project"]);
+  });
+
+  milestone(
+    "M1",
+    "a throwing getter or a thrown non-Error becomes internal-error, not an exception",
+    () => {
+      const getter = { ...bookcase } as Project;
+      Object.defineProperty(getter, "name", {
+        get() {
+          throw Object.create(null);
+        },
+      });
+      expect(() => solveModel(getter)).not.toThrow();
+      expect(rules(getter)).toContain("internal-error");
+    },
+  );
+
+  milestone("M1", "solving reads the validated copy, not objects that lie through toJSON", () => {
+    const liar = {
+      ...bookcase,
+      parts: bookcase.parts.map((p, i) =>
+        i === 0 ? { ...p, toJSON: () => ({ ...p, stock: bookcase.stock[0]?.id }) } : p,
+      ),
+      stock: [
+        { ...must(bookcase.stock[0]), toJSON: () => bookcase.stock[0] },
+        ...bookcase.stock.slice(1),
+      ],
+    } as unknown as Project;
+    expect(rules(liar)).not.toContain("internal-error");
+  });
+});

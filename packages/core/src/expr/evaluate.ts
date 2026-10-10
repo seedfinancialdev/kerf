@@ -47,7 +47,7 @@ function combineScalars(a: Kind, b: Kind): Kind {
 function guarded(q: Quantity, source: string, position: number): Quantity {
   const size = (n: bigint): number => (n < 0n ? -n : n).toString(16).length;
   if (size(q.value.num) > MAX_HEX_DIGITS || size(q.value.den) > MAX_HEX_DIGITS) {
-    throw new ExpressionError("This number is too large", source, position);
+    throw new ExpressionError("This number is too large", source, position, "limit");
   }
   return q;
 }
@@ -55,7 +55,7 @@ function guarded(q: Quantity, source: string, position: number): Quantity {
 function evaluateNode(node: Node, scope: Scope, source: string): Quantity {
   switch (node.type) {
     case "number":
-      return { value: node.value, kind: node.kind };
+      return guarded({ value: node.value, kind: node.kind }, source, node.position);
 
     case "ref": {
       // Own properties only: "toString" and "constructor" are not names.

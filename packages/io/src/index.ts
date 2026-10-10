@@ -124,6 +124,15 @@ function metaText(meta: KerfMeta): string {
   return `${JSON.stringify(ordered, null, 2)}\n`;
 }
 
+function checkThumbnail(bytes: Uint8Array): void {
+  if (!PNG_SIGNATURE.every((byte, i) => bytes[i] === byte)) {
+    throw new KerfFormatError(`${THUMBNAIL} is not a PNG image.`);
+  }
+  if (bytes.length > (MAX_SIZE[THUMBNAIL] ?? 0)) {
+    throw new KerfFormatError(`${THUMBNAIL} is too large.`);
+  }
+}
+
 /** Fixed timestamp (local 1980-01-01, the ZIP epoch) so output never depends on the clock. */
 const ZIP_EPOCH = new Date(1980, 0, 1, 0, 0, 0);
 
@@ -136,7 +145,10 @@ export function writeKerf(project: Project, meta: KerfMeta, thumbnail?: Uint8Arr
     [PROJECT]: strToU8(serializeProject(project)),
     [META]: strToU8(metaText(meta)),
   };
-  if (thumbnail) entries[THUMBNAIL] = thumbnail;
+  if (thumbnail) {
+    checkThumbnail(thumbnail);
+    entries[THUMBNAIL] = thumbnail;
+  }
   return zipSync(entries, { level: 6, mtime: ZIP_EPOCH });
 }
 
@@ -150,7 +162,9 @@ export function readKerf(bytes: Uint8Array): {
   thumbnail?: Uint8Array;
 } {
   const unexpected: string[] = [];
+  const repeated: string[] = [];
   const oversize: string[] = [];
+  const seen = new Set<string>();
   let entries: Record<string, Uint8Array>;
   try {
     entries = unzipSync(bytes, {
@@ -159,7 +173,13 @@ export function readKerf(bytes: Uint8Array): {
           unexpected.push(file.name);
           return false;
         }
-        if (file.originalSize > (MAX_SIZE[file.name] ?? 0)) {
+        if (seen.has(file.name)) {
+          repeated.push(file.name);
+          return false;
+        }
+        seen.add(file.name);
+        // Stored entries are read at their compressed size, so check both declared sizes.
+        if (Math.max(file.size, file.originalSize) > (MAX_SIZE[file.name] ?? 0)) {
           oversize.push(file.name);
           return false;
         }
@@ -172,8 +192,16 @@ export function readKerf(bytes: Uint8Array): {
   if (unexpected.length > 0) {
     throw new KerfFormatError(`The archive has an unexpected entry: ${unexpected.join(", ")}.`);
   }
+  if (repeated.length > 0) {
+    throw new KerfFormatError(`The archive lists ${repeated.join(", ")} more than once.`);
+  }
   if (oversize.length > 0) {
     throw new KerfFormatError(`The archive entry ${oversize.join(", ")} is too large.`);
+  }
+  for (const [name, data] of Object.entries(entries)) {
+    if (data.length > (MAX_SIZE[name] ?? 0)) {
+      throw new KerfFormatError(`The archive entry ${name} is too large.`);
+    }
   }
 
   const projectBytes = entries[PROJECT];
@@ -187,9 +215,7 @@ export function readKerf(bytes: Uint8Array): {
 
   const thumbnail = entries[THUMBNAIL];
   if (thumbnail) {
-    if (!PNG_SIGNATURE.every((byte, i) => thumbnail[i] === byte)) {
-      throw new KerfFormatError(`${THUMBNAIL} is not a PNG image.`);
-    }
+    checkThumbnail(thumbnail);
     result.thumbnail = thumbnail;
   }
   return result;

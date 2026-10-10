@@ -142,3 +142,63 @@ describe(".kerf archive: strictness", () => {
     }
   });
 });
+
+describe(".kerf archive: second review", () => {
+  const enc = (v: unknown) => strToU8(JSON.stringify(v));
+
+  /** Rewrites the declared uncompressed size of every entry (local and central headers). */
+  function lie(bytes: Uint8Array, size: number): Uint8Array {
+    const out = new Uint8Array(bytes);
+    const view = new DataView(out.buffer);
+    for (let i = 0; i + 4 < out.length; i += 1) {
+      const sig = view.getUint32(i, true);
+      if (sig === 0x04034b50) view.setUint32(i + 22, size, true);
+      if (sig === 0x02014b50) view.setUint32(i + 24, size, true);
+    }
+    return out;
+  }
+
+  it("does not trust a stored entry that declares a small size", () => {
+    const big = { ...meta, appVersion: "x".repeat(100 * 1024) };
+    const zip = zipSync({
+      "project.json": [enc(project), { level: 0 }],
+      "meta.json": [enc(big), { level: 0 }],
+    });
+    expect(() => readKerf(lie(zip, 10))).toThrow(/too large|invalid|not a \.kerf/i);
+  });
+
+  it("rejects an entry name that appears twice", () => {
+    const zip = zipSync({
+      "project.json": enc(project),
+      "project.jsoX": enc(project),
+      "meta.json": enc(meta),
+    });
+    const dup = new Uint8Array(zip);
+    const x = "project.jsoX";
+    for (let i = 0; i + x.length < dup.length; i += 1) {
+      if (x.split("").every((c, j) => dup[i + j] === c.charCodeAt(0)))
+        dup[i + x.length - 1] = "n".charCodeAt(0);
+    }
+    expect(() => readKerf(dup)).toThrow(/more than once|duplicate/i);
+  });
+
+  it("refuses to write a thumbnail it would later refuse to read", () => {
+    expect(() => writeKerf(project, meta, new Uint8Array([1, 2, 3]))).toThrow(/PNG/);
+  });
+});
+
+describe(".kerf archive: clock independence", () => {
+  it("stamps every entry with the fixed ZIP epoch (1980-01-01 00:00), whatever the local clock", () => {
+    const bytes = writeKerf(project, meta);
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    let headers = 0;
+    for (let i = 0; i + 14 < bytes.length; i += 1) {
+      if (view.getUint32(i, true) === 0x04034b50) {
+        headers += 1;
+        expect(view.getUint16(i + 10, true)).toBe(0); // time 00:00:00
+        expect(view.getUint16(i + 12, true)).toBe(0x21); // date 1980-01-01
+      }
+    }
+    expect(headers).toBe(2);
+  });
+});

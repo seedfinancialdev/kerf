@@ -12,8 +12,8 @@ export {
   CURRENT_SCHEMA_VERSION,
   ProjectFormatError,
   parseProject,
-  projectProblem,
   serializeProject,
+  validateProject,
 } from "./project-file";
 export type { Rational } from "./rational";
 export { rational } from "./rational";

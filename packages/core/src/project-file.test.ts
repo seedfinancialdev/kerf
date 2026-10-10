@@ -288,7 +288,8 @@ describe("integrity checks at load", () => {
       const stock = must(list(r, "stock")[0]);
       stock.solid = { standardLengths: [19507200], maxWidth: 1625600 };
       stock.price = { per: "boardFoot", cents: 1250 };
-      must(list(r, "instances")[0]).parent = must(list(r, "instances")[0]).id;
+      const first = must(list(r, "instances")[0]);
+      list(r, "instances").push({ ...first, id: id(400), parent: first.id });
       must(list(r, "parts")[0]).notes = "Glue up two boards";
     });
     const parsed = parseProject(rich);
@@ -313,5 +314,88 @@ describe("integrity checks at load", () => {
       must(list(r, "parts")[0]).notes = null;
     });
     expect(() => parseProject(raw)).toThrow(/notes.*(null|expected a string)/);
+  });
+});
+
+describe("second review: canonical order and references", () => {
+  const text = serializeProject(project);
+  type Raw = Record<string, unknown>;
+  const edit = (change: (raw: Raw) => void): string => {
+    const raw = JSON.parse(text) as Raw;
+    change(raw);
+    return JSON.stringify(raw);
+  };
+  const list = (raw: Raw, key: string): Raw[] => raw[key] as Raw[];
+
+  it("orders integer-like keys by code point too, not numerically", () => {
+    const written = serializeProject({
+      ...project,
+      structures: [
+        {
+          ...(project.structures[0] as object),
+          options: { "9": "a", "10": "b", a: "c" },
+        } as never,
+      ],
+    });
+    const at = (key: string) => written.indexOf(`"${key}": `, written.indexOf('"options"'));
+    expect(at("10")).toBeLessThan(at("9"));
+    expect(at("9")).toBeLessThan(at("a"));
+    expect(serializeProject(parseProject(written))).toBe(written);
+  });
+
+  it("serializing a pathologically nested project is a format error, not a RangeError", () => {
+    let nested: Raw = { id: id(1), children: [] };
+    for (let i = 0; i < 50_000; i += 1) nested = { id: id(i + 1000), children: [nested] };
+    const bad = {
+      ...project,
+      structures: [{ ...(project.structures[0] as object), openings: [nested] }],
+    };
+    expect(() => serializeProject(bad as never)).toThrow(ProjectFormatError);
+  });
+
+  it.each([
+    [
+      "a part's source structure",
+      (r: Raw) => {
+        (list(r, "parts")[0] as Raw).source = { structure: id(99), role: "x" };
+      },
+      /structure/,
+    ],
+    [
+      "an instance that is its own parent",
+      (r: Raw) => {
+        const i = list(r, "instances")[0] as Raw;
+        i.parent = i.id;
+      },
+      /parent/,
+    ],
+    [
+      "a repeated match-set member",
+      (r: Raw) => {
+        const m = list(r, "matchSets")[0] as Raw;
+        m.members = [...(m.members as string[]), (m.members as string[])[0]];
+      },
+      /members/,
+    ],
+    [
+      "a joint joining a part to itself",
+      (r: Raw) => {
+        const j = list(r, "joints")[0] as Raw;
+        j.guest = j.host;
+      },
+      /guest/,
+    ],
+  ])("rejects %s", (_label, change, pattern) => {
+    expect(() => parseProject(edit(change))).toThrow(pattern);
+  });
+
+  it("rejects a parent cycle", () => {
+    const raw = edit((r) => {
+      const instances = list(r, "instances");
+      const second = { ...(instances[0] as Raw), id: id(500), parent: (instances[0] as Raw).id };
+      (instances[0] as Raw).parent = second.id;
+      instances.push(second);
+    });
+    expect(() => parseProject(raw)).toThrow(/parent/);
   });
 });

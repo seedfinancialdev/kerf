@@ -17,10 +17,20 @@
 import { ExpressionError } from "../expr/errors";
 import { evaluateQuantity, type Quantity } from "../expr/evaluate";
 import { type Node, parseExpression, partKey, referencesOf, slug, stockKey } from "../expr/parser";
-import { LengthRangeError, MAX_LENGTH, snapToGrid, type UnitSystem } from "../length";
+import { LengthRangeError, snapToGrid, type UnitSystem } from "../length";
 import type { Diagnostic } from "../outputs";
-import { projectProblem } from "../project-file";
-import { add, div, fromInteger, isInteger, mul, rational, sub, toSafeInteger } from "../rational";
+import { validateProject } from "../project-file";
+import {
+  add,
+  div,
+  fromInteger,
+  isInteger,
+  mul,
+  type Rational,
+  rational,
+  sub,
+  toSafeInteger,
+} from "../rational";
 import type { EdgeRef, Id, Instance, Len, Param, PartDef, Pattern, Project } from "../types";
 import { extentOf, isOrientationIndex } from "./orientation";
 
@@ -118,8 +128,7 @@ class Solver {
     for (const param of this.project.params) this.addParam(param);
     this.collectParts();
     this.parseAll();
-    this.failCycles();
-    for (const key of this.order) this.resolve(key);
+    for (const key of this.dependencyOrder()) this.solveField(key);
 
     const entries: Array<[string, Quantity]> = [];
     for (const param of this.project.params) {
@@ -196,27 +205,18 @@ class Solver {
       this.addPartField(part, "length", part.length);
       this.addPartField(part, "width", part.width);
       if (part.thickness === undefined) {
-        const key = partKey(part.name, "thickness");
-        const exact: Quantity = { value: rational(BigInt(stock.thickness)), kind: "length" };
-        this.exact.set(key, exact);
-        this.addField({
-          key,
+        const field: Field = {
+          key: partKey(part.name, "thickness"),
           label: `${part.name} thickness`,
           source: "",
           expect: "length",
           dimension: true,
           partId: part.id,
           refs: [],
-          state: "done",
-          exact,
-          value: exact,
-        });
-        if (stock.thickness <= 0) {
-          this.error("invalid-dimension", `${part.name} thickness must be greater than zero.`, {
-            part: part.id,
-            field: `${part.name} thickness`,
-          });
-        }
+          state: "pending",
+        };
+        this.addField(field);
+        this.conclude(field, { value: rational(BigInt(stock.thickness)), kind: "length" });
       } else {
         this.addPartField(part, "thickness", part.thickness);
       }
@@ -254,48 +254,65 @@ class Solver {
     }
   }
 
-  /** Strongly connected components with more than one member (or a self-reference). */
-  private failCycles(): void {
+  /**
+   * Fields in dependency order (what a field refers to comes before it), found with an iterative
+   * Tarjan pass, so a chain of any length is safe. Strongly connected components with more than
+   * one member, or a self-reference, are reported as one cycle and marked failed.
+   */
+  private dependencyOrder(): string[] {
     const index = new Map<string, number>();
     const low = new Map<string, number>();
     const onStack = new Set<string>();
     const stack: string[] = [];
     const position = new Map(this.order.map((key, i) => [key, i]));
+    const result: string[] = [];
     let counter = 0;
 
-    const visit = (key: string): void => {
-      index.set(key, counter);
-      low.set(key, counter);
-      counter += 1;
-      stack.push(key);
-      onStack.add(key);
+    const successors = (key: string): string[] =>
+      (this.fields.get(key)?.refs ?? []).filter((ref) => this.fields.has(ref));
+    const lowOf = (key: string): number => low.get(key) ?? 0;
 
-      const field = this.fields.get(key);
-      for (const ref of field?.refs ?? []) {
-        if (!this.fields.has(ref)) continue;
-        if (!index.has(ref)) {
-          visit(ref);
-          low.set(key, Math.min(low.get(key) ?? 0, low.get(ref) ?? 0));
-        } else if (onStack.has(ref)) {
-          low.set(key, Math.min(low.get(key) ?? 0, index.get(ref) ?? 0));
+    for (const root of this.order) {
+      if (index.has(root)) continue;
+      const work: Array<{ key: string; next: number; successors: string[] }> = [];
+      const enter = (key: string): void => {
+        index.set(key, counter);
+        low.set(key, counter);
+        counter += 1;
+        stack.push(key);
+        onStack.add(key);
+        work.push({ key, next: 0, successors: successors(key) });
+      };
+
+      enter(root);
+      for (let frame = work.at(-1); frame !== undefined; frame = work.at(-1)) {
+        const ref = frame.successors[frame.next];
+        if (ref !== undefined) {
+          frame.next += 1;
+          if (!index.has(ref)) enter(ref);
+          else if (onStack.has(ref))
+            low.set(frame.key, Math.min(lowOf(frame.key), index.get(ref) ?? 0));
+          continue;
         }
-      }
 
-      if (low.get(key) === index.get(key)) {
+        work.pop();
+        const parent = work.at(-1);
+        if (parent) low.set(parent.key, Math.min(lowOf(parent.key), lowOf(frame.key)));
+        if (lowOf(frame.key) !== index.get(frame.key)) continue;
+
         const members: string[] = [];
-        for (;;) {
-          const member = stack.pop();
-          if (member === undefined) break;
+        for (let member = stack.pop(); member !== undefined; member = stack.pop()) {
           onStack.delete(member);
           members.push(member);
-          if (member === key) break;
+          if (member === frame.key) break;
         }
-        const selfLoop = members.length === 1 && field?.refs.includes(key) === true;
+        const selfLoop =
+          members.length === 1 && this.fields.get(frame.key)?.refs.includes(frame.key);
         if (members.length > 1 || selfLoop) this.reportCycle(members, position);
+        result.push(...members);
       }
-    };
-
-    for (const key of this.order) if (!index.has(key)) visit(key);
+    }
+    return result;
   }
 
   private reportCycle(members: string[], position: Map<string, number>): void {
@@ -315,56 +332,76 @@ class Solver {
     );
   }
 
-  /** Solves a field after everything it refers to. Returns null when it cannot be solved. */
-  private resolve(key: string): Quantity | null {
-    const leaf = this.leaves.get(key);
-    if (leaf) return leaf;
-
+  /** Solves one field. Everything it refers to has already been solved or has failed. */
+  private solveField(key: string): void {
     const field = this.fields.get(key);
-    if (!field) return null;
-    if (field.state === "done") return field.exact ?? null;
-    if (field.state === "failed" || !field.node) return null;
+    if (field?.state !== "pending" || !field.node) return;
 
-    field.state = "failed"; // guards against re-entry; replaced on success
     const scope: Array<[string, Quantity]> = [];
     let ok = true;
     for (const ref of field.refs) {
-      if (!this.leaves.has(ref) && !this.fields.has(ref)) {
+      const leaf = this.leaves.get(ref);
+      if (leaf) {
+        scope.push([ref, leaf]);
+        continue;
+      }
+      const dependency = this.fields.get(ref);
+      if (!dependency) {
         this.error("unknown-reference", `${field.label}: there is nothing called "${ref}".`, {
           part: field.partId,
           field: field.label,
         });
         ok = false;
-        continue;
+      } else if (dependency.state === "done" && dependency.exact) {
+        scope.push([ref, dependency.exact]);
+      } else {
+        ok = false; // failed upstream; its own diagnostic says why
       }
-      const dep = this.resolve(ref);
-      if (dep === null) ok = false;
-      else scope.push([ref, dep]);
     }
-    if (!ok) return null;
+    if (!ok) {
+      field.state = "failed";
+      return;
+    }
 
-    const solved = this.solveExpression(
-      field.source,
-      scope,
-      field.label,
-      field.expect,
-      field.partId,
-    );
-    if (solved === null) return null;
+    try {
+      this.conclude(field, evaluateQuantity(field.source, Object.fromEntries(scope)));
+    } catch (error) {
+      this.reportProblem(field, error);
+      field.state = "failed";
+    }
+  }
+
+  /**
+   * Turns a raw value into a field's result: checks its kind, snaps a length once, and requires
+   * part dimensions to be greater than zero. Reports and returns false on failure.
+   */
+  private conclude(field: Field, raw: Quantity): boolean {
+    let solved: { exact: Quantity; value: Quantity } | null;
+    try {
+      solved = this.coerce(raw, field.expect, field.label, field.partId);
+    } catch (error) {
+      this.reportProblem(field, error);
+      field.state = "failed";
+      return false;
+    }
+    if (solved === null) {
+      field.state = "failed";
+      return false;
+    }
     if (field.dimension && solved.value.value.num <= 0n) {
       this.error(
         "invalid-dimension",
         `${field.label} must be greater than zero (it is zero or negative after rounding to the grid).`,
         { part: field.partId, field: field.label },
       );
-      return null;
+      field.state = "failed";
+      return false;
     }
-
     field.exact = solved.exact;
     field.value = solved.value;
     field.state = "done";
-    this.exact.set(key, solved.exact);
-    return solved.exact;
+    this.exact.set(field.key, solved.exact);
+    return true;
   }
 
   /**
@@ -411,13 +448,15 @@ class Solver {
       return { exact: count, value: count };
     }
     if (raw.kind === "length") return mismatch("a plain number or ratio, not a length");
-    const scalar: Quantity = { value: raw.value, kind: raw.kind === "count" ? "count" : "ratio" };
-    return { exact: scalar, value: scalar };
+    // A parameter declared as a ratio is a ratio, whatever its expression looks like.
+    const ratio: Quantity = { value: raw.value, kind: "ratio" };
+    return { exact: ratio, value: ratio };
   }
 
   private reportProblem(where: { label: string; partId?: Id }, error: unknown): void {
     if (error instanceof ExpressionError) {
-      this.error("expression-syntax", `${where.label}: ${error.message}.`, {
+      const rule = error.reason === "limit" ? "limit-exceeded" : "expression-syntax";
+      this.error(rule, `${where.label}: ${error.message}.`, {
         part: where.partId,
         field: where.label,
       });
@@ -510,7 +549,7 @@ class Solver {
         for (const member of this.expandPattern(instance, part, pattern, name)) out.push(member);
       } else {
         const placed = this.place(instance, part, name);
-        if (placed) out.push(placed);
+        if (placed) out.push(placed.placed);
       }
     }
     return out;
@@ -549,8 +588,16 @@ class Solver {
     return ok ? this.solveExpression(source, scope, label, expect, part) : null;
   }
 
-  private position(instance: Instance, label: string): { x: Len; y: Len; z: Len } | null {
-    const coords: Len[] = [];
+  /** Position on each axis: snapped for storage, exact for patterns that step from it. */
+  private position(
+    instance: Instance,
+    label: string,
+  ): {
+    value: { x: Len; y: Len; z: Len };
+    exact: { x: Rational; y: Rational; z: Rational };
+  } | null {
+    const value = { x: 0, y: 0, z: 0 };
+    const exact = { x: rational(0n), y: rational(0n), z: rational(0n) };
     for (const axis of ["x", "y", "z"] as const) {
       const q = this.evaluateOutside(
         instance.position[axis],
@@ -558,22 +605,30 @@ class Solver {
         "length",
       );
       if (!q) return null;
-      coords.push(toSafeInteger(q.value.value));
+      value[axis] = toSafeInteger(q.value.value);
+      exact[axis] = q.exact.value;
     }
-    return { x: coords[0] ?? 0, y: coords[1] ?? 0, z: coords[2] ?? 0 };
+    return { value, exact };
   }
 
-  private place(instance: Instance, part: SolvedPart, name: string): SolvedInstance | null {
+  private place(
+    instance: Instance,
+    part: SolvedPart,
+    name: string,
+  ): { placed: SolvedInstance; exact: { x: Rational; y: Rational; z: Rational } } | null {
     const position = this.position(instance, name);
     if (!position) return null;
     return {
-      id: instance.id,
-      def: part.id,
-      name,
-      position,
-      extent: extentOf(instance.orientation, part),
-      orientation: instance.orientation,
-      mirrored: instance.mirrored,
+      exact: position.exact,
+      placed: {
+        id: instance.id,
+        def: part.id,
+        name,
+        position: position.value,
+        extent: extentOf(instance.orientation, part),
+        orientation: instance.orientation,
+        mirrored: instance.mirrored,
+      },
     };
   }
 
@@ -596,15 +651,16 @@ class Solver {
     }
     const count = toSafeInteger(countQ.value.value);
 
-    const base = this.place(instance, part, name);
-    if (!base) return [];
+    const found = this.place(instance, part, name);
+    if (!found) return [];
+    const base = found.placed;
     const axis = pattern.axis;
     const positions = this.positionsAlong(
       pattern,
       label,
       count,
       base.extent[axis],
-      base.position[axis],
+      found.exact[axis],
     );
     if (!positions) return [];
 
@@ -623,26 +679,27 @@ class Solver {
     label: string,
     count: number,
     extent: Len,
-    base: Len,
+    base: Rational,
   ): Len[] | null {
-    const inRange = (n: number): boolean => Math.abs(n) <= MAX_LENGTH;
-
     if (pattern.spacing.mode === "fixed") {
       const stepQ = this.evaluateOutside(pattern.spacing.step, `${label} step`, "length");
       if (!stepQ) return null;
-      const step = toSafeInteger(stepQ.value.value);
-      if (step <= 0) {
+      // R1: step from the exact values and snap each member once, so error never accumulates.
+      const step = stepQ.exact.value;
+      if (step.num <= 0n) {
         this.error("invalid-pattern", `${label} step must be greater than zero.`, {
           field: `${label} step`,
         });
         return null;
       }
-      const last = base + (count - 1) * step;
-      if (!inRange(last)) {
-        this.error("out-of-range", `${label} runs past the supported size.`, { field: label });
+      try {
+        return Array.from({ length: count }, (_, i) =>
+          snapToGrid(add(base, mul(fromInteger(i), step)), this.units),
+        );
+      } catch (error) {
+        this.reportProblem({ label }, error);
         return null;
       }
-      return Array.from({ length: count }, (_, i) => base + i * step);
     }
 
     const from = this.evaluateOutside(pattern.spacing.from, `${label} from`, "length");
@@ -679,48 +736,53 @@ class Solver {
   }
 }
 
+function describe(error: unknown): string {
+  try {
+    if (error instanceof Error) return `${error.name}: ${error.message}`;
+    return typeof error === "object" ? "a value that is not an error was thrown" : String(error);
+  } catch {
+    return "an error that could not be described";
+  }
+}
+
 /**
- * Steps 1-3 of the solve pipeline. Never throws: problems come back as diagnostics, and an
- * invalid project (wrong shape, repeated ids, dangling references) yields one "invalid-project"
- * error and an empty model.
+ * Steps 1-3 of the solve pipeline. Never throws: problems come back as diagnostics. A project
+ * that is the wrong shape, reuses an id or has a dangling reference yields one "invalid-project"
+ * error and an empty model. Solving reads a validated copy, never the object passed in.
  */
 export function solveModel(project: Project): SolvedModel {
-  const problem = projectProblem(project);
-  if (problem) {
-    return {
-      diagnostics: [
+  const empty = (diagnostics: Diagnostic[]): SolvedModel => ({
+    diagnostics,
+    params: {},
+    parts: [],
+    instances: [],
+  });
+
+  let solver: Solver | undefined;
+  try {
+    const checked = validateProject(project);
+    if (checked.problem) {
+      return empty([
         {
           severity: "error",
           rule: "invalid-project",
-          message: `The project file is not valid: ${problem.message}.`,
-          field: problem.path,
+          message: `The project file is not valid: ${checked.problem.message}.`,
+          field: checked.problem.path,
         },
-      ],
-      params: {},
-      parts: [],
-      instances: [],
-    };
-  }
-
-  const solver = new Solver(project, project.units);
-  try {
+      ]);
+    }
+    solver = new Solver(checked.project, checked.project.units);
     const { params, parts } = solver.solveFields();
     const instances = solver.expandInstances(parts);
     return { diagnostics: solver.diagnostics, params, parts, instances };
   } catch (error) {
-    const reason = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-    return {
-      diagnostics: [
-        ...solver.diagnostics,
-        {
-          severity: "error",
-          rule: "internal-error",
-          message: `Kerf could not finish solving this project (${reason}). This is a bug; please report it.`,
-        },
-      ],
-      params: {},
-      parts: [],
-      instances: [],
-    };
+    return empty([
+      ...(solver?.diagnostics ?? []),
+      {
+        severity: "error",
+        rule: "internal-error",
+        message: `Kerf could not finish solving this project (${describe(error)}). This is a bug; please report it.`,
+      },
+    ]);
   }
 }

@@ -447,13 +447,27 @@ function checkIntegrity(project: Project): void {
     if (!ok) throw new ProjectFormatError(path, `refers to ${what} that does not exist`);
   };
 
+  const structures = new Set(project.structures.map((x) => x.id));
   for (const [i, part] of project.parts.entries()) {
     need(stock.has(part.stock), `$.parts[${i}].stock`, "stock");
+    if (part.source !== undefined) {
+      need(structures.has(part.source.structure), `$.parts[${i}].source.structure`, "a structure");
+    }
   }
   for (const [i, instance] of project.instances.entries()) {
     need(parts.has(instance.def), `$.instances[${i}].def`, "a part");
     if (instance.parent !== undefined) {
       need(instances.has(instance.parent), `$.instances[${i}].parent`, "an instance");
+    }
+  }
+  const parentOf = new Map(project.instances.map((x) => [x.id, x.parent]));
+  for (const [i, instance] of project.instances.entries()) {
+    const seen = new Set<Id>([instance.id]);
+    for (let at = instance.parent; at !== undefined; at = parentOf.get(at)) {
+      if (seen.has(at)) {
+        throw new ProjectFormatError(`$.instances[${i}].parent`, "is part of a parent loop");
+      }
+      seen.add(at);
     }
   }
   for (const [i, pattern] of project.patterns.entries()) {
@@ -463,10 +477,18 @@ function checkIntegrity(project: Project): void {
     const known = (id: Id): boolean => instances.has(id) || patterns.has(id);
     need(known(joint.host), `$.joints[${i}].host`, "an instance or pattern");
     need(known(joint.guest), `$.joints[${i}].guest`, "an instance or pattern");
+    if (joint.host === joint.guest) {
+      throw new ProjectFormatError(`$.joints[${i}].guest`, "cannot be the same part as the host");
+    }
   }
   for (const [i, set] of project.matchSets.entries()) {
+    const members = new Set<Id>();
     for (const [j, member] of set.members.entries()) {
       need(instances.has(member), `$.matchSets[${i}].members[${j}]`, "an instance");
+      if (members.has(member)) {
+        throw new ProjectFormatError(`$.matchSets[${i}].members[${j}]`, "is listed twice");
+      }
+      members.add(member);
     }
   }
 }
@@ -509,31 +531,51 @@ function compareCodePoints(a: string, b: string): number {
   return left.length - right.length;
 }
 
-function sortKeys(value: Json): Json {
-  if (Array.isArray(value)) return value.map(sortKeys);
+/**
+ * JSON with keys in code-point order, 2-space indent and no trailing newline. Written by hand
+ * because a JavaScript object always lists integer-like keys first, whatever order they were set.
+ */
+function canonicalJson(value: Json, indent = ""): string {
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "[]";
+    const inner = `${indent}  `;
+    return `[\n${value.map((v) => `${inner}${canonicalJson(v, inner)}`).join(",\n")}\n${indent}]`;
+  }
   if (value !== null && typeof value === "object") {
     const record = value as { [key: string]: Json };
-    return Object.fromEntries(
-      Object.keys(record)
-        .sort(compareCodePoints)
-        .map((key) => [key, sortKeys(record[key] as Json)] as const),
+    const keys = Object.keys(record).sort(compareCodePoints);
+    if (keys.length === 0) return "{}";
+    const inner = `${indent}  `;
+    const lines = keys.map(
+      (key) => `${inner}${JSON.stringify(key)}: ${canonicalJson(record[key] as Json, inner)}`,
     );
+    return `{\n${lines.join(",\n")}\n${indent}}`;
   }
-  return value;
+  return JSON.stringify(value);
 }
 
 /**
- * Checks a project object against the file schema without writing it: shape, integer lengths,
- * unique ids and resolvable references. Returns null when valid.
+ * Checks any value against the file schema (shape, whole-number lengths, unique ids, resolvable
+ * references) and returns a validated copy. Callers should use the copy, never the original, so
+ * that what was checked is exactly what is read.
  */
-export function projectProblem(project: unknown): ProjectFormatError | null {
+export function validateProject(
+  value: unknown,
+):
+  | { project: Project; problem?: undefined }
+  | { project?: undefined; problem: ProjectFormatError } {
   try {
-    readProject(JSON.parse(JSON.stringify(project)) as unknown);
-    return null;
+    const clone = JSON.parse(JSON.stringify(value)) as unknown;
+    return { project: readProject(clone) };
   } catch (error) {
-    if (error instanceof ProjectFormatError) return error;
+    if (error instanceof ProjectFormatError) return { problem: error };
+    if (error instanceof RangeError) {
+      return {
+        problem: new ProjectFormatError("$", "the project is nested too deeply to be read"),
+      };
+    }
     if (error instanceof SyntaxError || error instanceof TypeError) {
-      return new ProjectFormatError("$", "the project cannot be read as plain data");
+      return { problem: new ProjectFormatError("$", "the project cannot be read as plain data") };
     }
     throw error;
   }
@@ -544,8 +586,9 @@ export function projectProblem(project: unknown): ProjectFormatError | null {
  * Throws ProjectFormatError.
  */
 export function serializeProject(project: Project): string {
-  const valid = readProject(JSON.parse(JSON.stringify(project)) as unknown);
-  return `${JSON.stringify(sortKeys(valid as unknown as Json), null, 2)}\n`;
+  const checked = validateProject(project);
+  if (checked.problem) throw checked.problem;
+  return `${canonicalJson(checked.project as unknown as Json)}\n`;
 }
 
 /** Reads project.json text, migrating older schema versions forward. Throws ProjectFormatError. */
