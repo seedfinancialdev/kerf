@@ -130,6 +130,11 @@ describe("joints", () => {
     expect(rules(p)).toContain("error:rabbet-not-seated");
   });
 
+  it("a guest hanging past the far end of the host is not seated in an end1 rabbet", () => {
+    // 1/2" thick from x = 11-3/4" to 12-1/4": only 1/4" is over the host.
+    expect(rules(standing({ width: "1in" }, "11.75in"))).toContain("error:rabbet-not-seated");
+  });
+
   it("a rabbet narrower than the guest says so", () => {
     const found = solve(rabbetP({ width: "1/4in" }), shop).diagnostics.find(
       (d) => d.rule === "rabbet-not-seated",
