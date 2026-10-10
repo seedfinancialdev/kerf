@@ -11,6 +11,7 @@ import {
   deriveJointCuts,
   INCH,
   layoutDovetail,
+  MAX_LENGTH,
   type Project,
   ProjectFormatError,
   parseProject,
@@ -21,6 +22,7 @@ import {
 import { buildDisplayMesh, initGeometry, isManifold } from "@kerf/geometry";
 import fc from "fast-check";
 import { describe, expect } from "vitest";
+import { boards } from "../../src/builders";
 import { applyBookcaseEdit, applyBoxEdit, bookcaseEdit, boxEdit, RUNS } from "../../src/edits";
 import { loadProject, loadShopProfile } from "../../src/index";
 import { milestone } from "../../src/milestone";
@@ -409,4 +411,59 @@ describe("resize keeps joinery true (charter question 3)", () => {
       for (const line of buildCutList(p).lines) expect(thicknesses.has(line.thickness)).toBe(true);
     });
   });
+});
+
+describe("bookmatch planing allowance", () => {
+  const thickness = fc.constantFrom("1/2in", "3/4in", "1in");
+  const members = fc.integer({ min: 2, max: 5 });
+  const steps = fc.integer({ min: 0, max: 16 }); // sixty-fourths of an inch, per face
+
+  milestone(
+    "M2",
+    "composite thickness = parts + saw gaps + 2 faces x members x allowance, for any pair or more",
+    () => {
+      const unit: Record<string, number> = {
+        "1/2in": INCH / 2,
+        "3/4in": (INCH * 3) / 4,
+        "1in": INCH,
+      };
+      property(fc.tuple(thickness, members, steps), ([t, n, a]) => {
+        const names = Array.from({ length: n }, (_, i) => `M${i}`);
+        const base = boards(
+          names.map((name) => ({
+            name,
+            length: "10in",
+            width: "4in",
+            thickness: t,
+            stock: "wood" as const,
+          })),
+          names.map((name, i) => ({
+            name,
+            part: name,
+            at: ["0in", `${i * 5}in`, "0in"] as [string, string, string],
+          })),
+          [],
+          { matchSets: [{ name: "Set", type: "bookmatch" as const, members: names }] },
+        );
+        const allowance = (a * INCH) / 64;
+        const project: Project = { ...base, planingAllowance: allowance };
+        const layout = solve(project, shop).nesting.boards[0];
+        // Domain: parts, then a saw gap between neighbours, then every face planed once.
+        const expected = n * (unit[t] ?? 0) + (n - 1) * shop.kerf + 2 * n * allowance;
+        expect(layout?.compositeThickness).toBe(expected);
+      });
+    },
+  );
+
+  milestone(
+    "M2",
+    "any allowance from nothing up to the length limit is saved and read back unchanged",
+    () => {
+      property(fc.integer({ min: 0, max: MAX_LENGTH }), (allowance) => {
+        const text = serializeProject({ ...box, planingAllowance: allowance });
+        expect(parseProject(text).planingAllowance).toBe(allowance);
+        expect(serializeProject(parseProject(text))).toBe(text);
+      });
+    },
+  );
 });

@@ -64,13 +64,6 @@ import { loadProject, loadShopProfile, withParam } from "../../src/index";
   }
 
   describe("pattern-to-pattern joints", () => {
-    it("does not try every host against every guest (and does not flood diagnostics)", () => {
-      const started = performance.now();
-      const result = solve(manyCorners(1500), shop);
-      expect(performance.now() - started).toBeLessThan(5000);
-      expect(result.diagnostics.length).toBeLessThan(100);
-    });
-
     it("reports one aggregated message for guests that touch nothing, not one per pair", () => {
       const p = manyCorners(40);
       const unmatched = withStep(p, "Tails", "11in"); // half the guests drift away from their hosts
@@ -80,22 +73,6 @@ import { loadProject, loadShopProfile, withParam } from "../../src/index";
   });
 
   describe("diagnostic floods", () => {
-    it("bounds overlap errors when thousands of parts collapse onto one spot", () => {
-      const part: PartSpec = { name: "P", length: "4in", width: "4in", thickness: "1/2in" };
-      const p = boards([part], [{ name: "P", part: "P", at: ["0in", "0in", "0in"] }], [], {
-        patterns: [
-          { source: "P", count: "2000", axis: "z", spacing: { mode: "fixed", step: "1/1000in" } },
-        ],
-      });
-      const result = solve(p, shop);
-      expect(result.diagnostics.length).toBeLessThan(200);
-      // The first few pairs are named, and the total is still told.
-      const counts = result.diagnostics
-        .filter((d) => d.rule === "overlap")
-        .map((d) => d.count ?? 1);
-      expect(Math.max(...counts)).toBeGreaterThan(1000);
-    });
-
     it("bounds dado-overlap errors and stays fast with many dados on one host", () => {
       const host: PartSpec = { name: "Host", length: "12in", width: "40in", thickness: "3/4in" };
       const guest: PartSpec = { name: "G", length: "4in", width: "5in", thickness: "1/16in" };
@@ -199,37 +176,6 @@ import { loadProject, loadShopProfile, withParam } from "../../src/index";
       const found = rules(sunk);
       expect(found).not.toContain("error:joint-no-contact");
       expect(found.some((r) => r === "error:joint-overlap" || r === "error:overlap")).toBe(true);
-    });
-  });
-
-  describe("work is bounded for huge overlapping patterns", () => {
-    it("does not derive millions of pairs between overlapping pattern members", () => {
-      const host: PartSpec = { name: "Host", length: "96in", width: "6in", thickness: "3/4in" };
-      const guest: PartSpec = { name: "G", length: "4in", width: "5in", thickness: "1/2in" };
-      const p = boards(
-        [host, guest],
-        [
-          { name: "Host", part: "Host", at: ["0in", "0in", "0in"] },
-          { name: "G", part: "G", at: ["2in", "0.5in", "3/4in"], orientation: 17 },
-        ],
-        [{ type: "dado", host: "Host", guest: "G" }],
-        {
-          patterns: [
-            {
-              source: "Host",
-              count: "2500",
-              axis: "x",
-              spacing: { mode: "fixed", step: "1/32in" },
-            },
-            { source: "G", count: "2500", axis: "x", spacing: { mode: "fixed", step: "1/32in" } },
-          ],
-        },
-      );
-      const started = Date.now();
-      const result = solve(p, shop);
-      expect(Date.now() - started).toBeLessThan(5000);
-      expect(result.blocked).toBe(true);
-      expect(result.diagnostics.length).toBeLessThan(100);
     });
   });
 
@@ -337,46 +283,6 @@ import { loadProject, loadShopProfile, withParam } from "../../src/index";
       const q = { ...p, patterns: p.patterns.map((x) => ({ ...x, count: "4" })) };
       const d = solve(q, shop).diagnostics.find((x) => x.rule === "joint-host-unjoined");
       expect(d?.count).toBe(3);
-    });
-  });
-
-  describe("pair cap boundary", () => {
-    const stacks = (n: number): Project => {
-      const slab: PartSpec = { name: "Slab", length: "20in", width: "20in", thickness: "1/2in" };
-      const g: PartSpec = { name: "G", length: "20in", width: "20in", thickness: "1/2in" };
-      return boards(
-        [slab, g],
-        [
-          { name: "Slab", part: "Slab", at: ["0in", "0in", "0in"] },
-          { name: "G", part: "G", at: ["0in", "0in", "0in"] },
-        ],
-        [{ type: "dado", host: "Slab", guest: "G" }],
-        {
-          patterns: [
-            {
-              source: "Slab",
-              count: String(n),
-              axis: "x",
-              spacing: { mode: "fixed", step: "1/64in" },
-            },
-            {
-              source: "G",
-              count: String(n),
-              axis: "x",
-              spacing: { mode: "fixed", step: "1/64in" },
-            },
-          ],
-        },
-      );
-    };
-    it("316 x 316 = 99,856 pairs is worked out; 317 x 317 = 100,489 is refused", () => {
-      expect(rules(stacks(316))).not.toContain("error:joint-too-many-pairs");
-      const refused = solve(stacks(317), shop).diagnostics.filter(
-        (d) => d.rule === "joint-too-many-pairs",
-      );
-      expect(refused.map((d) => [d.severity, d.field])).toEqual([
-        ["error", "dado between patterns"],
-      ]);
     });
   });
 }

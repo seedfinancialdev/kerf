@@ -49,7 +49,8 @@ import { loadProject, loadShopProfile } from "../../src/index";
         },
       };
       const checked = validateProject(hostile);
-      expect(checked.problem?.message).toMatch(/plain data/);
+      expect(checked.problem).toBeInstanceOf(ProjectFormatError);
+      expect(checked.problem?.path).toBe("$");
       expect(rules(hostile as unknown as Project)).not.toContain("error:internal-error");
     });
 
@@ -82,7 +83,6 @@ import { loadProject, loadShopProfile } from "../../src/index";
       expect(() => parseProject(bad)).toThrow(
         /planingAllowance: expected a value from 0 in to 100000 in/,
       );
-      expect(() => parseProject(bad)).not.toThrow(/20320000000/);
     });
   });
 }

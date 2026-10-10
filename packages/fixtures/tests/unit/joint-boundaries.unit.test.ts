@@ -108,7 +108,7 @@ describe("joints", () => {
     const found = solve(rabbetP({ width: "1/4in" }), shop).diagnostics.find(
       (d) => d.rule === "rabbet-not-seated",
     );
-    expect(found?.message).toMatch(/narrower/);
+    expect(found).toMatchObject({ severity: "error", field: "Host rabbet" });
   });
 
   it("a rabbet exactly half the host's width, with the guest against its shoulder, is built", () => {

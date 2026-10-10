@@ -11,6 +11,22 @@ import { ExpressionError } from "./errors";
 import { evaluateQuantity } from "./evaluate";
 import { parseExpression, referencesOf, stockKey } from "./parser";
 
+/** Asserts the call throws an error of this class whose message matches. */
+const throwsA = (
+  fn: () => unknown,
+  cls: abstract new (...args: never[]) => Error,
+  message: RegExp,
+): void => {
+  let caught: unknown;
+  try {
+    fn();
+  } catch (error) {
+    caught = error;
+  }
+  expect(caught).toBeInstanceOf(cls);
+  expect((caught as Error).message).toMatch(message);
+};
+
 const inches = (n: number) => rational(BigInt(n * INCH));
 const evalValue = (source: string, scope = {}) => evaluateQuantity(source, scope).value;
 
@@ -55,7 +71,7 @@ describe("the spec's type rules are strict", () => {
 
 describe("names are never looked up on the object prototype", () => {
   it.each(["toString", "constructor", "__proto__", "hasOwnProperty", "valueOf"])("%s", (name) => {
-    expect(() => evaluateQuantity(name, {})).toThrow(/Unknown name/);
+    throwsA(() => evaluateQuantity(name, {}), ExpressionError, /Unknown name/);
     expect(() => evaluateQuantity(`-${name} * 2in`, {})).toThrow(ExpressionError);
   });
 });
@@ -65,7 +81,7 @@ describe("limits turn hostile input into ExpressionError, never a crash", () => 
     expect(() => parseExpression(`${"(".repeat(200)}1${")".repeat(200)}`)).toThrow(
       /too deeply nested/,
     );
-    expect(() => parseExpression(`${"-".repeat(200)}1`)).toThrow(/too deeply nested/);
+    throwsA(() => parseExpression(`${"-".repeat(200)}1`), ExpressionError, /too deeply nested/);
   });
 
   it("accepts ordinary nesting", () => {
@@ -73,12 +89,12 @@ describe("limits turn hostile input into ExpressionError, never a crash", () => 
   });
 
   it("rejects very long expressions", () => {
-    expect(() => parseExpression(Array(100000).fill("1").join("+"))).toThrow(/too long/);
+    throwsA(() => parseExpression(Array(100000).fill("1").join("+")), ExpressionError, /too long/);
   });
 
   it("rejects numbers that grow without bound", () => {
     const source = Array(60).fill("99999999999").join("*");
-    expect(() => evaluateQuantity(source, {})).toThrow(/too large/);
+    throwsA(() => evaluateQuantity(source, {}), ExpressionError, /too large/);
   });
 });
 

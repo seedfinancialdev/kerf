@@ -26,6 +26,13 @@ export default defineConfig({
           testTimeout: 60_000,
         },
       },
+      {
+        test: {
+          name: "stress",
+          include: ["packages/fixtures/tests/stress/**/*.test.ts"],
+          testTimeout: 60_000,
+        },
+      },
       { test: { name: "bench", include: ["packages/fixtures/tests/bench/**/*.test.ts"] } },
     ],
   },

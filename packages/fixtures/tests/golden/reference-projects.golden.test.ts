@@ -113,10 +113,8 @@ describe("keepsake box (golden)", () => {
     const expected = loadExpected<{ warnings: Array<{ rule: string }> }>("box", "validation");
     const { diagnostics } = solve(project, shop);
     expect(diagnostics.filter((d) => d.severity === "error")).toEqual([]);
-    for (const warning of expected.warnings) {
-      expect(diagnostics.some((d) => d.severity === "warning" && d.rule === warning.rule)).toBe(
-        true,
-      );
-    }
+    // Exactly the warnings the spec lists, and nothing else a user would need to act on.
+    const warned = new Set(diagnostics.filter((d) => d.severity === "warning").map((d) => d.rule));
+    expect(warned).toEqual(new Set(expected.warnings.map((w) => w.rule)));
   });
 });

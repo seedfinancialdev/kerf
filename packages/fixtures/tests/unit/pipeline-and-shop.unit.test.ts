@@ -10,6 +10,7 @@ import {
   machiningSetups,
   nest,
   type Project,
+  ProjectFormatError,
   parseProject,
   type ShopProfile,
   shopProblem,
@@ -18,6 +19,22 @@ import {
 import { describe, expect, it } from "vitest";
 import { boards, type InstanceSpec, type PartSpec } from "../../src/builders";
 import { loadProject, loadShopProfile, withParam } from "../../src/index";
+
+/** Asserts the call throws an error of this class whose message matches. */
+const throwsA = (
+  fn: () => unknown,
+  cls: abstract new (...args: never[]) => Error,
+  message: RegExp,
+): void => {
+  let caught: unknown;
+  try {
+    fn();
+  } catch (error) {
+    caught = error;
+  }
+  expect(caught).toBeInstanceOf(cls);
+  expect((caught as Error).message).toMatch(message);
+};
 
 describe("solving does not mutate its input", () => {
   const freeze = <T>(o: T): T => {
@@ -213,7 +230,7 @@ describe("solving does not mutate its input", () => {
         patterns: [{ source: "B", count: "3", axis: "y", spacing: { mode: "fixed", step: "5in" } }],
         matchSets: [{ name: "Set", type: "sameBoard", members: ["A", "B"] }],
       });
-      expect(() => parseProject(serializeProjectUnchecked(p))).toThrow(/pattern/);
+      throwsA(() => parseProject(serializeProjectUnchecked(p)), ProjectFormatError, /pattern/);
       expect(rules(p)).toContain("error:invalid-project");
     });
 

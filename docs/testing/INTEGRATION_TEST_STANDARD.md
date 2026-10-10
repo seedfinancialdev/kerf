@@ -15,6 +15,7 @@
 | --- | --- | --- | --- |
 | Golden | `pnpm test:golden` | The reference projects produce exactly the numbers in the spec | `packages/fixtures/tests/golden/` |
 | Property | `pnpm test:prop` | An invariant holds for 1,000 random valid edits | `packages/fixtures/tests/prop/` |
+| Stress | `pnpm test:stress` | Hostile or huge input is bounded, reported and finishes | `packages/fixtures/tests/stress/` |
 | Benchmark | `pnpm bench` | A time budget from the spec holds | `packages/fixtures/tests/bench/` |
 | Cross-package | `pnpm test` | Packages agree at their boundary (core with io, for example) | `packages/fixtures/tests/unit/` |
 | End-to-end | `pnpm e2e` | A real person's flow works in a real browser | `packages/app/e2e/` |

@@ -74,6 +74,10 @@ importers:
       '@kerf/pdf':
         specifier: workspace:*
         version: link:../pdf
+    devDependencies:
+      fflate:
+        specifier: 0.8.3
+        version: 0.8.3
 
   packages/geometry:
     dependencies:

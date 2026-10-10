@@ -10,6 +10,7 @@
     "test:golden": "vitest run --project golden",
     "test:prop": "vitest run --project prop",
     "e2e": "pnpm --filter @kerf/app e2e",
+    "test:stress": "vitest run --project stress",
     "bench": "vitest run --project bench",
     "lint": "biome check . && pnpm lint:deps && pnpm lint:headers",
     "lint:deps": "node scripts/lint-deps.mjs",

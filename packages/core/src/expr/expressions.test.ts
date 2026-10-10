@@ -10,6 +10,22 @@ import { evaluateQuantity } from "./evaluate";
 import { tokenize } from "./lexer";
 import { parseExpression, partKey, referencesOf, slug, stockKey } from "./parser";
 
+/** Asserts the call throws an error of this class whose message matches. */
+const throwsA = (
+  fn: () => unknown,
+  cls: abstract new (...args: never[]) => Error,
+  message: RegExp,
+): void => {
+  let caught: unknown;
+  try {
+    fn();
+  } catch (error) {
+    caught = error;
+  }
+  expect(caught).toBeInstanceOf(cls);
+  expect((caught as Error).message).toMatch(message);
+};
+
 const value = (source: string, scope = {}) => evaluateQuantity(source, scope);
 const inches = (n: number, den = 1) => rational(BigInt(n * INCH), BigInt(den));
 
@@ -62,7 +78,7 @@ describe("type rules", () => {
   });
 
   it("reports division by zero on the field", () => {
-    expect(() => value("1in / 0")).toThrow(/zero/);
+    throwsA(() => value("1in / 0"), ExpressionError, /zero/);
   });
 
   it("reports the position of an error", () => {
@@ -94,7 +110,7 @@ describe("functions", () => {
   });
 
   it("an unknown function is an error", () => {
-    expect(() => value("sqrt(4)")).toThrow(/Unknown function/);
+    throwsA(() => value("sqrt(4)"), ExpressionError, /Unknown function/);
   });
 });
 
@@ -109,7 +125,7 @@ describe("references", () => {
   it("resolves from the scope and reports unknown names", () => {
     const scope = { width: { value: inches(36), kind: "length" as const } };
     expect(value("width / 2", scope).value).toEqual(inches(18));
-    expect(() => value("depth", scope)).toThrow(/Unknown name "depth"/);
+    throwsA(() => value("depth", scope), ExpressionError, /Unknown name "depth"/);
   });
 
   it("lists each reference once, in first-use order", () => {

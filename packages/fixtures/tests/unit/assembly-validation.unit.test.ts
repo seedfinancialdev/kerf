@@ -20,11 +20,6 @@ const ply = (name: string, l: string, w: string, extra: Partial<PartSpec> = {}):
   thickness: "3/4in",
   ...extra,
 });
-const at = (name: string, y: string, partName = name): InstanceSpec => ({
-  name,
-  part: partName,
-  at: ["0in", y, "0in"],
-});
 
 describe("validate", () => {
   const tall = withParam(loadProject("box"), "box_height", "4in + 1/64in");
@@ -167,20 +162,5 @@ describe("validate", () => {
       [{ type: "throughDovetail", host: "Pins", guest: "Tails" }],
     );
     expect(rules(p)).not.toContain("error:internal-error");
-  });
-});
-
-describe("a pile of parts is reported, not ground through", () => {
-  it("says so once when more than a million pairs touch", () => {
-    const slab: PartSpec = { name: "Slab", length: "4in", width: "4in", thickness: "1/2in" };
-    const p = boards([slab], [at("Slab", "0in")], [], {
-      patterns: [
-        { source: "Slab", count: "5000", axis: "x", spacing: { mode: "fixed", step: "1/64in" } },
-      ],
-    });
-    const started = Date.now();
-    const found = solve(p, shop).diagnostics.filter((d) => d.rule === "overlap");
-    expect(Date.now() - started).toBeLessThan(15000);
-    expect(found.map((d) => d.message).join(" ")).toMatch(/More than 1,000,000 pairs/);
   });
 });

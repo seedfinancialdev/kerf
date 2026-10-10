@@ -6,6 +6,22 @@ import { describe, expect, it } from "vitest";
 import { ProjectFormatError, parseProject, serializeProject } from "./project-file";
 import type { Project } from "./types";
 
+/** Asserts the call throws an error of this class whose message matches. */
+const throwsA = (
+  fn: () => unknown,
+  cls: abstract new (...args: never[]) => Error,
+  message: RegExp,
+): void => {
+  let caught: unknown;
+  try {
+    fn();
+  } catch (error) {
+    caught = error;
+  }
+  expect(caught).toBeInstanceOf(cls);
+  expect((caught as Error).message).toMatch(message);
+};
+
 /** Narrows a value that a test fixture is known to provide. */
 function must<T>(value: T | undefined): T {
   if (value === undefined) throw new Error("fixture value is missing");
@@ -107,12 +123,12 @@ describe("serializeProject", () => {
 
   it("refuses to save a float", () => {
     const bad = { ...project, stock: [{ ...(project.stock[0] as object), thickness: 1.5 }] };
-    expect(() => serializeProject(bad as unknown as Project)).toThrow(/whole number/);
+    throwsA(() => serializeProject(bad as unknown as Project), ProjectFormatError, /whole number/);
   });
 
   it("refuses to save fields the schema does not know (no derived data)", () => {
     const bad = { ...project, cutList: [] };
-    expect(() => serializeProject(bad as unknown as Project)).toThrow(/unknown field/);
+    throwsA(() => serializeProject(bad as unknown as Project), ProjectFormatError, /unknown field/);
   });
 });
 
@@ -148,14 +164,14 @@ describe("parseProject", () => {
     const raw = tweak((r) => {
       first(r.params).id = "param-1";
     });
-    expect(() => parseProject(raw)).toThrow(/ULID/);
+    throwsA(() => parseProject(raw), ProjectFormatError, /ULID/);
   });
 
   it("rejects an orientation outside 0-23, naming the field", () => {
     const raw = tweak((r) => {
       first(r.instances).orientation = 24;
     });
-    expect(() => parseProject(raw)).toThrow(/instances\[0\]\.orientation/);
+    throwsA(() => parseProject(raw), ProjectFormatError, /instances\[0\]\.orientation/);
   });
 
   it("rejects an unknown unit system and an unknown joint type", () => {
@@ -169,7 +185,7 @@ describe("parseProject", () => {
     const raw = tweak((r) => {
       first(r.joints).type = "mortise";
     });
-    expect(() => parseProject(raw)).toThrow(/joints\[0\]\.type/);
+    throwsA(() => parseProject(raw), ProjectFormatError, /joints\[0\]\.type/);
   });
 });
 
@@ -187,7 +203,7 @@ describe("integrity checks at load", () => {
     const raw = edit((r) => {
       must(list(r, "stock")[0]).id = must(list(r, "params")[0]).id;
     });
-    expect(() => parseProject(raw)).toThrow(/duplicate id/);
+    throwsA(() => parseProject(raw), ProjectFormatError, /duplicate id/);
   });
 
   it.each([
@@ -278,7 +294,7 @@ describe("integrity checks at load", () => {
       structure.openings = [nested];
     });
     expect(() => parseProject(raw)).toThrow(ProjectFormatError);
-    expect(() => parseProject(raw)).toThrow(/too deeply nested/);
+    throwsA(() => parseProject(raw), ProjectFormatError, /too deeply nested/);
   });
 
   it("round-trips the optional shapes: list spacing, bays, fixed pattern, solid stock, price, parent, notes", () => {
@@ -313,18 +329,18 @@ describe("integrity checks at load", () => {
     const badEdge = edit((r) => {
       must((must(list(r, "parts")[0]).ops as Raw[])[0]).edges = ["edge2/face0"];
     });
-    expect(() => parseProject(badEdge)).toThrow(/edge/);
+    throwsA(() => parseProject(badEdge), ProjectFormatError, /edge/);
     const badParam = edit((r) => {
       must(list(r, "joints")[0]).params = { depth: 6 };
     });
-    expect(() => parseProject(badParam)).toThrow(/params\.depth/);
+    throwsA(() => parseProject(badParam), ProjectFormatError, /params\.depth/);
   });
 
   it("names a null optional field instead of calling it unknown", () => {
     const raw = edit((r) => {
       must(list(r, "parts")[0]).notes = null;
     });
-    expect(() => parseProject(raw)).toThrow(/notes.*(null|expected a string)/);
+    throwsA(() => parseProject(raw), ProjectFormatError, /notes.*(null|expected a string)/);
   });
 });
 
@@ -407,6 +423,6 @@ describe("second review: canonical order and references", () => {
       (instances[0] as Raw).parent = second.id;
       instances.push(second);
     });
-    expect(() => parseProject(raw)).toThrow(/parent/);
+    throwsA(() => parseProject(raw), ProjectFormatError, /parent/);
   });
 });

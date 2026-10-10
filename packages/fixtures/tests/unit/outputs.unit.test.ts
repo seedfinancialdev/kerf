@@ -65,8 +65,8 @@ describe("cut list grouping", () => {
   it("shows visible and cut size together and separates parts whose cut sizes differ", () => {
     const bookcase = loadProject("bookcase");
     const line = buildCutList(bookcase).lines[1];
-    expect(line?.visible).toEqual({ length: 34.5625 * INCH, width: 11.75 * INCH });
-    expect(line?.length).toBe(35.0625 * INCH);
+    expect(line?.visible).toEqual({ length: (INCH * 553) / 16, width: (INCH * 47) / 4 });
+    expect(line?.length).toBe((INCH * 561) / 16);
   });
 
   it("lists match-set members as a block, in order, outside the lines", () => {

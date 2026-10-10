@@ -15,5 +15,8 @@
     "@kerf/geometry": "workspace:*",
     "@kerf/io": "workspace:*",
     "@kerf/pdf": "workspace:*"
+  },
+  "devDependencies": {
+    "fflate": "0.8.3"
   }
 }
