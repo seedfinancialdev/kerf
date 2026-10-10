@@ -12,12 +12,13 @@ export {
   CURRENT_SCHEMA_VERSION,
   ProjectFormatError,
   parseProject,
+  projectProblem,
   serializeProject,
 } from "./project-file";
 export type { Rational } from "./rational";
 export { rational } from "./rational";
-export type { SolvedInstance, SolvedModel, SolvedPart } from "./solve/model";
-export { solveModel } from "./solve/model";
+export type { SolvedInstance, SolvedModel, SolvedOp, SolvedPart } from "./solve/model";
+export { MAX_PATTERN_COUNT, solveModel } from "./solve/model";
 export type { Orientation } from "./solve/orientation";
 export { extentOf, ORIENTATION_COUNT, orientationOf } from "./solve/orientation";
 export * from "./types";

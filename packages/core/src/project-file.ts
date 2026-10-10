@@ -129,7 +129,7 @@ class Reader {
     return value.map((item, i) => read(item, `${this.at(key)}[${i}]`));
   }
 
-  /** A map of string keys to string (or boolean when allowed) values. */
+  /** A map of string keys to string (or boolean when allowed) values. Every key is kept. */
   record<T extends string | boolean>(
     key: string,
     accepts: (v: unknown) => v is T,
@@ -139,13 +139,14 @@ class Reader {
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
       throw new ProjectFormatError(this.at(key), "expected an object");
     }
-    const out: Record<string, T> = {};
+    const entries: Array<[string, T]> = [];
     for (const [k, v] of Object.entries(value)) {
       if (!accepts(v))
         throw new ProjectFormatError(`${this.at(key)}.${k}`, `expected ${description}`);
-      out[k] = v;
+      entries.push([k, v]);
     }
-    return out;
+    // fromEntries defines own properties, so a "__proto__" key is kept rather than lost.
+    return Object.fromEntries(entries);
   }
 
   /** `"even"` or a list of expressions, for a shelves division. */
@@ -351,7 +352,16 @@ function readJoint(value: unknown, path: string): Joint {
   return joint;
 }
 
-function readOpening(value: unknown, path: string): Opening {
+/** Deepest nesting of openings accepted in a file. */
+const MAX_OPENING_DEPTH = 32;
+
+function readOpening(value: unknown, path: string, depth = 0): Opening {
+  if (depth >= MAX_OPENING_DEPTH) {
+    throw new ProjectFormatError(
+      path,
+      `openings are too deeply nested (at most ${MAX_OPENING_DEPTH} levels)`,
+    );
+  }
   const r = new Reader(value, path);
   const opening: Opening = { id: r.id("id"), children: [] };
   const division = r.optionalObject("division");
@@ -370,7 +380,7 @@ function readOpening(value: unknown, path: string): Opening {
     }
     division.done();
   }
-  opening.children = r.array("children", readOpening);
+  opening.children = r.array("children", (item, p) => readOpening(item, p, depth + 1));
   r.done();
   return opening;
 }
@@ -388,6 +398,77 @@ function readStructure(value: unknown, path: string): Structure {
   size.done();
   r.done();
   return structure;
+}
+
+function* openingIds(openings: Opening[], path: string): Generator<[Id, string]> {
+  for (const [i, opening] of openings.entries()) {
+    yield [opening.id, `${path}[${i}]`];
+    yield* openingIds(opening.children, `${path}[${i}].children`);
+  }
+}
+
+/** Ids are never reused (Domain model, `Id`), and every reference must point at something. */
+function checkIntegrity(project: Project): void {
+  const owners = new Map<Id, string>();
+  const claim = (id: Id, path: string): void => {
+    const previous = owners.get(id);
+    if (previous !== undefined) {
+      throw new ProjectFormatError(path, `duplicate id (also used at ${previous})`);
+    }
+    owners.set(id, path);
+  };
+  const lists: Array<[string, ReadonlyArray<{ id: Id }>]> = [
+    ["params", project.params],
+    ["stock", project.stock],
+    ["parts", project.parts],
+    ["instances", project.instances],
+    ["patterns", project.patterns],
+    ["joints", project.joints],
+    ["matchSets", project.matchSets],
+    ["structures", project.structures],
+  ];
+  for (const [name, items] of lists) {
+    for (const [i, item] of items.entries()) claim(item.id, `$.${name}[${i}].id`);
+  }
+  for (const [i, structure] of project.structures.entries()) {
+    for (const [id, path] of openingIds(structure.openings, `$.structures[${i}].openings`)) {
+      claim(id, `${path}.id`);
+    }
+  }
+  for (const [i, part] of project.parts.entries()) {
+    for (const [j, op] of part.ops.entries()) claim(op.id, `$.parts[${i}].ops[${j}].id`);
+  }
+
+  const stock = new Set(project.stock.map((x) => x.id));
+  const parts = new Set(project.parts.map((x) => x.id));
+  const instances = new Set(project.instances.map((x) => x.id));
+  const patterns = new Set(project.patterns.map((x) => x.id));
+  const need = (ok: boolean, path: string, what: string): void => {
+    if (!ok) throw new ProjectFormatError(path, `refers to ${what} that does not exist`);
+  };
+
+  for (const [i, part] of project.parts.entries()) {
+    need(stock.has(part.stock), `$.parts[${i}].stock`, "stock");
+  }
+  for (const [i, instance] of project.instances.entries()) {
+    need(parts.has(instance.def), `$.instances[${i}].def`, "a part");
+    if (instance.parent !== undefined) {
+      need(instances.has(instance.parent), `$.instances[${i}].parent`, "an instance");
+    }
+  }
+  for (const [i, pattern] of project.patterns.entries()) {
+    need(instances.has(pattern.source), `$.patterns[${i}].source`, "an instance");
+  }
+  for (const [i, joint] of project.joints.entries()) {
+    const known = (id: Id): boolean => instances.has(id) || patterns.has(id);
+    need(known(joint.host), `$.joints[${i}].host`, "an instance or pattern");
+    need(known(joint.guest), `$.joints[${i}].guest`, "an instance or pattern");
+  }
+  for (const [i, set] of project.matchSets.entries()) {
+    for (const [j, member] of set.members.entries()) {
+      need(instances.has(member), `$.matchSets[${i}].members[${j}]`, "an instance");
+    }
+  }
 }
 
 function readProject(value: unknown): Project {
@@ -410,21 +491,52 @@ function readProject(value: unknown): Project {
     structures: r.array("structures", readStructure),
   };
   r.done();
+  checkIntegrity(project);
   return project;
 }
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
+/** Orders by Unicode code point (not UTF-16 unit), as decision D3 specifies. */
+function compareCodePoints(a: string, b: string): number {
+  const left = Array.from(a, (ch) => ch.codePointAt(0) ?? 0);
+  const right = Array.from(b, (ch) => ch.codePointAt(0) ?? 0);
+  const shared = Math.min(left.length, right.length);
+  for (let i = 0; i < shared; i += 1) {
+    const diff = (left[i] ?? 0) - (right[i] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return left.length - right.length;
+}
+
 function sortKeys(value: Json): Json {
   if (Array.isArray(value)) return value.map(sortKeys);
   if (value !== null && typeof value === "object") {
-    const out: { [key: string]: Json } = {};
-    for (const key of Object.keys(value).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))) {
-      out[key] = sortKeys(value[key] as Json);
-    }
-    return out;
+    const record = value as { [key: string]: Json };
+    return Object.fromEntries(
+      Object.keys(record)
+        .sort(compareCodePoints)
+        .map((key) => [key, sortKeys(record[key] as Json)] as const),
+    );
   }
   return value;
+}
+
+/**
+ * Checks a project object against the file schema without writing it: shape, integer lengths,
+ * unique ids and resolvable references. Returns null when valid.
+ */
+export function projectProblem(project: unknown): ProjectFormatError | null {
+  try {
+    readProject(JSON.parse(JSON.stringify(project)) as unknown);
+    return null;
+  } catch (error) {
+    if (error instanceof ProjectFormatError) return error;
+    if (error instanceof SyntaxError || error instanceof TypeError) {
+      return new ProjectFormatError("$", "the project cannot be read as plain data");
+    }
+    throw error;
+  }
 }
 
 /**

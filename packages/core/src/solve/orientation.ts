@@ -34,12 +34,19 @@ const DIRECTIONS: readonly Axis[] = [
   [0, 0, -1],
 ];
 
+/** Avoids -0, which would compare unequal to 0 under Object.is semantics. */
+const clean = (n: number): number => (n === 0 ? 0 : n);
+
 function cross(a: Axis, b: Axis): Axis {
-  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  return [
+    clean(a[1] * b[2] - a[2] * b[1]),
+    clean(a[2] * b[0] - a[0] * b[2]),
+    clean(a[0] * b[1] - a[1] * b[0]),
+  ];
 }
 
 function negated(a: Axis): Axis {
-  return [-a[0], -a[1], -a[2]];
+  return [clean(-a[0]), clean(-a[1]), clean(-a[2])];
 }
 
 function referenceFor(direction: Axis): Axis {

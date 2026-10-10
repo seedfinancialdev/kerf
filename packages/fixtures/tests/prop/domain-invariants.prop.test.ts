@@ -4,16 +4,18 @@
 
 // Property tests: one per Domain model invariant, plus the harness checks from the Build plan
 // (no throw, every mesh manifold, cut list equals part data, load -> save byte-identical).
-// Skeletons at M0: each fails until the milestone it names is active.
+// Each test is gated by the milestone it belongs to (see milestones.json).
 
 import {
   buildCutList,
   deriveJointCuts,
   INCH,
   type Project,
+  ProjectFormatError,
   parseProject,
   serializeProject,
   solve,
+  solveModel,
 } from "@kerf/core";
 import { buildDisplayMesh, isManifold } from "@kerf/geometry";
 import fc from "fast-check";
@@ -37,33 +39,138 @@ function property<T>(arb: fc.Arbitrary<T>, check: (value: T) => void): void {
   );
 }
 
-function numbers(value: unknown, out: number[] = []): number[] {
-  if (typeof value === "number") out.push(value);
-  else if (Array.isArray(value)) for (const v of value) numbers(v, out);
-  else if (value && typeof value === "object")
-    for (const v of Object.values(value)) numbers(v, out);
-  return out;
-}
+describe("saved file and solver invariants (M1)", () => {
+  const orientations = fc.array(fc.integer({ min: 0, max: 23 }), { minLength: 9, maxLength: 9 });
+  const wild = fc.record({
+    edit: bookcaseEdit,
+    units: fc.constantFrom("imperial", "metric"),
+    orientations,
+  });
 
-describe("saved file invariants", () => {
-  milestone("M1", "every saved length is an integer; no floats in project.json", () => {
-    property(anyProject, (p) => {
-      for (const n of numbers(JSON.parse(serializeProject(p))))
-        expect(Number.isInteger(n)).toBe(true);
+  const scrambled = (w: {
+    edit: Parameters<typeof applyBookcaseEdit>[1];
+    units: string;
+    orientations: number[];
+  }) => {
+    const p = applyBookcaseEdit(bookcase, w.edit);
+    return {
+      ...p,
+      units: w.units as Project["units"],
+      instances: p.instances.map((i, n) => ({ ...i, orientation: w.orientations[n] ?? 0 })),
+    };
+  };
+
+  milestone(
+    "M1",
+    "solving never throws, never changes the project, and returns only safe integers",
+    () => {
+      property(wild, (w) => {
+        const p = scrambled(w);
+        const before = serializeProject(p);
+        const model = solveModel(p);
+        expect(serializeProject(p)).toBe(before);
+        const lengths: number[] = [];
+        for (const part of model.parts) lengths.push(part.length, part.width, part.thickness);
+        for (const i of model.instances) {
+          lengths.push(
+            i.position.x,
+            i.position.y,
+            i.position.z,
+            i.extent.x,
+            i.extent.y,
+            i.extent.z,
+          );
+        }
+        for (const n of lengths) expect(Number.isSafeInteger(n)).toBe(true);
+      });
+    },
+  );
+
+  milestone(
+    "M1",
+    "the assembled bookcase is exactly width x depth x height after any resize",
+    () => {
+      property(bookcaseEdit, (edit) => {
+        const model = solveModel(applyBookcaseEdit(bookcase, edit));
+        expect(model.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+        const max = { x: 0, y: 0, z: 0 };
+        for (const i of model.instances) {
+          for (const a of ["x", "y", "z"] as const)
+            max[a] = Math.max(max[a], i.position[a] + i.extent[a]);
+        }
+        const quarter = INCH / 4;
+        expect(max).toEqual({
+          x: edit.width * quarter,
+          y: edit.depth * quarter,
+          z: edit.height * quarter,
+        });
+      });
+    },
+  );
+
+  milestone(
+    "M1",
+    "any text in names, notes and options survives load -> save byte-identically",
+    () => {
+      const text = fc.string({ unit: "grapheme" });
+      const arbitrary = fc.record({
+        name: text,
+        notes: text,
+        options: fc.dictionary(text, fc.oneof(text, fc.boolean())),
+      });
+      property(arbitrary, ({ name, notes, options }) => {
+        const p: Project = {
+          ...bookcase,
+          name,
+          parts: bookcase.parts.map((part, i) => (i === 0 ? { ...part, notes } : part)),
+          structures: [
+            {
+              id: "01K7M3Q8ZD00000000F2000001",
+              type: "case",
+              size: { w: "36in", h: "72in", d: "12in" },
+              options,
+              openings: [],
+            },
+          ],
+        };
+        const saved = serializeProject(p);
+        expect(serializeProject(parseProject(saved))).toBe(saved);
+        expect(parseProject(saved)).toEqual(p);
+      });
+    },
+  );
+
+  milestone("M1", "a non-integer in any saved number is refused at load", () => {
+    const where = fc.constantFrom(
+      (p: Project, v: number) => ({
+        ...p,
+        stock: p.stock.map((s, i) => (i === 0 ? { ...s, thickness: v } : s)),
+      }),
+      (p: Project, v: number) => ({
+        ...p,
+        stock: p.stock.map((s, i) =>
+          i === 0 ? { ...s, allowance: { ...s.allowance, width: v } } : s,
+        ),
+      }),
+      (p: Project, v: number) => ({
+        ...p,
+        instances: p.instances.map((x, i) => (i === 0 ? { ...x, orientation: v } : x)),
+      }),
+    );
+    const fraction = fc
+      .double({ min: -1e6, max: 1e6, noNaN: true })
+      .filter((n) => !Number.isInteger(n));
+    property(fc.tuple(where, fraction), ([edit, v]) => {
+      const text = JSON.stringify(edit(bookcase, v));
+      expect(() => parseProject(text)).toThrow(ProjectFormatError);
     });
   });
 
-  milestone("M1", "load -> save is byte-identical", () => {
+  milestone("M1", "the saved file contains no solver results", () => {
     property(anyProject, (p) => {
+      solveModel(p);
       const text = serializeProject(p);
-      expect(serializeProject(parseProject(text))).toBe(text);
-    });
-  });
-
-  milestone("M1", "the saved file contains no derived data", () => {
-    property(anyProject, (p) => {
-      const text = serializeProject(p);
-      for (const key of ["cutList", "removals", "mesh", "setups", "layouts"]) {
+      for (const key of ["cutList", "removals", "mesh", "setups", "layouts", "extent"]) {
         expect(text).not.toContain(`"${key}"`);
       }
     });

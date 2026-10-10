@@ -9,6 +9,11 @@ import type { Rational } from "../rational";
 import { ExpressionError } from "./errors";
 import { type Kind, type Token, tokenize } from "./lexer";
 
+/** Deepest nesting of parentheses, calls and unary minus signs. */
+export const MAX_DEPTH = 64;
+/** Longest expression accepted, in characters. */
+export const MAX_EXPRESSION_LENGTH = 1000;
+
 export type FunctionName = "min" | "max" | "round" | "floor" | "ceil";
 const FUNCTIONS: ReadonlySet<string> = new Set(["min", "max", "round", "floor", "ceil"]);
 
@@ -34,11 +39,13 @@ export function partKey(partName: string, property: string): string {
 
 /** Reference key for a stock property, e.g. `stock["3/4 plywood"].thickness`. */
 export function stockKey(stockName: string, property: string): string {
-  return `stock["${stockName}"].${property}`;
+  const escaped = stockName.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return `stock["${escaped}"].${property}`;
 }
 
 class Parser {
   private index = 0;
+  private depth = 0;
 
   constructor(
     private readonly source: string,
@@ -116,11 +123,19 @@ class Parser {
 
   private unary(): Node {
     const token = this.peek();
-    if (token.type === "op" && token.op === "-") {
-      this.next();
-      return { type: "negate", arg: this.unary(), position: token.position };
+    this.depth += 1;
+    if (this.depth > MAX_DEPTH) {
+      throw new ExpressionError("Expression is too deeply nested", this.source, token.position);
     }
-    return this.primary();
+    try {
+      if (token.type === "op" && token.op === "-") {
+        this.next();
+        return { type: "negate", arg: this.unary(), position: token.position };
+      }
+      return this.primary();
+    } finally {
+      this.depth -= 1;
+    }
   }
 
   private primary(): Node {
@@ -191,6 +206,13 @@ class Parser {
 
 /** Parses an expression. Throws ExpressionError with the offending position. */
 export function parseExpression(source: string): Node {
+  if (source.length > MAX_EXPRESSION_LENGTH) {
+    throw new ExpressionError(
+      `Expression is too long (the limit is ${MAX_EXPRESSION_LENGTH} characters)`,
+      source,
+      MAX_EXPRESSION_LENGTH,
+    );
+  }
   return new Parser(source, tokenize(source)).parse();
 }
 

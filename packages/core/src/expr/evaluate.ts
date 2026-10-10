@@ -32,6 +32,9 @@ export type Scope = Readonly<Record<string, Quantity>>;
 
 const isScalar = (kind: Kind): boolean => kind !== "length";
 
+/** Longest numerator or denominator, in hexadecimal digits (1,024 bits). */
+const MAX_HEX_DIGITS = 256;
+
 function describe(kind: Kind): string {
   return kind === "length" ? "a length" : kind === "count" ? "a count" : "a ratio";
 }
@@ -40,13 +43,23 @@ function combineScalars(a: Kind, b: Kind): Kind {
   return a === "count" && b === "count" ? "count" : "ratio";
 }
 
+/** Stops numbers from growing without bound inside one expression. */
+function guarded(q: Quantity, source: string, position: number): Quantity {
+  const size = (n: bigint): number => (n < 0n ? -n : n).toString(16).length;
+  if (size(q.value.num) > MAX_HEX_DIGITS || size(q.value.den) > MAX_HEX_DIGITS) {
+    throw new ExpressionError("This number is too large", source, position);
+  }
+  return q;
+}
+
 function evaluateNode(node: Node, scope: Scope, source: string): Quantity {
   switch (node.type) {
     case "number":
       return { value: node.value, kind: node.kind };
 
     case "ref": {
-      const found = scope[node.key];
+      // Own properties only: "toString" and "constructor" are not names.
+      const found = Object.hasOwn(scope, node.key) ? scope[node.key] : undefined;
       if (!found) throw new ExpressionError(`Unknown name "${node.key}"`, source, node.position);
       return found;
     }
@@ -59,12 +72,16 @@ function evaluateNode(node: Node, scope: Scope, source: string): Quantity {
     case "binary": {
       const left = evaluateNode(node.left, scope, source);
       const right = evaluateNode(node.right, scope, source);
-      return applyBinary(node.op, left, right, source, node.position);
+      return guarded(
+        applyBinary(node.op, left, right, source, node.position),
+        source,
+        node.position,
+      );
     }
 
     case "call": {
       const args = node.args.map((arg) => evaluateNode(arg, scope, source));
-      return applyFunction(node.name, args, source, node.position);
+      return guarded(applyFunction(node.name, args, source, node.position), source, node.position);
     }
   }
 }
@@ -98,25 +115,34 @@ function applyBinary(
     };
   }
 
+  // Multiplication: length × count = length; scalars combine; anything else is an error.
   if (op === "*") {
-    if (left.kind === "length" && right.kind === "length") return fail();
-    const kind: Kind =
-      left.kind === "length" || right.kind === "length"
-        ? "length"
-        : combineScalars(left.kind, right.kind);
-    return { value: mul(left.value, right.value), kind };
+    if (left.kind === "length" && right.kind === "count") {
+      return { value: mul(left.value, right.value), kind: "length" };
+    }
+    if (left.kind === "count" && right.kind === "length") {
+      return { value: mul(left.value, right.value), kind: "length" };
+    }
+    if (isScalar(left.kind) && isScalar(right.kind)) {
+      return { value: mul(left.value, right.value), kind: combineScalars(left.kind, right.kind) };
+    }
+    return fail();
   }
 
-  // Division
+  // Division: length ÷ length = ratio; length ÷ count = length; scalars combine.
   if (right.value.num === 0n) {
     throw new ExpressionError("Division by zero", source, position);
   }
   if (left.kind === "length" && right.kind === "length") {
     return { value: div(left.value, right.value), kind: "ratio" };
   }
-  if (left.kind === "length") return { value: div(left.value, right.value), kind: "length" };
-  if (right.kind === "length") return fail();
-  return { value: div(left.value, right.value), kind: "ratio" };
+  if (left.kind === "length" && right.kind === "count") {
+    return { value: div(left.value, right.value), kind: "length" };
+  }
+  if (isScalar(left.kind) && isScalar(right.kind)) {
+    return { value: div(left.value, right.value), kind: "ratio" };
+  }
+  return fail();
 }
 
 function applyFunction(

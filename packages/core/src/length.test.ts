@@ -61,3 +61,25 @@ describe("formatLength", () => {
     );
   });
 });
+
+describe("range and display edge cases", () => {
+  it("rejects lengths beyond the supported range instead of returning an unsafe number", () => {
+    expect(() => parseLength("100000000000in", "imperial")).toThrow(/too large/);
+    expect(() => parseLength("-100000000000in", "imperial")).toThrow(/too large/);
+    expect(() => snapToGrid(rational(10n ** 30n), "imperial")).toThrow(RangeError);
+  });
+
+  it("accepts a very long but supported length", () => {
+    expect(parseLength("1000in", "imperial")).toBe(1000 * INCH);
+  });
+
+  it("never prints a negative zero", () => {
+    expect(formatLength(-1, "imperial")).toBe('0"');
+    expect(formatLength(-1, "metric")).toBe("0.0 mm");
+  });
+
+  it("reads back what it prints, including metric with a space before the unit", () => {
+    expect(parseLength(formatLength(18 * MM, "metric"), "metric")).toBe(18 * MM);
+    expect(parseLength(formatLength(12.5 * MM, "metric"), "metric")).toBe(12.5 * MM);
+  });
+});
