@@ -26,7 +26,8 @@ Expected files may carry annotation keys that start with `_` (never compared by 
 
 1. **Orientations and placement.** Orientations come from the table in ADR 003 so each project
    assembles to its overall size (bookcase 36 x 12 x 72 in, box 10 x 6 x 4 in): bookcase right Side
-   17, left Side 23 (mirrored), Back 16; box Front and Back 1, Sides 8; everything else 0. Parts sit
+   17, left Side 23 (mirrored), Back 16; box Front 1, Back 3, Side A 12, Side B 8, so each wall's +Z (face1, the show face) points
+   away from the interior; everything else 0. Parts sit
    at the shoulder (Domain model decision 3): shelves, top and bottom start at the side's inner face
    and at the back rabbet width, the back panel sits at `y = 0` (`edge1` is the front), and the box
    bottom starts at the walls' inner faces. X runs across, Y is depth (front at +Y), Z is up.

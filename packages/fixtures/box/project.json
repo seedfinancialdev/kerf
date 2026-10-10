@@ -17,7 +17,7 @@
       "id": "01K7M3Q8ZD00000000B200002A",
       "mirrored": false,
       "name": "Side A",
-      "orientation": 8,
+      "orientation": 12,
       "position": {
         "x": "0in",
         "y": "0in",
@@ -29,7 +29,7 @@
       "id": "01K7M3Q8ZD00000000B2000029",
       "mirrored": false,
       "name": "Back",
-      "orientation": 1,
+      "orientation": 3,
       "position": {
         "x": "0in",
         "y": "box_width - stock[\"4/4 walnut\"].thickness",
