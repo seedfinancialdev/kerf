@@ -1,0 +1,307 @@
+{
+  "instances": [
+    {
+      "def": "01K7M3Q8ZD00000000B1000014",
+      "id": "01K7M3Q8ZD00000000B1000028",
+      "mirrored": false,
+      "name": "Right side",
+      "orientation": 0,
+      "position": {
+        "x": "0in",
+        "y": "0in",
+        "z": "0in"
+      }
+    },
+    {
+      "def": "01K7M3Q8ZD00000000B1000014",
+      "id": "01K7M3Q8ZD00000000B1000029",
+      "mirrored": true,
+      "name": "Left side",
+      "orientation": 0,
+      "position": {
+        "x": "width - stock[\"3/4 plywood\"].thickness",
+        "y": "0in",
+        "z": "0in"
+      }
+    },
+    {
+      "def": "01K7M3Q8ZD00000000B1000015",
+      "id": "01K7M3Q8ZD00000000B100002A",
+      "mirrored": false,
+      "name": "Top",
+      "orientation": 0,
+      "position": {
+        "x": "stock[\"3/4 plywood\"].thickness - rabbet_depth",
+        "y": "0in",
+        "z": "height - stock[\"3/4 plywood\"].thickness"
+      }
+    },
+    {
+      "def": "01K7M3Q8ZD00000000B1000016",
+      "id": "01K7M3Q8ZD00000000B100002B",
+      "mirrored": false,
+      "name": "Bottom",
+      "orientation": 0,
+      "position": {
+        "x": "stock[\"3/4 plywood\"].thickness - rabbet_depth",
+        "y": "0in",
+        "z": "0in"
+      }
+    },
+    {
+      "def": "01K7M3Q8ZD00000000B1000017",
+      "id": "01K7M3Q8ZD00000000B100002C",
+      "mirrored": false,
+      "name": "Shelf",
+      "orientation": 0,
+      "position": {
+        "x": "stock[\"3/4 plywood\"].thickness - dado_depth",
+        "y": "0in",
+        "z": "stock[\"3/4 plywood\"].thickness"
+      }
+    },
+    {
+      "def": "01K7M3Q8ZD00000000B1000018",
+      "id": "01K7M3Q8ZD00000000B100002D",
+      "mirrored": false,
+      "name": "Back",
+      "orientation": 0,
+      "position": {
+        "x": "stock[\"3/4 plywood\"].thickness - back_rabbet_depth",
+        "y": "depth - stock[\"1/4 plywood\"].thickness",
+        "z": "0in"
+      }
+    }
+  ],
+  "joints": [
+    {
+      "guest": "01K7M3Q8ZD00000000B100003C",
+      "host": "01K7M3Q8ZD00000000B1000028",
+      "id": "01K7M3Q8ZD00000000B1000046",
+      "params": {
+        "depth": "dado_depth"
+      },
+      "type": "dado"
+    },
+    {
+      "guest": "01K7M3Q8ZD00000000B100003C",
+      "host": "01K7M3Q8ZD00000000B1000029",
+      "id": "01K7M3Q8ZD00000000B1000047",
+      "params": {
+        "depth": "dado_depth"
+      },
+      "type": "dado"
+    },
+    {
+      "guest": "01K7M3Q8ZD00000000B100002A",
+      "host": "01K7M3Q8ZD00000000B1000028",
+      "id": "01K7M3Q8ZD00000000B1000048",
+      "params": {
+        "depth": "rabbet_depth"
+      },
+      "type": "rabbet"
+    },
+    {
+      "guest": "01K7M3Q8ZD00000000B100002B",
+      "host": "01K7M3Q8ZD00000000B1000028",
+      "id": "01K7M3Q8ZD00000000B1000049",
+      "params": {
+        "depth": "rabbet_depth"
+      },
+      "type": "rabbet"
+    },
+    {
+      "guest": "01K7M3Q8ZD00000000B100002A",
+      "host": "01K7M3Q8ZD00000000B1000029",
+      "id": "01K7M3Q8ZD00000000B100004A",
+      "params": {
+        "depth": "rabbet_depth"
+      },
+      "type": "rabbet"
+    },
+    {
+      "guest": "01K7M3Q8ZD00000000B100002B",
+      "host": "01K7M3Q8ZD00000000B1000029",
+      "id": "01K7M3Q8ZD00000000B100004B",
+      "params": {
+        "depth": "rabbet_depth"
+      },
+      "type": "rabbet"
+    },
+    {
+      "guest": "01K7M3Q8ZD00000000B100002D",
+      "host": "01K7M3Q8ZD00000000B1000028",
+      "id": "01K7M3Q8ZD00000000B100004C",
+      "params": {
+        "depth": "back_rabbet_depth"
+      },
+      "type": "rabbet"
+    },
+    {
+      "guest": "01K7M3Q8ZD00000000B100002D",
+      "host": "01K7M3Q8ZD00000000B1000029",
+      "id": "01K7M3Q8ZD00000000B100004D",
+      "params": {
+        "depth": "back_rabbet_depth"
+      },
+      "type": "rabbet"
+    }
+  ],
+  "matchSets": [],
+  "name": "Bookcase",
+  "params": [
+    {
+      "expr": "36in",
+      "id": "01K7M3Q8ZD00000000B100000A",
+      "kind": "length",
+      "name": "width"
+    },
+    {
+      "expr": "72in",
+      "id": "01K7M3Q8ZD00000000B100000B",
+      "kind": "length",
+      "name": "height"
+    },
+    {
+      "expr": "12in",
+      "id": "01K7M3Q8ZD00000000B100000C",
+      "kind": "length",
+      "name": "depth"
+    },
+    {
+      "expr": "4",
+      "id": "01K7M3Q8ZD00000000B100000D",
+      "kind": "count",
+      "name": "shelf_count"
+    },
+    {
+      "expr": "1/4in",
+      "id": "01K7M3Q8ZD00000000B100000E",
+      "kind": "length",
+      "name": "dado_depth"
+    },
+    {
+      "expr": "1/4in",
+      "id": "01K7M3Q8ZD00000000B100000F",
+      "kind": "length",
+      "name": "rabbet_depth"
+    },
+    {
+      "expr": "3/8in",
+      "id": "01K7M3Q8ZD00000000B1000010",
+      "kind": "length",
+      "name": "back_rabbet_depth"
+    },
+    {
+      "expr": "1/8in",
+      "id": "01K7M3Q8ZD00000000B1000011",
+      "kind": "length",
+      "name": "roundover_radius"
+    }
+  ],
+  "parts": [
+    {
+      "grainLocked": true,
+      "id": "01K7M3Q8ZD00000000B1000014",
+      "length": "height",
+      "name": "Side",
+      "ops": [],
+      "stock": "01K7M3Q8ZD00000000B1000001",
+      "width": "depth"
+    },
+    {
+      "grainLocked": true,
+      "id": "01K7M3Q8ZD00000000B1000015",
+      "length": "width - 2*stock[\"3/4 plywood\"].thickness",
+      "name": "Top",
+      "ops": [],
+      "stock": "01K7M3Q8ZD00000000B1000001",
+      "width": "depth - stock[\"1/4 plywood\"].thickness"
+    },
+    {
+      "grainLocked": true,
+      "id": "01K7M3Q8ZD00000000B1000016",
+      "length": "width - 2*stock[\"3/4 plywood\"].thickness",
+      "name": "Bottom",
+      "ops": [],
+      "stock": "01K7M3Q8ZD00000000B1000001",
+      "width": "depth - stock[\"1/4 plywood\"].thickness"
+    },
+    {
+      "grainLocked": true,
+      "id": "01K7M3Q8ZD00000000B1000017",
+      "length": "width - 2*stock[\"3/4 plywood\"].thickness",
+      "name": "Shelf",
+      "ops": [
+        {
+          "edges": [
+            "edge1/face0",
+            "edge1/face1"
+          ],
+          "id": "01K7M3Q8ZD00000000B100001E",
+          "radius": "roundover_radius",
+          "type": "roundover"
+        }
+      ],
+      "stock": "01K7M3Q8ZD00000000B1000001",
+      "width": "depth - stock[\"1/4 plywood\"].thickness"
+    },
+    {
+      "grainLocked": true,
+      "id": "01K7M3Q8ZD00000000B1000018",
+      "length": "height",
+      "name": "Back",
+      "ops": [],
+      "stock": "01K7M3Q8ZD00000000B1000002",
+      "width": "width - 2*stock[\"3/4 plywood\"].thickness"
+    }
+  ],
+  "patterns": [
+    {
+      "axis": "z",
+      "count": "shelf_count",
+      "id": "01K7M3Q8ZD00000000B100003C",
+      "source": "01K7M3Q8ZD00000000B100002C",
+      "spacing": {
+        "from": "stock[\"3/4 plywood\"].thickness",
+        "mode": "distribute",
+        "to": "height - stock[\"3/4 plywood\"].thickness"
+      }
+    }
+  ],
+  "schemaVersion": 1,
+  "stock": [
+    {
+      "allowance": {
+        "length": 0,
+        "width": 0
+      },
+      "id": "01K7M3Q8ZD00000000B1000001",
+      "kind": "sheet",
+      "name": "3/4 plywood",
+      "sheet": {
+        "grain": "along-length",
+        "length": 19507200,
+        "width": 9753600
+      },
+      "thickness": 146050
+    },
+    {
+      "allowance": {
+        "length": 0,
+        "width": 0
+      },
+      "id": "01K7M3Q8ZD00000000B1000002",
+      "kind": "sheet",
+      "name": "1/4 plywood",
+      "sheet": {
+        "grain": "along-length",
+        "length": 19507200,
+        "width": 9753600
+      },
+      "thickness": 50800
+    }
+  ],
+  "structures": [],
+  "units": "imperial"
+}

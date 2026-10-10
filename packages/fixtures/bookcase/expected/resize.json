@@ -1,0 +1,18 @@
+{
+  "_spec": {
+    "/width30/dadoDepth": "1/4\"",
+    "/width30/shelfCutLength": "29-1/16\"",
+    "/width30/shelfVisibleLength": "28-9/16\"",
+    "/width30/width": "30\""
+  },
+  "shelfCount5": {
+    "mergedLineQuantity": 7,
+    "shelfCount": 5
+  },
+  "width30": {
+    "dadoDepth": 50800,
+    "shelfCutLength": 5905500,
+    "shelfVisibleLength": 5803900,
+    "width": 6096000
+  }
+}

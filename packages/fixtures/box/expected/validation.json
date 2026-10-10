@@ -1,0 +1,9 @@
+{
+  "errors": [],
+  "warnings": [
+    {
+      "_note": "Operation specs: 'the groove exits through the board ends; on a through-dovetailed box it must land inside the bottom half-pin or it shows on the outside. The validator flags it if it doesn't.' Rule id is ours. Decision A: the golden box expects this warning.",
+      "rule": "groove-outside-bottom-half-pin"
+    }
+  ]
+}

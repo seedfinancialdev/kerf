@@ -1,0 +1,84 @@
+{
+  "_spec": {
+    "/blocks/0/members/0/length": "10\"",
+    "/blocks/0/members/0/thickness": "1/2\"",
+    "/blocks/0/members/0/width": "4\"",
+    "/blocks/0/members/1/length": "6\"",
+    "/blocks/0/members/1/thickness": "1/2\"",
+    "/blocks/0/members/1/width": "4\"",
+    "/blocks/0/members/2/length": "10\"",
+    "/blocks/0/members/2/thickness": "1/2\"",
+    "/blocks/0/members/2/width": "4\"",
+    "/blocks/0/members/3/length": "6\"",
+    "/blocks/0/members/3/thickness": "1/2\"",
+    "/blocks/0/members/3/width": "4\"",
+    "/lines/0/length": "9-1/2\"",
+    "/lines/0/thickness": "1/4\"",
+    "/lines/0/visible/length": "9\"",
+    "/lines/0/visible/width": "5\"",
+    "/lines/0/width": "5-1/2\""
+  },
+  "blocks": [
+    {
+      "matchSet": "01K7M3Q8ZD00000000B200005A",
+      "members": [
+        {
+          "length": 2032000,
+          "name": "Front",
+          "of": 4,
+          "sequence": 1,
+          "stock": "01K7M3Q8ZD00000000B2000001",
+          "thickness": 101600,
+          "width": 812800
+        },
+        {
+          "length": 1219200,
+          "name": "Side",
+          "of": 4,
+          "sequence": 2,
+          "stock": "01K7M3Q8ZD00000000B2000001",
+          "thickness": 101600,
+          "width": 812800
+        },
+        {
+          "length": 2032000,
+          "name": "Back",
+          "of": 4,
+          "sequence": 3,
+          "stock": "01K7M3Q8ZD00000000B2000001",
+          "thickness": 101600,
+          "width": 812800
+        },
+        {
+          "length": 1219200,
+          "name": "Side",
+          "of": 4,
+          "sequence": 4,
+          "stock": "01K7M3Q8ZD00000000B2000001",
+          "thickness": 101600,
+          "width": 812800
+        }
+      ],
+      "name": "Grain wraps the corners"
+    }
+  ],
+  "lines": [
+    {
+      "length": 1930400,
+      "parts": [
+        {
+          "name": "Bottom",
+          "quantity": 1
+        }
+      ],
+      "quantity": 1,
+      "stock": "01K7M3Q8ZD00000000B2000002",
+      "thickness": 50800,
+      "visible": {
+        "length": 1828800,
+        "width": 1016000
+      },
+      "width": 1117600
+    }
+  ]
+}

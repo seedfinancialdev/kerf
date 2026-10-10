@@ -1,0 +1,37 @@
+{
+  "_spec": {
+    "/setups/0/depth": "1/4\"",
+    "/setups/0/width": "23/32\"",
+    "/setups/1/depth": "3/8\"",
+    "/setups/1/width": "1/4\"",
+    "/setups/2/bit/radius": "1/8\""
+  },
+  "setups": [
+    {
+      "_note": "12: 8 shelf dados + 4 end rabbets for top and bottom, on the 2 sides",
+      "cuts": 12,
+      "depth": 50800,
+      "setup": 1,
+      "tool": "dadoStack",
+      "width": 146050
+    },
+    {
+      "_note": "2: back rabbets on the 2 sides",
+      "cuts": 2,
+      "depth": 76200,
+      "setup": 2,
+      "tool": "dadoStack",
+      "width": 50800
+    },
+    {
+      "_note": "8 edges: 2 front edges on each of 4 shelves",
+      "bit": {
+        "radius": 25400,
+        "type": "roundover"
+      },
+      "cuts": 8,
+      "setup": 3,
+      "tool": "router"
+    }
+  ]
+}

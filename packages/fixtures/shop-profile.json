@@ -1,0 +1,20 @@
+{
+  "kerf": 25400,
+  "tools": [
+    {
+      "maxWidth": 152400,
+      "type": "dadoStack"
+    },
+    {
+      "roundoverBits": [
+        25400
+      ],
+      "straightBits": [],
+      "type": "router"
+    },
+    {
+      "dovetails": true,
+      "type": "handTools"
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "instances": [],
+  "joints": [],
+  "matchSets": [],
+  "name": "Keepsake box",
+  "params": [
+    {
+      "expr": "10in",
+      "id": "01K7M3Q8ZD00000000B200000A",
+      "kind": "length",
+      "name": "box_length"
+    },
+    {
+      "expr": "6in",
+      "id": "01K7M3Q8ZD00000000B200000B",
+      "kind": "length",
+      "name": "box_width"
+    },
+    {
+      "expr": "4in",
+      "id": "01K7M3Q8ZD00000000B200000C",
+      "kind": "length",
+      "name": "box_height"
+    }
+  ],
+  "parts": [],
+  "patterns": [],
+  "schemaVersion": 1,
+  "stock": [
+    {
+      "allowance": {
+        "length": 0,
+        "width": 50800
+      },
+      "id": "01K7M3Q8ZD00000000B2000001",
+      "kind": "solid",
+      "name": "4/4 walnut",
+      "solid": {
+        "maxWidth": 1625600,
+        "standardLengths": [
+          19507200
+        ]
+      },
+      "thickness": 101600
+    },
+    {
+      "allowance": {
+        "length": 0,
+        "width": 0
+      },
+      "id": "01K7M3Q8ZD00000000B2000002",
+      "kind": "sheet",
+      "name": "1/4 plywood",
+      "sheet": {
+        "grain": "along-length",
+        "length": 19507200,
+        "width": 9753600
+      },
+      "thickness": 50800
+    }
+  ],
+  "structures": [
+    {
+      "id": "01K7M3Q8ZD00000000B2000050",
+      "openings": [
+        {
+          "children": [],
+          "id": "01K7M3Q8ZD00000000B2000051"
+        }
+      ],
+      "options": {
+        "bottom": "groove",
+        "bottomStock": "01K7M3Q8ZD00000000B2000002",
+        "cornerJoint": "through-dovetail",
+        "grainWraps": true,
+        "grooveDepth": "1/4in",
+        "grooveOffset": "1/4in",
+        "wallStock": "01K7M3Q8ZD00000000B2000001"
+      },
+      "size": {
+        "d": "box_width",
+        "h": "box_height",
+        "w": "box_length"
+      },
+      "type": "box"
+    }
+  ],
+  "units": "imperial"
+}

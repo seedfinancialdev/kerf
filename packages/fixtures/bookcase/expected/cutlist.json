@@ -1,0 +1,81 @@
+{
+  "_spec": {
+    "/lines/0/length": "72\"",
+    "/lines/0/thickness": "23/32\"",
+    "/lines/0/visible/length": "72\"",
+    "/lines/0/visible/width": "12\"",
+    "/lines/0/width": "12\"",
+    "/lines/1/length": "35-1/16\"",
+    "/lines/1/thickness": "23/32\"",
+    "/lines/1/visible/length": "34-9/16\"",
+    "/lines/1/visible/width": "11-3/4\"",
+    "/lines/1/width": "11-3/4\"",
+    "/lines/2/length": "72\"",
+    "/lines/2/thickness": "1/4\"",
+    "/lines/2/visible/length": "72\"",
+    "/lines/2/visible/width": "34-9/16\"",
+    "/lines/2/width": "35-5/16\""
+  },
+  "blocks": [],
+  "lines": [
+    {
+      "length": 14630400,
+      "parts": [
+        {
+          "name": "Side",
+          "quantity": 2
+        }
+      ],
+      "quantity": 2,
+      "stock": "01K7M3Q8ZD00000000B1000001",
+      "thickness": 146050,
+      "visible": {
+        "length": 14630400,
+        "width": 2438400
+      },
+      "width": 2438400
+    },
+    {
+      "length": 7124700,
+      "parts": [
+        {
+          "name": "Top",
+          "quantity": 1
+        },
+        {
+          "name": "Bottom",
+          "quantity": 1
+        },
+        {
+          "name": "Shelf",
+          "quantity": 4
+        }
+      ],
+      "quantity": 6,
+      "stock": "01K7M3Q8ZD00000000B1000001",
+      "thickness": 146050,
+      "visible": {
+        "length": 7023100,
+        "width": 2387600
+      },
+      "width": 2387600
+    },
+    {
+      "length": 14630400,
+      "parts": [
+        {
+          "name": "Back",
+          "quantity": 1
+        }
+      ],
+      "quantity": 1,
+      "stock": "01K7M3Q8ZD00000000B1000002",
+      "thickness": 50800,
+      "visible": {
+        "length": 14630400,
+        "width": 7023100
+      },
+      "width": 7175500
+    }
+  ]
+}

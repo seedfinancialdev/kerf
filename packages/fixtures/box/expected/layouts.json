@@ -1,0 +1,49 @@
+{
+  "_note": "Only the match-set board is specified. No sheet layout is given for the 1/4\" plywood bottom, so none is asserted.",
+  "_spec": {
+    "/boards/0/composite/length": "33-3/8\"",
+    "/boards/0/composite/width": "4\"",
+    "/boards/0/composite/widthAllowance": "1/4\"",
+    "/boards/0/minBoardLength": "34\"",
+    "/inputs/edgeTrimPerEnd": "1/2\"",
+    "/inputs/kerf": "1/8\""
+  },
+  "boards": [
+    {
+      "composite": {
+        "length": 6781800,
+        "width": 812800,
+        "widthAllowance": 50800
+      },
+      "matchSet": "01K7M3Q8ZD00000000B200005A",
+      "minBoardLength": 6908800,
+      "sequence": [
+        {
+          "name": "Front",
+          "of": 4,
+          "sequence": 1
+        },
+        {
+          "name": "Side",
+          "of": 4,
+          "sequence": 2
+        },
+        {
+          "name": "Back",
+          "of": 4,
+          "sequence": 3
+        },
+        {
+          "name": "Side",
+          "of": 4,
+          "sequence": 4
+        }
+      ],
+      "stock": "01K7M3Q8ZD00000000B2000001"
+    }
+  ],
+  "inputs": {
+    "edgeTrimPerEnd": 101600,
+    "kerf": 25400
+  }
+}
