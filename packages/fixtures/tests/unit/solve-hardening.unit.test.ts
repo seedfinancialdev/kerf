@@ -190,7 +190,7 @@ describe("positions", () => {
   milestone("M1", "other instances land where their expressions say", () => {
     const at = (name: string) => solveModel(bookcase).instances.find((i) => i.name === name);
     expect(at("Top")?.position.z).toBe(14630400 - 146050); // 72" - 23/32"
-    expect(at("Back")?.position).toMatchObject({ x: 146050 - 76200, y: 2438400 - 50800 });
+    expect(at("Back")?.position).toMatchObject({ x: 146050, y: 0 }); // at the shoulder, at the back
     expect(at("Left side")?.position.x).toBe(36 * INCH - 146050);
   });
 
