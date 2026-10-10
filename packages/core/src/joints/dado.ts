@@ -17,7 +17,7 @@ export function deriveDado(ctx: DeriveContext, joint: Joint, seat: Seat): PairCu
   const [L, W, T] = dimsOf(host);
   const hostName = host.instance.name;
   const guestName = guest.instance.name;
-  const where = { joint: joint.id, part: host.part.id };
+  const where = { joint: joint.id, part: host.part.id, field: `${hostName} dado` };
 
   if (hostFace.axis !== 2) {
     ctx.error(
@@ -62,7 +62,17 @@ export function deriveDado(ctx: DeriveContext, joint: Joint, seat: Seat): PairCu
   if (depth === undefined || fit === undefined) return undefined;
   if (joint.params.stop !== undefined && stop === undefined) return undefined;
 
-  if (depth <= 0 || depth >= T) {
+  const bad = (key: string, why: string): undefined => {
+    ctx.error("invalid-parameter", `The dado ${key} in ${hostName} ${why}.`, {
+      ...where,
+      field: `joint ${key}`,
+    });
+    return undefined;
+  };
+  if (depth <= 0) return bad("depth", "must be greater than zero");
+  if (fit < 0) return bad("fit", "cannot be negative");
+
+  if (depth >= T) {
     ctx.error(
       "dado-too-deep",
       `This part can't be built: the dado in ${hostName} is as deep as the board is thick.`,
@@ -96,7 +106,7 @@ export function deriveDado(ctx: DeriveContext, joint: Joint, seat: Seat): PairCu
       ctx.error(
         "dado-stop",
         `The stop distance for the dado in ${hostName} is outside the board.`,
-        where,
+        { ...where, field: "joint stop" },
       );
       return undefined;
     }

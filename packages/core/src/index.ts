@@ -21,6 +21,8 @@ export {
 } from "./project-file";
 export type { Rational } from "./rational";
 export { rational } from "./rational";
+export type { Box, Frame } from "./solve/assembly";
+export { boxOf, toLocal, toParent } from "./solve/assembly";
 export type { SolvedInstance, SolvedModel, SolvedOp, SolvedPart } from "./solve/model";
 export { MAX_PATTERN_COUNT, solveModel } from "./solve/model";
 export type { Orientation } from "./solve/orientation";

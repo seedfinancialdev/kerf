@@ -110,7 +110,7 @@ export function deriveDovetail(
   host: Frame,
   guest: Frame,
 ): PairCut | undefined {
-  const where = { joint: joint.id, part: host.part.id };
+  const where = { joint: joint.id, part: host.part.id, field: `${host.instance.name} dovetail` };
   const hostName = host.instance.name;
   const guestName = guest.instance.name;
   const notCorner = (): undefined => {
@@ -183,6 +183,13 @@ export function deriveDovetail(
   const pin = ctx.length(joint, "pin", INCH / 4);
   const proud = ctx.length(joint, "proud", 0);
   if (pin === undefined || proud === undefined) return undefined;
+  if (proud < 0) {
+    ctx.error("invalid-parameter", 'The dovetail "proud" cannot be negative.', {
+      ...where,
+      field: "joint proud",
+    });
+    return undefined;
+  }
 
   let tails: number | undefined;
   const tailsQ = ctx.expression(joint, "tails");
@@ -249,20 +256,26 @@ export function deriveDovetail(
   }));
 
   // Pin board (host): a socket for each tail, through its thickness, over the corner's length.
+  // The tail spans are measured from the guest's edge0; when the host's width axis points the
+  // other way, its own edge0 is the guest's far edge, so the spans are mirrored across the width.
+  const flipped = hostMaps[1].sign !== guestMaps[1].sign;
   const zTip = tipFace.side === 0 ? 0 : Th;
   const zBase = tipFace.side === 0 ? Th : 0;
   const range: [Len, Len] = hostEnd === 0 ? [0, Tg] : [Lh - Tg, Lh];
-  const hostCuts: RemovalPrimitive[] = tailSpans.map((t) => ({
-    kind: "trapezoidPrism",
-    plane: "yz",
-    points: [
-      [t.start, zTip],
-      [t.end, zTip],
-      [t.end - off, zBase],
-      [t.start + off, zBase],
-    ],
-    range,
-  }));
+  const hostCuts: RemovalPrimitive[] = tailSpans
+    .map((t) => (flipped ? { start: W - t.end, end: W - t.start } : t))
+    .sort((a, b) => a.start - b.start)
+    .map((t) => ({
+      kind: "trapezoidPrism" as const,
+      plane: "yz" as const,
+      points: [
+        [t.start, zTip],
+        [t.end, zTip],
+        [t.end - off, zBase],
+        [t.start + off, zBase],
+      ] as ReadonlyArray<readonly [Len, Len]>,
+      range,
+    }));
 
   return {
     joint: joint.id,
@@ -281,6 +294,7 @@ export function deriveDovetail(
       guestEnd,
       hostTipSide: tipFace.side,
       halfPins: layout.halfPins,
+      hostHalfPins: flipped ? [layout.halfPins[1], layout.halfPins[0]] : layout.halfPins,
       slopeOffset: off,
       hostThickness: Th,
       guestThickness: Tg,

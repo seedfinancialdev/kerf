@@ -140,7 +140,7 @@ function grooveHalfPinWarnings(derived: Derived, frames: Map<Id, Frame>): Diagno
         const lo = g.min[1];
         const hi = g.max[1];
         const nearEdge0 = lo <= W - hi;
-        const halfPin = facts.halfPins[nearEdge0 ? 0 : 1];
+        const halfPin = (isHost ? facts.hostHalfPins : facts.halfPins)[nearEdge0 ? 0 : 1];
         // Depth from the tip face to the shallowest part of the groove (pin board only; on the
         // tail board the space is as wide as the half-pin at the tip along its whole length).
         let allowedNumerator = halfPin * facts.hostThickness;

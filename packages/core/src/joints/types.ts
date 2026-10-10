@@ -53,8 +53,10 @@ export interface DovetailFacts {
   guestEnd: 0 | 1;
   /** Which face of the host (local Z = 0 or T) the tail tips finish flush with. */
   hostTipSide: 0 | 1;
-  /** Half-pin width at the tip along the width axis: [edge0, edge1]. */
+  /** Half-pin width at the tip along the width axis, in the tail board's frame: [edge0, edge1]. */
   halfPins: [Len, Len];
+  /** The same half-pins in the pin board's own frame (swapped when its width axis is flipped). */
+  hostHalfPins: [Len, Len];
   slopeOffset: Len;
   hostThickness: Len;
   guestThickness: Len;
