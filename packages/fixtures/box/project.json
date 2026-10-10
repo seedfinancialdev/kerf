@@ -5,7 +5,7 @@
       "id": "01K7M3Q8ZD00000000B2000028",
       "mirrored": false,
       "name": "Front",
-      "orientation": 0,
+      "orientation": 1,
       "position": {
         "x": "0in",
         "y": "0in",
@@ -17,7 +17,7 @@
       "id": "01K7M3Q8ZD00000000B200002A",
       "mirrored": false,
       "name": "Side A",
-      "orientation": 0,
+      "orientation": 8,
       "position": {
         "x": "0in",
         "y": "0in",
@@ -29,7 +29,7 @@
       "id": "01K7M3Q8ZD00000000B2000029",
       "mirrored": false,
       "name": "Back",
-      "orientation": 0,
+      "orientation": 1,
       "position": {
         "x": "0in",
         "y": "box_width - stock[\"4/4 walnut\"].thickness",
@@ -41,7 +41,7 @@
       "id": "01K7M3Q8ZD00000000B200002B",
       "mirrored": false,
       "name": "Side B",
-      "orientation": 0,
+      "orientation": 8,
       "position": {
         "x": "box_length - stock[\"4/4 walnut\"].thickness",
         "y": "0in",
