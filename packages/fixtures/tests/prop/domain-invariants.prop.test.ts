@@ -17,7 +17,7 @@ import {
   solve,
   solveModel,
 } from "@kerf/core";
-import { buildDisplayMesh, isManifold } from "@kerf/geometry";
+import { buildDisplayMesh, initGeometry, isManifold } from "@kerf/geometry";
 import fc from "fast-check";
 import { describe, expect } from "vitest";
 import { applyBookcaseEdit, applyBoxEdit, bookcaseEdit, boxEdit, RUNS } from "../../src/edits";
@@ -185,14 +185,11 @@ describe("solve invariants", () => {
     });
   });
 
-  milestone("M2", "every display mesh is manifold", () => {
+  milestone("M2", "every display mesh is manifold", async () => {
+    await initGeometry();
     property(anyProject, (p: Project) => {
-      for (const line of buildCutList(p).lines) {
-        const mesh = buildDisplayMesh(
-          { length: line.length, width: line.width, thickness: line.thickness },
-          p.joints.flatMap((j) => deriveJointCuts(p, j.id).host),
-        );
-        expect(isManifold(mesh)).toBe(true);
+      for (const shape of solve(p, shop).shapes) {
+        expect(isManifold(buildDisplayMesh(shape, shape.removals))).toBe(true);
       }
     });
   });
@@ -241,6 +238,53 @@ describe("solve invariants", () => {
       expect(dados).toHaveLength(2);
       const [a, b] = dados;
       expect(deriveJointCuts(p, a?.id ?? "")).toEqual(deriveJointCuts(p, b?.id ?? ""));
+    });
+  });
+});
+
+describe("outputs invariants", () => {
+  milestone("M2", "solving is deterministic and never falls back to internal-error", () => {
+    property(anyProject, (p) => {
+      const first = solve(p, shop);
+      expect(first.diagnostics.map((d) => d.rule)).not.toContain("internal-error");
+      expect(
+        JSON.stringify(solve(p, shop), (_k, v) => (typeof v === "bigint" ? v.toString() : v)),
+      ).toBe(JSON.stringify(first, (_k, v) => (typeof v === "bigint" ? v.toString() : v)));
+    });
+  });
+
+  milestone("M2", "every part is placed exactly once, on a sheet or a board", () => {
+    property(anyProject, (p) => {
+      const result = solve(p, shop);
+      const cut =
+        result.cutList.lines.reduce((sum, l) => sum + l.quantity, 0) +
+        result.cutList.blocks.reduce((sum, b) => sum + b.members.length, 0);
+      const onSheets = result.nesting.sheets.reduce((sum, s) => sum + s.placements.length, 0);
+      const onBoards = result.nesting.boards.reduce((sum, b) => sum + b.sequence.length, 0);
+      expect(onSheets + onBoards).toBe(cut);
+    });
+  });
+
+  milestone(
+    "M2",
+    "sheet contents match placements, and efficiency is a fraction up to 1",
+    () => {
+      property(editedBookcase, (p) => {
+        for (const sheet of solve(p, shop).nesting.sheets) {
+          expect(sheet.efficiency.num).toBeGreaterThan(0n);
+          expect(sheet.efficiency.num <= sheet.efficiency.den).toBe(true);
+          expect(sheet.contents.reduce((n, c) => n + c.quantity, 0)).toBe(sheet.placements.length);
+        }
+      });
+    },
+  );
+
+  milestone("M2", "cut size is visible size plus what joints add, never less", () => {
+    property(editedBookcase, (p) => {
+      for (const line of solve(p, shop).cutList.lines) {
+        expect(line.length).toBeGreaterThanOrEqual(line.visible.length);
+        expect(line.width).toBeGreaterThanOrEqual(line.visible.width);
+      }
     });
   });
 });

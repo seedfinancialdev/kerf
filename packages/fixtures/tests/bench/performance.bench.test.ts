@@ -19,7 +19,9 @@ function elapsedMs(fn: () => void): number {
 }
 
 describe("benchmarks", () => {
-  milestone("M4", "solve the reference bookcase in under 100 ms", () => {
+  // The Build plan lists this under M4, but the whole pipeline exists from M2, so the budget is held
+  // from M2 on: a regression is caught the milestone it is introduced in.
+  milestone("M2", "solve the reference bookcase in under 100 ms", () => {
     const bookcase = loadProject("bookcase");
     expect(elapsedMs(() => solve(bookcase, shop))).toBeLessThan(100);
   });

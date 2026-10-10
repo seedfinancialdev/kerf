@@ -7,10 +7,10 @@ export * from "./errors";
 export type { Kind, Quantity, Scope } from "./expr";
 export { ExpressionError, evaluateExpression, evaluateQuantity } from "./expr";
 export type { Derived, InstanceCuts } from "./joints/derive";
-export { deriveJoints } from "./joints/derive";
 export { dovetailLayout, layoutDovetail } from "./joints/dovetail";
 export type { CutAdd, MachinedCut, PairCut } from "./joints/types";
 export * from "./length";
+export { DEFAULT_MIN_OFFCUT, nestSheets } from "./nest/sheets";
 export * from "./outputs";
 export {
   CURRENT_SCHEMA_VERSION,

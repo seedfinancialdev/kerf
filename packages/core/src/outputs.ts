@@ -6,6 +6,7 @@
 // but not their JSON shape; these shapes are the M0 contract the golden fixtures use.
 // None of this is ever saved to .kerf.
 
+import type { Rational } from "./rational";
 import type { EdgeRef, Id, Len } from "./types";
 
 export interface Diagnostic {
@@ -99,12 +100,40 @@ export interface CutStep {
   sizes: Len[];
 }
 
+/** A part placed on a sheet. `x` runs along the grain, `y` across it, from the sheet's corner. */
+export interface Placement {
+  x: Len;
+  y: Len;
+  /** Size along the grain and across it. */
+  length: Len;
+  width: Len;
+  instance: Id;
+  name: string;
+  /** True when the part is turned 90 degrees from its length-along-grain orientation. */
+  rotated: boolean;
+}
+
+export interface Offcut {
+  x: Len;
+  y: Len;
+  length: Len;
+  width: Len;
+}
+
 export interface SheetLayout {
   stock: Id;
   sheet: { length: Len; width: Len };
+  /** Distinct part sizes on this sheet, in order of first placement. */
   contents: Array<{ length: Len; width: Len; quantity: number }>;
+  /** Rips first, then crosscuts. */
   cutSequence: CutStep[];
+  /** The largest usable offcut and how many of that size the sheet has. */
   largestOffcut: { alongGrain: Len; acrossGrain: Len; count: number };
+  placements: Placement[];
+  /** Every usable offcut (both sides at least the minimum useful size). */
+  offcuts: Offcut[];
+  /** Used area over sheet area. */
+  efficiency: Rational;
 }
 
 /** A solid-stock board layout; only match-set boards are specified so far. */
@@ -114,6 +143,8 @@ export interface BoardLayout {
   /** Parts joined end to end, plus kerfs and trim, cut from one board. */
   composite?: { length: Len; width: Len; widthAllowance: Len };
   minBoardLength?: Len;
+  /** The standard length of the board the parts are cut from (ordinary boards). */
+  boardLength?: Len;
   sequence: Array<{ sequence: number; of: number; name: string }>;
 }
 
@@ -125,12 +156,26 @@ export interface NestingResult {
 
 export interface MachiningSetup {
   setup: number;
-  tool: "dadoStack" | "router";
-  /** Cut width for a dado stack, bit radius for a roundover bit. */
+  tool: "dadoStack" | "router" | "handTools";
+  /** Cut width for a dado stack or router straight bit. */
   width?: Len;
   depth?: Len;
   bit?: { type: "roundover"; radius: Len };
   cuts: number;
+  /** True when the shop profile has no tool that can make these cuts (the tool named is the one needed). */
+  missing?: boolean;
+}
+
+/** One distinct part shape, for the display mesh. Split definitions appear separately. */
+export interface PartShape {
+  /** The definition id, or `<id>~<n>` when cuts forced a split. */
+  definition: Id;
+  name: string;
+  length: Len;
+  width: Len;
+  thickness: Len;
+  /** Removals in definition space: joint cuts plus roundovers. */
+  removals: RemovalPrimitive[];
 }
 
 export interface SolveResult {
@@ -138,6 +183,8 @@ export interface SolveResult {
   cutList: CutList;
   nesting: NestingResult;
   setups: MachiningSetup[];
+  /** Distinct shapes with their removals. Empty when the project did not solve. */
+  shapes: PartShape[];
 }
 
 export interface BuildPlan {

@@ -276,5 +276,15 @@ export function deriveDovetail(
     machined: [
       { host: host.instance.id, kind: "dovetail", width: layout.wideTailWidth, depth: Th },
     ],
+    dovetail: {
+      hostEnd,
+      guestEnd,
+      hostTipSide: tipFace.side,
+      halfPins: layout.halfPins,
+      slopeOffset: off,
+      hostThickness: Th,
+      guestThickness: Tg,
+      boardWidth: W,
+    },
   };
 }

@@ -44,6 +44,21 @@ export interface PairCut {
   hostAdd: CutAdd;
   guestAdd: CutAdd;
   machined: MachinedCut[];
+  /** Dovetail layout facts, for validation. */
+  dovetail?: DovetailFacts;
+}
+
+export interface DovetailFacts {
+  hostEnd: 0 | 1;
+  guestEnd: 0 | 1;
+  /** Which face of the host (local Z = 0 or T) the tail tips finish flush with. */
+  hostTipSide: 0 | 1;
+  /** Half-pin width at the tip along the width axis: [edge0, edge1]. */
+  halfPins: [Len, Len];
+  slopeOffset: Len;
+  hostThickness: Len;
+  guestThickness: Len;
+  boardWidth: Len;
 }
 
 export interface DeriveContext {

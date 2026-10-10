@@ -13,6 +13,7 @@ export default defineConfig({
           include: [
             "packages/core/src/**/*.test.ts",
             "packages/io/src/**/*.test.ts",
+            "packages/geometry/src/**/*.test.ts",
             "packages/fixtures/tests/unit/**/*.test.ts",
           ],
         },

@@ -35,7 +35,16 @@ describe("bookcase (golden)", () => {
       sheetCountByStock: Record<string, number>;
     }>("bookcase", "layouts");
     const result = nest(project, shop);
-    expect(result.sheets).toEqual(expected.sheets);
+    // The spec fixes these fields; placements, offcuts and efficiency are checked in the nesting
+    // unit tests.
+    const specified = result.sheets.map((s) => ({
+      stock: s.stock,
+      sheet: s.sheet,
+      contents: s.contents,
+      cutSequence: s.cutSequence,
+      largestOffcut: s.largestOffcut,
+    }));
+    expect(specified).toEqual(expected.sheets);
     expect(result.sheetCountByStock).toEqual(expected.sheetCountByStock);
   });
 
