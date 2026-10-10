@@ -4,6 +4,21 @@
 
 export * from "./api";
 export * from "./errors";
+export type { Kind, Quantity, Scope } from "./expr";
+export { ExpressionError, evaluateExpression, evaluateQuantity } from "./expr";
+export * from "./length";
 export * from "./outputs";
+export {
+  CURRENT_SCHEMA_VERSION,
+  ProjectFormatError,
+  parseProject,
+  serializeProject,
+} from "./project-file";
+export type { Rational } from "./rational";
+export { rational } from "./rational";
+export type { SolvedInstance, SolvedModel, SolvedPart } from "./solve/model";
+export { solveModel } from "./solve/model";
+export type { Orientation } from "./solve/orientation";
+export { extentOf, ORIENTATION_COUNT, orientationOf } from "./solve/orientation";
 export * from "./types";
 export * from "./units";

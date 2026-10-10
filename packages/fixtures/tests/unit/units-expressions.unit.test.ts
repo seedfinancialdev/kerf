@@ -12,10 +12,10 @@ import {
   MM,
   parseLength,
   snapToGrid,
-  solve,
+  solveModel,
 } from "@kerf/core";
 import { describe, expect } from "vitest";
-import { loadProject, loadShopProfile, withParam } from "../../src/index";
+import { loadProject, withParam } from "../../src/index";
 import { milestone } from "../../src/milestone";
 import { expectRealError } from "../../src/support";
 
@@ -95,7 +95,10 @@ describe("expressions", () => {
   });
 
   milestone("M1", "references to parameters resolve (shelf_count, width)", () => {
-    const scope = { width: { num: BigInt(36 * INCH), den: 1n }, shelf_count: { num: 4n, den: 1n } };
+    const scope = {
+      width: { value: { num: BigInt(36 * INCH), den: 1n }, kind: "length" as const },
+      shelf_count: { value: { num: 4n, den: 1n }, kind: "count" as const },
+    };
     expect(evaluateExpression("width / shelf_count", scope)).toEqual({
       num: BigInt(9 * INCH),
       den: 1n,
@@ -107,7 +110,7 @@ describe("parameter solving", () => {
   milestone("M1", "a parameter cycle is an error naming every member", () => {
     const base = loadProject("bookcase");
     const cyclic = withParam(withParam(base, "width", "height + 1in"), "height", "width - 1in");
-    const { diagnostics } = solve(cyclic, loadShopProfile());
+    const { diagnostics } = solveModel(cyclic);
     const errors = diagnostics.filter((d) => d.severity === "error");
     expect(errors.length).toBeGreaterThan(0);
     const text = errors.map((d) => d.message).join(" ");

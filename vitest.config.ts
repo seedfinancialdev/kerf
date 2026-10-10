@@ -10,7 +10,11 @@ export default defineConfig({
       {
         test: {
           name: "unit",
-          include: ["packages/core/src/**/*.test.ts", "packages/fixtures/tests/unit/**/*.test.ts"],
+          include: [
+            "packages/core/src/**/*.test.ts",
+            "packages/io/src/**/*.test.ts",
+            "packages/fixtures/tests/unit/**/*.test.ts",
+          ],
         },
       },
       { test: { name: "golden", include: ["packages/fixtures/tests/golden/**/*.test.ts"] } },
