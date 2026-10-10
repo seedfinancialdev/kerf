@@ -8,7 +8,7 @@
 // Joinery is derived from contact between parts, so these placements are inputs to M2.
 // Ordinary tests, not milestone tests: they describe the fixtures, which exist today.
 
-import { INCH, solveModel } from "@kerf/core";
+import { INCH, orientationOf, solveModel } from "@kerf/core";
 import { describe, expect, it } from "vitest";
 import { loadProject } from "../../src/index";
 
@@ -107,3 +107,25 @@ describe("keepsake box placement", () => {
     });
   });
 });
+
+describe("which face is the show face", () => {
+  // Domain model, "Part axes & naming": face0 is the inside/back face, face1 (+Z) the outside/show
+  // face. A wall's local +Z therefore points away from the box interior.
+  const centre = { x: s(320), y: s(192) }; // centre of the 10" x 6" footprint
+
+  it("points every box wall's +Z away from the centre of the box", () => {
+    const walls = ["Front", "Back", "Side A", "Side B"];
+    const model = solveModel(loadProject("box"));
+    for (const name of walls) {
+      const i = model.instances.find((x) => x.name === name);
+      expect(i, name).toBeDefined();
+      const o = orientationOf(i?.orientation ?? 0);
+      // The wall's own centre relative to the box centre: its +Z must point the same way.
+      const cx = (i?.position.x ?? 0) + (i?.extent.x ?? 0) / 2 - centre.x;
+      const cy = (i?.position.y ?? 0) + (i?.extent.y ?? 0) / 2 - centre.y;
+      const outward = Math.abs(cx) > Math.abs(cy) ? [Math.sign(cx), 0] : [0, Math.sign(cy)];
+      expect([o.z[0], o.z[1]], name).toEqual(outward);
+    }
+  });
+});
+

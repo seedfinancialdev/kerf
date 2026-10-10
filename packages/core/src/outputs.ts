@@ -6,7 +6,7 @@
 // but not their JSON shape; these shapes are the M0 contract the golden fixtures use.
 // None of this is ever saved to .kerf.
 
-import type { Id, Len } from "./types";
+import type { EdgeRef, Id, Len } from "./types";
 
 export interface Diagnostic {
   severity: "error" | "warning";
@@ -14,15 +14,31 @@ export interface Diagnostic {
   /** Shop-language message shown in the UI. */
   message: string;
   part?: Id;
+  joint?: Id;
   /** The field the problem is on, e.g. a parameter name or "Side length". */
   field?: string;
 }
 
-/** SPEC-GAP: the spec names these primitives but does not define their fields. */
+export type Vec3 = readonly [Len, Len, Len];
+
+/**
+ * A removal in a part's local frame (ADR 013, decision D3). Local X is the length, Y the width
+ * and Z the thickness; every coordinate is an integer in internal units.
+ *
+ * - `box`: an axis-aligned block between `min` and `max` (dado, groove, rabbet).
+ * - `trapezoidPrism`: a four-point profile in the named plane, extruded over `range` along the
+ *   third axis (dovetail tails and sockets).
+ * - `quarterRoundSweep`: the quarter-round removed along an edge (roundover).
+ */
 export type RemovalPrimitive =
-  | { kind: "box"; min: [Len, Len, Len]; max: [Len, Len, Len] }
-  | { kind: "trapezoidPrism"; points: Array<[Len, Len]>; thickness: Len }
-  | { kind: "quarterRoundSweep"; radius: Len; edge: string };
+  | { kind: "box"; min: Vec3; max: Vec3 }
+  | {
+      kind: "trapezoidPrism";
+      plane: "xy" | "xz" | "yz";
+      points: ReadonlyArray<readonly [Len, Len]>;
+      range: readonly [Len, Len];
+    }
+  | { kind: "quarterRoundSweep"; edge: EdgeRef; radius: Len };
 
 export interface DovetailLayoutInput {
   boardWidth: Len;
