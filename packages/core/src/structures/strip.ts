@@ -15,8 +15,10 @@ export function withoutGenerated(project: Project): Project {
   const detached = new Set(project.parts.filter((p) => p.detached).map((p) => p.id));
   const parts = project.parts.filter((p) => p.source === undefined || p.detached);
   const keptParts = new Set(parts.map((p) => p.id));
+  // Hand-made copies of a generated board are kept: the board regenerates with the same id, so
+  // the copy still points at it. Saving refuses them (see `strandedReferences`).
   const instances = project.instances.filter(
-    (i) => keptParts.has(i.def) && (i.generatedBy === undefined || detached.has(i.def)),
+    (i) => i.generatedBy === undefined || detached.has(i.def),
   );
   const keptInstances = new Set(instances.map((i) => i.id));
   return {
@@ -27,4 +29,41 @@ export function withoutGenerated(project: Project): Project {
     joints: project.joints.filter((j) => j.generatedBy === undefined),
     matchSets: project.matchSets.filter((m) => m.generatedBy === undefined),
   };
+}
+
+/**
+ * Hand-made objects that point at a board the form generates. They work while the form is there,
+ * but the board is not in the saved file, so writing them would make a file that cannot be opened.
+ * Returns where each is and what it points at.
+ */
+export function strandedReferences(project: Project): Array<{ path: string; what: string }> {
+  const kept = withoutGenerated(project);
+  const parts = new Set(kept.parts.map((p) => p.id));
+  const instances = new Set(kept.instances.map((i) => i.id));
+  const placed = new Set([...instances, ...kept.patterns.map((p) => p.id)]);
+  const out: Array<{ path: string; what: string }> = [];
+  for (const [i, instance] of kept.instances.entries()) {
+    if (!parts.has(instance.def))
+      out.push({ path: `$.instances[${i}].def`, what: "a placed part" });
+    if (instance.parent !== undefined && !instances.has(instance.parent)) {
+      out.push({ path: `$.instances[${i}].parent`, what: "a placed part" });
+    }
+  }
+  for (const [i, pattern] of kept.patterns.entries()) {
+    if (!instances.has(pattern.source))
+      out.push({ path: `$.patterns[${i}].source`, what: "a placed part" });
+  }
+  for (const [i, joint] of kept.joints.entries()) {
+    for (const end of ["host", "guest"] as const) {
+      if (!placed.has(joint[end]))
+        out.push({ path: `$.joints[${i}].${end}`, what: "a placed part" });
+    }
+  }
+  for (const [i, set] of kept.matchSets.entries()) {
+    for (const [m, member] of set.members.entries()) {
+      if (!instances.has(member))
+        out.push({ path: `$.matchSets[${i}].members[${m}]`, what: "a placed part" });
+    }
+  }
+  return out;
 }

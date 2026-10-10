@@ -2,19 +2,21 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The core API. Functions here are thin wrappers over the pipeline in pipeline.ts; structures
-// (M3) are still typed stubs that throw NotImplemented.
+// The core API. Functions here are thin wrappers over the pipeline in pipeline.ts and the
+// structure generators.
 
 import { deriveJoints } from "./joints/derive";
 import type { CutAdd } from "./joints/types";
 import type {
   CutList,
+  Diagnostic,
   MachiningSetup,
   NestingResult,
   RemovalPrimitive,
   SolveResult,
 } from "./outputs";
 import { runPipeline, solveProject } from "./pipeline";
+import { validateProject } from "./project-file";
 import { detachedPart, generate } from "./structures";
 import type { Id, PartDef, Project, ShopProfile } from "./types";
 
@@ -80,7 +82,21 @@ export function machiningSetups(project: Project, shop: ShopProfile): MachiningS
  * name the tool you would need), so the shop does not change what is generated.
  */
 export function generateStructures(project: Project, _shop: ShopProfile): Project {
-  return generate(project).project;
+  return generateStructuresChecked(project, _shop).project;
+}
+
+/**
+ * The same, with what the generators found: a missing stock, an option of the wrong type, a board
+ * edited by hand that the form no longer places. Throws ProjectFormatError for a project that is
+ * not valid (it is checked first, so a bad object never reaches the generators).
+ */
+export function generateStructuresChecked(
+  project: Project,
+  _shop: ShopProfile,
+): { project: Project; diagnostics: Diagnostic[] } {
+  const checked = validateProject(project);
+  if (checked.problem) throw checked.problem;
+  return generate(checked.project);
 }
 
 /**

@@ -511,6 +511,53 @@ describe("structure generation (M3)", () => {
     },
   );
 
+  milestone("M3", "any bays or partition with shelves in every part builds with no errors", () => {
+    const structure = form.structures[0];
+    const root = structure?.openings[0];
+    if (!structure || !root) throw new Error("form has no opening");
+    const shape = fc.oneof(
+      fc.record({ bays: fc.integer({ min: 2, max: 6 }), shelves: fc.integer({ min: 1, max: 4 }) }),
+      fc.record({ at: fc.integer({ min: 4, max: 20 }), shelves: fc.integer({ min: 1, max: 4 }) }),
+    );
+    property(fc.tuple(bookcaseEdit, shape), ([edit, s]) => {
+      const sized = applyBookcaseEdit(form, edit);
+      const base = sized.structures[0];
+      if (!base) throw new Error("no structure");
+      const childId = (n: number): string => `01K7M3Q8ZD00000000B10000${70 + n}`;
+      const division =
+        "bays" in s
+          ? { type: "bays" as const, count: String(s.bays) }
+          : { type: "partition" as const, at: `${s.at}in` };
+      const kids = "bays" in s ? s.bays : 2;
+      const project: Project = {
+        ...sized,
+        structures: [
+          {
+            ...base,
+            openings: [
+              {
+                id: root.id,
+                division,
+                children: Array.from({ length: kids }, (_, i) => ({
+                  id: childId(i),
+                  division: {
+                    type: "shelves" as const,
+                    count: String(s.shelves),
+                    spacing: "even" as const,
+                  },
+                  children: [],
+                })),
+              },
+            ],
+          },
+        ],
+      };
+      const errors = solve(project, shop).diagnostics.filter((d) => d.severity === "error");
+      // The only error a division may give is the generator's own "this partition does not fit".
+      expect(errors.every((e) => e.rule === "partition-outside-opening")).toBe(true);
+    });
+  });
+
   milestone(
     "M3",
     "the saved file holds the form, never the boards, and loads back the same",

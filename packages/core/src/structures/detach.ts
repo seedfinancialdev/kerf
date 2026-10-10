@@ -5,8 +5,17 @@
 // Detaching (Domain model v0, "Structures, openings & shop profile"): editing a generated part by
 // hand marks only that part. The generator then leaves it alone and it is saved like any other
 // part. Re-attaching is the inverse, which is what undo does.
+//
+// A detached board stops following the form: its size, its place and the pattern that repeats it
+// are written down as exact lengths at the moment it is detached, so a later resize of the form
+// leaves it exactly where the user left it.
 
-import type { Id, PartDef, Project } from "../types";
+import { evaluateQuantity } from "../expr/evaluate";
+import { solveModel } from "../solve/model";
+import type { Id, Instance, PartDef, Pattern, Project } from "../types";
+import { INCH } from "../units";
+
+const lit = (units: number): string => (units === 0 ? "0in" : `${units}/${INCH}in`);
 
 function generatedPart(project: Project, partId: Id): PartDef {
   const part = project.parts.find((p) => p.id === partId);
@@ -17,15 +26,63 @@ function generatedPart(project: Project, partId: Id): PartDef {
   return part;
 }
 
-/** The part as detached: its role is kept so the inspector can say where it came from. */
+/** The part as detached, with its size frozen and its role kept for the inspector. */
 export function detachedPart(project: Project, partId: Id): PartDef {
-  return { ...generatedPart(project, partId), detached: true };
+  const part = generatedPart(project, partId);
+  const solved = solveModel(project).parts.find((p) => p.id === partId);
+  if (!solved) return { ...part, detached: true };
+  return {
+    ...part,
+    length: lit(solved.length),
+    width: lit(solved.width),
+    thickness: lit(solved.thickness),
+    detached: true,
+  };
 }
 
-/** The project with one generated part detached. */
+/** The project with one generated part detached, and its placements and patterns frozen. */
 export function detachPartIn(project: Project, partId: Id): Project {
   const detached = detachedPart(project, partId);
-  return { ...project, parts: project.parts.map((p) => (p.id === partId ? detached : p)) };
+  const model = solveModel(project);
+  // Where each placement is now. A pattern's source is its first member.
+  const solvedAt = new Map(model.instances.map((i) => [i.id, i.position]));
+  const sourceOf = new Map(project.patterns.map((p) => [p.id, p.source]));
+  for (const member of model.instances) {
+    const source = member.pattern && sourceOf.get(member.pattern.id);
+    if (source && member.pattern?.index === 0) solvedAt.set(source, member.position);
+  }
+  const instances: Instance[] = project.instances.map((i) => {
+    const at = i.def === partId ? solvedAt.get(i.id) : undefined;
+    return at ? { ...i, position: { x: lit(at.x), y: lit(at.y), z: lit(at.z) } } : i;
+  });
+  const mine = new Set(project.instances.filter((i) => i.def === partId).map((i) => i.id));
+  const evaluate = (expr: string): string => {
+    try {
+      const q = evaluateQuantity(expr, model.scope);
+      if (q.kind === "length" && q.value.den === 1n) return lit(Number(q.value.num));
+      if (q.kind === "count" && q.value.den === 1n) return String(q.value.num);
+    } catch {
+      // keep the expression: it still means what it meant
+    }
+    return expr;
+  };
+  const patterns: Pattern[] = project.patterns.map((p) => {
+    if (!mine.has(p.source)) return p;
+    return {
+      ...p,
+      count: evaluate(p.count),
+      spacing:
+        p.spacing.mode === "fixed"
+          ? { mode: "fixed", step: evaluate(p.spacing.step) }
+          : { mode: "distribute", from: evaluate(p.spacing.from), to: evaluate(p.spacing.to) },
+    };
+  });
+  return {
+    ...project,
+    parts: project.parts.map((p) => (p.id === partId ? detached : p)),
+    instances,
+    patterns,
+  };
 }
 
 /** The project with a detached part handed back to its structure. */

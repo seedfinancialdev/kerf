@@ -109,10 +109,16 @@ export const TEMPLATES: readonly Template[] = [
  */
 export function projectFromTemplate(
   template: Template,
-  options: { name?: string; stock: Stock[]; stockFor: Partial<Record<string, Id>> },
+  options: {
+    name?: string;
+    stock: Stock[];
+    stockFor: Partial<Record<string, Id>>;
+    /** A second structure from the same template needs its own id. */
+    structureId?: Id;
+  },
 ): Project {
   const structure: Structure = {
-    id: template.id,
+    id: options.structureId ?? template.id,
     ...template.structure,
     options: { ...template.structure.options },
   };
