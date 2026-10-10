@@ -13,9 +13,9 @@
 
 import { ExpressionError } from "../expr/errors";
 import { evaluateQuantity, type Quantity } from "../expr/evaluate";
-import { gridSize, type UnitSystem } from "../length";
+import { snapToGrid, type UnitSystem } from "../length";
 import type { Diagnostic } from "../outputs";
-import { div, floor, type Rational, rational, toSafeInteger } from "../rational";
+import { div, type Rational, rational } from "../rational";
 import { solveModel } from "../solve/model";
 import type {
   GeneratedFrom,
@@ -82,11 +82,8 @@ const wrap = (e: string): string => `(${e})`;
 const depth = (value: string | undefined): Record<string, string> =>
   value === undefined ? {} : { depth: value };
 
-/** Rounds an exact value down onto the project grid. */
-function floorGrid(value: Rational, units: UnitSystem): number {
-  const grid = gridSize(units);
-  return toSafeInteger(floor(div(value, rational(BigInt(grid))))) * grid;
-}
+/** Rounds an exact value onto the project grid, half to even (Domain model, "Units & precision"). */
+const snap = (value: Rational, units: UnitSystem): number => snapToGrid(value, units);
 
 /** An opening's horizontal extent: expressions to write, and exact values to decide with. */
 interface Span {
@@ -511,7 +508,7 @@ function generateCase(b: Builder): void {
       let at: { expr: string; units: Rational } | undefined;
       if (q?.kind === "length") at = { expr: d.at, units: q.value };
       else if (q?.kind === "ratio" && span.n0 && span.n1) {
-        const units = floorGridR(mul(q.value, sub(span.n1, span.n0)), b.units);
+        const units = snap(mul(q.value, sub(span.n1, span.n0)), b.units);
         at = { expr: lit(units), units: rational(BigInt(units)) };
       } else {
         b.report(
@@ -556,7 +553,9 @@ function generateCase(b: Builder): void {
       return;
     }
 
-    // Bays: every bay the same width, snapped once to the grid; the last takes the remainder.
+    // Bays: n equal sections. Each partition's position is worked out exactly and snapped once
+    // (half to even); a bay's width is the difference of the snapped faces, so shelves always
+    // meet the partitions and bays differ by at most one grid step.
     const n = b.count(d.count, "bays");
     if (n < 2) {
       if (n === 1 || n === 0) {
@@ -581,32 +580,35 @@ function generateCase(b: Builder): void {
       return;
     }
     const inside = sub(sub(span.n1, span.n0), mul(tn, rational(BigInt(n - 1))));
-    const bay = floorGrid(div(inside, rational(BigInt(n))), b.units);
-    if (bay <= 0) {
+    const bay = div(inside, rational(BigInt(n)));
+    // Left face of partition k (1-based), measured from the opening's left face.
+    const face = (k: number): number =>
+      snap(add(mul(bay, rational(BigInt(k))), mul(tn, rational(BigInt(k - 1)))), b.units);
+    const faces = Array.from({ length: n - 1 }, (_, k) => face(k + 1));
+    const starts = [0, ...faces.map((f) => f + Tn)];
+    const ends = [...faces, undefined];
+    const narrowest = starts.reduce((least, from, k) => {
+      const end = ends[k] ?? Number(span.n1 && span.n0 ? sub(span.n1, span.n0).num : 0n);
+      return Math.min(least, end - from);
+    }, Number.POSITIVE_INFINITY);
+    if (narrowest <= 0) {
       b.report(
         "error",
         "bays-too-narrow",
-        `${n} bays do not fit in this opening: each would be no wider than a board is thick.`,
+        `${n} bays do not fit in this opening: the narrowest would have no width left.`,
         "bays",
       );
       return;
     }
-    const at = (k: number): number => k * bay + (k - 1) * Tn;
-    const startOf = (k: number): number => k * (bay + Tn);
-    const endOf = (k: number): number => (k + 1) * bay + k * Tn;
-    const offsets = Array.from({ length: n - 1 }, (_, k) => {
-      const units = at(k + 1);
-      return { expr: lit(units), units: rational(BigInt(units)) };
-    });
+    const offsets = faces.map((units) => ({ expr: lit(units), units: rational(BigInt(units)) }));
     const n0 = span.n0;
-    const children = Array.from({ length: n }, (_, k): Span => {
-      const first = k === 0;
-      const last = k === n - 1;
+    const children = starts.map((from, k): Span => {
+      const to = ends[k];
       return {
-        x0: first ? span.x0 : `${wrap(span.x0)} + ${lit(startOf(k))}`,
-        x1: last ? span.x1 : `${wrap(span.x0)} + ${lit(endOf(k))}`,
-        n0: first ? n0 : add(n0, rational(BigInt(startOf(k)))),
-        n1: last ? (span.n1 as Rational) : add(n0, rational(BigInt(endOf(k)))),
+        x0: k === 0 ? span.x0 : `${wrap(span.x0)} + ${lit(from)}`,
+        x1: to === undefined ? span.x1 : `${wrap(span.x0)} + ${lit(to)}`,
+        n0: k === 0 ? n0 : add(n0, rational(BigInt(from))),
+        n1: to === undefined ? (span.n1 as Rational) : add(n0, rational(BigInt(to))),
       };
     });
     split(offsets, children);
@@ -654,7 +656,6 @@ const cmp = (a: Rational, c: Rational): number => {
   const d = a.num * c.den - c.num * a.den;
   return d < 0n ? -1 : d > 0n ? 1 : 0;
 };
-const floorGridR = (v: Rational, units: UnitSystem): number => floorGrid(v, units);
 
 /** How many shelf openings and partitions a case will have, so names are numbered only if needed. */
 function tally(b: Builder, o: Opening | undefined): { shelfOpenings: number; partitions: number } {

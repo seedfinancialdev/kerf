@@ -49,9 +49,12 @@ export function strandedReferences(project: Project): Array<{ path: string; what
       out.push({ path: `$.instances[${i}].parent`, what: "a placed part" });
     }
   }
-  for (const [i, pattern] of kept.patterns.entries()) {
-    if (!instances.has(pattern.source))
+  // Patterns are filtered out of `kept` when their source board is not saved, so look at the
+  // project's own hand-made patterns.
+  for (const [i, pattern] of project.patterns.entries()) {
+    if (pattern.generatedBy === undefined && !instances.has(pattern.source)) {
       out.push({ path: `$.patterns[${i}].source`, what: "a placed part" });
+    }
   }
   for (const [i, joint] of kept.joints.entries()) {
     for (const end of ["host", "guest"] as const) {

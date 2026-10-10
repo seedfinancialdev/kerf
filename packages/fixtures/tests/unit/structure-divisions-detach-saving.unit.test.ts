@@ -56,10 +56,11 @@ describe("bays and partitions with shelves in them", () => {
     expect(errors(p)).toEqual([]);
   });
 
-  it("snaps the bay width once: 3 bays in 34-9/16 less 2 partitions", () => {
-    // Interior 34-9/16 = 2212/64; two partitions of 23/32 = 46/64 each take 92/64; 2120/64 / 3 =
-    // 706-2/3 sixty-fourths, snapped down to 706/64 for every bay (the last takes the rest).
-    // First partition's left face: 23/32 + 706/64 = 752/64 from the case's outside.
+  it("snaps each partition once, half to even, and shelves meet them: 3 bays in 34-9/16", () => {
+    // Interior 2212/64; two partitions of 46/64 leave 2120/64, so a bay is 706-2/3. Partition 1's
+    // left face is 706-2/3 -> 707 in from the interior's left; partition 2's is 2 x 706-2/3 + 46 =
+    // 1459-1/3 -> 1459. The bays are then 707, 706 and 707 wide (2212 - 1505), so shelves are
+    // those plus 32/64 of dado at both ends: 739, 738 and 739.
     const p = withOpening(form(), { type: "bays", count: "3" }, [
       shelves(1, OPEN(80)),
       shelves(1, OPEN(81)),
@@ -68,9 +69,7 @@ describe("bays and partitions with shelves in them", () => {
     const lengths = buildCutList(p).lines.flatMap((l) =>
       l.parts.filter((x) => x.name.startsWith("Shelf")).map(() => l.length),
     );
-    // Shelf length = bay width + 2 x 1/4" dado: 706/64 + 32/64 = 738/64 for the first two, and the
-    // last bay is wider by the remainder (2212 - 2 x 46 - 2 x 706 = 708/64 -> 740/64).
-    expect(new Set(lengths)).toEqual(new Set([sixtyFourths(738), sixtyFourths(740)]));
+    expect(new Set(lengths)).toEqual(new Set([sixtyFourths(739), sixtyFourths(738)]));
   });
 
   it("a partition at a fraction of the opening: 1/3 from the left", () => {

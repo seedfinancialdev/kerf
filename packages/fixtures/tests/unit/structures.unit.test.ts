@@ -71,6 +71,13 @@ describe("generateStructures()", () => {
     expect([...new Set(rules(box()))]).toEqual(["warning:groove-outside-bottom-half-pin"]);
   });
 
+  it("keeps its ids stable across releases: pinned values from FNV-1a, computed independently", () => {
+    // Saved detached boards refer to these ids, so changing how they are made would orphan them.
+    const made = generateStructures(form(), shop);
+    expect(made.parts[0]?.id).toBe("01K7M3Q8ZD000000HVZ94KAS8Y");
+    expect(made.instances[0]?.id).toBe("01K7M3Q8ZD00000024DR6WCDHG");
+  });
+
   it("has the same ids for the same structure whatever else is in the project", () => {
     const base = generateStructures(form(), shop);
     const wider = generateStructures(withParam(form(), "width", "40in"), shop);
@@ -177,7 +184,7 @@ describe("divisions of an opening", () => {
     expect(of("Shelf 2")).toBe(sixtyFourths(22 * 64 + 22));
   });
 
-  it("splits into bays: 3 bays make 2 partitions, each snapped once", () => {
+  it("splits into bays: 3 bays make 2 partitions", () => {
     const base = form();
     const structure = base.structures[0];
     const opening = structure?.openings[0];
@@ -192,11 +199,15 @@ describe("divisions of an opening", () => {
       ],
     };
     const made = generateStructures(withBays, shop);
-    expect(made.parts.filter((p) => p.source?.role === "partition")).toHaveLength(2);
-    // Bay width = (34-9/16 - 2 x 23/32) / 3 = 11-1/24; first partition's left face is 23/32 +
-    // 11-1/24 = 11.7604 from the outside, which snaps to 753/64.
-    const solved = solve(withBays, shop);
-    expect(solved.blocked).toBe(false);
+    const partitions = made.instances.filter((i) => i.name?.startsWith("Partition"));
+    expect(partitions).toHaveLength(2);
+    // Interior 2212/64 less 2 x 46/64 leaves 2120/64, so a bay is 706-2/3. The first partition's
+    // face is 706-2/3 -> 707 in from the interior's left, 707/64 in from the interior's left.
+    // 707/64 = 2,244,725 units: the position is written as the case's side thickness plus that.
+    expect(partitions[0]?.position.x).toBe(
+      `(stock["3/4 plywood"].thickness) + (${707 * 3175}/203200in)`,
+    );
+    expect(solve(withBays, shop).blocked).toBe(false);
   });
 });
 

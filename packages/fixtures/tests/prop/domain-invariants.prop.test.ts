@@ -553,10 +553,38 @@ describe("structure generation (M3)", () => {
         ],
       };
       const errors = solve(project, shop).diagnostics.filter((d) => d.severity === "error");
-      // The only error a division may give is the generator's own "this partition does not fit".
-      expect(errors.every((e) => e.rule === "partition-outside-opening")).toBe(true);
+      // A partition that fits (at most the interior less one board) builds with no error at all;
+      // one that does not is reported by the generator's own rule and nothing else.
+      const interior = edit.width * 16 - 2 * 46; // sixty-fourths of an inch (width is in quarters)
+      const fits = "bays" in s || s.at * 64 <= interior - 46;
+      if (fits) expect(errors).toEqual([]);
+      else expect(errors.every((e) => e.rule === "partition-outside-opening")).toBe(true);
     });
   });
+
+  milestone(
+    "M3",
+    "for any size the form places and sizes every board as the hand-built project does",
+    () => {
+      const describeBoards = (p: Project) => {
+        const model = solveModel(generateStructures(p, shop));
+        return {
+          instances: model.instances
+            .map((i) => [i.name, i.position, i.extent, i.orientation, i.mirrored] as const)
+            .sort((a, b) => a[0].localeCompare(b[0])),
+          parts: model.parts
+            .map((x) => [x.name, x.length, x.width, x.thickness, x.grainLocked, x.stock] as const)
+            .sort((a, b) => a[0].localeCompare(b[0])),
+        };
+      };
+      property(bookcaseEdit, (edit) => {
+        const made = describeBoards(applyBookcaseEdit(form, edit));
+        const hand = describeBoards(applyBookcaseEdit(bookcase, edit));
+        expect(made.parts).toEqual(hand.parts);
+        expect(made.instances).toEqual(hand.instances);
+      });
+    },
+  );
 
   milestone(
     "M3",

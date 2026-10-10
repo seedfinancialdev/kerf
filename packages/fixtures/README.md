@@ -56,6 +56,8 @@ Expected files may carry annotation keys that start with `_` (never compared by 
 
 ## Not specified, so deliberately absent
 
+- Default sizes of the Blank case (30 x 36 x 12 in) and Blank box (8 x 6 x 3 in) templates.
+
 - Removal-primitive coordinates and dado positions (the spec gives cut sizes, not primitives).
 - Shopping list, milling list and board feet.
 - A sheet layout for the box's 1/4" plywood bottom, and machining setups for the box.
