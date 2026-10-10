@@ -61,12 +61,13 @@ export function layoutDovetail(
   const narrow = wide - 2 * offset;
   if (narrow < MIN_TAIL) return { problem: "narrow-tail" };
 
-  // Step 4: leftover grid steps go to the half-pins; the odd step to edge0.
-  const leftoverSteps = (room - n * wide) / grid;
-  const edge1Steps = Math.floor(leftoverSteps / 2);
-  const edge0Steps = leftoverSteps - edge1Steps;
-  const half0 = p + edge0Steps * grid;
-  const half1 = p + edge1Steps * grid;
+  // Step 4: the leftover goes to the two edge half-pins in whole grid steps, the odd step to
+  // edge0. Anything under a grid step (only possible if the inputs were not on the grid) also goes
+  // to edge0, so every position stays an integer.
+  const leftover = room - n * wide;
+  const edge1 = Math.floor(leftover / grid / 2) * grid;
+  const half0 = p + (leftover - edge1);
+  const half1 = p + edge1;
 
   const tails: Array<{ start: Len; end: Len }> = [];
   for (let i = 0; i < n; i += 1) {

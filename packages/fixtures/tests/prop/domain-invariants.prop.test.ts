@@ -10,6 +10,7 @@ import {
   buildCutList,
   deriveJointCuts,
   INCH,
+  layoutDovetail,
   type Project,
   ProjectFormatError,
   parseProject,
@@ -280,6 +281,120 @@ describe("outputs invariants", () => {
       for (const line of solve(p, shop).cutList.lines) {
         expect(line.length).toBeGreaterThanOrEqual(line.visible.length);
         expect(line.width).toBeGreaterThanOrEqual(line.visible.width);
+      }
+    });
+  });
+});
+
+describe("stronger M2 properties", () => {
+  const GRID = INCH / 64;
+
+  milestone(
+    "M2",
+    "a dovetail layout always fills the board exactly, on the grid, odd step to edge0",
+    () => {
+      const input = fc.record({
+        width: fc.integer({ min: 64, max: 1600 }), // 1" to 25", in 64ths
+        tails: fc.integer({ min: 1, max: 8 }),
+        pin: fc.integer({ min: 8, max: 64 }),
+        mating: fc.integer({ min: 16, max: 96 }),
+        slope: fc.integer({ min: 5, max: 10 }),
+        metric: fc.boolean(),
+      });
+      property(input, (i) => {
+        const units = i.metric ? "metric" : "imperial";
+        const grid = i.metric ? 80 : GRID;
+        // Inputs sit on the unit system's grid, like every solved length: 1/64" or 0.01 mm.
+        const q = (n: number): number => (i.metric ? n * 80 * 40 : n * GRID);
+        const layout = layoutDovetail(
+          {
+            boardWidth: q(i.width),
+            tails: i.tails,
+            pin: q(i.pin),
+            matingThickness: q(i.mating),
+            slope: i.slope,
+          },
+          units,
+        );
+        if ("problem" in layout) return; // a valid refusal; the other cases hold for what is accepted
+        const { tails, halfPins, wideTailWidth, narrowTailWidth, slopeOffset } = layout;
+        // Tails, pins and half-pins add up to the board's width, exactly.
+        const pins = (i.tails - 1) * q(i.pin);
+        expect(halfPins[0] + halfPins[1] + i.tails * wideTailWidth + pins).toBe(q(i.width));
+        // The leftover is shared out in whole grid steps; the odd step goes to edge0.
+        const extra0 = (halfPins[0] - q(i.pin)) / grid;
+        const extra1 = (halfPins[1] - q(i.pin)) / grid;
+        expect(Number.isInteger(extra0) && Number.isInteger(extra1)).toBe(true);
+        expect(extra0 - extra1 === 0 || extra0 - extra1 === 1).toBe(true);
+        expect(wideTailWidth % grid).toBe(0);
+        expect(narrowTailWidth).toBe(wideTailWidth - 2 * slopeOffset);
+        // Tails are in order, inside the board, a pin apart.
+        expect(tails).toHaveLength(i.tails);
+        for (const [k, t] of tails.entries()) {
+          expect(t.end - t.start).toBe(wideTailWidth);
+          const next = tails[k + 1];
+          if (next) expect(next.start - t.end).toBe(q(i.pin));
+        }
+      });
+    },
+  );
+
+  milestone(
+    "M2",
+    "solving random units and orientations never falls back to internal-error",
+    () => {
+      const wild = fc.record({
+        edit: bookcaseEdit,
+        units: fc.constantFrom("imperial", "metric"),
+        orientations: fc.array(fc.integer({ min: 0, max: 23 }), { minLength: 9, maxLength: 9 }),
+      });
+      property(wild, (w) => {
+        const base = applyBookcaseEdit(bookcase, w.edit);
+        const p: Project = {
+          ...base,
+          units: w.units as Project["units"],
+          instances: base.instances.map((x, n) => ({ ...x, orientation: w.orientations[n] ?? 0 })),
+        };
+        const before = JSON.stringify(p);
+        const result = solve(p, shop);
+        expect(result.diagnostics.map((d) => d.rule)).not.toContain("internal-error");
+        expect(JSON.stringify(p)).toBe(before);
+        // Whatever it concludes, it concludes the same way twice.
+        const again = solve(p, shop);
+        expect(again.diagnostics).toEqual(result.diagnostics);
+        expect(again.blocked).toBe(result.blocked);
+      });
+    },
+  );
+
+  milestone(
+    "M2",
+    "each bookcase line's cut size is its visible size plus exactly what its joints add",
+    () => {
+      property(editedBookcase, (p) => {
+        const add: Record<string, [number, number]> = {
+          Side: [0, 0],
+          Top: [32 * GRID, 0], // 2 x 1/4" at the two end rabbets
+          Bottom: [32 * GRID, 0],
+          Shelf: [32 * GRID, 0], // 2 x 1/4" in the dados
+          Back: [0, 48 * GRID], // 2 x 3/8" in the back rabbets
+        };
+        for (const line of solve(p, shop).cutList.lines) {
+          for (const part of line.parts) {
+            const [dl, dw] = add[part.name] ?? [Number.NaN, Number.NaN];
+            expect(line.length - line.visible.length).toBe(dl);
+            expect(line.width - line.visible.width).toBe(dw);
+          }
+        }
+      });
+    },
+  );
+
+  milestone("M2", "every error or warning says which part, joint or field it is about", () => {
+    property(anyProject, (p) => {
+      for (const d of solve(p, shop).diagnostics) {
+        if (d.severity === "info") continue;
+        expect(d.field !== undefined || d.part !== undefined || d.joint !== undefined).toBe(true);
       }
     });
   });

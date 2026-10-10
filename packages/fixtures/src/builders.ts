@@ -19,6 +19,8 @@ export interface PartSpec {
   thickness: string;
   stock?: "ply" | "wood";
   ops?: PartDef["ops"];
+  /** Grain pins the part's length along the sheet. Defaults to true. */
+  locked?: boolean;
 }
 
 export interface InstanceSpec {
@@ -51,6 +53,11 @@ export interface Extras {
   }>;
   woodLengths?: number[];
   woodMaxWidth?: number;
+  woodAllowanceLength?: number;
+  /** Wood stock with no board sizes: it cannot be nested. */
+  woodWithoutSizes?: boolean;
+  plyGrain?: "along-length" | "none";
+  units?: "imperial" | "metric";
 }
 
 export const PLY_ID = uid(1);
@@ -69,7 +76,7 @@ export function boards(
       name: "3/4 ply",
       kind: "sheet",
       thickness: (INCH * 3) / 4,
-      sheet: { length: 96 * INCH, width: 48 * INCH, grain: "along-length" },
+      sheet: { length: 96 * INCH, width: 48 * INCH, grain: extras.plyGrain ?? "along-length" },
       allowance: { length: 0, width: 0 },
     },
     {
@@ -77,11 +84,15 @@ export function boards(
       name: "4/4 wood",
       kind: "solid",
       thickness: INCH / 2,
-      solid: {
-        standardLengths: extras.woodLengths ?? [96 * INCH],
-        maxWidth: extras.woodMaxWidth ?? 8 * INCH,
-      },
-      allowance: { length: 0, width: 0 },
+      ...(extras.woodWithoutSizes
+        ? {}
+        : {
+            solid: {
+              standardLengths: extras.woodLengths ?? [96 * INCH],
+              maxWidth: extras.woodMaxWidth ?? 8 * INCH,
+            },
+          }),
+      allowance: { length: extras.woodAllowanceLength ?? 0, width: 0 },
     },
   ];
   const partId = new Map(parts.map((p, i) => [p.name, uid(100 + i)]));
@@ -104,7 +115,7 @@ export function boards(
   return {
     schemaVersion: 1,
     name: "Test",
-    units: "imperial",
+    units: extras.units ?? "imperial",
     params: [],
     stock,
     parts: parts.map((p) => ({
@@ -114,7 +125,7 @@ export function boards(
       length: p.length,
       width: p.width,
       thickness: p.thickness,
-      grainLocked: true,
+      grainLocked: p.locked ?? true,
       ops: p.ops ?? [],
     })),
     instances: instances.map(
