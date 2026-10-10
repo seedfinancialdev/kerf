@@ -100,6 +100,9 @@ export function deriveJoints(project: Project, model: SolvedModel): Derived {
   const ctx = makeContext(model, project.units, frames, diagnostics);
   const pairs: PairCut[] = [];
   const attempted: Array<[Id, Id]> = [];
+  // Rabbets and dovetails add to the guest's cut size, so a second joint of one kind between the
+  // same two parts would silently add twice. (Dados are caught as overlapping channels.)
+  const seenPairs = new Set<string>();
 
   for (const joint of project.joints) {
     const hosts = membersOf(joint.host);
@@ -116,7 +119,7 @@ export function deriveJoints(project: Project, model: SolvedModel): Derived {
       diagnostics.push({
         severity: "error",
         rule: "joint-too-many-pairs",
-        message: `This joint would join more than ${MAX_JOINT_PAIRS.toLocaleString("en-US")} pairs of parts (${hosts.length} against ${guests.length}), which is more than Kerf will work out. The parts are probably overlapping by mistake.`,
+        message: `This joint would join more than ${MAX_JOINT_PAIRS.toLocaleString("en-US")} pairs of parts (${hosts.length} against ${guests.length}), which is more than Kerf will work out. Check that the repeated parts are not stacked or overlapping by mistake.`,
         joint: joint.id,
         field: `${joint.type} between patterns`,
       });
@@ -126,6 +129,8 @@ export function deriveJoints(project: Project, model: SolvedModel): Derived {
     const joinedGuest = new Set<number>();
     const reportedGuest = new Set<number>();
     const overlapGuest = new Set<number>();
+    const coveredHost = new Set<number>();
+    let duplicates = 0;
 
     for (const [hi, gi] of candidates) {
       const host = hosts[hi] as Frame;
@@ -133,17 +138,40 @@ export function deriveJoints(project: Project, model: SolvedModel): Derived {
       if (host.instance.id === guest.instance.id) continue;
       const before = ctx.reported();
       const pair = derivePair(ctx, joint, host, guest, quiet);
+      if (pair && pair.kind !== "dado") {
+        const key = `${pair.kind}|${pair.host}|${pair.guest}`;
+        if (seenPairs.has(key)) {
+          duplicates += 1;
+          joinedGuest.add(gi);
+          coveredHost.add(hi);
+          continue;
+        }
+        seenPairs.add(key);
+      }
       if (pair) {
         pairs.push(pair);
         joinedGuest.add(gi);
+        coveredHost.add(hi);
       } else if (ctx.reported() > before) {
         // Said (or counted, past the limit on how many are said) by the joint itself.
         reportedGuest.add(gi);
+        coveredHost.add(hi);
         attempted.push([host.instance.id, guest.instance.id]);
       } else if (contactOf(boxOf(host.instance), boxOf(guest.instance)).kind === "overlap") {
         // A quiet pair of patterns that interpenetrate; the assembly check names it as an overlap.
         overlapGuest.add(gi);
       }
+    }
+
+    if (duplicates > 0) {
+      diagnostics.push({
+        severity: "error",
+        rule: "duplicate-joint",
+        message: `${duplicates === 1 ? "A" : `${duplicates}`} ${joint.type} joint${duplicates === 1 ? " repeats" : "s repeat"} one already made between the same two parts; the second would cut the same part twice.`,
+        joint: joint.id,
+        field: `${joint.type} joint`,
+        ...(duplicates > 1 ? { count: duplicates } : {}),
+      });
     }
 
     // A guest nothing joined, and nothing explained, does not touch what it should.
@@ -157,13 +185,33 @@ export function deriveJoints(project: Project, model: SolvedModel): Derived {
         rule: "joint-no-contact",
         message:
           lost.length === 1
-            ? `${first.instance.name} does not touch ${hosts.length === 1 ? (hosts[0] as Frame).instance.name : "any of the parts it should be joined to"}, so there is nothing to join.`
-            : `${lost.length} parts (starting with ${first.instance.name}) do not touch any of the parts they should be joined to.`,
+            ? `${first.instance.name} does not meet ${hosts.length === 1 ? (hosts[0] as Frame).instance.name : "any of the parts it should be joined to"} the way a ${joint.type} needs, so there is nothing to join.`
+            : `${lost.length} parts (starting with ${first.instance.name}) do not meet any of the parts they should be joined to the way a ${joint.type} needs.`,
         joint: joint.id,
         part: first.part.id,
         field: `${first.instance.name} ${joint.type}`,
         ...(lost.length > 1 ? { count: lost.length } : {}),
       });
+    }
+
+    // Some copies of a repeated host got a guest and some got none: likely a missed part.
+    if (hosts.length > 1 && coveredHost.size > 0 && isPattern(joint.host)) {
+      const bare = hosts.filter((_, hi) => !coveredHost.has(hi));
+      if (bare.length > 0) {
+        const first = bare[0] as Frame;
+        diagnostics.push({
+          severity: "warning",
+          rule: "joint-host-unjoined",
+          message:
+            bare.length === 1
+              ? `${first.instance.name} has nothing joined to it by this ${joint.type}, though other copies do.`
+              : `${bare.length} copies of the repeated part (starting with ${first.instance.name}) have nothing joined to them by this ${joint.type}, though other copies do.`,
+          joint: joint.id,
+          part: first.part.id,
+          field: `${first.instance.name} ${joint.type}`,
+          ...(bare.length > 1 ? { count: bare.length } : {}),
+        });
+      }
     }
   }
 

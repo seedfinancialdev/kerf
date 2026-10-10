@@ -100,18 +100,19 @@ export function touchingPairs(
 /**
  * Every pair (i, j), i < j, of boxes in one list that share any point, ordered by i then j. Swept
  * along the axis the boxes are most spread over, so a project with thousands of parts is fast.
- * `limit` works as in `touchingPairs`.
+ * `limit` works as in `touchingPairs`; only pairs `accept` says yes to are returned or counted.
  */
 export function selfTouchingPairs(
   boxes: Box[],
   limit = Number.POSITIVE_INFINITY,
+  accept: (i: number, j: number) => boolean = () => true,
 ): Array<[number, number]> {
   const out: Array<[number, number]> = [];
   if (boxes.length < 2) return out;
   if (boxes.length <= 16) {
     for (let i = 0; i < boxes.length; i += 1) {
       for (let j = i + 1; j < boxes.length; j += 1) {
-        if (touches(boxes[i] as Box, boxes[j] as Box)) out.push([i, j]);
+        if (touches(boxes[i] as Box, boxes[j] as Box) && accept(i, j)) out.push([i, j]);
       }
     }
     return out;
@@ -127,7 +128,10 @@ export function selfTouchingPairs(
     const box = boxes[item.index] as Box;
     for (const other of active) {
       if (!touches(boxes[other.index] as Box, box)) continue;
-      out.push(other.index < item.index ? [other.index, item.index] : [item.index, other.index]);
+      const pair: [number, number] =
+        other.index < item.index ? [other.index, item.index] : [item.index, other.index];
+      if (!accept(pair[0], pair[1])) continue;
+      out.push(pair);
       if (out.length > limit) return out;
     }
     active.push(item);

@@ -331,3 +331,39 @@ describe("the display mesh rejects unknown input with a MeshError", () => {
     expect(() => buildDisplayMesh(blank, [removal as never])).toThrow(MeshError);
   });
 });
+
+describe("third review: joints that quietly do the wrong thing", () => {
+  it("two rabbet joints on one pair are an error, not a doubled cut size", () => {
+    const host: PartSpec = { name: "Host", length: "12in", width: "6in", thickness: "3/4in" };
+    const back: PartSpec = { name: "Back", length: "4in", width: "5in", thickness: "1/4in" };
+    const joint = { type: "rabbet" as const, host: "Host", guest: "Back" };
+    const p = boards(
+      [host, back],
+      [
+        { name: "Host", part: "Host", at: ["0in", "0in", "0in"] },
+        { name: "Back", part: "Back", at: ["2in", "0in", "3/4in"], orientation: 16 },
+      ],
+      [joint, joint],
+    );
+    const result = solve(p, shop);
+    expect(result.diagnostics.map((d) => d.rule)).toContain("duplicate-joint");
+    expect(result.blocked).toBe(true);
+  });
+
+  it("warns when a copy of a patterned host is joined to nothing", () => {
+    const p = boards(
+      [ply("Side", "20in", "6in"), ply("Shelf", "8in", "6in")],
+      [
+        { name: "Side", part: "Side", at: ["0in", "0in", "0in"], orientation: 17 },
+        { name: "Shelf", part: "Shelf", at: ["3/4in", "0in", "5in"] },
+      ],
+      [{ type: "dado", host: "Side", guest: "Shelf" }],
+      {
+        patterns: [
+          { source: "Side", count: "2", axis: "x", spacing: { mode: "fixed", step: "10in" } },
+        ],
+      },
+    );
+    expect(rules(p)).toContain("warning:joint-host-unjoined");
+  });
+});

@@ -8,6 +8,7 @@
 
 import type { RemovalPrimitive } from "../outputs";
 import { rational } from "../rational";
+import { boxOf, boxToLocal } from "../solve/assembly";
 import type { Joint } from "../types";
 import { dimsOf, faceName, type Seat } from "./seat";
 import { type DeriveContext, NO_ADD, type PairCut } from "./types";
@@ -16,7 +17,7 @@ type Boundary = "end0" | "end1" | "edge0" | "edge1";
 const BOUNDARIES: readonly Boundary[] = ["end0", "end1", "edge0", "edge1"];
 
 export function deriveRabbet(ctx: DeriveContext, joint: Joint, seat: Seat): PairCut | undefined {
-  const { host, guest, hostPatch, hostFace, guestFace } = seat;
+  const { host, guest, hostFace, guestFace } = seat;
   const [L, W, T] = dimsOf(host);
   const hostName = host.instance.name;
   const guestName = guest.instance.name;
@@ -81,11 +82,13 @@ export function deriveRabbet(ctx: DeriveContext, joint: Joint, seat: Seat): Pair
   // The boundary the step runs up to. The guest's footprint must lie inside the step, between the
   // boundary and the shoulder, and touch the shoulder (its far edge is exactly `width` in).
   const dim = (name: Boundary): number => (name === "end0" || name === "end1" ? L : W);
+  // The guest's own footprint, not only the part of it over the host: it must lie inside the step.
+  const g = boxToLocal(host, boxOf(guest.instance));
   const region: Array<[Boundary, boolean, boolean]> = [
-    ["end0", hostPatch.max[0] <= width, hostPatch.max[0] === width],
-    ["end1", hostPatch.min[0] >= L - width, hostPatch.min[0] === L - width],
-    ["edge0", hostPatch.max[1] <= width, hostPatch.max[1] === width],
-    ["edge1", hostPatch.min[1] >= W - width, hostPatch.min[1] === W - width],
+    ["end0", g.min[0] >= 0 && g.max[0] <= width, g.max[0] === width],
+    ["end1", g.max[0] <= L && g.min[0] >= L - width, g.min[0] === L - width],
+    ["edge0", g.min[1] >= 0 && g.max[1] <= width, g.max[1] === width],
+    ["edge1", g.max[1] <= W && g.min[1] >= W - width, g.min[1] === W - width],
   ];
   const inside = region.filter(
     ([name, within]) => within && (atParam === undefined || name === atParam),

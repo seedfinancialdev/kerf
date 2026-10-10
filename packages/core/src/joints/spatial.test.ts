@@ -137,6 +137,13 @@ describe("selfTouchingPairs", () => {
     expect(capped.length).toBeLessThan((40 * 39) / 2);
   });
 
+  it("counts only the pairs the predicate accepts toward the limit", () => {
+    // 40 boxes in a row that only touch at faces; accept none: nothing found, limit never hit.
+    const row = Array.from({ length: 40 }, (_, i) => box(i * 10, 0, 0, 10));
+    expect(selfTouchingPairs(row, 5, () => false)).toEqual([]);
+    expect(selfTouchingPairs(row, 5, () => true).length).toBeGreaterThan(5);
+  });
+
   it("limits touchingPairs the same way", () => {
     const a = Array.from({ length: 30 }, () => box(0, 0, 0, 10));
     const b = Array.from({ length: 30 }, () => box(0, 0, 0, 10));

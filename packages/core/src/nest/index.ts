@@ -258,6 +258,14 @@ function nestSolidStock(
   }
 
   const packed = packBoards(items, solid.standardLengths, kerf, SOLID_END_TRIM, seeds);
+  for (const seed of packed.unplaced) {
+    // The checks above make this unreachable; if they ever diverge it must not go quiet.
+    diagnostics.push({
+      severity: "error",
+      rule: "internal-error",
+      message: `A match set (${seed.id}) could not be placed on any board. This is a bug; please report it.`,
+    });
+  }
   for (const item of packed.tooLong) {
     diagnostics.push({
       severity: "error",

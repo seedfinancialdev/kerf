@@ -168,8 +168,8 @@ export function solveProject(project: Project, shop: ShopProfile): SolveResult {
     try {
       const nested = nestProject(p.project, p.parts, copy);
       nesting = nested.result;
-      setups = buildSetups(p.project, p.parts, p.derived, copy);
       diagnostics.push(...nested.diagnostics);
+      setups = buildSetups(p.project, p.parts, p.derived, copy);
     } catch (error) {
       const reason =
         error instanceof Error ? `${error.name}: ${error.message}` : "an unexpected value";

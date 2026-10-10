@@ -215,6 +215,7 @@ export function buildDisplayMesh(blank: Blank, removals: readonly RemovalPrimiti
   ) {
     throw new MeshError("The part has a zero or negative dimension.");
   }
+  if (!Array.isArray(removals)) throw new MeshError("The cuts are not a list.");
   if (removals.length > MAX_REMOVALS) {
     throw new MeshError(`The part has ${removals.length} cuts; at most ${MAX_REMOVALS} are drawn.`);
   }

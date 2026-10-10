@@ -151,7 +151,8 @@ export interface BoardLayout {
   minBoardLength?: Len;
   /** The standard length of the board the parts are cut from. */
   boardLength?: Len;
-  /** Set only when several match sets are cut from one board: layouts with the same index share it. */
+  /** Set only when several match sets are cut from one board: layouts of the same stock with the same
+   * index share it. The index counts boards within one stock. */
   boardIndex?: number;
   /** Other parts cut from the same board, after the match set. */
   alsoOnBoard?: Array<{ name: string; instance: Id }>;
@@ -195,7 +196,7 @@ export interface SolveResult {
   cutList: CutList;
   nesting: NestingResult;
   setups: MachiningSetup[];
-  /** Distinct shapes with their removals. Empty when the project did not solve. */
+  /** Distinct shapes with their removals. Empty whenever an error blocks the solve (`blocked`). */
   shapes: PartShape[];
   /**
    * True when any error exists (Operation specs: "Error blocks the solve"; Interaction spec: the

@@ -122,6 +122,19 @@ sits in an edge rabbet.
 - **The display mesh refuses unknown cuts** (an unknown kind or plane, non-whole coordinates) with
   a `MeshError`, because the input arrives by type only.
 
+## Third look (maintainer to confirm)
+
+- **A rabbet's guest must lie wholly inside the step**, not merely have its contact patch there.
+- **Two rabbet or dovetail joints between the same two parts are an error** (`duplicate-joint`):
+  each adds to the guest's cut size, so the second would silently add again.
+- **Some copies of a repeated host with a guest and some without is a warning**
+  (`joint-host-unjoined`). The spec does not say whether partial coverage is intended.
+- **`shapes` is empty whenever `blocked` is true**, including layout and shop-profile errors, so
+  a consumer never draws a model the solver has refused. The cut list is still returned for those.
+- **`boardIndex` counts boards within one stock.**
+- **The overlap check's cap counts real overlaps**, not touching pairs, so a large well-built
+  assembly is never called "piled up".
+
 ## Not in M2
 
 - Per-stock totals (sheets, board feet, linear feet), the shopping and milling lists, setup

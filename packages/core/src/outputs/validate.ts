@@ -12,15 +12,15 @@
 import type { Derived } from "../joints/derive";
 import { selfTouchingPairs } from "../joints/spatial";
 import type { Diagnostic } from "../outputs";
-import { boxOf, contactOf, type Frame, toParent } from "../solve/assembly";
+import { type Box, boxOf, contactOf, type Frame, toParent } from "../solve/assembly";
 import type { SolvedModel } from "../solve/model";
 import type { Id } from "../types";
 
 /** How many overlapping pairs are named before the rest are only counted. */
 const OVERLAPS_SHOWN = 10;
 
-/** Touching or overlapping pairs examined; a real assembly has about as many as it has parts. */
-const MAX_TOUCHING_PAIRS = 1_000_000;
+/** Overlapping pairs looked at; beyond this the parts are piled up and counting them is pointless. */
+const MAX_OVERLAPPING_PAIRS = 1_000_000;
 
 function pairKey(a: Id, b: Id): string {
   return a < b ? `${a}|${b}` : `${b}|${a}`;
@@ -43,11 +43,13 @@ export function validateAssembly(model: SolvedModel, derived: Derived): Diagnost
 
   // Overlaps, found with a sweep along the axis the parts are most spread over, so a project with
   // thousands of parts stays fast.
+  const boxes = list.map((f) => boxOf(f.instance));
   const touching = selfTouchingPairs(
-    list.map((f) => boxOf(f.instance)),
-    MAX_TOUCHING_PAIRS,
+    boxes,
+    MAX_OVERLAPPING_PAIRS,
+    (i, j) => contactOf(boxes[i] as Box, boxes[j] as Box).kind === "overlap",
   );
-  const exhausted = touching.length > MAX_TOUCHING_PAIRS;
+  const exhausted = touching.length > MAX_OVERLAPPING_PAIRS;
   let overlapping = 0;
   for (const [i, j] of touching) {
     const a = list[i];
@@ -70,7 +72,7 @@ export function validateAssembly(model: SolvedModel, derived: Derived): Diagnost
     out.push({
       severity: "error",
       rule: "overlap",
-      message: `More than ${MAX_TOUCHING_PAIRS.toLocaleString("en-US")} pairs of parts touch or overlap; the parts are piled on top of each other and were not checked further.`,
+      message: `More than ${MAX_OVERLAPPING_PAIRS.toLocaleString("en-US")} pairs of parts occupy the same space and are not joined; the parts are piled on top of each other and were not checked further.`,
     });
   } else if (overlapping > OVERLAPS_SHOWN) {
     out.push({
