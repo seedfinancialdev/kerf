@@ -11,6 +11,8 @@ import {
   type DisplayMesh,
   initGeometry,
   isManifold,
+  MAX_REMOVALS,
+  MeshError,
   meshVolume,
 } from "./index";
 
@@ -156,5 +158,136 @@ describe("isManifold", () => {
     flipped[0] = flipped[1] as number;
     flipped[1] = a;
     expect(isManifold({ positions: closed.positions, indices: flipped })).toBe(false);
+  });
+});
+
+describe("exact volumes (hand calculations)", () => {
+  it('a dovetail socket in the yz plane removes 1" wide at the tip, 3/4" at the base', () => {
+    // Profile (y, z) in inches: (3.125,0), (4.125,0), (4,0.75), (3.25,0.75). Area = (1 + 0.75)/2
+    // x 0.75 = 0.65625 in2, extruded 1/2" along the length: 0.328125 in3.
+    const socket: RemovalPrimitive = {
+      kind: "trapezoidPrism",
+      plane: "yz",
+      points: [
+        [q(200), 0],
+        [q(264), 0],
+        [q(256), q(48)],
+        [q(208), q(48)],
+      ],
+      range: [q(736), q(768)],
+    };
+    const mesh = buildDisplayMesh(blank, [socket]);
+    expect(meshVolume(mesh)).toBeCloseTo(BLANK_VOLUME - 0.328125, 5);
+  });
+
+  it("a tail space in the xy plane removes its area through the thickness", () => {
+    // Points (x, y) in inches: (0,1), (0,2), (0.5,2.25), (0.5,0.75): shoelace area 0.625 in2,
+    // through the 3/4" thickness: 0.46875 in3.
+    const space: RemovalPrimitive = {
+      kind: "trapezoidPrism",
+      plane: "xy",
+      points: [
+        [0, q(64)],
+        [0, q(128)],
+        [q(32), q(144)],
+        [q(32), q(48)],
+      ],
+      range: [0, q(48)],
+    };
+    expect(meshVolume(buildDisplayMesh(blank, [space]))).toBeCloseTo(BLANK_VOLUME - 0.46875, 5);
+  });
+
+  it("a roundover removes the corner square minus an 8-segment arc, on every corner kind", () => {
+    // Eight triangles at the arc's centre, each pi/16 wide: fan area 4 r2 sin(pi/16). The 8 is the
+    // spec's number (Operation specs, "Display"), written out here rather than read from the source.
+    const r = 0.125;
+    const removedArea = r * r - 4 * r * r * Math.sin(Math.PI / 16);
+    const cases: Array<[string, number]> = [
+      ["edge0/face0", 12],
+      ["edge1/face1", 12],
+      ["end0/face1", 6],
+      ["end1/face0", 6],
+    ];
+    for (const [edge, length] of cases) {
+      const mesh = buildDisplayMesh(blank, [
+        { kind: "quarterRoundSweep", edge: edge as never, radius: q(8) },
+      ]);
+      expect(isManifold(mesh)).toBe(true);
+      expect(meshVolume(mesh)).toBeCloseTo(BLANK_VOLUME - removedArea * length, 4);
+    }
+  });
+
+  it("the arc has the spec's 8 segments", () => {
+    expect(ARC_SEGMENTS).toBe(8);
+  });
+});
+
+describe("invalid input is a MeshError that names the problem", () => {
+  const bad: Array<[string, RemovalPrimitive, RegExp]> = [
+    ["a box with min above max", box([100, 0, 0], [50, 384, 16]), /Removal 1 .*no volume/],
+    ["a flat box", box([0, 0, 0], [0, 384, 16]), /no volume/],
+    ["a box with NaN", { kind: "box", min: [Number.NaN, 0, 0], max: [1, 1, 1] }, /no volume/],
+    [
+      "a prism with two points",
+      {
+        kind: "trapezoidPrism",
+        plane: "xy",
+        points: [
+          [0, 0],
+          [1, 1],
+        ],
+        range: [0, 1],
+      },
+      /fewer than 3/,
+    ],
+    [
+      "a prism with no depth",
+      {
+        kind: "trapezoidPrism",
+        plane: "xy",
+        points: [
+          [0, 0],
+          [q(8), 0],
+          [q(8), q(8)],
+        ],
+        range: [0, 0],
+      },
+      /no depth/,
+    ],
+    [
+      "a roundover of radius 0",
+      { kind: "quarterRoundSweep", edge: "edge1/face1", radius: 0 },
+      /radius/,
+    ],
+    [
+      "a roundover wider than the board",
+      { kind: "quarterRoundSweep", edge: "edge1/face1", radius: q(480) },
+      /radius/,
+    ],
+    [
+      "an edge that does not exist",
+      { kind: "quarterRoundSweep", edge: "edge9/face1" as never, radius: q(8) },
+      /does not exist/,
+    ],
+  ];
+
+  it.each(bad)("%s", (_label, removal, message) => {
+    expect(() => buildDisplayMesh(blank, [removal])).toThrow(MeshError);
+    expect(() => buildDisplayMesh(blank, [removal])).toThrow(message);
+  });
+
+  it("refuses a blank with a zero or negative dimension", () => {
+    expect(() => buildDisplayMesh({ ...blank, thickness: 0 }, [])).toThrow(/zero or negative/);
+  });
+
+  it("refuses more cuts than it will draw", () => {
+    const many = Array.from({ length: MAX_REMOVALS + 1 }, () => box([0, 0, 0], [1, 1, 1]));
+    expect(() => buildDisplayMesh(blank, many)).toThrow(/at most/);
+  });
+
+  it("builds repeatedly without leaking: 200 builds of a part with 50 cuts", () => {
+    const cuts = Array.from({ length: 50 }, (_, i) => box([i * 8, 0, 0], [i * 8 + 4, 384, 16]));
+    for (let i = 0; i < 200; i += 1) buildDisplayMesh(blank, cuts);
+    expect(isManifold(buildDisplayMesh(blank, cuts))).toBe(true);
   });
 });

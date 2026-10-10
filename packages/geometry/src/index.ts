@@ -28,6 +28,17 @@ export interface Blank {
 /** Segments in a roundover arc (Operation specs, "Display"). */
 export const ARC_SEGMENTS = 8;
 
+/** Most removals one part may carry; more than any real part needs, and it bounds the cost. */
+export const MAX_REMOVALS = 2000;
+
+/** Thrown when a part cannot be turned into a mesh; the message names what is wrong. */
+export class MeshError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MeshError";
+  }
+}
+
 let wasm: ManifoldToplevel | undefined;
 
 /** Loads the geometry engine. Await this once before building meshes. */
@@ -63,9 +74,9 @@ function prism(
   plane: Plane,
   profile: Array<[number, number]>,
   range: readonly [number, number],
+  own: (x: Manifold) => Manifold,
 ): Manifold {
-  const height = Math.max(range[1] - range[0], 1e-9);
-  const solid = m.Manifold.extrude([ccw(profile)], height);
+  const solid = own(m.Manifold.extrude([ccw(profile)], range[1] - range[0]));
   if (plane === "xy") return solid.translate([0, 0, range[0]]);
   if (plane === "yz") {
     // (a, b, c) -> (x = c, y = a, z = b)
@@ -75,18 +86,23 @@ function prism(
   return solid.transform([1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, range[1], 0, 1]);
 }
 
-function removal(m: ManifoldToplevel, blank: Blank, p: RemovalPrimitive): Manifold {
+function removal(
+  m: ManifoldToplevel,
+  blank: Blank,
+  p: RemovalPrimitive,
+  own: (x: Manifold) => Manifold,
+): Manifold {
   if (p.kind === "box") {
     const min = p.min.map(inches);
     const size = p.max.map((v, i) => inches(v) - (min[i] ?? 0));
-    return m.Manifold.cube(size as [number, number, number]).translate(
+    return own(m.Manifold.cube(size as [number, number, number])).translate(
       min as [number, number, number],
     );
   }
 
   if (p.kind === "trapezoidPrism") {
     const profile = p.points.map(([a, b]) => [inches(a), inches(b)] as [number, number]);
-    return prism(m, p.plane, profile, [inches(p.range[0]), inches(p.range[1])]);
+    return prism(m, p.plane, profile, [inches(p.range[0]), inches(p.range[1])], own);
   }
 
   // Quarter-round along an edge: the corner square minus a quarter disc, as 8 segments.
@@ -109,34 +125,88 @@ function removal(m: ManifoldToplevel, blank: Blank, p: RemovalPrimitive): Manifo
   const profile = local.map(
     ([u, v]) => [first + firstDir * u, second + secondDir * v] as [number, number],
   );
-  return alongX ? prism(m, "yz", profile, [0, L]) : prism(m, "xz", profile, [0, W]);
+  return alongX ? prism(m, "yz", profile, [0, L], own) : prism(m, "xz", profile, [0, W], own);
+}
+
+function finite(...values: number[]): boolean {
+  return values.every((v) => Number.isFinite(v));
+}
+
+const EDGE = /^(end0|end1|edge0|edge1)\/(face0|face1)$/;
+
+/** Checks a primitive before it is handed to the engine; throws MeshError naming it. */
+function check(blank: Blank, p: RemovalPrimitive, index: number): void {
+  const at = `Removal ${index + 1}`;
+  if (p.kind === "box") {
+    const ok = finite(...p.min, ...p.max) && p.min.every((lo, k) => lo < (p.max[k] ?? Number.NaN));
+    if (!ok)
+      throw new MeshError(`${at} is a box with no volume (its minimum is not below its maximum).`);
+    return;
+  }
+  if (p.kind === "trapezoidPrism") {
+    const ok =
+      p.points.length >= 3 &&
+      p.points.every(([a, b]) => finite(a, b)) &&
+      finite(...p.range) &&
+      p.range[0] < p.range[1];
+    if (!ok) throw new MeshError(`${at} is a prism with fewer than 3 points or no depth.`);
+    return;
+  }
+  const across = p.edge.startsWith("end") ? blank.length : blank.width;
+  if (!EDGE.test(p.edge))
+    throw new MeshError(`${at} names an edge that does not exist: ${p.edge}.`);
+  if (!(p.radius > 0) || p.radius > blank.thickness || p.radius > across) {
+    throw new MeshError(`${at} is a roundover whose radius does not fit the board.`);
+  }
 }
 
 /**
  * The part's shape: its blank minus every removal. `initGeometry()` must have completed.
- * Throws if the result is empty.
+ * Throws MeshError for a primitive that cannot be built or a part with no material left.
  */
 export function buildDisplayMesh(blank: Blank, removals: readonly RemovalPrimitive[]): DisplayMesh {
   const m = engine();
-  const solid = m.Manifold.cube([
-    inches(blank.length),
-    inches(blank.width),
-    inches(blank.thickness),
-  ]);
-  const cuts = removals.map((r) => removal(m, blank, r));
-  const result = cuts.length === 0 ? solid : m.Manifold.difference([solid, m.Manifold.union(cuts)]);
-  const mesh = result.getMesh();
-  if (mesh.triVerts.length === 0) throw new Error("The part has no material left after its cuts.");
-
-  const stride = mesh.numProp;
-  const count = mesh.vertProperties.length / stride;
-  const positions = new Float32Array(count * 3);
-  for (let i = 0; i < count; i += 1) {
-    positions[i * 3] = mesh.vertProperties[i * stride] ?? 0;
-    positions[i * 3 + 1] = mesh.vertProperties[i * stride + 1] ?? 0;
-    positions[i * 3 + 2] = mesh.vertProperties[i * stride + 2] ?? 0;
+  if (
+    !finite(blank.length, blank.width, blank.thickness) ||
+    Math.min(blank.length, blank.width, blank.thickness) <= 0
+  ) {
+    throw new MeshError("The part has a zero or negative dimension.");
   }
-  return { positions, indices: new Uint32Array(mesh.triVerts) };
+  if (removals.length > MAX_REMOVALS) {
+    throw new MeshError(`The part has ${removals.length} cuts; at most ${MAX_REMOVALS} are drawn.`);
+  }
+  removals.forEach((r, i) => check(blank, r, i));
+
+  // Every engine object lives in WebAssembly memory and must be freed explicitly.
+  const made: Manifold[] = [];
+  const own = (x: Manifold): Manifold => {
+    made.push(x);
+    return x;
+  };
+  try {
+    const solid = own(
+      m.Manifold.cube([inches(blank.length), inches(blank.width), inches(blank.thickness)]),
+    );
+    const cuts = removals.map((r) => own(removal(m, blank, r, own)));
+    const result =
+      cuts.length === 0 ? solid : own(m.Manifold.difference([solid, own(m.Manifold.union(cuts))]));
+    const mesh = result.getMesh();
+    if (mesh.triVerts.length === 0) {
+      throw new MeshError("The part has no material left after its cuts.");
+    }
+
+    const stride = mesh.numProp;
+    const count = mesh.vertProperties.length / stride;
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i += 1) {
+      positions[i * 3] = mesh.vertProperties[i * stride] ?? 0;
+      positions[i * 3 + 1] = mesh.vertProperties[i * stride + 1] ?? 0;
+      positions[i * 3 + 2] = mesh.vertProperties[i * stride + 2] ?? 0;
+    }
+    return { positions, indices: new Uint32Array(mesh.triVerts) };
+  } finally {
+    for (const x of made) x.delete();
+  }
 }
 
 /**
