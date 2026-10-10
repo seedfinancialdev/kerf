@@ -1023,12 +1023,20 @@ describe("solid-stock boards shared by match sets", () => {
 });
 
 describe("result shapes", () => {
-  it("are withheld when any error blocks the solve, including one found while nesting", () => {
+  it("stay when only the layout fails, and are withheld when the assembly cannot be built", () => {
     const big = boards([ply("Big", "100in", "10in")], [at("Big", "0in")]);
-    const result = solve(big, shop);
-    expect(result.blocked).toBe(true);
-    expect(result.diagnostics.map((d) => d.rule)).toContain("part-too-large");
-    expect(result.shapes).toEqual([]);
+    const tooBig = solve(big, shop);
+    expect(tooBig.blocked).toBe(true);
+    expect(tooBig.diagnostics.map((d) => d.rule)).toContain("part-too-large");
+    expect(tooBig.shapes).toHaveLength(1);
+
+    const broken = boards(
+      [ply("A", "10in", "10in"), ply("B", "10in", "10in")],
+      [at("A", "0in"), { name: "B", part: "B", at: ["1in", "1in", "0in"] }],
+    );
+    const overlapping = solve(broken, shop);
+    expect(overlapping.diagnostics.map((d) => d.rule)).toContain("overlap");
+    expect(overlapping.shapes).toEqual([]);
   });
 });
 

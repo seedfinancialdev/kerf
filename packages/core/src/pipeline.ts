@@ -187,7 +187,7 @@ export function solveProject(project: Project, shop: ShopProfile): SolveResult {
     cutList: p.cutList,
     nesting,
     setups,
-    shapes: blocked ? [] : shapesOf(p),
+    shapes: p.stopped ? [] : shapesOf(p),
     blocked,
   };
 }

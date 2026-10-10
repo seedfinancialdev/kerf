@@ -196,7 +196,8 @@ export interface SolveResult {
   cutList: CutList;
   nesting: NestingResult;
   setups: MachiningSetup[];
-  /** Distinct shapes with their removals. Empty whenever an error blocks the solve (`blocked`). */
+  /** Distinct shapes with their removals. Empty when an error in the assembly (steps 1-5) means the parts cannot be built. A layout or
+   * shop-profile error does not empty it. */
   shapes: PartShape[];
   /**
    * True when any error exists (Operation specs: "Error blocks the solve"; Interaction spec: the

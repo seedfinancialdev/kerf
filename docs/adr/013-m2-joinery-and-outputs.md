@@ -129,8 +129,9 @@ sits in an edge rabbet.
   each adds to the guest's cut size, so the second would silently add again.
 - **Some copies of a repeated host with a guest and some without is a warning**
   (`joint-host-unjoined`). The spec does not say whether partial coverage is intended.
-- **`shapes` is empty whenever `blocked` is true**, including layout and shop-profile errors, so
-  a consumer never draws a model the solver has refused. The cut list is still returned for those.
+- **`shapes` is empty only when the assembly itself cannot be built** (errors in steps 1-5). A
+  layout or shop-profile error leaves the model showing, as the maintainer asked. Showing every
+  part except the broken one is left to the M4 viewport.
 - **`boardIndex` counts boards within one stock.**
 - **The overlap check's cap counts real overlaps**, not touching pairs, so a large well-built
   assembly is never called "piled up".
