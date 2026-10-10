@@ -35,7 +35,16 @@ describe("bookcase (golden)", () => {
       sheetCountByStock: Record<string, number>;
     }>("bookcase", "layouts");
     const result = nest(project, shop);
-    expect(result.sheets).toEqual(expected.sheets);
+    // The spec fixes these fields; placements, offcuts and efficiency are checked in the nesting
+    // unit tests.
+    const specified = result.sheets.map((s) => ({
+      stock: s.stock,
+      sheet: s.sheet,
+      contents: s.contents,
+      cutSequence: s.cutSequence,
+      largestOffcut: s.largestOffcut,
+    }));
+    expect(specified).toEqual(expected.sheets);
     expect(result.sheetCountByStock).toEqual(expected.sheetCountByStock);
   });
 
@@ -44,7 +53,10 @@ describe("bookcase (golden)", () => {
     "machining setups: dado stack 23/32 x 1/4 (12), 1/4 x 3/8 (2), router (8)",
     () => {
       const expected = loadExpected<{ setups: MachiningSetup[] }>("bookcase", "setups");
-      expect(machiningSetups(project, shop)).toEqual(expected.setups);
+      // The spec fixes tool, setting and cut count; the part list per setup is ours (checked in the
+      // machining unit tests).
+      const specified = machiningSetups(project, shop).map(({ parts: _parts, ...rest }) => rest);
+      expect(specified).toEqual(expected.setups);
     },
   );
 
@@ -91,17 +103,18 @@ describe("keepsake box (golden)", () => {
 
   milestone("M2", "match set nests as one composite blank on one walnut board", () => {
     const expected = loadExpected<{ boards: BoardLayout[] }>("box", "layouts");
-    expect(nest(project, shop).boards).toEqual(expected.boards);
+    // The spec fixes the composite, the board minimum and the order; the chosen standard board
+    // length is ours (checked in the nesting unit tests).
+    const specified = nest(project, shop).boards.map(({ boardLength: _length, ...rest }) => rest);
+    expect(specified).toEqual(expected.boards);
   });
 
   milestone("M2", "warns when the groove does not land inside the bottom half-pin", () => {
     const expected = loadExpected<{ warnings: Array<{ rule: string }> }>("box", "validation");
     const { diagnostics } = solve(project, shop);
     expect(diagnostics.filter((d) => d.severity === "error")).toEqual([]);
-    for (const warning of expected.warnings) {
-      expect(diagnostics.some((d) => d.severity === "warning" && d.rule === warning.rule)).toBe(
-        true,
-      );
-    }
+    // Exactly the warnings the spec lists, and nothing else a user would need to act on.
+    const warned = new Set(diagnostics.filter((d) => d.severity === "warning").map((d) => d.rule));
+    expect(warned).toEqual(new Set(expected.warnings.map((w) => w.rule)));
   });
 });

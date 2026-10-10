@@ -13,6 +13,8 @@ export interface Project {
   schemaVersion: 1;
   name: string;
   units: "imperial" | "metric"; // display + snap grid
+  /** Extra thickness left on each face of a bookmatched part for planing; default 1/16". */
+  planingAllowance?: Len;
   params: Param[];
   stock: Stock[];
   parts: PartDef[];

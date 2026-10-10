@@ -4,7 +4,7 @@
 
 // Solve pipeline steps 1-3 (Domain model v0, "Solve pipeline"):
 //   1. Parameters   2. Parts   3. Instances and patterns
-// Joints, validation and outputs belong to later stages (M2); this function does not apply
+// Joints, validation and outputs are steps 4-6 (see pipeline.ts); this function does not apply
 // joints, match sets or structures, and says so in its name.
 //
 // Rules (ADR 012):
@@ -74,6 +74,11 @@ export interface SolvedModel {
   diagnostics: Diagnostic[];
   /** Evaluated parameters by name; lengths are snapped integers in internal units. */
   params: Record<string, Quantity>;
+  /**
+   * Exact value of every name an expression may use: parameters, part properties
+   * (`side.thickness`) and stock thickness. Later stages evaluate joint parameters against this.
+   */
+  scope: Record<string, Quantity>;
   parts: SolvedPart[];
   instances: SolvedInstance[];
 }
@@ -113,15 +118,28 @@ class Solver {
     private readonly units: UnitSystem,
   ) {}
 
-  private error(rule: string, message: string, extra: Partial<Diagnostic> = {}): void {
+  private error(
+    rule: string,
+    message: string,
+    extra: Partial<Omit<Diagnostic, "severity" | "rule" | "message">> = {},
+  ): void {
     this.diagnostics.push({ severity: "error", rule, message, ...extra });
   }
 
-  private warn(rule: string, message: string, extra: Partial<Diagnostic> = {}): void {
+  private warn(
+    rule: string,
+    message: string,
+    extra: Partial<Omit<Diagnostic, "severity" | "rule" | "message">> = {},
+  ): void {
     this.diagnostics.push({ severity: "warning", rule, message, ...extra });
   }
 
   // ───────── Steps 1 and 2: parameters and part sizes ─────────
+
+  /** Exact value of every solved name, for evaluating joint parameters later. */
+  exactScope(): Record<string, Quantity> {
+    return Object.fromEntries([...this.leaves, ...this.exact]);
+  }
 
   solveFields(): { params: Record<string, Quantity>; parts: SolvedPart[] } {
     this.collectStock();
@@ -745,39 +763,67 @@ function describe(error: unknown): string {
   }
 }
 
+const emptyModel = (diagnostics: Diagnostic[]): SolvedModel => ({
+  diagnostics,
+  params: {},
+  scope: {},
+  parts: [],
+  instances: [],
+});
+
+/** The single "invalid-project" diagnostic for a project that failed validation. */
+export function invalidProjectModel(path: string, message: string): SolvedModel {
+  return emptyModel([
+    {
+      severity: "error",
+      rule: "invalid-project",
+      message: `The project file is not valid: ${message}.`,
+      field: path,
+    },
+  ]);
+}
+
+/**
+ * Steps 1-3 for a project that has already passed `validateProject`. Never throws: anything
+ * unexpected is an "internal-error" diagnostic.
+ */
+export function solveValidatedModel(project: Project): SolvedModel {
+  let solver: Solver | undefined;
+  try {
+    solver = new Solver(project, project.units);
+    const { params, parts } = solver.solveFields();
+    const instances = solver.expandInstances(parts);
+    return {
+      diagnostics: solver.diagnostics,
+      params,
+      scope: solver.exactScope(),
+      parts,
+      instances,
+    };
+  } catch (error) {
+    return emptyModel([
+      ...(solver?.diagnostics ?? []),
+      {
+        severity: "error",
+        rule: "internal-error",
+        message: `Kerf could not finish solving this project (${describe(error)}). This is a bug; please report it.`,
+      },
+    ]);
+  }
+}
+
 /**
  * Steps 1-3 of the solve pipeline. Never throws: problems come back as diagnostics. A project
  * that is the wrong shape, reuses an id or has a dangling reference yields one "invalid-project"
  * error and an empty model. Solving reads a validated copy, never the object passed in.
  */
 export function solveModel(project: Project): SolvedModel {
-  const empty = (diagnostics: Diagnostic[]): SolvedModel => ({
-    diagnostics,
-    params: {},
-    parts: [],
-    instances: [],
-  });
-
-  let solver: Solver | undefined;
   try {
     const checked = validateProject(project);
-    if (checked.problem) {
-      return empty([
-        {
-          severity: "error",
-          rule: "invalid-project",
-          message: `The project file is not valid: ${checked.problem.message}.`,
-          field: checked.problem.path,
-        },
-      ]);
-    }
-    solver = new Solver(checked.project, checked.project.units);
-    const { params, parts } = solver.solveFields();
-    const instances = solver.expandInstances(parts);
-    return { diagnostics: solver.diagnostics, params, parts, instances };
+    if (checked.problem) return invalidProjectModel(checked.problem.path, checked.problem.message);
+    return solveValidatedModel(checked.project);
   } catch (error) {
-    return empty([
-      ...(solver?.diagnostics ?? []),
+    return emptyModel([
       {
         severity: "error",
         rule: "internal-error",

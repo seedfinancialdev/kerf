@@ -4,9 +4,26 @@
 
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { ExpressionError } from "./expr/errors";
 import { formatLength, gridSize, parseLength, snapToGrid } from "./length";
 import { rational } from "./rational";
 import { INCH, MM } from "./units";
+
+/** Asserts the call throws an error of this class whose message matches. */
+const throwsA = (
+  fn: () => unknown,
+  cls: abstract new (...args: never[]) => Error,
+  message: RegExp,
+): void => {
+  let caught: unknown;
+  try {
+    fn();
+  } catch (error) {
+    caught = error;
+  }
+  expect(caught).toBeInstanceOf(cls);
+  expect((caught as Error).message).toMatch(message);
+};
 
 describe("grid", () => {
   it("is 1/64 inch or 0.01 mm", () => {
@@ -30,7 +47,7 @@ describe("parseLength", () => {
   });
 
   it("rejects a bare number", () => {
-    expect(() => parseLength("4", "imperial")).toThrow(/not a length/);
+    throwsA(() => parseLength("4", "imperial"), ExpressionError, /not a length/);
   });
 });
 
@@ -39,7 +56,7 @@ describe("formatLength", () => {
     [0, '0"'],
     [146050, '23/32"'],
     [36 * INCH, '36"'],
-    [34.5 * INCH, '34-1/2"'],
+    [(INCH * 69) / 2, '34-1/2"'],
     [-INCH / 2, '-1/2"'],
     [INCH / 64, '1/64"'],
   ])("%d is %s", (len, text) => {
@@ -64,8 +81,8 @@ describe("formatLength", () => {
 
 describe("range and display edge cases", () => {
   it("rejects lengths beyond the supported range instead of returning an unsafe number", () => {
-    expect(() => parseLength("100000000000in", "imperial")).toThrow(/too large/);
-    expect(() => parseLength("-100000000000in", "imperial")).toThrow(/too large/);
+    throwsA(() => parseLength("100000000000in", "imperial"), ExpressionError, /too large/);
+    throwsA(() => parseLength("-100000000000in", "imperial"), ExpressionError, /too large/);
     expect(() => snapToGrid(rational(10n ** 30n), "imperial")).toThrow(RangeError);
   });
 

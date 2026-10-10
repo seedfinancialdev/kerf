@@ -190,7 +190,7 @@ describe("positions", () => {
   milestone("M1", "other instances land where their expressions say", () => {
     const at = (name: string) => solveModel(bookcase).instances.find((i) => i.name === name);
     expect(at("Top")?.position.z).toBe(14630400 - 146050); // 72" - 23/32"
-    expect(at("Back")?.position).toMatchObject({ x: 146050 - 76200, y: 2438400 - 50800 });
+    expect(at("Back")?.position).toMatchObject({ x: 146050, y: 0 }); // at the shoulder, at the back
     expect(at("Left side")?.position.x).toBe(36 * INCH - 146050);
   });
 
@@ -584,7 +584,7 @@ describe("second review: fixed-step patterns, default thickness, limits", () => 
   milestone("M1", "a stock thickness beyond the length limit is an error, not a giant part", () => {
     const p = panelProject({ units: "imperial" });
     const huge: Project = { ...p, stock: p.stock.map((s) => ({ ...s, thickness: 2 ** 52 })) };
-    expect(rules(huge)).toContain("out-of-range");
+    expect(rules(huge)).toContain("invalid-project"); // the file reader bounds it like any length
   });
 
   milestone(
@@ -667,7 +667,7 @@ describe("second review: solveModel total on hostile objects", () => {
 
   milestone(
     "M1",
-    "a throwing getter or a thrown non-Error becomes internal-error, not an exception",
+    "a throwing getter or a thrown non-Error is reported as unreadable input, not an exception",
     () => {
       const getter = { ...bookcase } as Project;
       Object.defineProperty(getter, "name", {
@@ -676,7 +676,9 @@ describe("second review: solveModel total on hostile objects", () => {
         },
       });
       expect(() => solveModel(getter)).not.toThrow();
-      expect(rules(getter)).toContain("internal-error");
+      // Bad input, not a fault in Kerf: it must not be reported as a bug.
+      expect(rules(getter)).toContain("invalid-project");
+      expect(rules(getter)).not.toContain("internal-error");
     },
   );
 

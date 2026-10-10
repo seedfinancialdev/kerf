@@ -2,56 +2,73 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// M0: every core function is a typed stub that throws NotImplemented.
-// Function names and signatures are the M0 contract; the spec defines behaviour, not an API.
+// The core API. Functions here are thin wrappers over the pipeline in pipeline.ts; structures
+// (M3) are still typed stubs that throw NotImplemented.
 
 import { notImplemented } from "./errors";
+import { deriveJoints } from "./joints/derive";
+import type { CutAdd } from "./joints/types";
 import type {
   CutList,
-  DovetailLayout,
-  DovetailLayoutInput,
   MachiningSetup,
   NestingResult,
   RemovalPrimitive,
   SolveResult,
 } from "./outputs";
-import type { Id, Len, PartDef, Project, ShopProfile } from "./types";
+import { runPipeline, solveProject } from "./pipeline";
+import type { Id, PartDef, Project, ShopProfile } from "./types";
 
-// Solve pipeline (M2; steps 1-3 are solveModel)
+// The whole pipeline (steps 1-6).
 
-export function solve(_project: Project, _shop: ShopProfile): SolveResult {
-  return notImplemented("solve");
+export function solve(project: Project, shop: ShopProfile): SolveResult {
+  return solveProject(project, shop);
 }
 
 // Joinery (M2)
 
-export function dovetailLayout(_input: DovetailLayoutInput): DovetailLayout {
-  return notImplemented("dovetailLayout");
-}
-
+/**
+ * What one joint does to its host and guest: removals in each part's definition space, and what it
+ * adds to the guest's cut size. For a joint with a pattern on either side, `host`/`guest` collect
+ * the removals of every pair and `guestCutAdd` is the add for the first derived pair.
+ * Throws RangeError for a joint id the project does not have, and Error for a project that is not
+ * valid; a joint that failed has no cuts and its reasons are in `solve(...).diagnostics`.
+ */
 export function deriveJointCuts(
-  _project: Project,
-  _jointId: Id,
-): {
-  host: RemovalPrimitive[];
-  guest: RemovalPrimitive[];
-  guestCutAdd: { length: Len; width: Len };
-} {
-  return notImplemented("deriveJointCuts");
+  project: Project,
+  jointId: Id,
+): { host: RemovalPrimitive[]; guest: RemovalPrimitive[]; guestCutAdd: CutAdd } {
+  const p = runPipeline(project);
+  if (!p.project) {
+    const why = p.diagnostics.find((d) => d.severity === "error")?.message;
+    throw new Error(`The project is not valid${why ? `: ${why}` : "."}`);
+  }
+  if (!p.project.joints.some((j) => j.id === jointId)) {
+    throw new RangeError(`The project has no joint "${jointId}".`);
+  }
+  const pairs = p.derived.pairs.filter((pair) => pair.joint === jointId);
+  const key = (r: RemovalPrimitive): string => JSON.stringify(r);
+  const order = (a: RemovalPrimitive, b: RemovalPrimitive): number =>
+    key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0;
+  return {
+    host: pairs.flatMap((pair) => pair.hostCuts).sort(order),
+    guest: pairs.flatMap((pair) => pair.guestCuts).sort(order),
+    guestCutAdd: pairs[0]?.guestAdd ?? { length: 0, width: 0 },
+  };
 }
 
-// Outputs (M2)
+// Outputs (M2). These return the output only; `solve` is the way to see why one is empty
+// (an invalid project, an error in the assembly, an invalid shop profile).
 
-export function buildCutList(_project: Project): CutList {
-  return notImplemented("buildCutList");
+export function buildCutList(project: Project): CutList {
+  return runPipeline(project).cutList;
 }
 
-export function nest(_project: Project, _shop: ShopProfile): NestingResult {
-  return notImplemented("nest");
+export function nest(project: Project, shop: ShopProfile): NestingResult {
+  return solveProject(project, shop).nesting;
 }
 
-export function machiningSetups(_project: Project, _shop: ShopProfile): MachiningSetup[] {
-  return notImplemented("machiningSetups");
+export function machiningSetups(project: Project, shop: ShopProfile): MachiningSetup[] {
+  return solveProject(project, shop).setups;
 }
 
 // Structures (M3)
@@ -63,3 +80,5 @@ export function generateStructures(_project: Project, _shop: ShopProfile): Proje
 export function detachPart(_project: Project, _part: Id): PartDef {
   return notImplemented("detachPart");
 }
+
+export { deriveJoints };

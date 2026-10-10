@@ -14,7 +14,7 @@ import {
   parseProject,
   serializeProject,
 } from "@kerf/core";
-import { strToU8, unzipSync, zipSync } from "fflate";
+import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 
 // Present in every browser and in Node; declared here because this package targets neither DOM nor
 // Node typings.
@@ -138,7 +138,7 @@ const ZIP_EPOCH = new Date(1980, 0, 1, 0, 0, 0);
 
 /**
  * Writes a `.kerf` archive. Throws ProjectFormatError if the project does not validate and
- * KerfFormatError if the meta would not be readable back.
+ * KerfFormatError if the meta would not be readable back or the thumbnail is not a usable PNG.
  */
 export function writeKerf(project: Project, meta: KerfMeta, thumbnail?: Uint8Array): Uint8Array {
   const entries: Record<string, Uint8Array> = {
@@ -150,6 +150,41 @@ export function writeKerf(project: Project, meta: KerfMeta, thumbnail?: Uint8Arr
     entries[THUMBNAIL] = thumbnail;
   }
   return zipSync(entries, { level: 6, mtime: ZIP_EPOCH });
+}
+
+const CRC_TABLE = ((): Uint32Array => {
+  const table = new Uint32Array(256);
+  for (let n = 0; n < 256; n += 1) {
+    let c = n;
+    for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    table[n] = c >>> 0;
+  }
+  return table;
+})();
+
+function crc32(data: Uint8Array): number {
+  let crc = 0xffffffff;
+  for (const byte of data) crc = (CRC_TABLE[(crc ^ byte) & 0xff] as number) ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+/** The checksum and size each entry's header declares, from the zip's central directory. */
+function declaredEntries(bytes: Uint8Array): Map<string, { crc: number; size: number }> {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const out = new Map<string, { crc: number; size: number }>();
+  let end = bytes.length - 22;
+  while (end >= 0 && view.getUint32(end, true) !== 0x06054b50) end -= 1;
+  if (end < 0) return out;
+  const count = view.getUint16(end + 10, true);
+  let at = view.getUint32(end + 16, true);
+  for (let i = 0; i < count && at + 46 <= bytes.length; i += 1) {
+    if (view.getUint32(at, true) !== 0x02014b50) break;
+    const nameLength = view.getUint16(at + 28, true);
+    const name = strFromU8(bytes.subarray(at + 46, at + 46 + nameLength));
+    out.set(name, { crc: view.getUint32(at + 16, true), size: view.getUint32(at + 24, true) });
+    at += 46 + nameLength + view.getUint16(at + 30, true) + view.getUint16(at + 32, true);
+  }
+  return out;
 }
 
 /**
@@ -198,9 +233,16 @@ export function readKerf(bytes: Uint8Array): {
   if (oversize.length > 0) {
     throw new KerfFormatError(`The archive entry ${oversize.join(", ")} is too large.`);
   }
+  const declared = declaredEntries(bytes);
   for (const [name, data] of Object.entries(entries)) {
     if (data.length > (MAX_SIZE[name] ?? 0)) {
       throw new KerfFormatError(`The archive entry ${name} is too large.`);
+    }
+    // The decompressor does not check these, so a changed byte could otherwise load as a
+    // different project and be saved over the good one.
+    const header = declared.get(name);
+    if (!header || header.size !== data.length || header.crc !== crc32(data)) {
+      throw new KerfFormatError(`The archive entry ${name} is damaged.`);
     }
   }
 

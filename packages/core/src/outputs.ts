@@ -6,23 +6,42 @@
 // but not their JSON shape; these shapes are the M0 contract the golden fixtures use.
 // None of this is ever saved to .kerf.
 
-import type { Id, Len } from "./types";
+import type { Rational } from "./rational";
+import type { EdgeRef, Id, Len } from "./types";
 
 export interface Diagnostic {
-  severity: "error" | "warning";
+  severity: "error" | "warning" | "info";
   rule: string;
   /** Shop-language message shown in the UI. */
   message: string;
   part?: Id;
+  joint?: Id;
   /** The field the problem is on, e.g. a parameter name or "Side length". */
   field?: string;
+  /** How many times this same problem occurred, when it was reported once for all of them. */
+  count?: number;
 }
 
-/** SPEC-GAP: the spec names these primitives but does not define their fields. */
+export type Vec3 = readonly [Len, Len, Len];
+
+/**
+ * A removal in a part's local frame (ADR 013, decision D3). Local X is the length, Y the width
+ * and Z the thickness; every coordinate is an integer in internal units.
+ *
+ * - `box`: an axis-aligned block between `min` and `max` (dado, groove, rabbet).
+ * - `trapezoidPrism`: a four-point profile in the named plane, extruded over `range` along the
+ *   third axis (dovetail tails and sockets).
+ * - `quarterRoundSweep`: the quarter-round removed along an edge (roundover).
+ */
 export type RemovalPrimitive =
-  | { kind: "box"; min: [Len, Len, Len]; max: [Len, Len, Len] }
-  | { kind: "trapezoidPrism"; points: Array<[Len, Len]>; thickness: Len }
-  | { kind: "quarterRoundSweep"; radius: Len; edge: string };
+  | { kind: "box"; min: Vec3; max: Vec3 }
+  | {
+      kind: "trapezoidPrism";
+      plane: "xy" | "xz" | "yz";
+      points: ReadonlyArray<readonly [Len, Len]>;
+      range: readonly [Len, Len];
+    }
+  | { kind: "quarterRoundSweep"; edge: EdgeRef; radius: Len };
 
 export interface DovetailLayoutInput {
   boardWidth: Len;
@@ -52,6 +71,8 @@ export interface CutListLine {
   thickness: Len;
   /** Visible size between joints, shown beside the cut size. */
   visible: { length: Len; width: Len };
+  /** Set when parts merged into this line have different visible sizes; `visible` is the first's. */
+  visibleVaries?: boolean;
   quantity: number;
   parts: CutListPart[];
 }
@@ -83,21 +104,65 @@ export interface CutStep {
   sizes: Len[];
 }
 
+/** A part placed on a sheet. `x` runs along the grain, `y` across it, from the sheet's corner. */
+export interface Placement {
+  x: Len;
+  y: Len;
+  /** Size along the grain and across it. */
+  length: Len;
+  width: Len;
+  instance: Id;
+  name: string;
+  /** True when the part is turned 90 degrees from its length-along-grain orientation. */
+  rotated: boolean;
+  /** For a member of a continuous-grain run: its place in the run (1 of 4, 2 of 4...). */
+  sequence?: { n: number; of: number };
+}
+
+export interface Offcut {
+  x: Len;
+  y: Len;
+  length: Len;
+  width: Len;
+}
+
 export interface SheetLayout {
   stock: Id;
   sheet: { length: Len; width: Len };
+  /** Distinct part sizes on this sheet, in order of first placement. */
   contents: Array<{ length: Len; width: Len; quantity: number }>;
+  /** Strip rips first, then the crosscuts (one per distinct strip pattern), then one step per distinct
+   * composite blank that divides it into members (a crosscut, or a rip when the members lie side by
+   * side). */
   cutSequence: CutStep[];
+  /** The largest usable offcut and how many of that size the sheet has. */
   largestOffcut: { alongGrain: Len; acrossGrain: Len; count: number };
+  placements: Placement[];
+  /** Every usable offcut (both sides at least the minimum useful size). */
+  offcuts: Offcut[];
+  /** Used area over sheet area. */
+  efficiency: Rational;
 }
 
-/** A solid-stock board layout; only match-set boards are specified so far. */
+/** A solid-stock board layout: one per board bought. Match-set boards also carry the composite blank. */
 export interface BoardLayout {
   stock: Id;
   matchSet?: Id;
-  /** Parts joined end to end, plus kerfs and trim, cut from one board. */
+  /**
+   * The blank a match set is cut from: members end to end (or side by side for axis "width", or the
+   * largest member's length and width for a bookmatch), plus kerfs and end trim.
+   */
   composite?: { length: Len; width: Len; widthAllowance: Len };
   minBoardLength?: Len;
+  /** A bookmatch only: thickness of the resawn board (parts, saw gap and planing allowance). */
+  compositeThickness?: Len;
+  /** The standard length of the board the parts are cut from. */
+  boardLength?: Len;
+  /** Set only when several match sets are cut from one board: layouts of the same stock with the same
+   * index share it. The index counts boards within one stock. */
+  boardIndex?: number;
+  /** Other parts cut from the same board, after the match set. */
+  alsoOnBoard?: Array<{ name: string; instance: Id }>;
   sequence: Array<{ sequence: number; of: number; name: string }>;
 }
 
@@ -109,12 +174,28 @@ export interface NestingResult {
 
 export interface MachiningSetup {
   setup: number;
-  tool: "dadoStack" | "router";
-  /** Cut width for a dado stack, bit radius for a roundover bit. */
+  tool: "dadoStack" | "router" | "handTools";
+  /** Cut width for a dado stack or router straight bit. */
   width?: Len;
   depth?: Len;
   bit?: { type: "roundover"; radius: Len };
   cuts: number;
+  /** The parts this setup cuts, and how many cuts each takes. */
+  parts?: Array<{ name: string; cuts: number }>;
+  /** True when the shop profile has no tool that can make these cuts (the tool named is the one needed). */
+  missing?: boolean;
+}
+
+/** One distinct part shape, for the display mesh. Split definitions appear separately. */
+export interface PartShape {
+  /** The definition id, or `<id>~<n>` when cuts forced a split. */
+  definition: Id;
+  name: string;
+  length: Len;
+  width: Len;
+  thickness: Len;
+  /** Removals in definition space: joint cuts plus roundovers. */
+  removals: RemovalPrimitive[];
 }
 
 export interface SolveResult {
@@ -122,6 +203,15 @@ export interface SolveResult {
   cutList: CutList;
   nesting: NestingResult;
   setups: MachiningSetup[];
+  /** Distinct shapes with their removals. Empty when an error in the assembly (steps 1-5) means the parts cannot be built. A layout or
+   * shop-profile error does not empty it. */
+  shapes: PartShape[];
+  /**
+   * True when any error exists (Operation specs: "Error blocks the solve"; Interaction spec: the
+   * build plan cannot be exported). An error in the assembly also withholds the cut list, layouts
+   * and setups; a layout or shop error leaves the cut list in place. Warnings and info never block.
+   */
+  blocked: boolean;
 }
 
 export interface BuildPlan {

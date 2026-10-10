@@ -44,6 +44,9 @@ jobs:
       - name: Property tests
         run: pnpm test:prop
 
+      - name: Stress tests
+        run: pnpm test:stress
+
       - name: Benchmarks
         run: pnpm bench
 

@@ -40,6 +40,7 @@ interface Project {
   schemaVersion: 1;
   name: string;
   units: "imperial" | "metric";         // display + snap grid
+  planingAllowance?: Len;               // per face, for bookmatch composites; default 1/16"
   params: Param[];
   stock: Stock[];
   parts: PartDef[];

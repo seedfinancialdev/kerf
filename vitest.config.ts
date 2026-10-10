@@ -13,6 +13,7 @@ export default defineConfig({
           include: [
             "packages/core/src/**/*.test.ts",
             "packages/io/src/**/*.test.ts",
+            "packages/geometry/src/**/*.test.ts",
             "packages/fixtures/tests/unit/**/*.test.ts",
           ],
         },
@@ -22,6 +23,13 @@ export default defineConfig({
         test: {
           name: "prop",
           include: ["packages/fixtures/tests/prop/**/*.test.ts"],
+          testTimeout: 60_000,
+        },
+      },
+      {
+        test: {
+          name: "stress",
+          include: ["packages/fixtures/tests/stress/**/*.test.ts"],
           testTimeout: 60_000,
         },
       },

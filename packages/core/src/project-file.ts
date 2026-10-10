@@ -9,6 +9,7 @@
 // - Canonical form: keys sorted by code point, 2-space indent, trailing newline.
 // - Older schema versions migrate forward on load; the app never writes an older version.
 
+import { MAX_LENGTH } from "./length";
 import { isOrientationIndex } from "./solve/orientation";
 import type {
   EdgeRef,
@@ -25,6 +26,7 @@ import type {
   Structure,
   UserOp,
 } from "./types";
+import { INCH } from "./units";
 
 export const CURRENT_SCHEMA_VERSION = 1;
 
@@ -95,9 +97,18 @@ class Reader {
       throw new ProjectFormatError(this.at(key), "expected a whole number (no floats are saved)");
     }
     if (value < min || value > max) {
-      throw new ProjectFormatError(this.at(key), `expected a value from ${min} to ${max}`);
+      const shown = (n: number): string =>
+        max === MAX_LENGTH && Math.abs(n) <= MAX_LENGTH ? `${n / INCH} in` : String(n);
+      throw new ProjectFormatError(
+        this.at(key),
+        `expected a value from ${shown(min)} to ${shown(max)}`,
+      );
     }
     return value;
+  }
+
+  optionalInteger(key: string, min: number, max: number): number | undefined {
+    return this.has(key) ? this.integer(key, min, max) : undefined;
   }
 
   boolean(key: string): boolean {
@@ -187,15 +198,15 @@ function readStock(value: unknown, path: string): Stock {
     id: r.id("id"),
     name: r.string("name"),
     kind: r.oneOf("kind", ["sheet", "solid", "dimensional"] as const),
-    thickness: r.integer("thickness", 1),
+    thickness: r.integer("thickness", 1, MAX_LENGTH),
     allowance: { length: 0, width: 0 },
   };
 
   const sheet = r.optionalObject("sheet");
   if (sheet) {
     stock.sheet = {
-      length: sheet.integer("length", 1),
-      width: sheet.integer("width", 1),
+      length: sheet.integer("length", 1, MAX_LENGTH),
+      width: sheet.integer("width", 1, MAX_LENGTH),
       grain: sheet.oneOf("grain", ["along-length", "none"] as const),
     };
     sheet.done();
@@ -205,20 +216,32 @@ function readStock(value: unknown, path: string): Stock {
   if (solid) {
     stock.solid = {
       standardLengths: solid.array("standardLengths", (item, p) => {
-        if (typeof item !== "number" || !Number.isSafeInteger(item) || item < 1) {
+        if (
+          typeof item !== "number" ||
+          !Number.isSafeInteger(item) ||
+          item < 1 ||
+          item > MAX_LENGTH
+        ) {
           throw new ProjectFormatError(p, "expected a whole number of units");
         }
         return item;
       }),
-      maxWidth: solid.integer("maxWidth", 1),
+      maxWidth: solid.integer("maxWidth", 1, MAX_LENGTH),
     };
     solid.done();
   }
 
+  if (stock.kind === "sheet" && stock.solid) {
+    throw new ProjectFormatError(`${path}.solid`, "sheet stock cannot have board sizes");
+  }
+  if (stock.kind !== "sheet" && stock.sheet) {
+    throw new ProjectFormatError(`${path}.sheet`, "only sheet stock has sheet sizes");
+  }
+
   const allowance = r.object("allowance");
   stock.allowance = {
-    length: allowance.integer("length", 0),
-    width: allowance.integer("width", 0),
+    length: allowance.integer("length", 0, MAX_LENGTH),
+    width: allowance.integer("width", 0, MAX_LENGTH),
   };
   allowance.done();
 
@@ -457,7 +480,7 @@ function checkIntegrity(project: Project): void {
   for (const [i, instance] of project.instances.entries()) {
     need(parts.has(instance.def), `$.instances[${i}].def`, "a part");
     if (instance.parent !== undefined) {
-      need(instances.has(instance.parent), `$.instances[${i}].parent`, "an instance");
+      need(instances.has(instance.parent), `$.instances[${i}].parent`, "a placed part");
     }
   }
   const parentOf = new Map(project.instances.map((x) => [x.id, x.parent]));
@@ -471,24 +494,36 @@ function checkIntegrity(project: Project): void {
     }
   }
   for (const [i, pattern] of project.patterns.entries()) {
-    need(instances.has(pattern.source), `$.patterns[${i}].source`, "an instance");
+    need(instances.has(pattern.source), `$.patterns[${i}].source`, "a placed part");
   }
   for (const [i, joint] of project.joints.entries()) {
     const known = (id: Id): boolean => instances.has(id) || patterns.has(id);
-    need(known(joint.host), `$.joints[${i}].host`, "an instance or pattern");
-    need(known(joint.guest), `$.joints[${i}].guest`, "an instance or pattern");
+    need(known(joint.host), `$.joints[${i}].host`, "a placed part or pattern");
+    need(known(joint.guest), `$.joints[${i}].guest`, "a placed part or pattern");
     if (joint.host === joint.guest) {
       throw new ProjectFormatError(`$.joints[${i}].guest`, "cannot be the same part as the host");
     }
   }
+  const repeated = new Set(project.patterns.map((p) => p.source));
+  const setOf = new Map<Id, string>();
   for (const [i, set] of project.matchSets.entries()) {
     const members = new Set<Id>();
     for (const [j, member] of set.members.entries()) {
-      need(instances.has(member), `$.matchSets[${i}].members[${j}]`, "an instance");
-      if (members.has(member)) {
-        throw new ProjectFormatError(`$.matchSets[${i}].members[${j}]`, "is listed twice");
+      const path = `$.matchSets[${i}].members[${j}]`;
+      need(instances.has(member), path, "a placed part");
+      if (members.has(member)) throw new ProjectFormatError(path, "is listed twice");
+      if (repeated.has(member)) {
+        throw new ProjectFormatError(
+          path,
+          "is repeated by a pattern, so its copies cannot be listed",
+        );
+      }
+      const other = setOf.get(member);
+      if (other !== undefined) {
+        throw new ProjectFormatError(path, `is already in the match set "${other}"`);
       }
       members.add(member);
+      setOf.set(member, set.name);
     }
   }
 }
@@ -512,6 +547,8 @@ function readProject(value: unknown): Project {
     matchSets: r.array("matchSets", readMatchSet),
     structures: r.array("structures", readStructure),
   };
+  const planing = r.optionalInteger("planingAllowance", 0, MAX_LENGTH);
+  if (planing !== undefined) project.planingAllowance = planing;
   r.done();
   checkIntegrity(project);
   return project;
@@ -519,7 +556,7 @@ function readProject(value: unknown): Project {
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
-/** Orders by Unicode code point (not UTF-16 unit), as decision D3 specifies. */
+/** Orders by Unicode code point (not UTF-16 unit), as ADR 012, decision D3 specifies. */
 function compareCodePoints(a: string, b: string): number {
   const left = Array.from(a, (ch) => ch.codePointAt(0) ?? 0);
   const right = Array.from(b, (ch) => ch.codePointAt(0) ?? 0);
@@ -574,10 +611,9 @@ export function validateProject(
         problem: new ProjectFormatError("$", "the project is nested too deeply to be read"),
       };
     }
-    if (error instanceof SyntaxError || error instanceof TypeError) {
-      return { problem: new ProjectFormatError("$", "the project cannot be read as plain data") };
-    }
-    throw error;
+    // Anything else came from reading the caller's value (a getter that throws, a proxy), which
+    // is bad input, not a fault in Kerf.
+    return { problem: new ProjectFormatError("$", "the project cannot be read as plain data") };
   }
 }
 

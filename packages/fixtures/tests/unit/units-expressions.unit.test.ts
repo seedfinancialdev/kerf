@@ -49,7 +49,7 @@ describe("formatLength: imperial display", () => {
   });
 
   milestone("M1", 'whole inches with fractions: 34-1/2" and 34-9/16"', () => {
-    expect(formatLength(34.5 * INCH, "imperial")).toBe('34-1/2"');
+    expect(formatLength((INCH * 69) / 2, "imperial")).toBe('34-1/2"');
     expect(formatLength(34 * INCH + 9 * (INCH / 16), "imperial")).toBe('34-9/16"');
   });
 });
