@@ -16,8 +16,11 @@ import { DEFAULT_MIN_OFFCUT, nestSheets, type SheetItem } from "./sheets";
 
 /** Edge trim on rough solid stock: 1/2" per end (Cut list & nesting, "Inputs"). */
 export const SOLID_END_TRIM: Len = INCH / 2;
-/** Extra thickness a bookmatch's resawn board needs for planing both faces (Cut list, "Match sets"). */
-export const BOOKMATCH_PLANING: Len = INCH / 16;
+/**
+ * Planing allowance per face when the project does not set one (maintainer ruling, ADR 013). A
+ * bookmatch's two parts have four faces between them to plane after resawing.
+ */
+export const DEFAULT_PLANING_ALLOWANCE: Len = INCH / 16;
 /** Edge trim on sheet goods defaults to none. */
 export const SHEET_TRIM: Len = 0;
 
@@ -210,13 +213,15 @@ function nestSolidStock(
     const width =
       sideBySide && !bookmatch ? widths.reduce((a, b) => a + b, 0) + kerfs : Math.max(...widths);
     const compositeThickness = bookmatch
-      ? members.reduce((sum, m) => sum + m.thickness, 0) + kerfs + BOOKMATCH_PLANING
+      ? members.reduce((sum, m) => sum + m.thickness, 0) +
+        kerfs +
+        2 * members.length * (project.planingAllowance ?? DEFAULT_PLANING_ALLOWANCE)
       : undefined;
     if (compositeThickness !== undefined && compositeThickness > stock.thickness) {
       diagnostics.push({
         severity: "warning",
         rule: "bookmatch-needs-thicker-stock",
-        message: `${set.name} needs a board ${fmt(compositeThickness)} thick (both parts, the saw gap and planing), and ${stock.name} is ${fmt(stock.thickness)} thick.`,
+        message: `${set.name} needs a board ${fmt(compositeThickness)} thick (the parts, the saw gap and planing every face), and ${stock.name} is ${fmt(stock.thickness)} thick.`,
         field: set.name,
       });
     }

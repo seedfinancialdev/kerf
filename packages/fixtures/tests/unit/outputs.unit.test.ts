@@ -10,7 +10,9 @@ import {
   machiningSetups,
   nest,
   type Project,
+  parseProject,
   type ShopProfile,
+  serializeProject,
   solve,
 } from "@kerf/core";
 import { describe, expect, it } from "vitest";
@@ -285,8 +287,8 @@ describe("nesting a project", () => {
     expect(stockOf(big).diagnostics.map((d) => d.rule)).toContain("match-set-too-large");
   });
 
-  it("a bookmatch is one resawn board: its thickness is 2 x part + kerf + 1/16in planing", () => {
-    // Two 3/4" door panels, 10" x 4": 3/4 + 3/4 + 1/8" kerf + 1/16" planing = 1-11/16" thick, and
+  it("a bookmatch is one resawn board: parts + saw gap + 1/16in planing on every face", () => {
+    // Two 3/4" door panels, 10" x 4": 3/4 + 3/4 + 1/8" kerf + 4 faces x 1/16" = 1-7/8" thick, and
     // one board of 10" plus 1/2" trim at each end = 11", not two boards' worth.
     const p = boards(
       [
@@ -303,7 +305,7 @@ describe("nesting a project", () => {
     const layout = result.nesting.boards[0];
     expect(layout?.matchSet).toBeDefined();
     expect(layout?.composite).toMatchObject({ length: 11 * INCH, width: 4 * INCH });
-    expect(layout?.compositeThickness).toBe((27 / 16) * INCH);
+    expect(layout?.compositeThickness).toBe((15 / 8) * INCH);
     expect(layout?.sequence.map((m) => m.name)).toEqual(["A", "B"]);
   });
 
@@ -341,5 +343,40 @@ describe("nesting a project", () => {
 
   it("keeps the wood stock id stable for the shopping list", () => {
     expect(WOOD_ID).toBeTruthy();
+  });
+});
+
+describe("planing allowance is set per project, per face", () => {
+  const doors = (planing?: number) => {
+    const p = boards(
+      [
+        { ...panel("A", "10in", "4in"), stock: "wood" },
+        { ...panel("B", "10in", "4in"), stock: "wood" },
+      ],
+      [at("A", "0in", "0in"), at("B", "0in", "5in")],
+      [],
+      { matchSets: [{ name: "Doors", type: "bookmatch", members: ["A", "B"] }] },
+    );
+    return planing === undefined ? p : { ...p, planingAllowance: planing };
+  };
+  const thickness = (planing?: number): number | undefined =>
+    solve(doors(planing), shop).nesting.boards[0]?.compositeThickness;
+
+  it("defaults to 1/16in a face, and follows the project's setting", () => {
+    expect(thickness()).toBe((15 / 8) * INCH); // 1-1/2 + 1/8 + 4 x 1/16
+    expect(thickness(INCH / 8)).toBe((17 / 8) * INCH); // 1-1/2 + 1/8 + 4 x 1/8
+    expect(thickness(0)).toBe((13 / 8) * INCH); // 1-1/2 + 1/8
+  });
+
+  it("is saved with the project and read back, and must be a sensible length", () => {
+    const text = serializeProject(doors(INCH / 8));
+    expect(parseProject(text).planingAllowance).toBe(INCH / 8);
+    expect(parseProject(serializeProject(doors())).planingAllowance).toBeUndefined();
+    expect(() =>
+      parseProject(text.replace(`"planingAllowance": ${INCH / 8}`, '"planingAllowance": -1')),
+    ).toThrow();
+    expect(() =>
+      parseProject(text.replace(`"planingAllowance": ${INCH / 8}`, '"planingAllowance": 0.5')),
+    ).toThrow();
   });
 });

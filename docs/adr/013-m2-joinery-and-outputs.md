@@ -58,7 +58,10 @@ implementation reads the spec more narrowly or more broadly than its text.
   Same-board sets must fit one sheet or board. **Bookmatch** (maintainer ruling, 1/16" planing
   allowance): on solid stock the members are one resawn board, so its length and width are the
   largest member's and its thickness is the members' thicknesses plus a saw gap between each plus
-  1/16"; a warning says when the stock is thinner than that. On sheet goods the parts nest as
+  the planing allowance on every face of every member (two per part), so two parts have four
+  faces. The allowance is **per face and set per project** (`planingAllowance`, optional in the
+  `.kerf` file, default 1/16"), because some people plane harder than others. A warning says when
+  the stock is thinner than the result. On sheet goods the parts nest as
   ordinary parts, with a warning.
 - **Machining setups:** keyed by tool, cut width, cut depth (and bit). A dado stack is used when
   its maximum width allows the cut, otherwise a router with a straight bit no wider than the cut,

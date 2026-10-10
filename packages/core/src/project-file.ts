@@ -101,6 +101,10 @@ class Reader {
     return value;
   }
 
+  optionalInteger(key: string, min: number, max: number): number | undefined {
+    return this.has(key) ? this.integer(key, min, max) : undefined;
+  }
+
   boolean(key: string): boolean {
     const value = this.take(key);
     if (typeof value !== "boolean")
@@ -530,6 +534,8 @@ function readProject(value: unknown): Project {
     matchSets: r.array("matchSets", readMatchSet),
     structures: r.array("structures", readStructure),
   };
+  const planing = r.optionalInteger("planingAllowance", 0, MAX_LENGTH);
+  if (planing !== undefined) project.planingAllowance = planing;
   r.done();
   checkIntegrity(project);
   return project;
