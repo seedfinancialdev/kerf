@@ -55,8 +55,11 @@ implementation reads the spec more narrowly or more broadly than its text.
 - **Match sets:** continuous grain on solid stock gets its own board: composite length = members
   (with allowance) + kerfs + trim at each end; `minBoardLength` is that length rounded up to a whole
   inch (the spec's "at least 34"" for 33-3/8"). On sheet goods the composite is one strip.
-  Same-board sets must fit one sheet or board. **Bookmatch is not solved**: its planing allowance
-  is not defined in the spec, so it warns (`not-solved-yet`) and nests as ordinary parts.
+  Same-board sets must fit one sheet or board. **Bookmatch** (maintainer ruling, 1/16" planing
+  allowance): on solid stock the members are one resawn board, so its length and width are the
+  largest member's and its thickness is the members' thicknesses plus a saw gap between each plus
+  1/16"; a warning says when the stock is thinner than that. On sheet goods the parts nest as
+  ordinary parts, with a warning.
 - **Machining setups:** keyed by tool, cut width, cut depth (and bit). A dado stack is used when
   its maximum width allows the cut, otherwise a router with a straight bit no wider than the cut,
   otherwise the setup is kept and marked `missing`.
@@ -142,11 +145,11 @@ sits in an edge rabbet.
   checklists, offcut inventory (needs fields the schema does not have; build plan data, M5).
 - Adjustable edge trim and minimum offcut: they are constants (sheet 0, solid 1/2" per end,
   6") because the project and shop schema have no field for them. The spec says both adjustable.
-- Bookmatch (planing allowance undefined, issue #42), nested assemblies (`Instance.parent` warns).
+- Nested assemblies (`Instance.parent` warns).
 
 ## Consequences
 
 - The bookcase and box golden JSON match exactly; 1,000-run property tests hold, including that
   every display mesh is manifold and every part is placed exactly once.
 - The "solve in under 100 ms" benchmark is gated from M2, not M4, so a regression is caught early.
-- Not covered: offcut inventory, bookmatch, nested assemblies (`Instance.parent` warns).
+- Not covered: offcut inventory, nested assemblies (`Instance.parent` warns).

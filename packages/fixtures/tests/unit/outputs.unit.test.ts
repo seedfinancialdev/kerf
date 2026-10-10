@@ -285,7 +285,9 @@ describe("nesting a project", () => {
     expect(stockOf(big).diagnostics.map((d) => d.rule)).toContain("match-set-too-large");
   });
 
-  it("a bookmatch is flagged as not solved yet and nested as ordinary parts", () => {
+  it("a bookmatch is one resawn board: its thickness is 2 x part + kerf + 1/16in planing", () => {
+    // Two 3/4" door panels, 10" x 4": 3/4 + 3/4 + 1/8" kerf + 1/16" planing = 1-11/16" thick, and
+    // one board of 10" plus 1/2" trim at each end = 11", not two boards' worth.
     const p = boards(
       [
         { ...panel("A", "10in", "4in"), stock: "wood" },
@@ -296,9 +298,27 @@ describe("nesting a project", () => {
       { matchSets: [{ name: "Doors", type: "bookmatch", members: ["A", "B"] }] },
     );
     const result = stockOf(p);
-    expect(result.diagnostics.find((d) => d.rule === "not-solved-yet")?.severity).toBe("warning");
+    expect(result.diagnostics.map((d) => d.rule)).not.toContain("not-solved-yet");
     expect(result.nesting.boards).toHaveLength(1);
-    expect(result.nesting.boards[0]?.matchSet).toBeUndefined();
+    const layout = result.nesting.boards[0];
+    expect(layout?.matchSet).toBeDefined();
+    expect(layout?.composite).toMatchObject({ length: 11 * INCH, width: 4 * INCH });
+    expect(layout?.compositeThickness).toBe((27 / 16) * INCH);
+    expect(layout?.sequence.map((m) => m.name)).toEqual(["A", "B"]);
+  });
+
+  it("warns when the stock is thinner than the bookmatch's composite thickness", () => {
+    const p = boards(
+      [
+        { ...panel("A", "10in", "4in"), stock: "wood" },
+        { ...panel("B", "10in", "4in"), stock: "wood" },
+      ],
+      [at("A", "0in", "0in"), at("B", "0in", "5in")],
+      [],
+      { matchSets: [{ name: "Doors", type: "bookmatch", members: ["A", "B"] }] },
+    );
+    const found = stockOf(p).diagnostics.find((d) => d.rule === "bookmatch-needs-thicker-stock");
+    expect(found?.severity).toBe("warning");
   });
 
   it("a continuous-grain set on sheet goods is cut as one strip and each member is placed in it", () => {

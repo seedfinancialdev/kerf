@@ -16,6 +16,8 @@ import { DEFAULT_MIN_OFFCUT, nestSheets, type SheetItem } from "./sheets";
 
 /** Edge trim on rough solid stock: 1/2" per end (Cut list & nesting, "Inputs"). */
 export const SOLID_END_TRIM: Len = INCH / 2;
+/** Extra thickness a bookmatch's resawn board needs for planing both faces (Cut list, "Match sets"). */
+export const BOOKMATCH_PLANING: Len = INCH / 16;
 /** Edge trim on sheet goods defaults to none. */
 export const SHEET_TRIM: Len = 0;
 
@@ -45,17 +47,6 @@ export function nestProject(
   const sheetCountByStock: Record<Id, number> = {};
   const kerf = shop.kerf;
   const byInstance = new Map(parts.map((p) => [p.instance.id, p]));
-
-  for (const set of project.matchSets) {
-    if (set.type === "bookmatch") {
-      diagnostics.push({
-        severity: "warning",
-        rule: "not-solved-yet",
-        message: `${set.name} is a bookmatch; its composite thickness needs a planing allowance the spec does not define, so it is nested as ordinary parts.`,
-        field: set.name,
-      });
-    }
-  }
 
   for (const stock of project.stock) {
     const mine = parts.filter((p) => p.part.stock === stock.id);
@@ -108,7 +99,16 @@ function nestSheetStock(
   const done = new Set<Id>();
 
   for (const { set, members } of setsOn(project, stock, byInstance)) {
-    if (set.type === "bookmatch") continue; // nested as ordinary parts (warned)
+    if (set.type === "bookmatch") {
+      // A resawn board of solid wood only; on sheet goods the parts are nested as ordinary parts.
+      diagnostics.push({
+        severity: "warning",
+        rule: "bookmatch-needs-solid-stock",
+        message: `${set.name} is a bookmatch, which is cut from one resawn solid board; on ${stock.name} its parts are nested as ordinary parts.`,
+        field: set.name,
+      });
+      continue;
+    }
     if (mixedStock(set, members, stock)) {
       diagnostics.push({
         severity: "error",
@@ -187,7 +187,6 @@ function nestSolidStock(
   const setLayouts = new Map<Id, BoardLayout>();
 
   for (const { set, members } of setsOn(project, stock, byInstance)) {
-    if (set.type === "bookmatch") continue;
     if (mixedStock(set, members, stock)) {
       diagnostics.push({
         severity: "error",
@@ -201,11 +200,26 @@ function nestSolidStock(
 
     const lengths = members.map((m) => m.length + stock.allowance.length);
     const widths = members.map((m) => m.width);
+    const bookmatch = set.type === "bookmatch";
     const sideBySide = set.type === "continuousGrain" && set.axis === "width";
     const kerfs = kerf * (members.length - 1);
-    // End to end: lengths add; side by side: the widest length, and widths add.
-    const length = sideBySide ? Math.max(...lengths) : lengths.reduce((a, b) => a + b, 0) + kerfs;
-    const width = sideBySide ? widths.reduce((a, b) => a + b, 0) + kerfs : Math.max(...widths);
+    // End to end: lengths add; side by side: the widest length, and widths add. A bookmatch is
+    // the members stacked in thickness from one board: its length and width are the largest's.
+    const length =
+      sideBySide || bookmatch ? Math.max(...lengths) : lengths.reduce((a, b) => a + b, 0) + kerfs;
+    const width =
+      sideBySide && !bookmatch ? widths.reduce((a, b) => a + b, 0) + kerfs : Math.max(...widths);
+    const compositeThickness = bookmatch
+      ? members.reduce((sum, m) => sum + m.thickness, 0) + kerfs + BOOKMATCH_PLANING
+      : undefined;
+    if (compositeThickness !== undefined && compositeThickness > stock.thickness) {
+      diagnostics.push({
+        severity: "warning",
+        rule: "bookmatch-needs-thicker-stock",
+        message: `${set.name} needs a board ${fmt(compositeThickness)} thick (both parts, the saw gap and planing), and ${stock.name} is ${fmt(stock.thickness)} thick.`,
+        field: set.name,
+      });
+    }
     const composite = length + 2 * SOLID_END_TRIM;
     const minimum = Math.ceil(composite / INCH) * INCH;
 
@@ -233,6 +247,7 @@ function nestSolidStock(
       matchSet: set.id,
       composite: { length: composite, width, widthAllowance: stock.allowance.width },
       minBoardLength: minimum,
+      ...(compositeThickness !== undefined ? { compositeThickness } : {}),
       sequence: members.map((m, i) => ({ sequence: i + 1, of: members.length, name: m.part.name })),
     });
   }

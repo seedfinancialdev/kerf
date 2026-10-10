@@ -149,6 +149,8 @@ export interface BoardLayout {
   /** Parts joined end to end, plus kerfs and trim, cut from one board. */
   composite?: { length: Len; width: Len; widthAllowance: Len };
   minBoardLength?: Len;
+  /** A bookmatch only: thickness of the resawn board (parts, saw gap and planing allowance). */
+  compositeThickness?: Len;
   /** The standard length of the board the parts are cut from. */
   boardLength?: Len;
   /** Set only when several match sets are cut from one board: layouts of the same stock with the same
