@@ -9,15 +9,15 @@
   {
     "id": "form-bays-rounding",
     "file": "packages/core/src/structures/openings.ts",
-    "find": "snap(add(mul(bay, rational(BigInt(k + 1))), mul(this.tn, rational(BigInt(k)))), b.units)",
-    "replace": "Number(add(mul(bay, rational(BigInt(k + 1))), mul(this.tn, rational(BigInt(k)))).num / 1n)",
+    "find": "snapToGrid(\n        add(mul(bay, rational(BigInt(k + 1))), mul(this.thicknessExact, rational(BigInt(k)))),\n        b.units,\n      ),",
+    "replace": "Number(\n        add(mul(bay, rational(BigInt(k + 1))), mul(this.thicknessExact, rational(BigInt(k)))).num / 1n,\n      ),",
     "why": "partition faces are truncated instead of snapped half to even"
   },
   {
     "id": "form-back-position",
     "file": "packages/core/src/structures/case.ts",
-    "find": "[T, \"0in\", \"0in\"], { name: \"Back\", orientation: 16 });",
-    "replace": "[\"0in\", \"0in\", \"0in\"], { name: \"Back\", orientation: 16 });",
+    "find": "b.instance(\"back\", \"back\", def, [T, \"0in\", \"0in\"], {",
+    "replace": "b.instance(\"back\", \"back\", def, [\"0in\", \"0in\", \"0in\"], {",
     "why": "the inset back starts at the outside of the case"
   },
   {
