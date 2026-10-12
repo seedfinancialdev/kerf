@@ -9,6 +9,8 @@
 import {
   attachPartIn,
   buildCutList,
+  type CutList,
+  type CutListLine,
   detachPartIn,
   generateStructures,
   generateStructuresChecked,
@@ -17,7 +19,6 @@ import {
   nest,
   type Opening,
   type Project,
-  ProjectFormatError,
   parseProject,
   projectFromTemplate,
   serializeProject,
@@ -30,6 +31,12 @@ import { describe, expect, it } from "vitest";
 import { applyBookcaseEdit, bookcaseEdit } from "../../src/edits";
 import { loadExpected, loadProject, loadShopProfile, withParam } from "../../src/index";
 
+/** Narrows a lookup that the test itself guarantees; a miss is a test bug, said clearly. */
+function must<T>(value: T | undefined | null, what = "value"): T {
+  if (value === undefined || value === null) throw new Error(`test fixture has no ${what}`);
+  return value;
+}
+
 const shop = loadShopProfile();
 const form = (): Project => loadProject("bookcase", "structure");
 const box = (): Project => loadProject("box", "structure");
@@ -39,18 +46,18 @@ const withOpenings = (
   openings: Opening[],
   options: Record<string, string | boolean> = {},
 ): Project => {
-  const s = p.structures[0]!;
+  const s = must(p.structures[0]);
   return { ...p, structures: [{ ...s, openings, options: { ...s.options, ...options } }] };
 };
-const rootId = () => form().structures[0]!.openings[0]!.id;
+const rootId = () => must(must(form().structures[0]).openings[0]).id;
 const division = (d: NonNullable<Opening["division"]>, children: Opening[] = []): Project =>
   withOpenings(form(), [{ id: rootId(), division: d, children }]);
 const opt = (p: Project, o: Record<string, string | boolean>): Project => {
-  const s = p.structures[0]!;
+  const s = must(p.structures[0]);
   return { ...p, structures: [{ ...s, options: { ...s.options, ...o } }] };
 };
 const without = (p: Project, ...keys: string[]): Project => {
-  const s = p.structures[0]!;
+  const s = must(p.structures[0]);
   const options = { ...s.options };
   for (const k of keys) delete options[k];
   return { ...p, structures: [{ ...s, options }] };
@@ -61,7 +68,7 @@ const shelvesIn = (id: string, count = "1"): Opening => ({
   children: [],
 });
 const inst = (p: Project) => solveModel(generateStructures(p, shop)).instances;
-const at = (p: Project, name: string) => inst(p).find((i) => i.name === name)!;
+const at = (p: Project, name: string) => must(inst(p).find((i) => i.name === name));
 const diags = (p: Project) =>
   generateStructuresChecked(p, shop).diagnostics.map((d) => `${d.severity}:${d.rule}@${d.field}`);
 const errs = (p: Project) =>
@@ -199,7 +206,7 @@ describe("bays and partitions (positions by hand)", () => {
   });
   it("two openings on a case: the second is reported", () => {
     const f = form();
-    const s = f.structures[0]!;
+    const s = must(f.structures[0]);
     const p = {
       ...f,
       structures: [
@@ -270,7 +277,7 @@ describe("rules not yet pinned", () => {
   });
   it("a detached board edited by hand is not warned", () => {
     const made = generateStructures(form(), shop);
-    const d = detachPartIn(made, made.parts.find((p) => p.source?.role === "top")!.id);
+    const d = detachPartIn(made, must(made.parts.find((p) => p.source?.role === "top")).id);
     const edited = { ...d, parts: d.parts.map((p) => (p.detached ? { ...p, length: "10in" } : p)) };
     expect(generateStructuresChecked(edited, shop).diagnostics.map((x) => x.rule)).not.toContain(
       "generated-part-edited",
@@ -278,7 +285,7 @@ describe("rules not yet pinned", () => {
   });
   it("joint-dropped: a detached wall whose placement was deleted loses its 3 joints and the grain wrap", () => {
     const made = generateStructures(box(), shop);
-    const front = made.parts.find((p) => p.source?.role === "front")!;
+    const front = must(made.parts.find((p) => p.source?.role === "front"));
     const saved = parseProject(serializeProject(detachPartIn(made, front.id)));
     const gone = { ...saved, instances: saved.instances.filter((i) => i.def !== front.id) };
     const r = generateStructuresChecked(gone, shop);
@@ -301,7 +308,7 @@ describe("rules not yet pinned", () => {
   });
   it("a second structure's boards are prefixed Case 2 / Box 2", () => {
     const f = form();
-    const s = f.structures[0]!;
+    const s = must(f.structures[0]);
     const second = {
       ...s,
       id: "01K7M3Q8ZD00000000B1000090",
@@ -323,18 +330,18 @@ describe("rules not yet pinned", () => {
     ]);
   });
   it("blank box groove sits one bottom thickness up (1/4in)", () => {
-    const t = TEMPLATES.find((x) => x.name === "Blank box")!;
+    const t = must(TEMPLATES.find((x) => x.name === "Blank box"));
     const bs = box().stock;
     const p = projectFromTemplate(t, {
       stock: bs,
-      stockFor: { wallStock: bs[0]!.id, bottomStock: bs[1]!.id },
+      stockFor: { wallStock: must(bs[0]).id, bottomStock: must(bs[1]).id },
     });
     expect(at(p, "Bottom").position.z).toBe(50800);
   });
 });
 
 describe("detach", () => {
-  const shelfId = (p: Project) => p.parts.find((x) => x.source?.role === "shelf")!.id;
+  const shelfId = (p: Project) => must(p.parts.find((x) => x.source?.role === "shelf")).id;
   const shelvesZ = (p: Project) =>
     inst(p)
       .filter((i) => i.name.startsWith("Shelf"))
@@ -357,14 +364,14 @@ describe("detach", () => {
   });
   it("detaching the top leaves the shelves following the form", () => {
     const made = generateStructures(form(), shop);
-    const d = detachPartIn(made, made.parts.find((p) => p.source?.role === "top")!.id);
+    const d = detachPartIn(made, must(made.parts.find((p) => p.source?.role === "top")).id);
     const a = shelvesZ(withParam(d, "height", "60in"));
     const b = shelvesZ(withParam(form(), "height", "60in"));
     expect(a).toEqual(b);
   });
   it("detach then attach one of two leaves the other detached; unknown id is a RangeError", () => {
     const base = generateStructures(form(), shop);
-    const top = base.parts.find((p) => p.source?.role === "top")!.id;
+    const top = must(base.parts.find((p) => p.source?.role === "top")).id;
     const one = attachPartIn(detachPartIn(detachPartIn(base, shelfId(base)), top), top);
     expect(one.parts.find((p) => p.id === shelfId(base))?.detached).toBe(true);
     expect(() => detachPartIn(base, "01K7M3Q8ZD0000000000000000")).toThrow(RangeError);
@@ -383,7 +390,7 @@ describe("detach", () => {
       fc.property(bookcaseEdit, fc.constantFrom(...roles), (edit, role) => {
         const p = applyBookcaseEdit(form(), edit);
         const made = generateStructures(p, shop);
-        const id = made.parts.find((x) => x.source?.role === role)!.id;
+        const id = must(made.parts.find((x) => x.source?.role === role)).id;
         const d = detachPartIn(made, id);
         const key = (q: Project) =>
           JSON.stringify(
@@ -415,7 +422,7 @@ describe("saving refusals name the first stranded reference", () => {
   };
   const base = () => {
     const made = generateStructures(form(), shop);
-    const stock = made.stock[0]!.id;
+    const stock = must(made.stock[0]).id;
     const part = { ...handPart, stock };
     const inst0 = {
       id: "01K7M3Q8ZD00000000B1000961",
@@ -428,8 +435,8 @@ describe("saving refusals name the first stranded reference", () => {
       made,
       part,
       inst0,
-      top: made.instances.find((i) => i.name === "Top")!,
-      shelf: made.patterns[0]!,
+      top: must(made.instances.find((i) => i.name === "Top")),
+      shelf: must(made.patterns[0]),
     };
   };
   it("host", () => {
@@ -525,14 +532,14 @@ describe("stock names", () => {
 
 describe("templates", () => {
   const stock = form().stock;
-  const find = (n: string) => TEMPLATES.find((t) => t.name === n)!;
+  const find = (n: string) => must(TEMPLATES.find((t) => t.name === n));
   it("bookcase template: full lines", () => {
     const project = projectFromTemplate(find("Bookcase"), {
       stock,
-      stockFor: { carcaseStock: stock[0]!.id, backStock: stock[1]!.id },
+      stockFor: { carcaseStock: must(stock[0]).id, backStock: must(stock[1]).id },
     });
-    const exp = loadExpected<{ lines: any[] }>("bookcase", "cutlist");
-    const strip = (l: any) => ({
+    const exp = loadExpected<CutList>("bookcase", "cutlist");
+    const strip = (l: CutListLine) => ({
       length: l.length,
       width: l.width,
       quantity: l.quantity,
@@ -545,19 +552,19 @@ describe("templates", () => {
     const bs = box().stock;
     const project = projectFromTemplate(find("Keepsake box"), {
       stock: bs,
-      stockFor: { wallStock: bs[0]!.id, bottomStock: bs[1]!.id },
+      stockFor: { wallStock: must(bs[0]).id, bottomStock: must(bs[1]).id },
     });
-    const exp = loadExpected<any>("box", "cutlist");
-    const norm = (c: any) => ({
+    const exp = loadExpected<CutList>("box", "cutlist");
+    const norm = (c: CutList) => ({
       lines: c.lines,
-      blocks: c.blocks.map((b: any) => ({ ...b, matchSet: "" })),
+      blocks: c.blocks.map((b) => ({ ...b, matchSet: "" })),
     });
     expect(norm(buildCutList(project))).toEqual(norm(exp));
   });
   it("bookcase template: golden sheets and setups, not only the cut list", () => {
     const project = projectFromTemplate(find("Bookcase"), {
       stock,
-      stockFor: { carcaseStock: stock[0]!.id, backStock: stock[1]!.id },
+      stockFor: { carcaseStock: must(stock[0]).id, backStock: must(stock[1]).id },
     });
     const layouts = loadExpected<{ sheetCountByStock: Record<string, number> }>(
       "bookcase",
@@ -571,7 +578,7 @@ describe("templates", () => {
     const bs = box().stock;
     const project = projectFromTemplate(find("Keepsake box"), {
       stock: bs,
-      stockFor: { wallStock: bs[0]!.id, bottomStock: bs[1]!.id },
+      stockFor: { wallStock: must(bs[0]).id, bottomStock: must(bs[1]).id },
     });
     const rules = [
       ...new Set(
@@ -586,7 +593,7 @@ describe("templates", () => {
     const s = form().stock;
     const p = projectFromTemplate(find("Blank case"), {
       stock: s,
-      stockFor: { carcaseStock: s[0]!.id, backStock: s[1]!.id },
+      stockFor: { carcaseStock: must(s[0]).id, backStock: must(s[1]).id },
     });
     expect(generateStructures(p, shop).parts.map((x) => x.name)).toContain("Back");
   });
@@ -596,12 +603,12 @@ describe("templates", () => {
       name: "Mine",
       structureId: "01K7M3Q8ZD00000000B1000777",
       stock,
-      stockFor: { carcaseStock: stock[0]!.id },
+      stockFor: { carcaseStock: must(stock[0]).id },
     });
     expect(p.name).toBe("Mine");
-    expect(p.structures[0]!.id).toBe("01K7M3Q8ZD00000000B1000777");
-    p.params[0]!.expr = "1in";
-    expect(t.params[0]!.expr).toBe("36in");
+    expect(must(p.structures[0]).id).toBe("01K7M3Q8ZD00000000B1000777");
+    must(p.params[0]).expr = "1in";
+    expect(must(t.params[0]).expr).toBe("36in");
     expect(t.structure.options.carcaseStock).toBeUndefined();
   });
   it("every template with stock chosen solves with no errors", () => {
@@ -609,8 +616,8 @@ describe("templates", () => {
       const isBox = t.structure.type === "box";
       const s = isBox ? box().stock : stock;
       const stockFor = isBox
-        ? { wallStock: s[0]!.id, bottomStock: s[1]!.id }
-        : { carcaseStock: s[0]!.id, backStock: s[1]!.id };
+        ? { wallStock: must(s[0]).id, bottomStock: must(s[1]).id }
+        : { carcaseStock: must(s[0]).id, backStock: must(s[1]).id };
       const p = projectFromTemplate(t, { stock: s, stockFor });
       expect(errs(p), t.name).toEqual([]);
     }
@@ -639,7 +646,7 @@ describe("options", () => {
     ).toEqual([]);
   });
   it("box without a bottom needs no bottom stock", () => {
-    const s = box().structures[0]!;
+    const s = must(box().structures[0]);
     const options: Record<string, string | boolean> = { ...s.options, bottom: "none" };
     delete options.bottomStock;
     const p = { ...box(), structures: [{ ...s, options }] };
@@ -665,11 +672,11 @@ describe("options", () => {
 describe("ids", () => {
   it("two structures never share an id", () => {
     const f = form();
-    const s = f.structures[0]!;
+    const s = must(f.structures[0]);
     const second = {
       ...s,
       id: "01K7M3Q8ZD00000000B1000060",
-      openings: [{ ...s.openings[0]!, id: "01K7M3Q8ZD00000000B1000061" }],
+      openings: [{ ...must(s.openings[0]), id: "01K7M3Q8ZD00000000B1000061" }],
     };
     const m = generateStructures({ ...f, structures: [s, second] }, shop);
     const ids = [...m.parts, ...m.instances, ...m.patterns, ...m.joints].map((x) => x.id);

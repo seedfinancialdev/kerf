@@ -5,7 +5,7 @@
 // What is saved of a project with structures: its intent. Kept apart from the generators because
 // the file writer needs it and the generators need the solver, which reads the file format.
 
-import type { Id, Project } from "../types";
+import type { Project } from "../types";
 
 /**
  * The project with everything generated and not detached removed: what is saved, and what
@@ -14,7 +14,6 @@ import type { Id, Project } from "../types";
 export function withoutGenerated(project: Project): Project {
   const detached = new Set(project.parts.filter((p) => p.detached).map((p) => p.id));
   const parts = project.parts.filter((p) => p.source === undefined || p.detached);
-  const keptParts = new Set(parts.map((p) => p.id));
   // Hand-made copies of a generated board are kept: the board regenerates with the same id, so
   // the copy still points at it. Saving refuses them (see `strandedReferences`).
   const instances = project.instances.filter(
