@@ -9,7 +9,7 @@ export {
   detachPartIn,
   detachReferencedBoards,
 } from "./detach";
-export { generate } from "./generate";
+export { generate, generateFrom } from "./generate";
 export { generatedId } from "./ids";
 export { strandedReferences, withoutGenerated } from "./strip";
 export { projectFromTemplate, STOCK_OPTIONS, TEMPLATES } from "./templates";

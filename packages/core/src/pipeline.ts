@@ -29,10 +29,9 @@ import type {
 import { buildCutListFrom, type CutPart, cutParts } from "./outputs/cutlist";
 import { buildSetups } from "./outputs/machining";
 import { validateAssembly } from "./outputs/validate";
-import { validateProject } from "./project-file";
 import { shopProblem } from "./shop";
 import { invalidProjectModel, type SolvedModel, solveValidatedModel } from "./solve/model";
-import { generate } from "./structures";
+import { generateFrom } from "./structures";
 import type { Id, Project, ShopProfile } from "./types";
 
 const NO_CUTS: CutList = { lines: [], blocks: [] };
@@ -77,18 +76,13 @@ export function runPipeline(input: unknown, shop?: ShopProfile): Pipeline {
   // What was found before anything went wrong; an unexpected failure adds to it, never replaces it.
   let gathered: Diagnostic[] = [];
   try {
-    const checked = validateProject(input);
-    if (checked.problem) {
-      return failed(invalidProjectModel(checked.problem.path, checked.problem.message));
-    }
     // Structures generate ordinary parts, joints and match sets on every solve; the generated
     // project is validated like any other so nothing downstream can see an invalid object.
-    const generated = generate(checked.project, shop);
-    const whole = validateProject(generated.project);
-    if (whole.problem) {
-      return failed(invalidProjectModel(whole.problem.path, whole.problem.message));
+    const generated = generateFrom(input, shop);
+    if (!generated.ok) {
+      return failed(invalidProjectModel(generated.problem.path, generated.problem.message));
     }
-    const project = whole.project;
+    const project = generated.project;
     const model = solveValidatedModel(project);
     model.diagnostics.unshift(...generated.diagnostics);
     gathered = model.diagnostics;

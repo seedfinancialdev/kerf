@@ -15,6 +15,7 @@ import { ExpressionError } from "../expr/errors";
 import { evaluateQuantity, type Quantity } from "../expr/evaluate";
 import { snapToGrid, type UnitSystem } from "../length";
 import type { Diagnostic } from "../outputs";
+import { type ProjectFormatError, validateProject } from "../project-file";
 import { div, type Rational, rational } from "../rational";
 import type { RuleId } from "../rules";
 import { solveModel } from "../solve/model";
@@ -863,8 +864,63 @@ function generateBox(b: Builder): void {
 
 // ---- generating ---------------------------------------------------------------------------------
 
-/** Runs the generators. Pure: the same project always gives the same result, ids included. */
+/**
+ * What generating from a project came to: the checked project with everything its structures
+ * make, or the problem with the project itself (the input, or what was generated from it).
+ */
+export type Generation =
+  | { ok: true; project: Project; diagnostics: Diagnostic[] }
+  | { ok: false; problem: ProjectFormatError };
+
+/**
+ * Results already made, by the object they were made from and the bits the shop owns. A solve
+ * generates on every edit; an unchanged project (the same object) is not worked out again.
+ * Callers never change a project in place, so sharing the result is safe.
+ */
+const generatedFor = new WeakMap<object, Map<string, Generation>>();
+
+/**
+ * Checks `input`, runs the generators, and checks what they made, so nothing downstream sees an
+ * invalid project. Pure and deterministic; the result for one object is made once.
+ */
+export function generateFrom(input: unknown, shop?: ShopProfile): Generation {
+  const key = JSON.stringify(shopBits(shop));
+  const memo = typeof input === "object" && input !== null ? input : undefined;
+  const cached = memo && generatedFor.get(memo)?.get(key);
+  if (cached) return cached;
+
+  const checked = validateProject(input);
+  let result: Generation;
+  if (checked.problem) result = { ok: false, problem: checked.problem };
+  else {
+    const made = generate(checked.project, shop);
+    const whole = validateProject(made.project);
+    result = whole.problem
+      ? { ok: false, problem: whole.problem }
+      : { ok: true, project: whole.project, diagnostics: made.diagnostics };
+  }
+  if (memo) {
+    const byShop = generatedFor.get(memo) ?? new Map<string, Generation>();
+    byShop.set(key, result);
+    generatedFor.set(memo, byShop);
+  }
+  return result;
+}
+
+/** The roundover bits a shop owns: all of the shop profile that generation reads. */
+function shopBits(shop: ShopProfile | undefined): number[] {
+  return (shop?.tools ?? []).flatMap((t) => (t.type === "router" ? t.roundoverBits : []));
+}
+
+/** Runs the generators on a checked project. Pure: the same project always gives the same result. */
 export function generate(
+  project: Project,
+  shop?: ShopProfile,
+): { project: Project; diagnostics: Diagnostic[] } {
+  return work(project, shop);
+}
+
+function work(
   project: Project,
   shop?: ShopProfile,
 ): { project: Project; diagnostics: Diagnostic[] } {
@@ -878,12 +934,18 @@ export function generate(
   const roundoverBits = (shop?.tools ?? []).flatMap((t) =>
     t.type === "router" ? t.roundoverBits : [],
   );
-  let scope: Record<string, Quantity> = {};
-  try {
-    scope = solveModel(base).scope;
-  } catch {
-    scope = {};
-  }
+  // Counts and sizes are read from the parameters alone, so a hand-made part that points at a
+  // board the form is about to make cannot stop them being worked out.
+  const parameters: Project = {
+    ...base,
+    parts: [],
+    instances: [],
+    patterns: [],
+    joints: [],
+    matchSets: [],
+    structures: [],
+  };
+  const scope: Record<string, Quantity> = solveModel(parameters).scope;
   for (const [index, structure] of project.structures.entries()) {
     // A second structure's boards are told apart by number so every name stays unique.
     const prefix = index === 0 ? "" : `${structure.type === "case" ? "Case" : "Box"} ${index + 1} `;

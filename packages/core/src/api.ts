@@ -15,8 +15,7 @@ import type {
   SolveResult,
 } from "./outputs";
 import { runPipeline, solveProject } from "./pipeline";
-import { validateProject } from "./project-file";
-import { detachedPart, generate } from "./structures";
+import { detachedPart, generateFrom } from "./structures";
 import type { Id, PartDef, Project, ShopProfile } from "./types";
 
 // The whole pipeline (steps 1-6).
@@ -93,9 +92,9 @@ export function generateStructuresChecked(
   project: Project,
   shop: ShopProfile,
 ): { project: Project; diagnostics: Diagnostic[] } {
-  const checked = validateProject(project);
-  if (checked.problem) throw checked.problem;
-  return generate(checked.project, shop);
+  const generated = generateFrom(project, shop);
+  if (!generated.ok) throw generated.problem;
+  return { project: generated.project, diagnostics: generated.diagnostics };
 }
 
 /**
