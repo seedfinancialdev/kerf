@@ -8,6 +8,7 @@ import {
   buildCutList,
   INCH,
   machiningSetups,
+  matchSetBoard,
   nest,
   type Project,
   type ShopProfile,
@@ -302,8 +303,8 @@ describe("nesting a project", () => {
     expect(result.nesting.boards).toHaveLength(1);
     const layout = result.nesting.boards[0];
     expect(layout?.matchSet).toBeDefined();
-    expect(layout?.composite).toMatchObject({ length: 11 * INCH, width: 4 * INCH });
-    expect(layout?.compositeThickness).toBe((INCH * 15) / 8);
+    expect(matchSetBoard(layout)?.composite).toMatchObject({ length: 11 * INCH, width: 4 * INCH });
+    expect(matchSetBoard(layout)?.compositeThickness).toBe((INCH * 15) / 8);
     expect(layout?.sequence.map((m) => m.name)).toEqual(["A", "B"]);
   });
 
@@ -387,7 +388,7 @@ describe("planing allowance is set per project, per face", () => {
     return planing === undefined ? p : { ...p, planingAllowance: planing };
   };
   const thickness = (planing?: number): number | undefined =>
-    solve(doors(planing), shop).nesting.boards[0]?.compositeThickness;
+    matchSetBoard(solve(doors(planing), shop).nesting.boards[0])?.compositeThickness;
 
   it("defaults to 1/16in a face, and follows the project's setting", () => {
     expect(thickness()).toBe((INCH * 15) / 8); // 1-1/2 + 1/8 + 4 x 1/16

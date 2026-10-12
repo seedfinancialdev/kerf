@@ -2,16 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-import {
-  deriveJoints,
-  type Frame,
-  INCH,
-  type Project,
-  type RemovalPrimitive,
-  solve,
-  solveModel,
-  toParent,
-} from "@kerf/core";
+import { INCH, type Project, type RemovalPrimitive, solve, solveModel } from "@kerf/core";
+import { deriveJoints, type Frame, toParent } from "@kerf/core/internal";
 import { describe, expect, it } from "vitest";
 import { loadProject, loadShopProfile, withParam } from "../../src/index";
 

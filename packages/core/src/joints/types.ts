@@ -9,6 +9,7 @@ import { evaluateQuantity, type Quantity } from "../expr/evaluate";
 import { gridSize, LengthRangeError, snapToGrid, type UnitSystem } from "../length";
 import type { Diagnostic, RemovalPrimitive } from "../outputs";
 import { div, floor, type Rational, rational, toSafeInteger } from "../rational";
+import type { RuleId } from "../rules";
 import type { Frame } from "../solve/assembly";
 import type { SolvedModel } from "../solve/model";
 import type { Id, Joint, Len } from "../types";
@@ -71,12 +72,12 @@ export interface DeriveContext {
   length(joint: Joint, key: string, fallback?: Len): Len | undefined;
   expression(joint: Joint, key: string): Quantity | undefined;
   error(
-    rule: string,
+    rule: RuleId,
     message: string,
     extra?: Partial<Omit<Diagnostic, "severity" | "rule" | "message">>,
   ): void;
   warn(
-    rule: string,
+    rule: RuleId,
     message: string,
     extra?: Partial<Omit<Diagnostic, "severity" | "rule" | "message">>,
   ): void;

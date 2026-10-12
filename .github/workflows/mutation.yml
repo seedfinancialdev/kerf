@@ -1,0 +1,22 @@
+# Kerf — free, open-source woodworking design tool
+# Copyright (C) 2026 Kerf contributors
+# SPDX-License-Identifier: GPL-3.0-only
+
+name: Mutation testing
+
+# Slow, so it runs on demand rather than on every push. See docs/testing/MUTATION_TESTING.md.
+on:
+  workflow_dispatch:
+
+jobs:
+  mutate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm mutate

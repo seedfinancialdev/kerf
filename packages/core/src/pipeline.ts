@@ -29,9 +29,9 @@ import type {
 import { buildCutListFrom, type CutPart, cutParts } from "./outputs/cutlist";
 import { buildSetups } from "./outputs/machining";
 import { validateAssembly } from "./outputs/validate";
-import { validateProject } from "./project-file";
 import { shopProblem } from "./shop";
 import { invalidProjectModel, type SolvedModel, solveValidatedModel } from "./solve/model";
+import { generateFrom } from "./structures";
 import type { Id, Project, ShopProfile } from "./types";
 
 const NO_CUTS: CutList = { lines: [], blocks: [] };
@@ -57,6 +57,16 @@ export interface Pipeline {
   stopped: boolean;
 }
 
+/** What a fault in Kerf itself looks like to the user: said plainly, with a request to report it. */
+function internalError(error: unknown): Diagnostic {
+  const reason = error instanceof Error ? `${error.name}: ${error.message}` : "an unexpected value";
+  return {
+    severity: "error",
+    rule: "internal-error",
+    message: `Kerf could not finish solving this project (${reason}). This is a bug; please report it.`,
+  };
+}
+
 const hasError = (list: Diagnostic[]): boolean => list.some((d) => d.severity === "error");
 
 function failed(model: SolvedModel): Pipeline {
@@ -72,16 +82,19 @@ function failed(model: SolvedModel): Pipeline {
 }
 
 /** Steps 1-5 and the cut list. Never throws. */
-export function runPipeline(input: unknown): Pipeline {
+export function runPipeline(input: unknown, shop?: ShopProfile): Pipeline {
   // What was found before anything went wrong; an unexpected failure adds to it, never replaces it.
   let gathered: Diagnostic[] = [];
   try {
-    const checked = validateProject(input);
-    if (checked.problem) {
-      return failed(invalidProjectModel(checked.problem.path, checked.problem.message));
+    // Structures generate ordinary parts, joints and match sets on every solve; the generated
+    // project is validated like any other so nothing downstream can see an invalid object.
+    const generated = generateFrom(input, shop);
+    if (!generated.ok) {
+      return failed(invalidProjectModel(generated.problem.path, generated.problem.message));
     }
-    const project = checked.project;
+    const project = generated.project;
     const model = solveValidatedModel(project);
+    model.diagnostics.unshift(...generated.diagnostics);
     gathered = model.diagnostics;
     if (model.diagnostics.some((d) => d.rule === "internal-error")) return failed(model);
 
@@ -103,17 +116,8 @@ export function runPipeline(input: unknown): Pipeline {
       stopped,
     };
   } catch (error) {
-    const reason =
-      error instanceof Error ? `${error.name}: ${error.message}` : "an unexpected value";
     return failed({
-      diagnostics: [
-        ...gathered,
-        {
-          severity: "error",
-          rule: "internal-error",
-          message: `Kerf could not finish solving this project (${reason}). This is a bug; please report it.`,
-        },
-      ],
+      diagnostics: [...gathered, internalError(error)],
       params: {},
       scope: {},
       parts: [],
@@ -165,8 +169,9 @@ function readShop(shop: unknown): { shop?: ShopProfile; problem?: Diagnostic } {
 
 /** The whole pipeline. Never throws: anything unexpected is an "internal-error" diagnostic. */
 export function solveProject(project: Project, shop: ShopProfile): SolveResult {
-  const p = runPipeline(project);
+  // The shop is read once, first: structures use it too (a roundover taken from the bits owned).
   const { shop: copy, problem: shopIssue } = readShop(shop);
+  const p = runPipeline(project, copy);
   const diagnostics: Diagnostic[] = [...p.diagnostics];
   if (shopIssue) diagnostics.push(shopIssue);
 
@@ -179,13 +184,7 @@ export function solveProject(project: Project, shop: ShopProfile): SolveResult {
       diagnostics.push(...nested.diagnostics);
       setups = buildSetups(p.project, p.parts, p.derived, copy);
     } catch (error) {
-      const reason =
-        error instanceof Error ? `${error.name}: ${error.message}` : "an unexpected value";
-      diagnostics.push({
-        severity: "error",
-        rule: "internal-error",
-        message: `Kerf could not finish solving this project (${reason}). This is a bug; please report it.`,
-      });
+      diagnostics.push(internalError(error));
     }
   }
 

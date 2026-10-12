@@ -9,9 +9,10 @@
 import {
   buildCutList,
   deriveJointCuts,
+  generateStructures,
   INCH,
-  layoutDovetail,
   MAX_LENGTH,
+  matchSetBoard,
   type Project,
   ProjectFormatError,
   parseProject,
@@ -19,6 +20,7 @@ import {
   solve,
   solveModel,
 } from "@kerf/core";
+import { layoutDovetail } from "@kerf/core/internal";
 import { buildDisplayMesh, initGeometry, isManifold } from "@kerf/geometry";
 import fc from "fast-check";
 import { describe, expect } from "vitest";
@@ -450,7 +452,7 @@ describe("bookmatch planing allowance", () => {
         const layout = solve(project, shop).nesting.boards[0];
         // Domain: parts, then a saw gap between neighbours, then every face planed once.
         const expected = n * (unit[t] ?? 0) + (n - 1) * shop.kerf + 2 * n * allowance;
-        expect(layout?.compositeThickness).toBe(expected);
+        expect(matchSetBoard(layout)?.compositeThickness).toBe(expected);
       });
     },
   );
@@ -463,6 +465,139 @@ describe("bookmatch planing allowance", () => {
         const text = serializeProject({ ...box, planingAllowance: allowance });
         expect(parseProject(text).planingAllowance).toBe(allowance);
         expect(serializeProject(parseProject(text))).toBe(text);
+      });
+    },
+  );
+});
+
+describe("structure generation (M3)", () => {
+  const form = loadProject("bookcase", "structure");
+  const boxForm = loadProject("box", "structure");
+  const editedForm = bookcaseEdit.map((e) => applyBookcaseEdit(form, e));
+  const editedBoxForm = boxEdit.map((e) => applyBoxEdit(boxForm, e));
+  const anyForm = fc.oneof(editedForm, editedBoxForm);
+
+  milestone("M3", "generating is deterministic, idempotent and never throws, ids unique", () => {
+    property(anyForm, (project) => {
+      const once = generateStructures(project, shop);
+      expect(generateStructures(project, shop)).toEqual(once);
+      expect(generateStructures(once, shop)).toEqual(once);
+      const ids = [
+        ...once.parts,
+        ...once.instances,
+        ...once.patterns,
+        ...once.joints,
+        ...once.matchSets,
+      ].map((x) => x.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+  });
+
+  milestone(
+    "M3",
+    "for any size the form gives the cut list of the hand-built project of that size",
+    () => {
+      property(fc.tuple(bookcaseEdit, boxEdit), ([bc, bx]) => {
+        const noMatchSetIds = (list: ReturnType<typeof buildCutList>) => ({
+          ...list,
+          blocks: list.blocks.map((b) => ({ ...b, matchSet: "" })),
+        });
+        expect(noMatchSetIds(buildCutList(applyBookcaseEdit(form, bc)))).toEqual(
+          noMatchSetIds(buildCutList(applyBookcaseEdit(bookcase, bc))),
+        );
+        expect(noMatchSetIds(buildCutList(applyBoxEdit(boxForm, bx)))).toEqual(
+          noMatchSetIds(buildCutList(applyBoxEdit(box, bx))),
+        );
+      });
+    },
+  );
+
+  milestone("M3", "any bays or partition with shelves in every part builds with no errors", () => {
+    const structure = form.structures[0];
+    const root = structure?.openings[0];
+    if (!structure || !root) throw new Error("form has no opening");
+    const shape = fc.oneof(
+      fc.record({ bays: fc.integer({ min: 2, max: 6 }), shelves: fc.integer({ min: 1, max: 4 }) }),
+      fc.record({ at: fc.integer({ min: 4, max: 20 }), shelves: fc.integer({ min: 1, max: 4 }) }),
+    );
+    property(fc.tuple(bookcaseEdit, shape), ([edit, s]) => {
+      const sized = applyBookcaseEdit(form, edit);
+      const base = sized.structures[0];
+      if (!base) throw new Error("no structure");
+      const childId = (n: number): string => `01K7M3Q8ZD00000000B10000${70 + n}`;
+      const division =
+        "bays" in s
+          ? { type: "bays" as const, count: String(s.bays) }
+          : { type: "partition" as const, at: `${s.at}in` };
+      const kids = "bays" in s ? s.bays : 2;
+      const project: Project = {
+        ...sized,
+        structures: [
+          {
+            ...base,
+            openings: [
+              {
+                id: root.id,
+                division,
+                children: Array.from({ length: kids }, (_, i) => ({
+                  id: childId(i),
+                  division: {
+                    type: "shelves" as const,
+                    count: String(s.shelves),
+                    spacing: "even" as const,
+                  },
+                  children: [],
+                })),
+              },
+            ],
+          },
+        ],
+      };
+      const errors = solve(project, shop).diagnostics.filter((d) => d.severity === "error");
+      // A partition that fits (at most the interior less one board) builds with no error at all;
+      // one that does not is reported by the generator's own rule and nothing else.
+      const interior = edit.width * 16 - 2 * 46; // sixty-fourths of an inch (width is in quarters)
+      const fits = "bays" in s || s.at * 64 <= interior - 46;
+      if (fits) expect(errors).toEqual([]);
+      else expect(errors.every((e) => e.rule === "partition-outside-opening")).toBe(true);
+    });
+  });
+
+  milestone(
+    "M3",
+    "for any size the form places and sizes every board as the hand-built project does",
+    () => {
+      const describeBoards = (p: Project) => {
+        const model = solveModel(generateStructures(p, shop));
+        return {
+          instances: model.instances
+            .map((i) => [i.name, i.position, i.extent, i.orientation, i.mirrored] as const)
+            .sort((a, b) => a[0].localeCompare(b[0])),
+          parts: model.parts
+            .map((x) => [x.name, x.length, x.width, x.thickness, x.grainLocked, x.stock] as const)
+            .sort((a, b) => a[0].localeCompare(b[0])),
+        };
+      };
+      property(bookcaseEdit, (edit) => {
+        const made = describeBoards(applyBookcaseEdit(form, edit));
+        const hand = describeBoards(applyBookcaseEdit(bookcase, edit));
+        expect(made.parts).toEqual(hand.parts);
+        expect(made.instances).toEqual(hand.instances);
+      });
+    },
+  );
+
+  milestone(
+    "M3",
+    "the saved file holds the form, never the boards, and loads back the same",
+    () => {
+      property(anyForm, (project) => {
+        const text = serializeProject(generateStructures(project, shop));
+        const loaded = parseProject(text);
+        expect(loaded.parts).toEqual([]);
+        expect(loaded.joints).toEqual([]);
+        expect(serializeProject(loaded)).toBe(text);
+        expect(generateStructures(loaded, shop)).toEqual(generateStructures(project, shop));
       });
     },
   );

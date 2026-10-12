@@ -51,11 +51,9 @@ export function buildSetups(
   const nameOf = new Map(parts.map((p) => [p.instance.id, p.instance.name]));
   const note = (setup: MachiningSetup, instance: Id): void => {
     const name = nameOf.get(instance) ?? "A part";
-    const list = setup.parts ?? [];
-    const found = list.find((x) => x.name === name);
+    const found = setup.parts.find((x) => x.name === name);
     if (found) found.cuts += 1;
-    else list.push({ name, cuts: 1 });
-    setup.parts = list;
+    else setup.parts.push({ name, cuts: 1 });
   };
 
   // Joint cuts in cut-list order: sheet goods first, then by part, then as listed in the project.
@@ -78,11 +76,11 @@ export function buildSetups(
     const key = dovetail ? "handTools" : `${tool}|${cut.width}|${cut.depth}`;
     let setup = index.get(key);
     if (!setup) {
-      setup = { setup: setups.length + 1, tool, cuts: 0 };
-      if (!dovetail) {
-        setup.width = cut.width;
-        setup.depth = cut.depth;
-      }
+      const number = setups.length + 1;
+      setup =
+        dovetail || tool === "handTools"
+          ? { setup: number, tool: "handTools", cuts: 0, parts: [] }
+          : { setup: number, tool, width: cut.width, depth: cut.depth, cuts: 0, parts: [] };
       if (missing) setup.missing = true;
       index.set(key, setup);
       setups.push(setup);
@@ -102,6 +100,7 @@ export function buildSetups(
         tool: "router",
         bit: { type: "roundover", radius },
         cuts: 0,
+        parts: [],
       };
       if (!has) setup.missing = true;
       bits.set(radius, setup);

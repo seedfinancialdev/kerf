@@ -1,0 +1,72 @@
+[
+  {
+    "id": "boards-seed-kerf-dropped",
+    "file": "packages/core/src/nest/boards.ts",
+    "find": "const needed = used > 0 ? kerf + size : size;",
+    "replace": "const needed = size;",
+    "why": "two match sets share a board with no saw gap between them"
+  },
+  {
+    "id": "boards-seed-used-kerf",
+    "file": "packages/core/src/nest/boards.ts",
+    "find": "home.used += home.used > 0 ? kerf + size : size;",
+    "replace": "home.used += size;",
+    "why": "a shared board forgets the saw gap when counting what is used"
+  },
+  {
+    "id": "sheets-group-locked-turned",
+    "file": "packages/core/src/nest/sheets.ts",
+    "find": "else if (!item.locked && fits(turned))",
+    "replace": "else if (fits(turned))",
+    "why": "a grain-locked board of a same-board set is turned"
+  },
+  {
+    "id": "sheets-group-never-turned",
+    "file": "packages/core/src/nest/sheets.ts",
+    "find": "else if (!item.locked && fits(turned)) oriented.push(turned);",
+    "replace": "",
+    "why": "an unlocked board that only fits turned sinks its set"
+  },
+  {
+    "id": "offcut-minimum-strict",
+    "file": "packages/core/src/nest/sheets.ts",
+    "find": "if (remainder > 0 && remainder >= minOffcut && strip.across >= minOffcut) {",
+    "replace": "if (remainder > 0 && remainder > minOffcut && strip.across >= minOffcut) {",
+    "why": "an offcut of exactly the minimum is not listed"
+  },
+  {
+    "id": "bookmatch-faces-wrong",
+    "file": "packages/core/src/nest/index.ts",
+    "find": "2 * members.length * (project.planingAllowance ?? DEFAULT_PLANING_ALLOWANCE)",
+    "replace": "4 * (project.planingAllowance ?? DEFAULT_PLANING_ALLOWANCE)",
+    "why": "a bookmatch of three parts planes four faces"
+  },
+  {
+    "id": "overlap-shown-count",
+    "file": "packages/core/src/outputs/validate.ts",
+    "find": "const OVERLAPS_SHOWN = 10;",
+    "replace": "const OVERLAPS_SHOWN = 100;",
+    "why": "every overlap is listed instead of the first few"
+  },
+  {
+    "id": "overlap-cap-unbounded",
+    "file": "packages/core/src/outputs/validate.ts",
+    "find": "const MAX_OVERLAPPING_PAIRS = 1_000_000;",
+    "replace": "const MAX_OVERLAPPING_PAIRS = 1_000_000_000;",
+    "why": "the overlap check has no limit on a pile of parts"
+  },
+  {
+    "id": "pipeline-shapes-when-blocked",
+    "file": "packages/core/src/pipeline.ts",
+    "find": "shapes: p.stopped ? [] : shapesOf(p),",
+    "replace": "shapes: shapesOf(p),",
+    "why": "shapes are drawn for a project that cannot be built"
+  },
+  {
+    "id": "cutlist-key-without-thickness",
+    "file": "packages/core/src/outputs/cutlist.ts",
+    "find": "[cut.part.stock, cut.length, cut.width, cut.thickness].join(\"/\")",
+    "replace": "[cut.part.stock, cut.length, cut.width].join(\"/\")",
+    "why": "boards of different thickness merge into one cut list line"
+  }
+]

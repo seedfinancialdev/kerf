@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import {
-  deriveJoints,
   INCH,
   type Project,
   type RemovalPrimitive,
@@ -11,6 +10,7 @@ import {
   solve,
   solveModel,
 } from "@kerf/core";
+import { deriveJoints } from "@kerf/core/internal";
 import { describe, expect, it } from "vitest";
 import { boards, type InstanceSpec, type PartSpec } from "../../src/builders";
 import { loadShopProfile } from "../../src/index";

@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 describe("condense", () => {
   const d = (over: Partial<Diagnostic>): Diagnostic => ({
     severity: "error",
-    rule: "r",
+    rule: "overlap",
     message: "m",
     ...over,
   });
@@ -17,7 +17,7 @@ describe("condense", () => {
     list.push(d({ field: "x1", count: 3 }), d({ field: "x2", count: 3 }));
     const out = condense(list);
     expect(out).toHaveLength(26);
-    expect(out[25]).toMatchObject({ severity: "error", rule: "r", count: 6 });
+    expect(out[25]).toMatchObject({ severity: "error", rule: "overlap", count: 6 });
     expect(out[25]?.message).toContain("6 more");
   });
   it("26 entries leave exactly one in the summary", () => {

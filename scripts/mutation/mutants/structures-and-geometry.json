@@ -1,0 +1,51 @@
+[
+  {
+    "id": "form-top-length",
+    "file": "packages/core/src/structures/case.ts",
+    "find": "const railLength = sidesBetween ? W : `${W} - 2*${T}`;",
+    "replace": "const railLength = sidesBetween ? W : `${W} - 1*${T}`;",
+    "why": "top and bottom are one board thickness too long"
+  },
+  {
+    "id": "form-bays-rounding",
+    "file": "packages/core/src/structures/openings.ts",
+    "find": "snapToGrid(\n        add(mul(bay, rational(BigInt(k + 1))), mul(this.thicknessExact, rational(BigInt(k)))),\n        b.units,\n      ),",
+    "replace": "Number(\n        add(mul(bay, rational(BigInt(k + 1))), mul(this.thicknessExact, rational(BigInt(k)))).num / 1n,\n      ),",
+    "why": "partition faces are truncated instead of snapped half to even"
+  },
+  {
+    "id": "form-back-position",
+    "file": "packages/core/src/structures/case.ts",
+    "find": "b.instance(\"back\", \"back\", def, [T, \"0in\", \"0in\"], {",
+    "replace": "b.instance(\"back\", \"back\", def, [\"0in\", \"0in\", \"0in\"], {",
+    "why": "the inset back starts at the outside of the case"
+  },
+  {
+    "id": "form-detached-kept-not",
+    "file": "packages/core/src/structures/strip.ts",
+    "find": "(i) => i.generatedBy === undefined || detached.has(i.def),",
+    "replace": "(i) => i.generatedBy === undefined,",
+    "why": "a detached board loses its placement when saved"
+  },
+  {
+    "id": "form-joint-ownership",
+    "file": "packages/core/src/structures/strip.ts",
+    "find": "joints: project.joints.filter((j) => j.generatedBy === undefined),",
+    "replace": "joints: project.joints,",
+    "why": "generated joints are saved into the file"
+  },
+  {
+    "id": "geometry-radius-zero",
+    "file": "packages/geometry/src/index.ts",
+    "find": "radius <= 0 || radius > blank.thickness",
+    "replace": "radius < 0 || radius > blank.thickness",
+    "why": "a roundover of nothing is drawn"
+  },
+  {
+    "id": "spatial-self-limit",
+    "file": "packages/core/src/joints/spatial.ts",
+    "find": "if (out.length > limit) return out;\n    }\n    active.push(item);",
+    "replace": "}\n    active.push(item);",
+    "why": "the pair search never stops on a pile of parts"
+  }
+]

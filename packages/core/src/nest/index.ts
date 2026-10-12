@@ -7,7 +7,14 @@
 // then the rest of the parts pack around it.
 
 import { formatLength, MAX_LENGTH } from "../length";
-import type { BoardLayout, Diagnostic, NestingResult, SheetLayout, StockTotals } from "../outputs";
+import type {
+  BoardLayout,
+  Diagnostic,
+  MatchSetBoardLayout,
+  NestingResult,
+  SheetLayout,
+  StockTotals,
+} from "../outputs";
 import type { CutPart } from "../outputs/cutlist";
 import { rational } from "../rational";
 import type { Id, Len, MatchSet, Project, ShopProfile, Stock } from "../types";
@@ -218,7 +225,11 @@ function nestSolidStock(
   const fmt = (n: Len): string => formatLength(n, project.units);
   const grouped = new Set<Id>();
   const seeds: BoardSeed[] = [];
-  const setLayouts = new Map<Id, BoardLayout>();
+  // A match set's layout, before the board it lands on (and so its length) is known.
+  const setLayouts = new Map<
+    Id,
+    Omit<MatchSetBoardLayout, "boardLength" | "boardIndex" | "alsoOnBoard">
+  >();
 
   for (const { set, members } of setsOn(project, stock, byInstance)) {
     if (mixedStock(set, members, stock)) {
@@ -346,7 +357,7 @@ function nestSolidStock(
   for (const [index, board] of packed.boards.entries()) {
     const sets = board.seeds
       .map((id) => setLayouts.get(id))
-      .filter((l): l is BoardLayout => l !== undefined);
+      .filter((l): l is NonNullable<typeof l> => l !== undefined);
     if (sets.length === 0) {
       layouts.push({
         stock: stock.id,

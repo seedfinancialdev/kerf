@@ -17,7 +17,7 @@
 import { ExpressionError } from "../expr/errors";
 import { evaluateQuantity, type Quantity } from "../expr/evaluate";
 import { type Node, parseExpression, partKey, referencesOf, slug, stockKey } from "../expr/parser";
-import { LengthRangeError, snapToGrid, type UnitSystem } from "../length";
+import { gridSize, LengthRangeError, snapToGrid, type UnitSystem } from "../length";
 import type { Diagnostic } from "../outputs";
 import { validateProject } from "../project-file";
 import {
@@ -31,11 +31,11 @@ import {
   sub,
   toSafeInteger,
 } from "../rational";
+import type { RuleId } from "../rules";
 import type { EdgeRef, Id, Instance, Len, Param, PartDef, Pattern, Project } from "../types";
+import { INCH, MM } from "../units";
+import { MAX_PATTERN_COUNT } from "./limits";
 import { extentOf, isOrientationIndex } from "./orientation";
-
-/** Most members one pattern may expand to. */
-export const MAX_PATTERN_COUNT = 10_000;
 
 export interface SolvedOp {
   id: Id;
@@ -119,15 +119,40 @@ class Solver {
   ) {}
 
   private error(
-    rule: string,
+    rule: RuleId,
     message: string,
     extra: Partial<Omit<Diagnostic, "severity" | "rule" | "message">> = {},
   ): void {
     this.diagnostics.push({ severity: "error", rule, message, ...extra });
   }
 
+  /**
+   * Stock thickness is read exactly into every expression, while a part's own size is snapped to
+   * the grid once. A thickness between grid lines therefore makes boards that should meet differ
+   * by up to a grid step, which can stop a joint from seating at all, so it is named at the source.
+   * Only stock something uses is checked.
+   */
+  checkStockOnGrid(): void {
+    const grid = gridSize(this.units);
+    const used = new Set(this.project.parts.map((p) => p.stock));
+    for (const structure of this.project.structures) {
+      for (const value of Object.values(structure.options)) {
+        if (typeof value === "string") used.add(value);
+      }
+    }
+    for (const stock of this.project.stock) {
+      if (!used.has(stock.id) || stock.thickness % grid === 0) continue;
+      const step = this.units === "metric" ? "0.01 mm" : '1/64"';
+      this.warn(
+        "stock-off-grid",
+        `${stock.name} is ${exactThickness(stock.thickness)} thick, which is not a whole number of ${step} steps, so boards cut from it may fail to meet where they should (a joint may not seat). Give its thickness in the units this project uses, or set the project's units to match its stock.`,
+        { field: stock.name },
+      );
+    }
+  }
+
   private warn(
-    rule: string,
+    rule: RuleId,
     message: string,
     extra: Partial<Omit<Diagnostic, "severity" | "rule" | "message">> = {},
   ): void {
@@ -682,13 +707,17 @@ class Solver {
     );
     if (!positions) return [];
 
-    return positions.map((along, index) => ({
-      ...base,
-      id: `${pattern.id}:${index}`,
-      name: `${name} ${index + 1}`,
-      position: { ...base.position, [axis]: along },
-      pattern: { id: pattern.id, index },
-    }));
+    // Members taken out by hand are not made; the others keep the places the full count gave them.
+    const skipped = new Set(pattern.skip ?? []);
+    return positions
+      .map((along, index) => ({
+        ...base,
+        id: `${pattern.id}:${index}`,
+        name: `${name} ${index + 1}`,
+        position: { ...base.position, [axis]: along },
+        pattern: { id: pattern.id, index },
+      }))
+      .filter((member) => !skipped.has(member.pattern.index));
   }
 
   /** Position along the pattern axis for every member, or null after reporting a problem. */
@@ -763,6 +792,18 @@ function describe(error: unknown): string {
   }
 }
 
+/** A thickness shown exactly enough to see why it is off the grid: "0.7188 in (18.26 mm)". */
+function exactThickness(units: Len): string {
+  // Whole-number arithmetic, rounded half up at the last place; this is for the message only.
+  const decimal = (scale: number, places: number): string => {
+    const factor = 10n ** BigInt(places);
+    const scaled = (2n * BigInt(units) * factor + BigInt(scale)) / (2n * BigInt(scale));
+    const text = scaled.toString().padStart(places + 1, "0");
+    return `${text.slice(0, -places)}.${text.slice(-places)}`;
+  };
+  return `${decimal(INCH, 4)} in (${decimal(MM, 2)} mm)`;
+}
+
 const emptyModel = (diagnostics: Diagnostic[]): SolvedModel => ({
   diagnostics,
   params: {},
@@ -791,6 +832,7 @@ export function solveValidatedModel(project: Project): SolvedModel {
   let solver: Solver | undefined;
   try {
     solver = new Solver(project, project.units);
+    solver.checkStockOnGrid();
     const { params, parts } = solver.solveFields();
     const instances = solver.expandInstances(parts);
     return {
@@ -832,3 +874,5 @@ export function solveModel(project: Project): SolvedModel {
     ]);
   }
 }
+
+export { MAX_PATTERN_COUNT };

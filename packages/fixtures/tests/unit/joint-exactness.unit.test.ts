@@ -3,19 +3,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import {
-  boxOf,
   deriveJointCuts,
-  deriveJoints,
-  dovetailLayout,
-  type Frame,
   INCH,
   MM,
   type Project,
   type RemovalPrimitive,
   solve,
   solveModel,
-  toParent,
 } from "@kerf/core";
+import { boxOf, deriveJoints, dovetailLayout, type Frame, toParent } from "@kerf/core/internal";
 import { describe, expect, it } from "vitest";
 import { boards, type PartSpec } from "../../src/builders";
 import { loadProject, loadShopProfile } from "../../src/index";

@@ -42,11 +42,9 @@ Expected files may carry annotation keys that start with `_` (never compared by 
    no straight bits, hand tools can cut dovetails.
 8. **Stock values not in the spec:** 1/4" plywood is 1/4" actual (the goldens only work at 1/4");
    walnut allowance is length 0, width 1/4"; walnut standard length 96", max width 8".
-9. **Structure option keys.** Only `back: "inset-rabbet"` is exemplified in the spec. Option keys and
-   values in `structure.json` (`carcaseStock`, `topBottom`, `backStock`, `dadoDepth`,
-   `rabbetDepth`, `backRabbetDepth`, `shelfRoundover`, `wallStock`, `cornerJoint`, `bottom`,
-   `bottomStock`, `grooveDepth`, `grooveOffset`, `grainWraps`) are placeholders. Depths are explicit
-   because the defaults (host thickness ÷ 3, ÷ 2) do not give the golden 1/4" and 3/8".
+9. **Structure option keys.** Official as of ADR 014 (decision D1); the spec itself only
+   exemplifies `back: "inset-rabbet"`. Depths are explicit in these forms because the defaults
+   (host thickness ÷ 3, ÷ 2) do not give the golden 1/4" and 3/8".
 10. **Roundover on generated shelves.** The spec does not say where a form-generated part's
     roundover is stored; `shelfRoundover` is a placeholder.
 11. **Box cut list.** Match-set members are never merged (Domain model invariants), so the four
@@ -57,6 +55,8 @@ Expected files may carry annotation keys that start with `_` (never compared by 
     but "36-1/8" × 96"" (across × along). They are stored as `alongGrain` / `acrossGrain`.
 
 ## Not specified, so deliberately absent
+
+- Default sizes of the Blank case (30 x 36 x 12 in) and Blank box (8 x 6 x 3 in) templates.
 
 - Removal-primitive coordinates and dado positions (the spec gives cut sizes, not primitives).
 - Shopping list, milling list and board feet.

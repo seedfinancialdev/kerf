@@ -6,6 +6,7 @@
 // one or more edges, matching a roundover router bit. It never changes the cut list.
 
 import type { Diagnostic, RemovalPrimitive } from "../outputs";
+import type { RuleId } from "../rules";
 import type { SolvedPart } from "../solve/model";
 import type { EdgeRef, Id, Len } from "../types";
 
@@ -41,7 +42,7 @@ export function deriveRoundovers(
   const radii = new Map<EdgeRef, Len>();
   let ok = true;
   const field = `${instanceName} roundover`;
-  const fail = (rule: string, message: string): void => {
+  const fail = (rule: RuleId, message: string): void => {
     ok = false;
     sink.push({ severity: "error", rule, message, part: partId, field });
   };

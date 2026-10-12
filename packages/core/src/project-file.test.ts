@@ -55,7 +55,8 @@ const project: Project = {
       grainLocked: true,
       ops: [{ id: id(4), type: "roundover", edges: ["edge1/face1"], radius: "3mm" }],
       source: { structure: id(9), role: "shelf" },
-      detached: false,
+      // Detached, so the saved file keeps it: a generated part that is not detached is re-derived.
+      detached: true,
     },
   ],
   instances: [

@@ -15,13 +15,30 @@
 //   5. baseline on each board = the mating board's thickness
 
 import { gridSize, snapToGrid, type UnitSystem } from "../length";
-import type { DovetailLayout, DovetailLayoutInput, RemovalPrimitive } from "../outputs";
+import type { RemovalPrimitive } from "../outputs";
 import { div, floor, fromInteger, rational, roundHalfEven, toSafeInteger } from "../rational";
+import type { RuleId } from "../rules";
 import type { Frame } from "../solve/assembly";
 import { axisMaps, boxOf, boxToLocal, contactOf, faceAt, toParent } from "../solve/assembly";
 import type { Joint, Len } from "../types";
 import { INCH } from "../units";
 import type { DeriveContext, PairCut } from "./types";
+
+/** What a dovetail row is worked out from. */
+export interface DovetailLayoutInput {
+  boardWidth: Len;
+  tails: number;
+  pin: Len;
+  matingThickness: Len;
+  /** Slope denominator: 8 for 1:8. */
+  slope: number;
+}
+
+export interface DovetailLayout {
+  wideTailWidth: Len;
+  slopeOffset: Len;
+  narrowTailWidth: Len;
+}
 
 export const MIN_TAIL = INCH / 8;
 export const MIN_PIN = INCH / 8;
@@ -213,7 +230,7 @@ export function deriveDovetail(
     ctx.units,
   );
   if ("problem" in layout) {
-    const messages: Record<LayoutProblem, [string, string]> = {
+    const messages: Record<LayoutProblem, [RuleId, string]> = {
       slope: ["dovetail-slope", "The dovetail slope must be between 1:5 and 1:10."],
       "thin-pin": ["dovetail-thin-pin", 'The dovetail pins must be at least 1/8" wide.'],
       "narrow-tail": [

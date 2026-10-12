@@ -150,7 +150,7 @@ interface Template {                    // a starting point: a structure plus de
 }
 ```
 
-- **Generated parts carry their source:** `PartDef.source = { structure: Id, role: "side" | "shelf" | … }`.
+- **Generated parts carry their source:** `PartDef.source = { structure: Id, role: "side" | "shelf" | … }`; the instances, patterns, joints and match sets a structure generates carry `generatedBy` with the same shape, so the saved file can leave them out.
 - **Detaching:** editing a generated part by hand sets `detached: true` on it; the generator then leaves that part alone and says so in the inspector. Undo re-attaches.
 - **Joint choice:** a generator asks the joinery rules for the best joint given the contact and the shop profile; the user's override is stored on the structure, so regeneration keeps it.
 - **Saved:** structures, openings and overrides are saved (they are intent). The parts they generate are derived and not saved, except detached ones, which become ordinary saved parts.
