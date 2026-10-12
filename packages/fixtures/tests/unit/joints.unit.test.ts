@@ -5,7 +5,8 @@
 // Operation specs: dado/groove, rabbet, roundover, through dovetail. Milestone M2.
 // Only numbers the spec states are asserted; removal-primitive coordinates are not in the spec.
 
-import { deriveJointCuts, dovetailLayout, type Joint, type Project, solve } from "@kerf/core";
+import { deriveJointCuts, type Joint, type Project, solve } from "@kerf/core";
+import { dovetailLayout } from "@kerf/core/internal";
 import { describe, expect } from "vitest";
 import { loadExpected, loadProject, loadShopProfile, withParam } from "../../src/index";
 import { milestone } from "../../src/milestone";

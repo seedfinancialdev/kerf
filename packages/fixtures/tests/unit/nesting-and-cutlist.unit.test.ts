@@ -2,7 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-import { INCH, nest, nestSheets, type Project, solve } from "@kerf/core";
+import { INCH, nest, type Project, solve } from "@kerf/core";
+import { nestSheets } from "@kerf/core/internal";
 import { describe, expect, it } from "vitest";
 import { boards, type InstanceSpec, type PartSpec } from "../../src/builders";
 import { loadExpected, loadProject, loadShopProfile } from "../../src/index";

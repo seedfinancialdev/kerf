@@ -8,7 +8,8 @@
 // Joinery is derived from contact between parts, so these placements are inputs to M2.
 // Ordinary tests, not milestone tests: they describe the fixtures, which exist today.
 
-import { INCH, orientationOf, solveModel } from "@kerf/core";
+import { INCH, solveModel } from "@kerf/core";
+import { orientationOf } from "@kerf/core/internal";
 import { describe, expect, it } from "vitest";
 import { loadProject } from "../../src/index";
 

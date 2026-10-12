@@ -11,7 +11,6 @@ import {
   deriveJointCuts,
   generateStructures,
   INCH,
-  layoutDovetail,
   MAX_LENGTH,
   type Project,
   ProjectFormatError,
@@ -20,6 +19,7 @@ import {
   solve,
   solveModel,
 } from "@kerf/core";
+import { layoutDovetail } from "@kerf/core/internal";
 import { buildDisplayMesh, initGeometry, isManifold } from "@kerf/geometry";
 import fc from "fast-check";
 import { describe, expect } from "vitest";

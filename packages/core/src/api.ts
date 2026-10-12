@@ -5,7 +5,6 @@
 // The core API. Functions here are thin wrappers over the pipeline in pipeline.ts and the
 // structure generators.
 
-import { deriveJoints } from "./joints/derive";
 import type { CutAdd } from "./joints/types";
 import type {
   CutList,
@@ -106,5 +105,3 @@ export function generateStructuresChecked(
 export function detachPart(project: Project, part: Id): PartDef {
   return detachedPart(project, part);
 }
-
-export { deriveJoints };

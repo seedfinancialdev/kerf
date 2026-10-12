@@ -7,14 +7,8 @@
 //   23/32" = 46/64"  1/4" = 16/64"  3/8" = 24/64"  1/2" = 32/64"  12" = 768/64"  72" = 4608/64"
 // Primitives are in each part's definition space (local X length, Y width, Z thickness).
 
-import {
-  type Derived,
-  deriveJoints,
-  INCH,
-  type Project,
-  type RemovalPrimitive,
-  solveModel,
-} from "@kerf/core";
+import { INCH, type Project, type RemovalPrimitive, solveModel } from "@kerf/core";
+import { type Derived, deriveJoints } from "@kerf/core/internal";
 import { describe, expect, it } from "vitest";
 import { loadProject } from "../../src/index";
 
