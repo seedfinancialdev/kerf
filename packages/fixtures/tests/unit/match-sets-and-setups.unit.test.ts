@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-import { INCH, type Project, type ShopProfile, solve } from "@kerf/core";
+import { INCH, matchSetBoard, type Project, type ShopProfile, solve } from "@kerf/core";
 import { describe, expect, it } from "vitest";
 import { boards, type InstanceSpec, type PartSpec } from "../../src/builders";
 import { loadProject, loadShopProfile } from "../../src/index";
@@ -43,7 +43,7 @@ import { loadProject, loadShopProfile } from "../../src/index";
       });
       const out = solve(p, shop).nesting.boards;
       expect(out.map((b) => b.boardLength)).toEqual([inch(72)]);
-      expect(out[0]?.alsoOnBoard?.map((x) => x.name)).toEqual(["Lid"]);
+      expect(matchSetBoard(out[0])?.alsoOnBoard?.map((x) => x.name)).toEqual(["Lid"]);
     });
     it("equal totals: the shortest-first packing wins, so the 36in set gets the 48in board", () => {
       const p = boards(
@@ -91,7 +91,7 @@ import { loadProject, loadShopProfile } from "../../src/index";
         matchSets: [{ name: "Wrap", type: "continuousGrain", members: ["A", "B"] }],
         woodAllowanceLength: INCH,
       });
-      expect(solve(p, shop).nesting.boards[0]?.composite?.length).toBe(
+      expect(matchSetBoard(solve(p, shop).nesting.boards[0])?.composite.length).toBe(
         inch(10 + 1 + 10 + 1 + k + 1),
       );
     });
@@ -105,7 +105,7 @@ import { loadProject, loadShopProfile } from "../../src/index";
         },
       );
       const r = solve(p, shop);
-      expect(r.nesting.boards[0]?.composite).toEqual({
+      expect(matchSetBoard(r.nesting.boards[0])?.composite).toEqual({
         length: inch(10 + 10 + k + 1),
         width: inch(3),
         widthAllowance: 0,
@@ -188,8 +188,8 @@ import { loadProject, loadShopProfile } from "../../src/index";
       // L = 23-5/8": 47-3/8" each, 47-3/8 + 1/8 + 47-3/8 = 94-7/8" -> one board.
       const shared = solve(twoSets("23-5/8in"), shop).nesting.boards;
       expect(shared).toHaveLength(2);
-      expect(shared[0]?.boardIndex).toBeDefined();
-      expect(shared[0]?.boardIndex).toBe(shared[1]?.boardIndex);
+      expect(matchSetBoard(shared[0])?.boardIndex).toBeDefined();
+      expect(matchSetBoard(shared[0])?.boardIndex).toBe(matchSetBoard(shared[1])?.boardIndex);
       // Both sets leave 95 - 94-7/8 = 1/8" on that board: a 1/16" part needs 1/16 + 1/8 kerf > 1/8",
       // so it is cut from a board of its own.
       const tiny = boards(
@@ -205,11 +205,11 @@ import { loadProject, loadShopProfile } from "../../src/index";
         { matchSets: [set("One", "A1", "A2"), set("Two", "B1", "B2")] },
       );
       const crowded = solve(tiny, shop).nesting.boards;
-      expect(crowded.some((b) => b.alsoOnBoard !== undefined)).toBe(false);
+      expect(crowded.some((b) => matchSetBoard(b)?.alsoOnBoard !== undefined)).toBe(false);
       // L = 23-11/16": 47-1/2" each, 47-1/2 + 1/8 + 47-1/2 = 95-1/8" -> two boards.
       const apart = solve(twoSets("23-11/16in"), shop).nesting.boards;
       expect(apart).toHaveLength(2);
-      expect(apart[0]?.boardIndex).toBeUndefined();
+      expect(matchSetBoard(apart[0])?.boardIndex).toBeUndefined();
     });
   });
 }
@@ -249,7 +249,7 @@ import { loadProject, loadShopProfile } from "../../src/index";
       expect(layouts).toHaveLength(1);
       expect(layouts[0]?.matchSet).toBeDefined();
       expect(layouts[0]?.sequence.map((s) => s.name)).toEqual(["A", "B"]); // the set stays 1-2 of 2
-      expect(layouts[0]?.alsoOnBoard?.map((s) => s.name)).toEqual(["Lid"]);
+      expect(matchSetBoard(layouts[0])?.alsoOnBoard?.map((s) => s.name)).toEqual(["Lid"]);
     });
 
     it("lets other sheet parts share the sheet of a same-board set", () => {
@@ -277,7 +277,7 @@ import { loadProject, loadShopProfile } from "../../src/index";
       );
       const set = solve(p, shop).nesting.boards[0];
       // Along the board: one part's length plus trim at both ends; across it: widths and a kerf.
-      expect(set?.composite).toEqual({
+      expect(matchSetBoard(set)?.composite).toEqual({
         length: inch(10) + inch(1),
         width: inch(6) + inch(0.125),
         widthAllowance: 0,
@@ -434,7 +434,7 @@ import { loadProject, loadShopProfile } from "../../src/index";
       );
       const layouts = solve(p, shop).nesting.boards;
       expect(layouts).toHaveLength(2); // one per set
-      expect(new Set(layouts.map((b) => b.boardIndex)).size).toBe(1); // on one board
+      expect(new Set(layouts.map((b) => matchSetBoard(b)?.boardIndex)).size).toBe(1); // on one board
     });
 
     it("cuts the blank out, then divides it into the members of a run on a sheet", () => {

@@ -145,26 +145,46 @@ export interface SheetLayout {
   efficiency: Rational;
 }
 
-/** A solid-stock board layout: one per board bought. Match-set boards also carry the composite blank. */
-export interface BoardLayout {
+/** What every board bought has: its stock, the standard length it is cut from, and what it holds. */
+interface BoardLayoutBase {
   stock: Id;
-  matchSet?: Id;
+  /** The standard length of the board the parts are cut from. */
+  boardLength: Len;
+  sequence: Array<{ sequence: number; of: number; name: string }>;
+}
+
+/** A board holding ordinary parts, packed first-fit by length. */
+export interface PlainBoardLayout extends BoardLayoutBase {
+  matchSet?: undefined;
+}
+
+/** A board a match set is cut from, as one composite blank, with other parts around it. */
+export interface MatchSetBoardLayout extends BoardLayoutBase {
+  matchSet: Id;
   /**
-   * The blank a match set is cut from: members end to end (or side by side for axis "width", or the
+   * The blank the set is cut from: members end to end (or side by side for axis "width", or the
    * largest member's length and width for a bookmatch), plus kerfs and end trim.
    */
-  composite?: { length: Len; width: Len; widthAllowance: Len };
-  minBoardLength?: Len;
+  composite: { length: Len; width: Len; widthAllowance: Len };
+  /** The shortest standard board that holds the blank, in whole inches. */
+  minBoardLength: Len;
   /** A bookmatch only: thickness of the resawn board (parts, saw gap and planing allowance). */
   compositeThickness?: Len;
-  /** The standard length of the board the parts are cut from. */
-  boardLength?: Len;
-  /** Set only when several match sets are cut from one board: layouts of the same stock with the same
-   * index share it. The index counts boards within one stock. */
+  /**
+   * Set only when several match sets are cut from one board: layouts of the same stock with the
+   * same index share it. The index counts boards within one stock.
+   */
   boardIndex?: number;
   /** Other parts cut from the same board, after the match set. */
   alsoOnBoard?: Array<{ name: string; instance: Id }>;
-  sequence: Array<{ sequence: number; of: number; name: string }>;
+}
+
+/** A solid-stock board layout: one per board bought, or one per match set cut from a board. */
+export type BoardLayout = PlainBoardLayout | MatchSetBoardLayout;
+
+/** The layout as a match set's board, or undefined for a board of ordinary parts. */
+export function matchSetBoard(layout: BoardLayout | undefined): MatchSetBoardLayout | undefined {
+  return layout?.matchSet === undefined ? undefined : layout;
 }
 
 /**
@@ -188,19 +208,41 @@ export interface NestingResult {
   totals: StockTotals[];
 }
 
-export interface MachiningSetup {
+/** What every machining setup has: its number, how many cuts it makes and on which parts. */
+interface SetupBase {
   setup: number;
-  tool: "dadoStack" | "router" | "handTools";
-  /** Cut width for a dado stack or router straight bit. */
-  width?: Len;
-  depth?: Len;
-  bit?: { type: "roundover"; radius: Len };
   cuts: number;
   /** The parts this setup cuts, and how many cuts each takes. */
-  parts?: Array<{ name: string; cuts: number }>;
+  parts: Array<{ name: string; cuts: number }>;
   /** True when the shop profile has no tool that can make these cuts (the tool named is the one needed). */
   missing?: boolean;
 }
+
+/** Dados, grooves and rabbets: one cut width and depth, on a dado stack or a router. */
+export interface CutSetup extends SetupBase {
+  tool: "dadoStack" | "router";
+  width: Len;
+  depth: Len;
+  bit?: undefined;
+}
+
+/** An edge profile: every edge rounded with one bit. */
+export interface ProfileSetup extends SetupBase {
+  tool: "router";
+  bit: { type: "roundover"; radius: Len };
+  width?: undefined;
+  depth?: undefined;
+}
+
+/** Hand-cut joints (dovetails): no machine setting to speak of. */
+export interface HandToolSetup extends SetupBase {
+  tool: "handTools";
+  width?: undefined;
+  depth?: undefined;
+  bit?: undefined;
+}
+
+export type MachiningSetup = CutSetup | ProfileSetup | HandToolSetup;
 
 /** One distinct part shape, for the display mesh. Split definitions appear separately. */
 export interface PartShape {

@@ -5,6 +5,7 @@
 import {
   INCH,
   MAX_LENGTH,
+  matchSetBoard,
   type Project,
   ProjectFormatError,
   parseProject,
@@ -114,7 +115,9 @@ import { loadProject, loadShopProfile } from "../../src/index";
       },
     );
     it("3 members: 3 x 3/4 + 2 x 1/8 + 6 x 1/16 = 2-7/8", () =>
-      expect(solve(three, shop).nesting.boards[0]?.compositeThickness).toBe(inch(23 / 8)));
+      expect(matchSetBoard(solve(three, shop).nesting.boards[0])?.compositeThickness).toBe(
+        inch(23 / 8),
+      ));
     const unequal = boards(
       [wood("A", "10in", "4in"), wood("B", "12in", "5in")],
       [at("A", "0in"), at("B", "5in")],
@@ -124,7 +127,7 @@ import { loadProject, loadShopProfile } from "../../src/index";
       },
     );
     it("unequal: board is as long and wide as the largest member", () =>
-      expect(solve(unequal, shop).nesting.boards[0]?.composite).toMatchObject({
+      expect(matchSetBoard(solve(unequal, shop).nesting.boards[0])?.composite).toMatchObject({
         length: inch(13),
         width: inch(5),
       }));

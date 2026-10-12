@@ -12,6 +12,7 @@ import {
   generateStructures,
   INCH,
   MAX_LENGTH,
+  matchSetBoard,
   type Project,
   ProjectFormatError,
   parseProject,
@@ -451,7 +452,7 @@ describe("bookmatch planing allowance", () => {
         const layout = solve(project, shop).nesting.boards[0];
         // Domain: parts, then a saw gap between neighbours, then every face planed once.
         const expected = n * (unit[t] ?? 0) + (n - 1) * shop.kerf + 2 * n * allowance;
-        expect(layout?.compositeThickness).toBe(expected);
+        expect(matchSetBoard(layout)?.compositeThickness).toBe(expected);
       });
     },
   );
