@@ -26,6 +26,7 @@ export { shopProblem } from "./shop";
 export type { SolvedInstance, SolvedModel, SolvedOp, SolvedPart } from "./solve/model";
 export { MAX_PATTERN_COUNT, solveModel } from "./solve/model";
 export {
+  attachCopyIn,
   attachPartIn,
   detachCopyIn,
   detachPartIn,

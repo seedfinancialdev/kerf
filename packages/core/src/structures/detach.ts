@@ -152,6 +152,28 @@ export function detachCopyIn(project: Project, patternId: Id, index: number): Pr
 }
 
 /**
+ * Puts a detached copy back into the row it came from: the inverse of `detachCopyIn`, which is
+ * what undo does. Throws RangeError for an instance that is not a detached copy.
+ */
+export function attachCopyIn(project: Project, instanceId: Id): Project {
+  const copy = project.instances.find((i) => i.id === instanceId);
+  if (!copy?.detachedFrom) {
+    throw new RangeError("That board was not taken out of a row, so there is nothing to put back.");
+  }
+  return {
+    ...project,
+    parts: project.parts.filter((p) => p.id !== copy.def),
+    instances: project.instances.filter((i) => i.id !== instanceId),
+    patterns: project.patterns.map((p) => {
+      if (p.id !== copy.detachedFrom?.pattern) return p;
+      const skip = (p.skip ?? []).filter((n) => n !== copy.detachedFrom?.index);
+      const { skip: _old, ...rest } = p;
+      return skip.length > 0 ? { ...rest, skip } : rest;
+    }),
+  };
+}
+
+/**
  * Detaches every generated board that something hand-made refers to (a joint you added, a match
  * set, a copy), so that the project can be saved. Returns the project and the boards detached,
  * so the app can say which. Changes nothing when nothing refers to a generated board.

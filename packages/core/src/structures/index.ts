@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 export {
+  attachCopyIn,
   attachPartIn,
   detachCopyIn,
   detachedPart,

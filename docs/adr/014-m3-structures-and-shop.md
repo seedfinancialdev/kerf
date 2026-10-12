@@ -8,15 +8,15 @@ model "Structures, openings & shop profile", Interaction spec sections 2-4.
 | # | Decision |
 | --- | --- |
 | D1 | The form's field names (`carcaseStock`, `backStock`, `topBottom`, `back`, `dadoDepth`, `rabbetDepth`, `backRabbetDepth`, `shelfRoundover`, `wallStock`, `bottomStock`, `cornerJoint`, `bottom`, `grooveDepth`, `grooveOffset`, `grainWraps`) are official. Templates carry explicit depths; a blank form uses the spec's default rules (a third of the host for a dado, half for a rabbet). |
-| D2 | Case backs built: `none` and `inset-rabbet`. `applied` and `sides-between` top/bottom warn `not-built-yet` and fall back; the spec gives no sizing rule for them. |
+| D2 | Case backs: `none`, `inset-rabbet` and `applied`; top and bottom `between-sides` or `sides-between`. Anything else warns `not-built-yet` and falls back. The spec gives no sizing rule for the added ones; the rules are in "Proposed spec text" below. |
 | D3 | A detached board keeps its joints, worked out from where it now sits. Only its size and position stop following the form. |
-| D4 | Box corners: through dovetails only. Another `cornerJoint` warns `not-built-yet`. |
+| D4 | Box corners: through dovetails, and (added after the first review) rabbeted corners. Another `cornerJoint` warns `not-built-yet`. |
 | D5 | Generated ids are derived from the structure's id and the part's role (`generatedId`), so regenerating gives the same ids and saved references to a detached board stay valid. |
 | D6 | Every generated object carries its origin: `PartDef.source` (as the spec says) and, added here, `generatedBy` on instances, patterns, joints and match sets. This is how the saved file leaves them out. |
 | D7 | `serializeProject` writes intent only: structures, hand-made parts, and detached parts with their placements and patterns. Generated parts, placements, patterns, joints and match sets are re-derived on load. |
 | D8 | Generation runs inside every solve (`runPipeline`), so `solve()` accepts a project with structures directly. `generateStructures` is the same function, for callers that want the generated project. |
 | D9 | A partition's `at` is measured from the opening's left face to the partition's left face, as a length or a fraction of the opening. Bays divide the opening's width equally after the partitions' thickness; each partition's position is worked out exactly and snapped once, half to even (Domain model, Units & precision), and a bay's width is the difference of the snapped faces, so shelves always meet partitions and bays differ by at most one grid step. Explicit shelf heights (`spacing` as a list) are the underside of each shelf measured from the case's bottom. |
-| D10 | The shop does not change what is generated: joint types follow the structure, and the shop profile decides the tool and what is missing through the machining setups (M2). Templates: Bookcase, Keepsake box, Blank case, Blank box. |
+| D10 | Joint types follow the structure; the shop decides the tool and what is missing through the machining setups (M2), and, for `shelfRoundover: "auto"`, which roundover bit is used. Templates: Bookcase, Keepsake box, Blank case, Blank box. |
 
 ## Consequences
 
@@ -36,3 +36,32 @@ model "Structures, openings & shop profile", Interaction spec sections 2-4.
   `bays-too-narrow`, `stock-name-unsupported`, `structure-stock-missing`, `generated-part-edited`,
   `detached-board-orphaned`, `joint-dropped`, `not-built-yet`.
 - Blank case and Blank box sizes are not given by the spec; their defaults are ours and untested.
+
+## Proposed spec text (for the maintainer to adopt, change or reject)
+
+These rules were chosen while building because the spec is silent. Each is written the way the
+spec would say it, so adopting one is a copy and paste.
+
+- **Partition position.** "A partition's position is measured from the opening's left face to the
+  partition's left face, as a length or as a fraction of the opening's width. A fraction is snapped
+  once, half to even."
+- **Bays.** "N bays divide the opening's width equally after the thickness of N-1 partitions. Each
+  partition's position is worked out exactly and snapped once; a bay's width is the difference of
+  the snapped faces, so bays differ by at most one grid step and shelves always meet partitions."
+- **Shelves at set heights.** "Each height is the underside of a shelf measured from the bottom of
+  the case. The count is ignored when heights are listed."
+- **Applied back.** "An applied back is as wide and as tall as the outside of the case, lies flat
+  against the rear edges, and is not joined. Top, bottom and shelves are the full depth of the
+  case. The case's depth is measured without the back."
+- **Sides between top and bottom.** "Top and bottom are the full width of the case. Sides run
+  between them, each end in a rabbet cut across the underside (or top) face of the top (or bottom),
+  and are shorter by twice the rabbet depth's share of the overall height."
+- **Rabbeted box corners.** "The front and back run between the sides, each end in a rabbet cut in
+  the side's inner face; the sides run the full depth. Front and back are shorter than the box's
+  length by twice the wall thickness."
+- **Automatic roundover.** "`shelfRoundover: auto` takes the largest roundover bit the shop owns
+  whose radius is at most half the board's thickness; with none, there is no roundover."
+- **Detaching one copy.** "Detaching one copy of a repeated board makes it a board of its own where
+  it is. The other copies stay where the full count puts them, and the board keeps its joints."
+- **Saving a hand-made object that names a generated board.** "Saving refuses, and says which
+  board to detach first, rather than writing a file that cannot be opened."

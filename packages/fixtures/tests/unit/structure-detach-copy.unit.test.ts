@@ -7,6 +7,7 @@
 // objects refer to so a project can be saved. Heights are hand calculations in 1/64ths of an inch.
 
 import {
+  attachCopyIn,
   buildCutList,
   detachCopyIn,
   detachReferencedBoards,
@@ -77,6 +78,22 @@ describe("detaching one shelf out of four", () => {
   it("names the detached shelf so every board has its own name", () => {
     const names = second().parts.map((p) => p.name);
     expect(new Set(names).size).toBe(names.length);
+  });
+});
+
+describe("attaching a copy again", () => {
+  it("puts the shelf back into the row, where the form puts it", () => {
+    const made = generateStructures(form(), shop);
+    const detached = detachCopyIn(made, shelfPattern(made).id, 1);
+    const copy = detached.instances.find((i) => i.detachedFrom !== undefined);
+    if (!copy) throw new Error("no detached copy");
+    const restored = generateStructures(attachCopyIn(detached, copy.id), shop);
+    expect(restored).toEqual(generateStructures(made, shop));
+  });
+
+  it("refuses an instance that is not a detached copy", () => {
+    const made = generateStructures(form(), shop);
+    expect(() => attachCopyIn(made, made.instances[0]?.id ?? "")).toThrow(RangeError);
   });
 });
 
