@@ -14,6 +14,8 @@ import { evaluateQuantity } from "../expr/evaluate";
 import { solveModel } from "../solve/model";
 import type { Id, Instance, PartDef, Pattern, Project } from "../types";
 import { INCH } from "../units";
+import { generatedId } from "./ids";
+import { generatedBoardsReferencedByHand } from "./strip";
 
 const lit = (units: number): string => (units === 0 ? "0in" : `${units}/${INCH}in`);
 
@@ -90,4 +92,83 @@ export function attachPartIn(project: Project, partId: Id): Project {
   const part = generatedPart(project, partId);
   const { detached: _detached, ...rest } = part;
   return { ...project, parts: project.parts.map((p) => (p.id === partId ? rest : p)) };
+}
+
+/**
+ * Takes one copy out of a repeated board and makes it a board of its own, in the place it has now.
+ * The others stay exactly where the form puts them (the pattern is told to skip that member), and
+ * the copy keeps its joints. This is "editing one shelf detaches only that shelf".
+ * Throws RangeError for a pattern or member that does not exist, or one the form did not make.
+ */
+export function detachCopyIn(project: Project, patternId: Id, index: number): Project {
+  const pattern = project.patterns.find((p) => p.id === patternId);
+  if (!pattern) throw new RangeError(`The project has no repeated board "${patternId}".`);
+  const source = project.instances.find((i) => i.id === pattern.source);
+  const def = source && project.parts.find((p) => p.id === source.def);
+  if (!source || !def?.source) {
+    throw new RangeError("Only a board a form generated can have one copy detached.");
+  }
+  const model = solveModel(project);
+  const member = model.instances.find(
+    (i) => i.pattern?.id === patternId && i.pattern.index === index,
+  );
+  const solvedPart = model.parts.find((p) => p.id === def.id);
+  if (!member || !solvedPart) {
+    throw new RangeError(`There is no copy ${index + 1} of "${def.name}" to detach.`);
+  }
+
+  const { structure } = def.source;
+  const label = `${def.name} ${index + 1}`;
+  const partId = generatedId(structure, `detached:${patternId}:${index}`);
+  const alone: PartDef = {
+    ...def,
+    id: partId,
+    name: label,
+    length: lit(solvedPart.length),
+    width: lit(solvedPart.width),
+    thickness: lit(solvedPart.thickness),
+    // Operations need ids of their own: two parts may not share one.
+    ops: def.ops.map((op) => ({
+      ...op,
+      id: generatedId(structure, `detachedop:${patternId}:${index}:${op.id}`),
+    })),
+    detached: true,
+  };
+  const instance: Instance = {
+    ...source,
+    id: generatedId(structure, `detachedinst:${patternId}:${index}`),
+    def: partId,
+    name: label,
+    position: { x: lit(member.position.x), y: lit(member.position.y), z: lit(member.position.z) },
+    detachedFrom: { pattern: patternId, index },
+  };
+  const skipped = [...(pattern.skip ?? []), index].sort((a, b) => a - b);
+  return {
+    ...project,
+    parts: [...project.parts, alone],
+    instances: [...project.instances, instance],
+    patterns: project.patterns.map((p) => (p.id === patternId ? { ...p, skip: skipped } : p)),
+  };
+}
+
+/**
+ * Detaches every generated board that something hand-made refers to (a joint you added, a match
+ * set, a copy), so that the project can be saved. Returns the project and the boards detached,
+ * so the app can say which. Changes nothing when nothing refers to a generated board.
+ */
+export function detachReferencedBoards(project: Project): {
+  project: Project;
+  detached: PartDef[];
+} {
+  let current = project;
+  const detached: PartDef[] = [];
+  for (const defId of generatedBoardsReferencedByHand(project)) {
+    const part = current.parts.find((p) => p.id === defId);
+    if (!part || part.detached) continue;
+    const next = detachPartIn(current, defId);
+    const frozen = next.parts.find((p) => p.id === defId);
+    if (frozen) detached.push(frozen);
+    current = next;
+  }
+  return { project: current, detached };
 }

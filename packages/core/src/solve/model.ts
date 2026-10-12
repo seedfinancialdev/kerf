@@ -32,10 +32,8 @@ import {
   toSafeInteger,
 } from "../rational";
 import type { EdgeRef, Id, Instance, Len, Param, PartDef, Pattern, Project } from "../types";
+import { MAX_PATTERN_COUNT } from "./limits";
 import { extentOf, isOrientationIndex } from "./orientation";
-
-/** Most members one pattern may expand to. */
-export const MAX_PATTERN_COUNT = 10_000;
 
 export interface SolvedOp {
   id: Id;
@@ -700,13 +698,17 @@ class Solver {
     );
     if (!positions) return [];
 
-    return positions.map((along, index) => ({
-      ...base,
-      id: `${pattern.id}:${index}`,
-      name: `${name} ${index + 1}`,
-      position: { ...base.position, [axis]: along },
-      pattern: { id: pattern.id, index },
-    }));
+    // Members taken out by hand are not made; the others keep the places the full count gave them.
+    const skipped = new Set(pattern.skip ?? []);
+    return positions
+      .map((along, index) => ({
+        ...base,
+        id: `${pattern.id}:${index}`,
+        name: `${name} ${index + 1}`,
+        position: { ...base.position, [axis]: along },
+        pattern: { id: pattern.id, index },
+      }))
+      .filter((member) => !skipped.has(member.pattern.index));
   }
 
   /** Position along the pattern axis for every member, or null after reporting a problem. */
@@ -851,3 +853,5 @@ export function solveModel(project: Project): SolvedModel {
     ]);
   }
 }
+
+export { MAX_PATTERN_COUNT };

@@ -32,7 +32,9 @@ export type { Orientation } from "./solve/orientation";
 export { extentOf, ORIENTATION_COUNT, orientationOf } from "./solve/orientation";
 export {
   attachPartIn,
+  detachCopyIn,
   detachPartIn,
+  detachReferencedBoards,
   generatedId,
   projectFromTemplate,
   STOCK_OPTIONS,

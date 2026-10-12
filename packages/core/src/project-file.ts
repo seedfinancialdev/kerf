@@ -10,6 +10,7 @@
 // - Older schema versions migrate forward on load; the app never writes an older version.
 
 import { MAX_LENGTH } from "./length";
+import { MAX_PATTERN_COUNT } from "./solve/limits";
 import { isOrientationIndex } from "./solve/orientation";
 import { strandedReferences, withoutGenerated } from "./structures/strip";
 import type {
@@ -331,6 +332,14 @@ function readInstance(value: unknown, path: string): Instance {
   if (parent !== undefined) instance.parent = parent;
   const from = readGeneratedBy(r);
   if (from) instance.generatedBy = from;
+  const detachedFrom = r.optionalObject("detachedFrom");
+  if (detachedFrom) {
+    instance.detachedFrom = {
+      pattern: detachedFrom.id("pattern"),
+      index: detachedFrom.integer("index", 0, MAX_PATTERN_COUNT),
+    };
+    detachedFrom.done();
+  }
   r.done();
   return instance;
 }
@@ -354,6 +363,14 @@ function readPattern(value: unknown, path: string): Pattern {
           spacing: { mode, from: spacing.string("from"), to: spacing.string("to") },
         };
   spacing.done();
+  if (r.has("skip")) {
+    result.skip = r.array("skip", (item, p) => {
+      if (typeof item !== "number" || !Number.isSafeInteger(item) || item < 0) {
+        throw new ProjectFormatError(p, "expected a member number (0 or more)");
+      }
+      return item;
+    });
+  }
   const from = readGeneratedBy(r);
   if (from) result.generatedBy = from;
   r.done();

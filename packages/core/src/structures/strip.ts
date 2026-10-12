@@ -5,7 +5,7 @@
 // What is saved of a project with structures: its intent. Kept apart from the generators because
 // the file writer needs it and the generators need the solver, which reads the file format.
 
-import type { Project } from "../types";
+import type { Id, Project } from "../types";
 
 /**
  * The project with everything generated and not detached removed: what is saved, and what
@@ -68,4 +68,45 @@ export function strandedReferences(project: Project): Array<{ path: string; what
     }
   }
   return out;
+}
+
+/**
+ * The generated parts that hand-made objects refer to, in the order they are first mentioned: the
+ * boards a joint you added joins, a match set you made contains, a copy of one, or a pattern that
+ * repeats one.
+ */
+export function generatedBoardsReferencedByHand(project: Project): Id[] {
+  const generatedInstance = new Map(
+    project.instances.filter((i) => i.generatedBy !== undefined).map((i) => [i.id, i.def]),
+  );
+  const generatedPattern = new Map(
+    project.patterns
+      .filter((p) => p.generatedBy !== undefined)
+      .map((p) => [p.id, generatedInstance.get(p.source)]),
+  );
+  const generatedDefs = new Set(
+    project.parts.filter((p) => p.source !== undefined && !p.detached).map((p) => p.id),
+  );
+  const found: Id[] = [];
+  const note = (def: Id | undefined): void => {
+    if (def !== undefined && generatedDefs.has(def) && !found.includes(def)) found.push(def);
+  };
+  const ref = (id: Id): void => note(generatedInstance.get(id) ?? generatedPattern.get(id));
+  for (const joint of project.joints) {
+    if (joint.generatedBy !== undefined) continue;
+    ref(joint.host);
+    ref(joint.guest);
+  }
+  for (const set of project.matchSets) {
+    if (set.generatedBy === undefined) for (const member of set.members) ref(member);
+  }
+  for (const instance of project.instances) {
+    if (instance.generatedBy !== undefined) continue;
+    note(instance.def);
+    if (instance.parent !== undefined) ref(instance.parent);
+  }
+  for (const pattern of project.patterns) {
+    if (pattern.generatedBy === undefined) ref(pattern.source);
+  }
+  return found;
 }

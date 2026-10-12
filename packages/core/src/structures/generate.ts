@@ -98,6 +98,8 @@ interface Span {
 class Builder {
   readonly out = empty();
   readonly diagnostics: Diagnostic[] = [];
+  /** For each shelf pattern: the boards it is joined to, so a detached copy can keep its joints. */
+  readonly patternHosts = new Map<Id, { left: Id; right: Id; params: Record<string, string> }>();
   private readonly counted = new Map<string, number>();
   private readonly checkedOptions = new Set<string>();
 
@@ -488,6 +490,7 @@ function generateCase(b: Builder): void {
           generatedBy: b.from("shelf"),
         };
         b.out.patterns.push(pattern);
+        b.patternHosts.set(pattern.id, { left: leftBoard.id, right: rightBoard.id, params: dado });
         guests.push(pattern.id);
       } else {
         for (const [i, height] of heights.entries()) {
@@ -870,6 +873,7 @@ export function generate(
   const stocks = new Map(project.stock.map((s) => [s.id, s]));
   const diagnostics: Diagnostic[] = [];
   const made = empty();
+  const patternHosts = new Map<Id, { left: Id; right: Id; params: Record<string, string> }>();
   const roundoverBits = (shop?.tools ?? []).flatMap((t) =>
     t.type === "router" ? t.roundoverBits : [],
   );
@@ -892,6 +896,7 @@ export function generate(
     made.patterns.push(...builder.out.patterns);
     made.joints.push(...builder.out.joints);
     made.matchSets.push(...builder.out.matchSets);
+    for (const [id, hosts] of builder.patternHosts) patternHosts.set(id, hosts);
   }
 
   const fresh = <T extends { id: Id }>(have: T[], add: T[]): T[] => {
@@ -901,8 +906,15 @@ export function generate(
   // A detached part is kept as saved; so are its placements and patterns.
   const detachedDefs = new Set(base.parts.filter((p) => p.detached).map((p) => p.id));
   const madeParts = new Set(made.parts.map((p) => p.id));
+  // A copy detached from a pattern is a board of its own, but it still has a place in the form
+  // while the pattern it came from does.
+  const standsAlone = new Set(
+    base.instances
+      .filter((i) => i.detachedFrom && made.patterns.some((p) => p.id === i.detachedFrom?.pattern))
+      .map((i) => i.def),
+  );
   for (const part of base.parts) {
-    if (part.detached && part.source && !madeParts.has(part.id)) {
+    if (part.detached && part.source && !madeParts.has(part.id) && !standsAlone.has(part.id)) {
       diagnostics.push({
         severity: "warning",
         rule: "detached-board-orphaned",
@@ -934,17 +946,46 @@ export function generate(
   }
 
   const generatedInstances = made.instances.filter((i) => !detachedDefs.has(i.def));
-  const generatedPatterns = made.patterns.filter(
-    (p) => !detachedDefs.has(made.instances.find((i) => i.id === p.source)?.def ?? ""),
-  );
+  // Members taken out of a pattern by hand stay out when the pattern is made again.
+  const skipsOf = (patternId: Id): number[] =>
+    base.instances
+      .filter((i) => i.detachedFrom?.pattern === patternId)
+      .map((i) => i.detachedFrom?.index ?? 0)
+      .sort((a, b) => a - b);
+  const generatedPatterns = made.patterns
+    .filter((p) => !detachedDefs.has(made.instances.find((i) => i.id === p.source)?.def ?? ""))
+    .map((p) => {
+      const skip = skipsOf(p.id);
+      return skip.length > 0 ? { ...p, skip } : p;
+    });
+  // Each detached copy keeps the joints the form gave the pattern.
+  const copyJoints: Joint[] = base.instances.flatMap((copy) => {
+    const hosts = copy.detachedFrom && patternHosts.get(copy.detachedFrom.pattern);
+    const from = copy.generatedBy;
+    if (!hosts || !from) return [];
+    return (["left", "right"] as const).map((side) => ({
+      id: generatedId(from.structure, `detachedjoint:${copy.id}:${side}`),
+      type: "dado" as const,
+      host: side === "left" ? hosts.left : hosts.right,
+      guest: copy.id,
+      params: hosts.params,
+      generatedBy: from,
+    }));
+  });
   const instances = [...base.instances, ...fresh(base.instances, generatedInstances)];
   const patterns = [...base.patterns, ...fresh(base.patterns, generatedPatterns)];
   const placed = new Set([...instances.map((i) => i.id), ...patterns.map((p) => p.id)]);
   // A joint or match set that names a board with no placement (a detached board whose copies the
   // form no longer places) cannot be made; it is dropped and counted rather than breaking the file.
-  const joints = made.joints.filter((j) => placed.has(j.host) && placed.has(j.guest));
+  const joints = [...made.joints, ...copyJoints].filter(
+    (j) => placed.has(j.host) && placed.has(j.guest),
+  );
   const matchSets = made.matchSets.filter((m) => m.members.every((id) => placed.has(id)));
-  const dropped = made.joints.length - joints.length + (made.matchSets.length - matchSets.length);
+  const dropped =
+    made.joints.length +
+    copyJoints.length -
+    joints.length +
+    (made.matchSets.length - matchSets.length);
   if (dropped > 0) {
     diagnostics.push({
       severity: "warning",

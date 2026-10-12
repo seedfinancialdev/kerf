@@ -74,6 +74,8 @@ export interface Instance {
   mirrored: boolean; // left side = mirrored right side
   parent?: Id; // assembly instance, optional
   generatedBy?: GeneratedFrom; // set on instances a structure generated
+  /** A copy taken out of a pattern by hand: which pattern, and which member it replaced. */
+  detachedFrom?: { pattern: Id; index: number };
 }
 
 export interface Pattern {
@@ -82,6 +84,8 @@ export interface Pattern {
   count: Expr; // kind "count"
   axis: "x" | "y" | "z";
   spacing: { mode: "fixed"; step: Expr } | { mode: "distribute"; from: Expr; to: Expr };
+  /** Members (by index) that are not made, because they were detached and now stand alone. */
+  skip?: number[];
   generatedBy?: GeneratedFrom;
 }
 
