@@ -35,36 +35,33 @@ export function withoutGenerated(project: Project): Project {
  * but the board is not in the saved file, so writing them would make a file that cannot be opened.
  * Returns where each is and what it points at.
  */
-export function strandedReferences(project: Project): Array<{ path: string; what: string }> {
+export function strandedReferences(project: Project): string[] {
   const kept = withoutGenerated(project);
   const parts = new Set(kept.parts.map((p) => p.id));
   const instances = new Set(kept.instances.map((i) => i.id));
   const placed = new Set([...instances, ...kept.patterns.map((p) => p.id)]);
-  const out: Array<{ path: string; what: string }> = [];
+  const out: string[] = [];
   for (const [i, instance] of kept.instances.entries()) {
-    if (!parts.has(instance.def))
-      out.push({ path: `$.instances[${i}].def`, what: "a placed part" });
+    if (!parts.has(instance.def)) out.push(`$.instances[${i}].def`);
     if (instance.parent !== undefined && !instances.has(instance.parent)) {
-      out.push({ path: `$.instances[${i}].parent`, what: "a placed part" });
+      out.push(`$.instances[${i}].parent`);
     }
   }
   // Patterns are filtered out of `kept` when their source board is not saved, so look at the
   // project's own hand-made patterns.
   for (const [i, pattern] of project.patterns.entries()) {
     if (pattern.generatedBy === undefined && !instances.has(pattern.source)) {
-      out.push({ path: `$.patterns[${i}].source`, what: "a placed part" });
+      out.push(`$.patterns[${i}].source`);
     }
   }
   for (const [i, joint] of kept.joints.entries()) {
     for (const end of ["host", "guest"] as const) {
-      if (!placed.has(joint[end]))
-        out.push({ path: `$.joints[${i}].${end}`, what: "a placed part" });
+      if (!placed.has(joint[end])) out.push(`$.joints[${i}].${end}`);
     }
   }
   for (const [i, set] of kept.matchSets.entries()) {
     for (const [m, member] of set.members.entries()) {
-      if (!instances.has(member))
-        out.push({ path: `$.matchSets[${i}].members[${m}]`, what: "a placed part" });
+      if (!instances.has(member)) out.push(`$.matchSets[${i}].members[${m}]`);
     }
   }
   return out;

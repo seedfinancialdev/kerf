@@ -295,8 +295,10 @@ describe("rules not yet pinned", () => {
       count: 4,
     });
   });
-  it("invalid-option: a wrong-typed option on a form that does not use it is still reported", () => {
-    expect(diags(opt(box(), { back: true }))).toContain("error:invalid-option@back");
+  it("invalid-option: a wrong-typed option is reported even when nothing else reads it", () => {
+    expect(diags(opt(box(), { grooveOffset: true }))).toContain(
+      "error:invalid-option@grooveOffset",
+    );
     expect(diags(opt(box(), { grainWraps: "yes" }))).toContain("error:invalid-option@grainWraps");
     expect(
       diags(opt(form(), { dadoDepth: true })).filter((d) => d.includes("invalid-option")),

@@ -11,15 +11,18 @@
 // part the user has edited by hand is `detached`: it, its placements and its patterns are kept as
 // saved, and the generators stop regenerating them. This file runs the generators and merges what
 // they made with what the user kept; the case and the box themselves are in `case.ts` and `box.ts`.
+//
+// Generation is a pure function of the project and the shop: nothing is remembered between calls,
+// so a project edited in place and solved again gives the answer for what it now holds.
 
 import type { Quantity } from "../expr/evaluate";
 import type { Diagnostic } from "../outputs";
 import { type ProjectFormatError, validateProject } from "../project-file";
 import { solveModel } from "../solve/model";
-import type { Id, Joint, Project, ShopProfile } from "../types";
-import { generateBox } from "./box";
-import { Builder, empty } from "./builder";
-import { generateCase } from "./case";
+import type { Id, Joint, PartDef, Project, ShopProfile, Structure } from "../types";
+import { BOX_SPEC, generateBox } from "./box";
+import { Builder, empty, type Generated, type PatternHosts } from "./builder";
+import { CASE_SPEC, generateCase } from "./case";
 import { generatedId } from "./ids";
 import { withoutGenerated } from "./strip";
 
@@ -32,67 +35,33 @@ export type Generation =
   | { ok: false; problem: ProjectFormatError };
 
 /**
- * Results already made, by the object they were made from and the bits the shop owns. A solve
- * generates on every edit; an unchanged project (the same object) is not worked out again.
- * Callers never change a project in place, so sharing the result is safe.
- */
-const generatedFor = new WeakMap<object, Map<string, Generation>>();
-
-/**
  * Checks `input`, runs the generators, and checks what they made, so nothing downstream sees an
- * invalid project. Pure and deterministic; the result for one object is made once.
+ * invalid project.
  */
 export function generateFrom(input: unknown, shop?: ShopProfile): Generation {
-  const key = JSON.stringify(shopBits(shop));
-  const memo = typeof input === "object" && input !== null ? input : undefined;
-  const cached = memo && generatedFor.get(memo)?.get(key);
-  if (cached) return cached;
-
   const checked = validateProject(input);
-  let result: Generation;
-  if (checked.problem) result = { ok: false, problem: checked.problem };
-  else {
-    const made = generate(checked.project, shop);
-    const whole = validateProject(made.project);
-    result = whole.problem
-      ? { ok: false, problem: whole.problem }
-      : { ok: true, project: whole.project, diagnostics: made.diagnostics };
-  }
-  if (memo) {
-    const byShop = generatedFor.get(memo) ?? new Map<string, Generation>();
-    byShop.set(key, result);
-    generatedFor.set(memo, byShop);
-  }
-  return result;
+  if (checked.problem) return { ok: false, problem: checked.problem };
+  const made = generate(checked.project, shop);
+  const whole = validateProject(made.project);
+  if (whole.problem) return { ok: false, problem: whole.problem };
+  return { ok: true, project: whole.project, diagnostics: made.diagnostics };
 }
 
-/** The roundover bits a shop owns: all of the shop profile that generation reads. */
-function shopBits(shop: ShopProfile | undefined): number[] {
+/** The radii of the roundover bits a shop owns: all of the shop profile that generation reads. */
+function roundoverBitsOf(shop: ShopProfile | undefined): number[] {
   return (shop?.tools ?? []).flatMap((t) => (t.type === "router" ? t.roundoverBits : []));
 }
 
-/** Runs the generators on a checked project. Pure: the same project always gives the same result. */
-export function generate(
-  project: Project,
-  shop?: ShopProfile,
-): { project: Project; diagnostics: Diagnostic[] } {
-  return work(project, shop);
+/** What the generators made, with the joints each repeated shelf has (for detached copies). */
+interface Made extends Generated {
+  patternHosts: Map<Id, PatternHosts>;
+  diagnostics: Diagnostic[];
 }
 
-function work(
-  project: Project,
-  shop?: ShopProfile,
-): { project: Project; diagnostics: Diagnostic[] } {
-  const base = withoutGenerated(project);
-  if (project.structures.length === 0) return { project: base, diagnostics: [] };
-
+/** Runs each structure's generator over the parameters of `base`. */
+function runGenerators(project: Project, base: Project, shop: ShopProfile | undefined): Made {
+  const made: Made = { ...empty(), patternHosts: new Map(), diagnostics: [] };
   const stocks = new Map(project.stock.map((s) => [s.id, s]));
-  const diagnostics: Diagnostic[] = [];
-  const made = empty();
-  const patternHosts = new Map<Id, { left: Id; right: Id; params: Record<string, string> }>();
-  const roundoverBits = (shop?.tools ?? []).flatMap((t) =>
-    t.type === "router" ? t.roundoverBits : [],
-  );
   // Counts and sizes are read from the parameters alone, so a hand-made part that points at a
   // board the form is about to make cannot stop them being worked out.
   const parameters: Project = {
@@ -105,28 +74,33 @@ function work(
     structures: [],
   };
   const scope: Record<string, Quantity> = solveModel(parameters).scope;
+  const bits = roundoverBitsOf(shop);
+
   for (const [index, structure] of project.structures.entries()) {
     // A second structure's boards are told apart by number so every name stays unique.
     const prefix = index === 0 ? "" : `${structure.type === "case" ? "Case" : "Box"} ${index + 1} `;
-    const builder = new Builder(structure, stocks, scope, project.units, prefix, roundoverBits);
+    const spec = structure.type === "case" ? CASE_SPEC : BOX_SPEC;
+    const builder = new Builder(structure, spec, stocks, scope, project.units, prefix, bits);
     builder.checkOptions();
-    if (structure.type === "case") generateCase(builder);
-    else generateBox(builder);
-    diagnostics.push(...builder.diagnostics);
+    runGenerator(structure, builder);
+    made.diagnostics.push(...builder.diagnostics);
     made.parts.push(...builder.out.parts);
     made.instances.push(...builder.out.instances);
     made.patterns.push(...builder.out.patterns);
     made.joints.push(...builder.out.joints);
     made.matchSets.push(...builder.out.matchSets);
-    for (const [id, hosts] of builder.patternHosts) patternHosts.set(id, hosts);
+    for (const [id, hosts] of builder.patternHosts) made.patternHosts.set(id, hosts);
   }
+  return made;
+}
 
-  const fresh = <T extends { id: Id }>(have: T[], add: T[]): T[] => {
-    const ids = new Set(have.map((x) => x.id));
-    return add.filter((x) => !ids.has(x.id));
-  };
-  // A detached part is kept as saved; so are its placements and patterns.
-  const detachedDefs = new Set(base.parts.filter((p) => p.detached).map((p) => p.id));
+function runGenerator(structure: Structure, builder: Builder): void {
+  if (structure.type === "case") generateCase(builder);
+  else generateBox(builder);
+}
+
+/** A detached board the form no longer has a place for (and which is not a copy out of a row). */
+function orphanWarnings(base: Project, made: Made): Diagnostic[] {
   const madeParts = new Set(made.parts.map((p) => p.id));
   // A copy detached from a pattern is a board of its own, but it still has a place in the form
   // while the pattern it came from does.
@@ -135,54 +109,45 @@ function work(
       .filter((i) => i.detachedFrom && made.patterns.some((p) => p.id === i.detachedFrom?.pattern))
       .map((i) => i.def),
   );
-  for (const part of base.parts) {
-    if (part.detached && part.source && !madeParts.has(part.id) && !standsAlone.has(part.id)) {
-      diagnostics.push({
-        severity: "warning",
-        rule: "detached-board-orphaned",
-        message: `${part.name} was edited by hand and the form no longer has a place for it.`,
-        part: part.id,
-        field: part.name,
-      });
-    }
-  }
-  const edited = new Map(made.parts.map((p) => [p.id, p]));
-  for (const part of project.parts) {
-    const generated = edited.get(part.id);
-    if (
-      generated &&
-      part.source !== undefined &&
-      !part.detached &&
-      (part.length !== generated.length ||
-        part.width !== generated.width ||
-        part.thickness !== generated.thickness)
-    ) {
-      diagnostics.push({
-        severity: "warning",
-        rule: "generated-part-edited",
-        message: `${part.name} was changed by hand, but the form still controls it; detach it to keep the change.`,
-        part: part.id,
-        field: part.name,
-      });
-    }
-  }
+  return base.parts
+    .filter((p) => p.detached && p.source && !madeParts.has(p.id) && !standsAlone.has(p.id))
+    .map((part) => ({
+      severity: "warning",
+      rule: "detached-board-orphaned",
+      message: `${part.name} was edited by hand and the form no longer has a place for it.`,
+      part: part.id,
+      field: part.name,
+    }));
+}
 
-  const generatedInstances = made.instances.filter((i) => !detachedDefs.has(i.def));
-  // Members taken out of a pattern by hand stay out when the pattern is made again.
-  const skipsOf = (patternId: Id): number[] =>
-    base.instances
-      .filter((i) => i.detachedFrom?.pattern === patternId)
-      .map((i) => i.detachedFrom?.index ?? 0)
-      .sort((a, b) => a - b);
-  const generatedPatterns = made.patterns
-    .filter((p) => !detachedDefs.has(made.instances.find((i) => i.id === p.source)?.def ?? ""))
-    .map((p) => {
-      const skip = skipsOf(p.id);
-      return skip.length > 0 ? { ...p, skip } : p;
-    });
-  // Each detached copy keeps the joints the form gave the pattern.
-  const copyJoints: Joint[] = base.instances.flatMap((copy) => {
-    const hosts = copy.detachedFrom && patternHosts.get(copy.detachedFrom.pattern);
+/** A generated board whose size was changed by hand while the form still controls it. */
+function editedWarnings(project: Project, made: Made): Diagnostic[] {
+  const generatedParts = new Map<Id, PartDef>(made.parts.map((p) => [p.id, p]));
+  return project.parts
+    .filter((part) => {
+      const generated = generatedParts.get(part.id);
+      return (
+        generated &&
+        part.source !== undefined &&
+        !part.detached &&
+        (part.length !== generated.length ||
+          part.width !== generated.width ||
+          part.thickness !== generated.thickness)
+      );
+    })
+    .map((part) => ({
+      severity: "warning",
+      rule: "generated-part-edited",
+      message: `${part.name} was changed by hand, but the form still controls it; detach it to keep the change.`,
+      part: part.id,
+      field: part.name,
+    }));
+}
+
+/** The dados a copy taken out of a shelf row keeps: the ones the form gave the row. */
+function copyJoints(base: Project, made: Made): Joint[] {
+  return base.instances.flatMap((copy) => {
+    const hosts = copy.detachedFrom && made.patternHosts.get(copy.detachedFrom.pattern);
     const from = copy.generatedBy;
     if (!hosts || !from) return [];
     return (["left", "right"] as const).map((side) => ({
@@ -194,25 +159,70 @@ function work(
       generatedBy: from,
     }));
   });
-  const instances = [...base.instances, ...fresh(base.instances, generatedInstances)];
-  const patterns = [...base.patterns, ...fresh(base.patterns, generatedPatterns)];
-  const placed = new Set([...instances.map((i) => i.id), ...patterns.map((p) => p.id)]);
+}
+
+/** `add` without the entries `have` already holds (kept boards win over regenerated ones). */
+function fresh<T extends { id: Id }>(have: readonly T[], add: readonly T[]): T[] {
+  const ids = new Set(have.map((x) => x.id));
+  return add.filter((x) => !ids.has(x.id));
+}
+
+/** Joins what was kept with what was made, dropping what a detached board leaves without a place. */
+function merge(
+  project: Project,
+  base: Project,
+  made: Made,
+): {
+  project: Project;
+  diagnostics: Diagnostic[];
+} {
+  const diagnostics = [
+    ...made.diagnostics,
+    ...orphanWarnings(base, made),
+    ...editedWarnings(project, made),
+  ];
+
+  // A detached part is kept as saved; so are its placements and patterns.
+  const detachedDefs = new Set(base.parts.filter((p) => p.detached).map((p) => p.id));
+  const instances = [
+    ...base.instances,
+    ...fresh(
+      base.instances,
+      made.instances.filter((i) => !detachedDefs.has(i.def)),
+    ),
+  ];
+  // Members taken out of a pattern by hand stay out when the pattern is made again.
+  const skipsOf = (patternId: Id): number[] =>
+    base.instances
+      .filter((i) => i.detachedFrom?.pattern === patternId)
+      .flatMap((i) => (i.detachedFrom ? [i.detachedFrom.index] : []))
+      .sort((a, b) => a - b);
+  const instanceDef = new Map(made.instances.map((i) => [i.id, i.def]));
+  const patterns = [
+    ...base.patterns,
+    ...fresh(
+      base.patterns,
+      made.patterns
+        .filter((p) => !detachedDefs.has(instanceDef.get(p.source) ?? ""))
+        .map((p) => {
+          const skip = skipsOf(p.id);
+          return skip.length > 0 ? { ...p, skip } : p;
+        }),
+    ),
+  ];
+
   // A joint or match set that names a board with no placement (a detached board whose copies the
   // form no longer places) cannot be made; it is dropped and counted rather than breaking the file.
-  const joints = [...made.joints, ...copyJoints].filter(
-    (j) => placed.has(j.host) && placed.has(j.guest),
-  );
+  const placed = new Set([...instances.map((i) => i.id), ...patterns.map((p) => p.id)]);
+  const wantedJoints = [...made.joints, ...copyJoints(base, made)];
+  const joints = wantedJoints.filter((j) => placed.has(j.host) && placed.has(j.guest));
   const matchSets = made.matchSets.filter((m) => m.members.every((id) => placed.has(id)));
-  const dropped =
-    made.joints.length +
-    copyJoints.length -
-    joints.length +
-    (made.matchSets.length - matchSets.length);
+  const dropped = wantedJoints.length - joints.length + (made.matchSets.length - matchSets.length);
   if (dropped > 0) {
     diagnostics.push({
       severity: "warning",
       rule: "joint-dropped",
-      message: `${dropped} joint${dropped === 1 ? " was" : "s were"} not made because a board edited by hand is not placed where the form expects it.`,
+      message: `${dropped} joint${dropped === 1 ? " was" : "s were"} not made (or grain match not kept) because a board edited by hand is not placed where the form expects it.`,
       field: "detached boards",
       count: dropped,
     });
@@ -228,4 +238,17 @@ function work(
     },
     diagnostics,
   };
+}
+
+/**
+ * Runs the generators on a checked project. Pure: the same project always gives the same result,
+ * and the project passed in is not changed.
+ */
+export function generate(
+  project: Project,
+  shop?: ShopProfile,
+): { project: Project; diagnostics: Diagnostic[] } {
+  const base = withoutGenerated(project);
+  if (project.structures.length === 0) return { project: base, diagnostics: [] };
+  return merge(project, base, runGenerators(project, base, shop));
 }

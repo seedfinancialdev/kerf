@@ -29,28 +29,33 @@ the left column.
 
 ## From a form to a cut list
 
-Each edit runs the same pipeline, in order. The first three steps are "what are the parts",
-the middle ones "can it be built", the last ones "what do I do in the shop".
+Each edit runs the same pipeline, in order. It is the spec's numbered pipeline, with the form
+generating its boards first.
 
-1. **Generate** (`packages/core/src/structures`). A form (a *structure*: a case or a box) makes
+0. **Generate** (`packages/core/src/structures`). A form (a *structure*: a case or a box) makes
    ordinary boards, placements, repeats, joints and grain-matched sets. A partition or a bay is a
-   division of an *opening* and makes more boards.
-2. **Parameters, parts, placements** (`solve/model.ts`). Every size is an expression
+   division of an *opening* and makes more boards. A project with no form skips this.
+1. **Parameters** (`solve/model.ts`). Named values (`width = 36in`) are worked out in dependency
+   order; a cycle is an error that names every member.
+2. **Parts** and 3. **placements and repeats** (`solve/model.ts`). Every size is an expression
    (`width - 2*stock["3/4 plywood"].thickness`) worked out exactly with fractions, then snapped to
    the 1/64-inch grid *once*, at the end, rounding half to even.
-3. **Joints** (`joints/`). For each joint the cuts on both boards are worked out in each board's
+4. **Joints** (`joints/`). For each joint the cuts on both boards are worked out in each board's
    own frame, and what a joint adds to a board's cut size (a shelf in a 1/4-inch dado is 1/2 inch
    longer than it looks) is added.
-4. **Validation** (`outputs/validate.ts`). Overlaps between boards that are not joined, a groove
-   that shows through a dovetail, a rounded edge a joint hides. Errors stop everything after this
-   point; warnings never do.
-5. **Outputs** (`outputs/`, `nest/`). The cut list groups identical boards; nesting packs boards
-   onto sheets and standard-length boards; machining groups every cut by identical tool setup.
-6. **Display** (`packages/geometry`). Each board's blank minus its cuts, for the screen. Outputs
+5. **Validation** (`outputs/validate.ts`). Overlaps between boards that are not joined, a groove
+   that shows through a dovetail, a rounded edge a joint hides. An error here withholds the cut
+   list, layouts and setups; warnings never do.
+6. **Outputs** (`outputs/`, `nest/`). The cut list groups identical boards; nesting packs boards
+   onto sheets and standard-length boards; machining groups every cut by identical tool setup. A
+   problem found here (a board larger than its sheet, an invalid shop profile) is reported and
+   blocks the project, but the cut list is still given.
+7. **Display** (`packages/geometry`). Each board's blank minus its cuts, for the screen. Outputs
    never read this; it is only for looking at.
 
-`solve()` in `packages/core/src/pipeline.ts` runs all of it and never throws: whatever goes wrong
-becomes a diagnostic, a plain-language message with a rule name.
+`solve()` (in `packages/core/src/api.ts`, running `runPipeline` and `solveProject` in
+`pipeline.ts`) never throws: whatever goes wrong becomes a diagnostic, a plain-language message
+with a rule name.
 
 ## Why lengths are whole numbers
 

@@ -680,12 +680,11 @@ export function serializeProject(project: Project): string {
   // What is saved is intent: structures, openings and hand-made or detached parts. Generated parts,
   // placements, patterns, joints and match sets are re-derived on load. A hand-made object that
   // points at a generated board cannot be saved (the board is not in the file), so say so.
-  const stranded = strandedReferences(checked.project);
-  const first = stranded[0];
-  if (first) {
+  const [stranded] = strandedReferences(checked.project);
+  if (stranded) {
     throw new ProjectFormatError(
-      first.path,
-      `refers to ${first.what} that the form generates, which is not saved; detach that board first so it becomes your own`,
+      stranded,
+      "refers to a board the form generates, which is not saved; detach that board first so it becomes your own",
     );
   }
   return `${canonicalJson(withoutGenerated(checked.project) as unknown as Json)}\n`;

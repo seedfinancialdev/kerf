@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The core API. Functions here are thin wrappers over the pipeline in pipeline.ts and the
-// structure generators.
+// The core API: the functions an application calls. Each is a short front for the pipeline in
+// pipeline.ts or for the structure generators, with the contract a caller needs spelled out.
 
 import type { CutAdd } from "./joints/types";
 import type {
@@ -15,11 +15,16 @@ import type {
   SolveResult,
 } from "./outputs";
 import { runPipeline, solveProject } from "./pipeline";
+import { ProjectFormatError, validateProject } from "./project-file";
 import { detachedPart, generateFrom } from "./structures";
 import type { Id, PartDef, Project, ShopProfile } from "./types";
 
-// The whole pipeline (steps 1-6).
-
+/**
+ * Solves the whole project: structures, parameters, parts, joints, validation, then cut list,
+ * layouts and setups. Never throws: anything that goes wrong is a diagnostic, and `blocked` says
+ * whether an error stops the outputs. The project and the shop profile are read once and not
+ * changed.
+ */
 export function solve(project: Project, shop: ShopProfile): SolveResult {
   return solveProject(project, shop);
 }
@@ -30,8 +35,9 @@ export function solve(project: Project, shop: ShopProfile): SolveResult {
  * What one joint does to its host and guest: removals in each part's definition space, and what it
  * adds to the guest's cut size. For a joint with a pattern on either side, `host`/`guest` collect
  * the removals of every pair and `guestCutAdd` is the add for the first derived pair.
- * Throws RangeError for a joint id the project does not have, and Error for a project that is not
- * valid; a joint that failed has no cuts and its reasons are in `solve(...).diagnostics`.
+ * Throws RangeError for a joint id the project does not have, and ProjectFormatError for a
+ * project that is not valid; a joint that failed has no cuts and its reasons are in
+ * `solve(...).diagnostics`.
  */
 export function deriveJointCuts(
   project: Project,
@@ -39,8 +45,9 @@ export function deriveJointCuts(
 ): { host: RemovalPrimitive[]; guest: RemovalPrimitive[]; guestCutAdd: CutAdd } {
   const p = runPipeline(project);
   if (!p.project) {
-    const why = p.diagnostics.find((d) => d.severity === "error")?.message;
-    throw new Error(`The project is not valid${why ? `: ${why}` : "."}`);
+    const checked = validateProject(project);
+    if (checked.problem) throw checked.problem;
+    throw new ProjectFormatError("$", "the project could not be solved; see solve() for why");
   }
   if (!p.project.joints.some((j) => j.id === jointId)) {
     throw new RangeError(`The project has no joint "${jointId}".`);
@@ -59,14 +66,17 @@ export function deriveJointCuts(
 // Outputs (M2). These return the output only; `solve` is the way to see why one is empty
 // (an invalid project, an error in the assembly, an invalid shop profile).
 
+/** The cut list alone: empty when an error in the assembly means the project cannot be built. */
 export function buildCutList(project: Project): CutList {
   return runPipeline(project).cutList;
 }
 
+/** Sheet layouts, board layouts and totals, as `solve` gives them (empty when blocked). */
 export function nest(project: Project, shop: ShopProfile): NestingResult {
   return solveProject(project, shop).nesting;
 }
 
+/** Machining grouped by identical tool setup, as `solve` gives it (empty when blocked). */
 export function machiningSetups(project: Project, shop: ShopProfile): MachiningSetup[] {
   return solveProject(project, shop).setups;
 }
@@ -76,8 +86,8 @@ export function machiningSetups(project: Project, shop: ShopProfile): MachiningS
 /**
  * The project with everything its structures generate. Pure and deterministic: ids come from the
  * structure and the part's role, so generating twice gives the same project. A detached part is
- * kept exactly as saved. The shop matters in two ways: a `"auto"` roundover takes the largest bit
- * the shop owns, and the machining setups name the tool you would need for each joint.
+ * kept exactly as saved. The shop matters in one way: a `"auto"` roundover takes the largest bit
+ * the shop owns that fits the board. (Which tool a joint needs is told by `machiningSetups`.)
  */
 export function generateStructures(project: Project, shop: ShopProfile): Project {
   return generateStructuresChecked(project, shop).project;

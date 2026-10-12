@@ -2,13 +2,14 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// What every structure generator works with: the `Builder` that makes parts, placements, patterns
-// and joints with derived ids and a recorded origin, reads the form's options (and says when one
-// is wrong), and keeps the diagnostics. Nothing here knows what a case or a box is.
+// The tools every generator is written with: a `Builder` that makes parts, placements, patterns
+// and joints with derived ids and a recorded origin, reads the form's options and says when one is
+// wrong, and collects the diagnostics. Which options and stocks a form has is told to it by the
+// form (`FormSpec`), so this file knows nothing about cases or boxes.
 
 import { ExpressionError } from "../expr/errors";
 import { evaluateQuantity, type Quantity } from "../expr/evaluate";
-import { snapToGrid, type UnitSystem } from "../length";
+import type { UnitSystem } from "../length";
 import type { Diagnostic } from "../outputs";
 import type { Rational } from "../rational";
 import type { RuleId } from "../rules";
@@ -23,8 +24,8 @@ import type {
   Stock,
   Structure,
 } from "../types";
-import { INCH } from "../units";
 import { generatedId } from "./ids";
+import { lit } from "./lengths";
 
 /** Generated objects, before they are merged into a project. */
 export interface Generated {
@@ -46,36 +47,19 @@ export const empty = (): Generated => ({
 /** Most boards of one kind a form may ask for; it decides how many parts are made. */
 export const MAX_COUNT = 64;
 
-const STOCK_LABELS: Record<string, string> = {
-  carcaseStock: "the sides, top and bottom",
-  backStock: "the back",
-  wallStock: "the walls",
-  bottomStock: "the bottom",
-};
-
-const TEXT_OPTIONS = [
-  "topBottom",
-  "back",
-  "dadoDepth",
-  "rabbetDepth",
-  "backRabbetDepth",
-  "shelfRoundover",
-  "cornerJoint",
-  "bottom",
-  "grooveDepth",
-  "grooveOffset",
-];
-
-/** An exact length of `units` as an expression the solver reads back unchanged. */
-export const lit = (units: number): string => (units === 0 ? "0in" : `${units}/${INCH}in`);
-export const wrap = (e: string): string => `(${e})`;
+/** The options a form reads, so a wrong one is reported and none is quietly ignored. */
+export interface FormSpec {
+  /** Option key of each stock the form uses, and how the user would call it ("the back"). */
+  stockLabels: Readonly<Record<string, string>>;
+  /** Options that are text (a style, a depth expression). */
+  textOptions: readonly string[];
+  /** Options that are true or false. */
+  flags: readonly string[];
+}
 
 /** Joint parameters from the form's depth options; absent means the spec's default rule applies. */
 export const depth = (value: string | undefined): Record<string, string> =>
   value === undefined ? {} : { depth: value };
-
-/** Rounds an exact value onto the project grid, half to even (Domain model, "Units & precision"). */
-export const snap = (value: Rational, units: UnitSystem): number => snapToGrid(value, units);
 
 /** An opening's horizontal extent: expressions to write, and exact values to decide with. */
 export interface Span {
@@ -86,18 +70,25 @@ export interface Span {
   n1?: Rational;
 }
 
+/** The boards a repeated shelf is joined to, so a copy taken out of it can keep its joints. */
+export interface PatternHosts {
+  left: Id;
+  right: Id;
+  params: Record<string, string>;
+}
+
 export class Builder {
   readonly out = empty();
   readonly diagnostics: Diagnostic[] = [];
-  /** For each shelf pattern: the boards it is joined to, so a detached copy can keep its joints. */
-  readonly patternHosts = new Map<Id, { left: Id; right: Id; params: Record<string, string> }>();
+  readonly patternHosts = new Map<Id, PatternHosts>();
   private readonly counted = new Map<string, number>();
   private readonly checkedOptions = new Set<string>();
 
   constructor(
     readonly structure: Structure,
-    private readonly stocks: Map<Id, Stock>,
-    private readonly scope: Record<string, Quantity>,
+    private readonly spec: FormSpec,
+    private readonly stocks: ReadonlyMap<Id, Stock>,
+    private readonly scope: Readonly<Record<string, Quantity>>,
     readonly units: UnitSystem,
     private readonly prefix: string,
     /** Roundover bit radii the shop owns, for `shelfRoundover: "auto"`. */
@@ -122,7 +113,7 @@ export class Builder {
 
   /** The stock a form field names, or undefined with a message that says what is wrong. */
   stock(option: string): Stock | undefined {
-    const label = STOCK_LABELS[option] ?? option;
+    const label = this.spec.stockLabels[option] ?? option;
     const value = this.structure.options[option];
     if (value === undefined || value === "") {
       this.report(
@@ -133,7 +124,11 @@ export class Builder {
       );
       return undefined;
     }
-    const found = typeof value === "string" ? this.stocks.get(value) : undefined;
+    if (typeof value !== "string") {
+      this.badOption(option, "the stock chosen from the project's stock");
+      return undefined;
+    }
+    const found = this.stocks.get(value);
     if (!found) {
       this.report(
         "error",
@@ -169,6 +164,7 @@ export class Builder {
     return undefined;
   }
 
+  /** A true-or-false option; a wrong-typed value is reported once and read as false. */
   flag(key: string): boolean {
     const v = this.structure.options[key];
     if (v === undefined) return false;
@@ -177,10 +173,10 @@ export class Builder {
     return false;
   }
 
-  /** Reports every text option of the wrong type, so none is ignored without a word. */
+  /** Reads every option the form has, so a wrong one is said even if nothing else uses it. */
   checkOptions(): void {
-    for (const key of TEXT_OPTIONS) this.option(key);
-    if (this.structure.type === "box") this.flag("grainWraps");
+    for (const key of this.spec.textOptions) this.option(key);
+    for (const key of this.spec.flags) this.flag(key);
   }
 
   private badOption(key: string, wanted: string): void {
@@ -189,33 +185,37 @@ export class Builder {
     this.report("error", "invalid-option", `The form's "${key}" must be ${wanted}.`, key);
   }
 
-  /** A whole number from 0 to 64, evaluated now because it decides how many boards are made. */
+  /** A whole number from 0 to `MAX_COUNT`, worked out now because it decides how many boards. */
   count(expr: string, field: string): number {
-    const cached = this.counted.get(`${field}:${expr}`);
+    const memo = `${field}:${expr}`;
+    const cached = this.counted.get(memo);
     if (cached !== undefined) return cached;
     let result = 0;
-    let why = `must be a whole number from 0 to ${MAX_COUNT}`;
+    let message = `The number of ${field} must be a whole number from 0 to ${MAX_COUNT}.`;
     try {
       const q = evaluateQuantity(expr, this.scope);
-      if (q.kind === "count" && q.value.den === 1n && q.value.num >= 0n && q.value.num <= 64n) {
-        result = Number(q.value.num);
-        this.counted.set(`${field}:${expr}`, result);
+      const n = q.value.num;
+      if (q.kind === "count" && q.value.den === 1n && n >= 0n && n <= BigInt(MAX_COUNT)) {
+        result = Number(n);
+        this.counted.set(memo, result);
         return result;
       }
     } catch (error) {
-      if (error instanceof ExpressionError) why = error.message;
+      if (!(error instanceof ExpressionError)) throw error;
+      message = `The number of ${field} is not valid: ${error.message}`;
     }
-    this.report("error", "invalid-count", `The number of ${field} ${why}.`, field);
-    this.counted.set(`${field}:${expr}`, 0);
-    return 0;
+    this.report("error", "invalid-count", message, field);
+    this.counted.set(memo, result);
+    return result;
   }
 
-  /** An exact value of the expression, of the kind asked for. */
+  /** The exact value of an expression, or undefined when it does not evaluate. */
   quantity(expr: string): Quantity | undefined {
     try {
       return evaluateQuantity(expr, this.scope);
-    } catch {
-      return undefined;
+    } catch (error) {
+      if (error instanceof ExpressionError) return undefined;
+      throw error;
     }
   }
 

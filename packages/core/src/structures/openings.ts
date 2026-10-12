@@ -6,14 +6,17 @@
 // fraction, or N equal bays. A partition makes two child openings and bays make N, each divided in
 // turn from the form's own tree, so a bay can hold shelves or another partition.
 //
-// Positions are exact until a board's own place is written: a partition's left face is worked out
-// as an exact length and snapped once (half to even), and everything beside it is measured from
-// that snapped face. That is what lets a shelf meet its partition to the grid line.
+// Positions are exact until a board's own place is written: a partition at a fraction, or the faces
+// of bays, are worked out as exact lengths and snapped once (half to even), and everything beside
+// them is measured from that snapped face. That is what lets a shelf meet its partition to the
+// grid line. A partition given as a length is already a length and is used as written.
 
+import { snapToGrid } from "../length";
 import type { Rational } from "../rational";
 import { add, compare, div, mul, rational, sub } from "../rational";
 import type { Id, Instance, Opening, Pattern } from "../types";
-import { type Builder, lit, MAX_COUNT, type Span, snap, wrap } from "./builder";
+import { type Builder, MAX_COUNT, type Span } from "./builder";
+import { lit, wrap } from "./lengths";
 
 /** What dividing needs to know about the case around the opening. */
 export interface DivisionContext {
@@ -54,7 +57,7 @@ function tally(b: Builder, o: Opening | undefined): { shelfOpenings: number; par
     );
 }
 
-/** A board standing between two others, and its position as an expression and (if known) a value. */
+/** A partition's distance from the opening's low-X face: as an expression and as an exact length. */
 interface Offset {
   expr: string;
   units: Rational;
@@ -65,14 +68,15 @@ export class Divider {
   private readonly planned: { shelfOpenings: number; partitions: number };
   private shelfOpenings = 0;
   private partitions = 0;
-  private readonly tn: Rational;
+  /** The board thickness as an exact length, for the arithmetic that places partitions. */
+  private readonly thicknessExact: Rational;
 
   constructor(
     private readonly b: Builder,
     private readonly c: DivisionContext,
   ) {
     this.planned = tally(b, b.structure.openings[0]);
-    this.tn = rational(BigInt(c.thicknessUnits));
+    this.thicknessExact = rational(BigInt(c.thicknessUnits));
   }
 
   /** Makes the joints of everything divided so far; call once, after the rest of the case. */
@@ -80,7 +84,11 @@ export class Divider {
     for (const emit of this.pending) emit();
   }
 
-  /** Divides `o` between `left` and `right`, then each child opening in turn. */
+  /**
+   * Divides `o` between `left` and `right`, then each child opening in turn. `left` is the board
+   * at the smaller X (the right side of a case, seen from its front) and `right` the one at the
+   * larger X; the names follow the screen's left-to-right across the case's width.
+   */
   divide(o: Opening | undefined, span: Span, left: Instance, right: Instance, key: string): void {
     const d = o?.division;
     if (!o || !d) {
@@ -211,7 +219,7 @@ export class Divider {
     let offset: Offset;
     if (q?.kind === "length") offset = { expr: at, units: q.value };
     else if (q?.kind === "ratio" && span.n0 && span.n1) {
-      const units = snap(mul(q.value, sub(span.n1, span.n0)), b.units);
+      const units = snapToGrid(mul(q.value, sub(span.n1, span.n0)), b.units);
       offset = { expr: lit(units), units: rational(BigInt(units)) };
     } else {
       b.report(
@@ -223,7 +231,7 @@ export class Divider {
       return;
     }
     if (span.n0 && span.n1) {
-      const room = sub(sub(span.n1, span.n0), this.tn);
+      const room = sub(sub(span.n1, span.n0), this.thicknessExact);
       if (offset.units.num <= 0n || compare(offset.units, room) > 0) {
         b.report(
           "error",
@@ -246,7 +254,7 @@ export class Divider {
         {
           x0: `${leftEnd} + ${this.c.thickness}`,
           x1: span.x1,
-          ...(exact ? { n0: add(add(n0, offset.units), this.tn), n1 } : {}),
+          ...(exact ? { n0: add(add(n0, offset.units), this.thicknessExact), n1 } : {}),
         },
       ],
       left,
@@ -271,13 +279,16 @@ export class Divider {
     const { b } = this;
     const n = b.count(countExpr, "bays");
     if (n < 2) {
-      if (n === 1 || n === 0) {
+      // A count that is not a number was reported by `count`; only 0 and 1 are said here.
+      if (n === 1) {
         b.report(
           "warning",
           "division-ignored",
           "One bay is the opening itself; nothing is divided.",
           "bays",
         );
+      } else if (n === 0 && b.quantity(countExpr)?.kind === "count") {
+        b.report("warning", "division-ignored", "A count of zero bays divides nothing.", "bays");
       }
       this.unusedChildren(o, 0);
       return;
@@ -295,10 +306,16 @@ export class Divider {
     }
     const Tn = this.c.thicknessUnits;
     const width = sub(n1, n0);
-    const bay = div(sub(width, mul(this.tn, rational(BigInt(n - 1)))), rational(BigInt(n)));
+    const bay = div(
+      sub(width, mul(this.thicknessExact, rational(BigInt(n - 1)))),
+      rational(BigInt(n)),
+    );
     // Left face of partition k (1-based), measured from the opening's left face.
     const faces = Array.from({ length: n - 1 }, (_, k) =>
-      snap(add(mul(bay, rational(BigInt(k + 1))), mul(this.tn, rational(BigInt(k)))), b.units),
+      snapToGrid(
+        add(mul(bay, rational(BigInt(k + 1))), mul(this.thicknessExact, rational(BigInt(k)))),
+        b.units,
+      ),
     );
     const starts = [0, ...faces.map((f) => f + Tn)];
     const ends = [...faces, undefined];
@@ -362,8 +379,8 @@ export class Divider {
     for (const [i, child] of children.entries()) {
       const before = i === 0 ? left : (boards[i - 1] as Instance);
       const after = i === children.length - 1 ? right : (boards[i] as Instance);
-      const sub = o.children[i];
-      this.divide(sub, child, before, after, sub?.id ?? `${key}.${i}`);
+      const childOpening = o.children[i];
+      this.divide(childOpening, child, before, after, childOpening?.id ?? `${key}.${i}`);
     }
   }
 }

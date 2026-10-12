@@ -10,14 +10,13 @@
 // are written down as exact lengths at the moment it is detached, so a later resize of the form
 // leaves it exactly where the user left it.
 
+import { ExpressionError } from "../expr/errors";
 import { evaluateQuantity } from "../expr/evaluate";
-import { solveModel } from "../solve/model";
+import { type SolvedModel, solveModel } from "../solve/model";
 import type { Id, Instance, PartDef, Pattern, Project } from "../types";
-import { INCH } from "../units";
 import { generatedId } from "./ids";
+import { lit } from "./lengths";
 import { generatedBoardsReferencedByHand } from "./strip";
-
-const lit = (units: number): string => (units === 0 ? "0in" : `${units}/${INCH}in`);
 
 function generatedPart(project: Project, partId: Id): PartDef {
   const part = project.parts.find((p) => p.id === partId);
@@ -28,11 +27,14 @@ function generatedPart(project: Project, partId: Id): PartDef {
   return part;
 }
 
-/** The part as detached, with its size frozen and its role kept for the inspector. */
-export function detachedPart(project: Project, partId: Id): PartDef {
-  const part = generatedPart(project, partId);
-  const solved = solveModel(project).parts.find((p) => p.id === partId);
-  if (!solved) return { ...part, detached: true };
+/** The part with its size written down as exact lengths, as it is in `model`. */
+function frozenPart(part: PartDef, model: SolvedModel): PartDef {
+  const solved = model.parts.find((p) => p.id === part.id);
+  if (!solved) {
+    throw new RangeError(
+      `The size of "${part.name}" cannot be worked out right now (see the problems listed), so it cannot be detached.`,
+    );
+  }
   return {
     ...part,
     length: lit(solved.length),
@@ -42,10 +44,34 @@ export function detachedPart(project: Project, partId: Id): PartDef {
   };
 }
 
-/** The project with one generated part detached, and its placements and patterns frozen. */
+/**
+ * The generated part as detached, with its size frozen and its role kept for the inspector.
+ * Throws RangeError for a part that does not exist, was not generated, or whose size cannot be
+ * worked out.
+ */
+export function detachedPart(project: Project, partId: Id): PartDef {
+  return frozenPart(generatedPart(project, partId), solveModel(project));
+}
+
+/** A length or count expression as an exact literal, or as written when it does not evaluate. */
+function frozenExpression(expr: string, model: SolvedModel): string {
+  try {
+    const q = evaluateQuantity(expr, model.scope);
+    if (q.kind === "length" && q.value.den === 1n) return lit(Number(q.value.num));
+    if (q.kind === "count" && q.value.den === 1n) return String(q.value.num);
+  } catch (error) {
+    if (!(error instanceof ExpressionError)) throw error;
+  }
+  return expr;
+}
+
+/**
+ * The project with one generated part detached: its size, its places and the pattern repeating it
+ * are written down as exact lengths. Throws RangeError as `detachedPart` does.
+ */
 export function detachPartIn(project: Project, partId: Id): Project {
-  const detached = detachedPart(project, partId);
   const model = solveModel(project);
+  const detached = frozenPart(generatedPart(project, partId), model);
   // Where each placement is now. A pattern's source is its first member.
   const solvedAt = new Map(model.instances.map((i) => [i.id, i.position]));
   const sourceOf = new Map(project.patterns.map((p) => [p.id, p.source]));
@@ -58,25 +84,16 @@ export function detachPartIn(project: Project, partId: Id): Project {
     return at ? { ...i, position: { x: lit(at.x), y: lit(at.y), z: lit(at.z) } } : i;
   });
   const mine = new Set(project.instances.filter((i) => i.def === partId).map((i) => i.id));
-  const evaluate = (expr: string): string => {
-    try {
-      const q = evaluateQuantity(expr, model.scope);
-      if (q.kind === "length" && q.value.den === 1n) return lit(Number(q.value.num));
-      if (q.kind === "count" && q.value.den === 1n) return String(q.value.num);
-    } catch {
-      // keep the expression: it still means what it meant
-    }
-    return expr;
-  };
   const patterns: Pattern[] = project.patterns.map((p) => {
     if (!mine.has(p.source)) return p;
+    const freeze = (expr: string): string => frozenExpression(expr, model);
     return {
       ...p,
-      count: evaluate(p.count),
+      count: freeze(p.count),
       spacing:
         p.spacing.mode === "fixed"
-          ? { mode: "fixed", step: evaluate(p.spacing.step) }
-          : { mode: "distribute", from: evaluate(p.spacing.from), to: evaluate(p.spacing.to) },
+          ? { mode: "fixed", step: freeze(p.spacing.step) }
+          : { mode: "distribute", from: freeze(p.spacing.from), to: freeze(p.spacing.to) },
     };
   });
   return {
@@ -87,7 +104,10 @@ export function detachPartIn(project: Project, partId: Id): Project {
   };
 }
 
-/** The project with a detached part handed back to its structure. */
+/**
+ * The project with a detached part handed back to its structure (undo). Throws RangeError for a
+ * part that does not exist or was not generated.
+ */
 export function attachPartIn(project: Project, partId: Id): Project {
   const part = generatedPart(project, partId);
   const { detached: _detached, ...rest } = part;

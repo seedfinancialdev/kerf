@@ -10,15 +10,31 @@
 import type { Rational } from "../rational";
 import { rational, sub } from "../rational";
 import type { Instance, Stock } from "../types";
-import { type Builder, depth, roundoverFor, type Span, wrap } from "./builder";
+import { type Builder, depth, type FormSpec, roundoverFor, type Span } from "./builder";
+import { wrap } from "./lengths";
 import { Divider } from "./openings";
+import { FACING_FRONT, STANDING_ACROSS, STANDING_ACROSS_MIRRORED } from "./orientations";
+
+/** The options a case reads: each stock and how a woodworker names it, and the plain settings. */
+export const CASE_SPEC = {
+  stockLabels: { carcaseStock: "the sides, top and bottom", backStock: "the back" },
+  textOptions: [
+    "topBottom",
+    "back",
+    "dadoDepth",
+    "rabbetDepth",
+    "backRabbetDepth",
+    "shelfRoundover",
+  ],
+  flags: [],
+} as const satisfies FormSpec;
 
 /** The case form's choices, read and checked once. */
 interface CaseForm {
   carcase: Stock;
   /** `stock["…"].thickness` and the carcase thickness in units. */
   T: string;
-  Tn: number;
+  thicknessUnits: number;
   /** Overall width, height and depth as expressions, parenthesised. */
   W: string;
   H: string;
@@ -62,7 +78,7 @@ function readCaseForm(b: Builder): CaseForm | undefined {
   return {
     carcase,
     T: b.thickness(carcase),
-    Tn: carcase.thickness,
+    thicknessUnits: carcase.thickness,
     W: wrap(size.w),
     H: wrap(size.h),
     D: wrap(size.d),
@@ -91,11 +107,11 @@ function buildFrame(b: Builder, f: CaseForm, backTaken: string): Frame {
   const sideZ = sidesBetween ? T : "0in";
   const right = b.instance("side", "side:right", sideDef, ["0in", "0in", sideZ], {
     name: "Right side",
-    orientation: 17,
+    orientation: STANDING_ACROSS,
   });
   const left = b.instance("side", "side:left", sideDef, [`${W} - ${T}`, "0in", sideZ], {
     name: "Left side",
-    orientation: 23,
+    orientation: STANDING_ACROSS_MIRRORED,
     mirrored: true,
   });
 
@@ -129,12 +145,15 @@ function buildBack(b: Builder, f: CaseForm): Instance | undefined {
     width: back.style === "inset" ? inner : W,
   });
   if (back.style === "inset") {
-    return b.instance("back", "back", def, [T, "0in", "0in"], { name: "Back", orientation: 16 });
+    return b.instance("back", "back", def, [T, "0in", "0in"], {
+      name: "Back",
+      orientation: FACING_FRONT,
+    });
   }
   // Applied: it covers the whole outside, flat against the rear edges, and is fixed on, not joined.
   b.instance("back", "back", def, ["0in", `0in - ${b.thickness(back.stock)}`, "0in"], {
     name: "Back",
-    orientation: 16,
+    orientation: FACING_FRONT,
   });
   return undefined;
 }
@@ -143,7 +162,7 @@ function buildBack(b: Builder, f: CaseForm): Instance | undefined {
 function interior(b: Builder, f: CaseForm): Span {
   const q = b.quantity(b.structure.size.w);
   const width: Rational | undefined = q?.kind === "length" ? q.value : undefined;
-  const t = rational(BigInt(f.Tn));
+  const t = rational(BigInt(f.thicknessUnits));
   return {
     x0: f.T,
     x1: `${f.W} - ${f.T}`,
@@ -173,12 +192,12 @@ export function generateCase(b: Builder): void {
   const divider = new Divider(b, {
     stock: carcase.id,
     thickness: T,
-    thicknessUnits: form.Tn,
+    thicknessUnits: form.thicknessUnits,
     height: H,
     depth: form.D,
     backTaken,
     dado,
-    roundover: roundoverFor(b, b.option("shelfRoundover"), form.Tn),
+    roundover: roundoverFor(b, b.option("shelfRoundover"), form.thicknessUnits),
     top: frame.top,
     bottom: frame.bottom,
   });

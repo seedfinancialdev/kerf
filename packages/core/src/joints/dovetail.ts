@@ -15,7 +15,7 @@
 //   5. baseline on each board = the mating board's thickness
 
 import { gridSize, snapToGrid, type UnitSystem } from "../length";
-import type { DovetailLayout, DovetailLayoutInput, RemovalPrimitive } from "../outputs";
+import type { RemovalPrimitive } from "../outputs";
 import { div, floor, fromInteger, rational, roundHalfEven, toSafeInteger } from "../rational";
 import type { RuleId } from "../rules";
 import type { Frame } from "../solve/assembly";
@@ -23,6 +23,22 @@ import { axisMaps, boxOf, boxToLocal, contactOf, faceAt, toParent } from "../sol
 import type { Joint, Len } from "../types";
 import { INCH } from "../units";
 import type { DeriveContext, PairCut } from "./types";
+
+/** What a dovetail row is worked out from. */
+export interface DovetailLayoutInput {
+  boardWidth: Len;
+  tails: number;
+  pin: Len;
+  matingThickness: Len;
+  /** Slope denominator: 8 for 1:8. */
+  slope: number;
+}
+
+export interface DovetailLayout {
+  wideTailWidth: Len;
+  slopeOffset: Len;
+  narrowTailWidth: Len;
+}
 
 export const MIN_TAIL = INCH / 8;
 export const MIN_PIN = INCH / 8;

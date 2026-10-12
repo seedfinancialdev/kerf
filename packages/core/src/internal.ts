@@ -8,6 +8,7 @@
 
 export type { Derived, InstanceCuts } from "./joints/derive";
 export { deriveJoints } from "./joints/derive";
+export type { DovetailLayout, DovetailLayoutInput } from "./joints/dovetail";
 export { dovetailLayout, layoutDovetail } from "./joints/dovetail";
 export type { MachinedCut, PairCut } from "./joints/types";
 export { DEFAULT_MIN_OFFCUT, nestSheets } from "./nest/sheets";

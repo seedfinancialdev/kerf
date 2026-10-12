@@ -23,8 +23,9 @@ function fnv1a(text: string): bigint {
 
 /** A ULID-shaped id for `key` within `structure`. Keys must be unique per structure. */
 export function generatedId(structure: Id, key: string): Id {
-  // Two independent hashes give 10 characters (50 bits) plus 6 more from the structure id's own
-  // time part, so ids of different structures never collide on the same key.
+  // The first 16 characters of the structure's own id (its time and six random characters) keep
+  // ids of different structures apart; the last 10 are 50 bits of FNV-1a of the key. Collisions
+  // are possible in principle and vanishingly unlikely within one project.
   let value = fnv1a(`${structure}\u0000${key}`);
   let tail = "";
   for (let i = 0; i < 10; i += 1) {

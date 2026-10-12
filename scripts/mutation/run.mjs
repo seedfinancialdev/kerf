@@ -17,7 +17,8 @@
 //   pnpm mutate -- --list           list the mutants without running them
 //
 // The working tree must be clean for the files being mutated: the script edits them in place and
-// puts them back, even if interrupted.
+// puts them back when it finishes, fails, or is interrupted (Ctrl-C or a termination signal). The
+// suites must pass before any mutant is tried, otherwise every mutant would look killed.
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -55,20 +56,31 @@ function isDirty(file) {
   return out.trim() !== "";
 }
 
-/** Runs the suites; true when any test failed (the mutant was killed). */
-function suitesFail() {
+/**
+ * Runs the suites and says whether they passed. A run that could not start, or was cut off by a
+ * signal, is an error rather than a result: reading "could not run" as "a test failed" would make a
+ * mutant look killed when nothing was tested.
+ *
+ * @returns {boolean} true when every test passed.
+ */
+function suitesPass() {
   const args = ["vitest", "run", "--bail=1", ...SUITES.flatMap((s) => ["--project", s])];
   const result = spawnSync("pnpm", ["exec", ...args], { cwd: ROOT, stdio: "ignore" });
-  return result.status !== 0;
+  if (result.error) throw new Error(`could not run the tests: ${result.error.message}`);
+  if (result.status === 0) return true;
+  if (result.status === 1) return false;
+  throw new Error(`the tests ended abnormally (status ${result.status}, signal ${result.signal})`);
 }
 
 /** What to put back if the script is interrupted while a mutant is applied. */
 let pending;
 
-process.on("SIGINT", () => {
-  if (pending) writeFileSync(pending.path, pending.original);
-  process.exit(130);
-});
+for (const signal of ["SIGINT", "SIGTERM"]) {
+  process.on(signal, () => {
+    if (pending) writeFileSync(pending.path, pending.original);
+    process.exit(130);
+  });
+}
 
 /** @param {Mutant} mutant @returns {"killed" | "survived" | "not-applied" | "dirty"} */
 function trial(mutant) {
@@ -82,7 +94,7 @@ function trial(mutant) {
       path,
       original.replace(mutant.find, () => mutant.replace),
     );
-    return suitesFail() ? "killed" : "survived";
+    return suitesPass() ? "survived" : "killed";
   } finally {
     writeFileSync(path, original);
     pending = undefined;
@@ -100,6 +112,10 @@ function main() {
     return 0;
   }
 
+  if (!suitesPass()) {
+    console.error("The tests do not pass without any mutant; fix that first.");
+    return 2;
+  }
   const counts = { killed: 0, survived: 0, equivalent: 0, "not-applied": 0, dirty: 0 };
   const problems = [];
   for (const mutant of mutants) {

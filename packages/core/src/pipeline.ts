@@ -57,6 +57,16 @@ export interface Pipeline {
   stopped: boolean;
 }
 
+/** What a fault in Kerf itself looks like to the user: said plainly, with a request to report it. */
+function internalError(error: unknown): Diagnostic {
+  const reason = error instanceof Error ? `${error.name}: ${error.message}` : "an unexpected value";
+  return {
+    severity: "error",
+    rule: "internal-error",
+    message: `Kerf could not finish solving this project (${reason}). This is a bug; please report it.`,
+  };
+}
+
 const hasError = (list: Diagnostic[]): boolean => list.some((d) => d.severity === "error");
 
 function failed(model: SolvedModel): Pipeline {
@@ -106,17 +116,8 @@ export function runPipeline(input: unknown, shop?: ShopProfile): Pipeline {
       stopped,
     };
   } catch (error) {
-    const reason =
-      error instanceof Error ? `${error.name}: ${error.message}` : "an unexpected value";
     return failed({
-      diagnostics: [
-        ...gathered,
-        {
-          severity: "error",
-          rule: "internal-error",
-          message: `Kerf could not finish solving this project (${reason}). This is a bug; please report it.`,
-        },
-      ],
+      diagnostics: [...gathered, internalError(error)],
       params: {},
       scope: {},
       parts: [],
@@ -183,13 +184,7 @@ export function solveProject(project: Project, shop: ShopProfile): SolveResult {
       diagnostics.push(...nested.diagnostics);
       setups = buildSetups(p.project, p.parts, p.derived, copy);
     } catch (error) {
-      const reason =
-        error instanceof Error ? `${error.name}: ${error.message}` : "an unexpected value";
-      diagnostics.push({
-        severity: "error",
-        rule: "internal-error",
-        message: `Kerf could not finish solving this project (${reason}). This is a bug; please report it.`,
-      });
+      diagnostics.push(internalError(error));
     }
   }
 

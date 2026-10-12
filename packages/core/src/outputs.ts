@@ -17,7 +17,10 @@ export interface Diagnostic {
   message: string;
   part?: Id;
   joint?: Id;
-  /** The field the problem is on, e.g. a parameter name or "Side length". */
+  /**
+   * What the problem is on, in the user's words: a board or stock name ("Shelf"), a setting
+   * ("the number of bays"), or a field of a part ("Side length").
+   */
   field?: string;
   /** How many times this same problem occurred, when it was reported once for all of them. */
   count?: number;
@@ -43,21 +46,6 @@ export type RemovalPrimitive =
       range: readonly [Len, Len];
     }
   | { kind: "quarterRoundSweep"; edge: EdgeRef; radius: Len };
-
-export interface DovetailLayoutInput {
-  boardWidth: Len;
-  tails: number;
-  pin: Len;
-  matingThickness: Len;
-  /** Slope denominator: 8 for 1:8. */
-  slope: number;
-}
-
-export interface DovetailLayout {
-  wideTailWidth: Len;
-  slopeOffset: Len;
-  narrowTailWidth: Len;
-}
 
 export interface CutListPart {
   name: string;
@@ -132,9 +120,11 @@ export interface SheetLayout {
   sheet: { length: Len; width: Len };
   /** Distinct part sizes on this sheet, in order of first placement. */
   contents: Array<{ length: Len; width: Len; quantity: number }>;
-  /** Strip rips first, then the crosscuts (one per distinct strip pattern), then one step per distinct
-   * composite blank that divides it into members (a crosscut, or a rip when the members lie side by
-   * side). */
+  /**
+   * Strip rips first, then the crosscuts (one per distinct strip pattern), then one step per
+   * distinct composite blank that divides it into members (a crosscut, or a rip when the members
+   * lie side by side).
+   */
   cutSequence: CutStep[];
   /** The largest usable offcut and how many of that size the sheet has. */
   largestOffcut: { alongGrain: Len; acrossGrain: Len; count: number };
@@ -261,8 +251,10 @@ export interface SolveResult {
   cutList: CutList;
   nesting: NestingResult;
   setups: MachiningSetup[];
-  /** Distinct shapes with their removals. Empty when an error in the assembly (steps 1-5) means the parts cannot be built. A layout or
-   * shop-profile error does not empty it. */
+  /**
+   * Distinct shapes with their removals. Empty when an error in the assembly (steps 1-5) means
+   * the parts cannot be built; a layout or shop-profile error does not empty it.
+   */
   shapes: PartShape[];
   /**
    * True when any error exists (Operation specs: "Error blocks the solve"; Interaction spec: the

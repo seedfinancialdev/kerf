@@ -5,7 +5,7 @@
 // Benchmarks (Charter question 3, Cut list & nesting budget): written as timing tests so they use
 // the same expected-failure mechanism as every other milestone test.
 
-import { generateStructures, nest, type Project, solve } from "@kerf/core";
+import { nest, type Project, solve } from "@kerf/core";
 import { describe, expect } from "vitest";
 import { loadProject, loadShopProfile, withParam } from "../../src/index";
 import { milestone } from "../../src/milestone";
@@ -58,12 +58,6 @@ describe("benchmarks", () => {
       ],
     };
     expect(elapsedMs(() => solve(bays, shop))).toBeLessThan(250);
-  });
-
-  milestone("M3", "generating the same project again is free (the result is reused)", () => {
-    const form = loadProject("bookcase", "structure");
-    const first = generateStructures(form, shop);
-    expect(generateStructures(form, shop)).toBe(first);
   });
 
   milestone("M2", "nest 100 parts in under 1 s", () => {

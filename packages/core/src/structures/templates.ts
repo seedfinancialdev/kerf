@@ -7,6 +7,8 @@
 // Blank box. A template names no stock: the project it starts supplies those.
 
 import type { Id, Param, Project, Stock, Structure, Template } from "../types";
+import { BOX_SPEC } from "./box";
+import { CASE_SPEC } from "./case";
 
 const id = (n: number): Id =>
   `01K7M3Q8ZD00000000T1${n.toString(16).toUpperCase().padStart(6, "0")}`;
@@ -17,8 +19,14 @@ const lengthParam = (n: number, name: string, expr: string): Param => ({
   kind: "length",
 });
 
-/** Option keys that hold a stock id; a project must supply these when it starts from a template. */
-export const STOCK_OPTIONS = ["carcaseStock", "backStock", "wallStock", "bottomStock"] as const;
+/** The form fields that take a stock; a project supplies these when it starts from a template. */
+export type StockOption = keyof typeof CASE_SPEC.stockLabels | keyof typeof BOX_SPEC.stockLabels;
+
+/** Every `StockOption`, read from the forms so there is one list of them. */
+export const STOCK_OPTIONS = [
+  ...Object.keys(CASE_SPEC.stockLabels),
+  ...Object.keys(BOX_SPEC.stockLabels),
+] as StockOption[];
 
 export const TEMPLATES: readonly Template[] = [
   {
@@ -112,7 +120,7 @@ export function projectFromTemplate(
   options: {
     name?: string;
     stock: Stock[];
-    stockFor: Partial<Record<string, Id>>;
+    stockFor: Partial<Record<StockOption, Id>>;
     /** A second structure from the same template needs its own id. */
     structureId?: Id;
   },
