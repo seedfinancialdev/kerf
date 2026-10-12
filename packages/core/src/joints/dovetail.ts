@@ -17,6 +17,7 @@
 import { gridSize, snapToGrid, type UnitSystem } from "../length";
 import type { DovetailLayout, DovetailLayoutInput, RemovalPrimitive } from "../outputs";
 import { div, floor, fromInteger, rational, roundHalfEven, toSafeInteger } from "../rational";
+import type { RuleId } from "../rules";
 import type { Frame } from "../solve/assembly";
 import { axisMaps, boxOf, boxToLocal, contactOf, faceAt, toParent } from "../solve/assembly";
 import type { Joint, Len } from "../types";
@@ -213,7 +214,7 @@ export function deriveDovetail(
     ctx.units,
   );
   if ("problem" in layout) {
-    const messages: Record<LayoutProblem, [string, string]> = {
+    const messages: Record<LayoutProblem, [RuleId, string]> = {
       slope: ["dovetail-slope", "The dovetail slope must be between 1:5 and 1:10."],
       "thin-pin": ["dovetail-thin-pin", 'The dovetail pins must be at least 1/8" wide.'],
       "narrow-tail": [

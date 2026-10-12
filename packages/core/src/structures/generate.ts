@@ -16,6 +16,7 @@ import { evaluateQuantity, type Quantity } from "../expr/evaluate";
 import { snapToGrid, type UnitSystem } from "../length";
 import type { Diagnostic } from "../outputs";
 import { div, type Rational, rational } from "../rational";
+import type { RuleId } from "../rules";
 import { solveModel } from "../solve/model";
 import type {
   GeneratedFrom,
@@ -125,7 +126,7 @@ class Builder {
     return `${this.prefix}${name}`;
   }
 
-  report(severity: Diagnostic["severity"], rule: string, message: string, field: string): void {
+  report(severity: Diagnostic["severity"], rule: RuleId, message: string, field: string): void {
     this.diagnostics.push({ severity, rule, message, field });
   }
 

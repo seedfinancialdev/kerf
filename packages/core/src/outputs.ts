@@ -7,11 +7,12 @@
 // None of this is ever saved to .kerf.
 
 import type { Rational } from "./rational";
+import type { RuleId } from "./rules";
 import type { EdgeRef, Id, Len } from "./types";
 
 export interface Diagnostic {
   severity: "error" | "warning" | "info";
-  rule: string;
+  rule: RuleId;
   /** Shop-language message shown in the UI. */
   message: string;
   part?: Id;

@@ -20,6 +20,8 @@ export {
 } from "./project-file";
 export type { Rational } from "./rational";
 export { rational } from "./rational";
+export type { RuleId } from "./rules";
+export { RULE_IDS } from "./rules";
 export { shopProblem } from "./shop";
 export type { SolvedInstance, SolvedModel, SolvedOp, SolvedPart } from "./solve/model";
 export { MAX_PATTERN_COUNT, solveModel } from "./solve/model";

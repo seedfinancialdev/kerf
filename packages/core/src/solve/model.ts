@@ -31,6 +31,7 @@ import {
   sub,
   toSafeInteger,
 } from "../rational";
+import type { RuleId } from "../rules";
 import type { EdgeRef, Id, Instance, Len, Param, PartDef, Pattern, Project } from "../types";
 import { MAX_PATTERN_COUNT } from "./limits";
 import { extentOf, isOrientationIndex } from "./orientation";
@@ -117,7 +118,7 @@ class Solver {
   ) {}
 
   private error(
-    rule: string,
+    rule: RuleId,
     message: string,
     extra: Partial<Omit<Diagnostic, "severity" | "rule" | "message">> = {},
   ): void {
@@ -143,7 +144,7 @@ class Solver {
   }
 
   private warn(
-    rule: string,
+    rule: RuleId,
     message: string,
     extra: Partial<Omit<Diagnostic, "severity" | "rule" | "message">> = {},
   ): void {
