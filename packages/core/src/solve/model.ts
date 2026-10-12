@@ -17,7 +17,7 @@
 import { ExpressionError } from "../expr/errors";
 import { evaluateQuantity, type Quantity } from "../expr/evaluate";
 import { type Node, parseExpression, partKey, referencesOf, slug, stockKey } from "../expr/parser";
-import { LengthRangeError, snapToGrid, type UnitSystem } from "../length";
+import { formatLength, gridSize, LengthRangeError, snapToGrid, type UnitSystem } from "../length";
 import type { Diagnostic } from "../outputs";
 import { validateProject } from "../project-file";
 import {
@@ -124,6 +124,24 @@ class Solver {
     extra: Partial<Omit<Diagnostic, "severity" | "rule" | "message">> = {},
   ): void {
     this.diagnostics.push({ severity: "error", rule, message, ...extra });
+  }
+
+  /**
+   * Stock thickness is read exactly into every expression, while a part's own size is snapped to
+   * the grid once. A thickness between grid lines therefore makes boards that should meet differ
+   * by a hair, so it is named at the source.
+   */
+  checkStockOnGrid(): void {
+    const grid = gridSize(this.units);
+    for (const stock of this.project.stock) {
+      if (stock.thickness % grid === 0) continue;
+      const step = this.units === "metric" ? "0.01 mm" : '1/64"';
+      this.warn(
+        "stock-off-grid",
+        `${stock.name} is ${formatLength(stock.thickness, this.units)} thick, which is not a whole number of ${step} steps, so boards cut from it can be a hair off where they meet. Enter its thickness in this project's units.`,
+        { field: stock.name },
+      );
+    }
   }
 
   private warn(
@@ -791,6 +809,7 @@ export function solveValidatedModel(project: Project): SolvedModel {
   let solver: Solver | undefined;
   try {
     solver = new Solver(project, project.units);
+    solver.checkStockOnGrid();
     const { params, parts } = solver.solveFields();
     const instances = solver.expandInstances(parts);
     return {
