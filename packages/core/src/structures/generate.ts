@@ -27,6 +27,7 @@ import type {
   PartDef,
   Pattern,
   Project,
+  ShopProfile,
   Stock,
   Structure,
 } from "../types";
@@ -106,6 +107,8 @@ class Builder {
     private readonly scope: Record<string, Quantity>,
     readonly units: UnitSystem,
     private readonly prefix: string,
+    /** Roundover bit radii the shop owns, for `shelfRoundover: "auto"`. */
+    readonly roundoverBits: readonly number[],
   ) {}
 
   id(key: string): Id {
@@ -279,6 +282,22 @@ class Builder {
   }
 }
 
+/**
+ * The roundover radius a form asks for. `"auto"` takes the largest roundover bit the shop owns
+ * that leaves room for a profile on both faces of the board (radius at most half its thickness);
+ * with no such bit, or no shop, there is no roundover. Anything else is the expression as given.
+ */
+function roundoverFor(
+  b: Builder,
+  option: string | undefined,
+  thickness: number,
+): string | undefined {
+  if (option !== "auto") return option;
+  const fitting = b.roundoverBits.filter((radius) => radius > 0 && radius * 2 <= thickness);
+  const largest = Math.max(0, ...fitting);
+  return largest > 0 ? lit(largest) : undefined;
+}
+
 // ---- case ---------------------------------------------------------------------------------------
 
 function generateCase(b: Builder): void {
@@ -291,56 +310,73 @@ function generateCase(b: Builder): void {
   const H = wrap(size.h);
   const D = wrap(size.d);
 
-  const topBottom = b.option("topBottom") ?? "between-sides";
-  if (topBottom !== "between-sides") {
+  // How the top and bottom meet the sides, and what kind of back the case has.
+  let topBottom = b.option("topBottom") ?? "between-sides";
+  if (topBottom !== "between-sides" && topBottom !== "sides-between") {
     b.report(
       "warning",
       "not-built-yet",
       `A case with "${topBottom}" is not built yet; the top and bottom go between the sides.`,
       "topBottom",
     );
+    topBottom = "between-sides";
   }
-  const backStyle = b.option("back") ?? (b.option("backStock") ? "inset-rabbet" : "none");
-  if (backStyle !== "none" && backStyle !== "inset-rabbet") {
+  const sidesBetween = topBottom === "sides-between";
+  let backStyle = b.option("back") ?? (b.option("backStock") ? "inset-rabbet" : "none");
+  if (backStyle !== "none" && backStyle !== "inset-rabbet" && backStyle !== "applied") {
     b.report(
       "warning",
       "not-built-yet",
       `A case back of "${backStyle}" is not built yet; the case is built without a back.`,
       "back",
     );
+    backStyle = "none";
   }
-  const backStock = backStyle === "inset-rabbet" ? b.stock("backStock") : undefined;
-  const B = backStock ? b.thickness(backStock) : "0in";
+  const backStock = backStyle === "none" ? undefined : b.stock("backStock");
+  const inset = backStyle === "inset-rabbet" && backStock !== undefined;
+  const applied = backStyle === "applied" && backStock !== undefined;
+  // An inset back sits in rabbets, taking that much depth from the boards in front of it; an
+  // applied back covers the rear edges and takes none.
+  const B = backStock && inset ? b.thickness(backStock) : "0in";
+  const backThickness = backStock ? b.thickness(backStock) : "0in";
   const dado = depth(b.option("dadoDepth"));
   const rabbet = depth(b.option("rabbetDepth"));
   const backRabbet = depth(b.option("backRabbetDepth"));
-  const roundover = b.option("shelfRoundover");
+  const roundover = roundoverFor(b, b.option("shelfRoundover"), Tn);
   const inner = `${W} - 2*${T}`;
 
-  const sideDef = b.part("side", "side", { name: "Side", stock: carcase.id, length: H, width: D });
-  const right = b.instance("side", "side:right", sideDef, ["0in", "0in", "0in"], {
+  const sideZ = sidesBetween ? T : "0in";
+  const sideDef = b.part("side", "side", {
+    name: "Side",
+    stock: carcase.id,
+    length: sidesBetween ? `${H} - 2*${T}` : H,
+    width: D,
+  });
+  const right = b.instance("side", "side:right", sideDef, ["0in", "0in", sideZ], {
     name: "Right side",
     orientation: 17,
   });
-  const left = b.instance("side", "side:left", sideDef, [`${W} - ${T}`, "0in", "0in"], {
+  const left = b.instance("side", "side:left", sideDef, [`${W} - ${T}`, "0in", sideZ], {
     name: "Left side",
     orientation: 23,
     mirrored: true,
   });
+  const railLength = sidesBetween ? W : inner;
+  const railX = sidesBetween ? "0in" : T;
   const topDef = b.part("top", "top", {
     name: "Top",
     stock: carcase.id,
-    length: inner,
+    length: railLength,
     width: `${D} - ${B}`,
   });
   const bottomDef = b.part("bottom", "bottom", {
     name: "Bottom",
     stock: carcase.id,
-    length: inner,
+    length: railLength,
     width: `${D} - ${B}`,
   });
-  const top = b.instance("top", "top", topDef, [T, B, `${H} - ${T}`], { name: "Top" });
-  const bottom = b.instance("bottom", "bottom", bottomDef, [T, B, "0in"], { name: "Bottom" });
+  const top = b.instance("top", "top", topDef, [railX, B, `${H} - ${T}`], { name: "Top" });
+  const bottom = b.instance("bottom", "bottom", bottomDef, [railX, B, "0in"], { name: "Bottom" });
 
   // The case's interior across, in expressions and (when the size evaluates) exact values.
   const wq = b.quantity(size.w);
@@ -617,7 +653,7 @@ function generateCase(b: Builder): void {
   place(b.structure.openings[0], root, right, left, b.structure.openings[0]?.id ?? "0");
 
   let back: Instance | undefined;
-  if (backStock) {
+  if (backStock && inset) {
     const backDef = b.part("back", "back", {
       name: "Back",
       stock: backStock.id,
@@ -628,15 +664,36 @@ function generateCase(b: Builder): void {
       name: "Back",
       orientation: 16,
     });
+  } else if (backStock && applied) {
+    // Covers the whole outside, flat against the rear edges; it is fixed on, not joined.
+    const backDef = b.part("back", "back", {
+      name: "Back",
+      stock: backStock.id,
+      length: H,
+      width: W,
+    });
+    b.instance("back", "back", backDef, ["0in", `0in - ${backThickness}`, "0in"], {
+      name: "Back",
+      orientation: 16,
+    });
   }
 
   for (const emit of openingJoints) emit();
-  const carcaseJoints: Array<[Instance, Instance]> = [
-    [right, top],
-    [right, bottom],
-    [left, top],
-    [left, bottom],
-  ];
+  // Top and bottom are the hosts when they sit between the sides, the sides when it is the other
+  // way round (the rabbet is always cut in the board whose end or edge receives the other).
+  const carcaseJoints: Array<[Instance, Instance]> = sidesBetween
+    ? [
+        [top, right],
+        [top, left],
+        [bottom, right],
+        [bottom, left],
+      ]
+    : [
+        [right, top],
+        [right, bottom],
+        [left, top],
+        [left, bottom],
+      ];
   for (const [n, [host, guest]] of carcaseJoints.entries()) {
     b.joint("carcase", `rabbet:${n}`, "rabbet", host.id, guest.id, rabbet);
   }
@@ -687,21 +744,37 @@ function generateBox(b: Builder): void {
   const L = wrap(size.w);
   const Wd = wrap(size.d);
   const H = wrap(size.h);
-  const corner = b.option("cornerJoint") ?? "through-dovetail";
-  if (corner !== "through-dovetail") {
+  let corner = b.option("cornerJoint") ?? "through-dovetail";
+  if (corner !== "through-dovetail" && corner !== "rabbet") {
     b.report(
       "warning",
       "not-built-yet",
       `A box corner of "${corner}" is not built yet; the corners are through dovetails.`,
       "cornerJoint",
     );
+    corner = "through-dovetail";
   }
+  const rabbeted = corner === "rabbet";
+  // A rabbeted corner has the front and back between the sides, their ends in rabbets cut in the
+  // sides; dovetails interlock, so the front and back run the full length.
+  const frontLength = rabbeted ? `${L} - 2*${Tw}` : L;
+  const frontX = rabbeted ? Tw : "0in";
   // Left to itself the bottom sits one board's thickness above the wall's edge, so the groove
   // never breaks out through the bottom of the wall.
   const offset = b.option("grooveOffset") ?? (bottomStock ? b.thickness(bottomStock) : "0in");
 
-  const frontDef = b.part("front", "front", { name: "Front", stock: wall.id, length: L, width: H });
-  const backDef = b.part("back", "back", { name: "Back", stock: wall.id, length: L, width: H });
+  const frontDef = b.part("front", "front", {
+    name: "Front",
+    stock: wall.id,
+    length: frontLength,
+    width: H,
+  });
+  const backDef = b.part("back", "back", {
+    name: "Back",
+    stock: wall.id,
+    length: frontLength,
+    width: H,
+  });
   const sideDef = b.part("side", "side", { name: "Side", stock: wall.id, length: Wd, width: H });
   const bottomDef = bottomStock
     ? b.part("bottom", "bottom", {
@@ -712,7 +785,7 @@ function generateBox(b: Builder): void {
       })
     : undefined;
 
-  const front = b.instance("front", "front", frontDef, ["0in", "0in", "0in"], {
+  const front = b.instance("front", "front", frontDef, [frontX, "0in", "0in"], {
     name: "Front",
     orientation: 1,
   });
@@ -720,7 +793,7 @@ function generateBox(b: Builder): void {
     name: "Side A",
     orientation: 12,
   });
-  const back = b.instance("back", "back", backDef, ["0in", `${Wd} - ${Tw}`, "0in"], {
+  const back = b.instance("back", "back", backDef, [frontX, `${Wd} - ${Tw}`, "0in"], {
     name: "Back",
     orientation: 3,
   });
@@ -732,14 +805,33 @@ function generateBox(b: Builder): void {
     ? b.instance("bottom", "bottom", bottomDef, [Tw, Tw, offset], { name: "Bottom" })
     : undefined;
 
-  const corners: Array<[Instance, Instance, string]> = [
-    [front, sideA, "front-a"],
-    [front, sideB, "front-b"],
-    [back, sideA, "back-a"],
-    [back, sideB, "back-b"],
-  ];
-  for (const [host, guest, key] of corners) {
-    b.joint("corner", `corner:${key}`, "throughDovetail", host.id, guest.id, {});
+  if (rabbeted) {
+    const corners: Array<[Instance, Instance, string]> = [
+      [sideA, front, "a-front"],
+      [sideA, back, "a-back"],
+      [sideB, front, "b-front"],
+      [sideB, back, "b-back"],
+    ];
+    for (const [host, guest, key] of corners) {
+      b.joint(
+        "corner",
+        `corner:${key}`,
+        "rabbet",
+        host.id,
+        guest.id,
+        depth(b.option("rabbetDepth")),
+      );
+    }
+  } else {
+    const corners: Array<[Instance, Instance, string]> = [
+      [front, sideA, "front-a"],
+      [front, sideB, "front-b"],
+      [back, sideA, "back-a"],
+      [back, sideB, "back-b"],
+    ];
+    for (const [host, guest, key] of corners) {
+      b.joint("corner", `corner:${key}`, "throughDovetail", host.id, guest.id, {});
+    }
   }
   if (bottom) {
     const groove = depth(b.option("grooveDepth"));
@@ -768,13 +860,19 @@ function generateBox(b: Builder): void {
 // ---- generating ---------------------------------------------------------------------------------
 
 /** Runs the generators. Pure: the same project always gives the same result, ids included. */
-export function generate(project: Project): { project: Project; diagnostics: Diagnostic[] } {
+export function generate(
+  project: Project,
+  shop?: ShopProfile,
+): { project: Project; diagnostics: Diagnostic[] } {
   const base = withoutGenerated(project);
   if (project.structures.length === 0) return { project: base, diagnostics: [] };
 
   const stocks = new Map(project.stock.map((s) => [s.id, s]));
   const diagnostics: Diagnostic[] = [];
   const made = empty();
+  const roundoverBits = (shop?.tools ?? []).flatMap((t) =>
+    t.type === "router" ? t.roundoverBits : [],
+  );
   let scope: Record<string, Quantity> = {};
   try {
     scope = solveModel(base).scope;
@@ -784,7 +882,7 @@ export function generate(project: Project): { project: Project; diagnostics: Dia
   for (const [index, structure] of project.structures.entries()) {
     // A second structure's boards are told apart by number so every name stays unique.
     const prefix = index === 0 ? "" : `${structure.type === "case" ? "Case" : "Box"} ${index + 1} `;
-    const builder = new Builder(structure, stocks, scope, project.units, prefix);
+    const builder = new Builder(structure, stocks, scope, project.units, prefix, roundoverBits);
     builder.checkOptions();
     if (structure.type === "case") generateCase(builder);
     else generateBox(builder);

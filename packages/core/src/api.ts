@@ -78,11 +78,11 @@ export function machiningSetups(project: Project, shop: ShopProfile): MachiningS
 /**
  * The project with everything its structures generate. Pure and deterministic: ids come from the
  * structure and the part's role, so generating twice gives the same project. A detached part is
- * kept exactly as saved. Joint choice follows the shop only through the machining setups (which
- * name the tool you would need), so the shop does not change what is generated.
+ * kept exactly as saved. The shop matters in two ways: a `"auto"` roundover takes the largest bit
+ * the shop owns, and the machining setups name the tool you would need for each joint.
  */
-export function generateStructures(project: Project, _shop: ShopProfile): Project {
-  return generateStructuresChecked(project, _shop).project;
+export function generateStructures(project: Project, shop: ShopProfile): Project {
+  return generateStructuresChecked(project, shop).project;
 }
 
 /**
@@ -92,11 +92,11 @@ export function generateStructures(project: Project, _shop: ShopProfile): Projec
  */
 export function generateStructuresChecked(
   project: Project,
-  _shop: ShopProfile,
+  shop: ShopProfile,
 ): { project: Project; diagnostics: Diagnostic[] } {
   const checked = validateProject(project);
   if (checked.problem) throw checked.problem;
-  return generate(checked.project);
+  return generate(checked.project, shop);
 }
 
 /**

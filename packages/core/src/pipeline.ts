@@ -73,7 +73,7 @@ function failed(model: SolvedModel): Pipeline {
 }
 
 /** Steps 1-5 and the cut list. Never throws. */
-export function runPipeline(input: unknown): Pipeline {
+export function runPipeline(input: unknown, shop?: ShopProfile): Pipeline {
   // What was found before anything went wrong; an unexpected failure adds to it, never replaces it.
   let gathered: Diagnostic[] = [];
   try {
@@ -83,7 +83,7 @@ export function runPipeline(input: unknown): Pipeline {
     }
     // Structures generate ordinary parts, joints and match sets on every solve; the generated
     // project is validated like any other so nothing downstream can see an invalid object.
-    const generated = generate(checked.project);
+    const generated = generate(checked.project, shop);
     const whole = validateProject(generated.project);
     if (whole.problem) {
       return failed(invalidProjectModel(whole.problem.path, whole.problem.message));
@@ -174,8 +174,9 @@ function readShop(shop: unknown): { shop?: ShopProfile; problem?: Diagnostic } {
 
 /** The whole pipeline. Never throws: anything unexpected is an "internal-error" diagnostic. */
 export function solveProject(project: Project, shop: ShopProfile): SolveResult {
-  const p = runPipeline(project);
+  // The shop is read once, first: structures use it too (a roundover taken from the bits owned).
   const { shop: copy, problem: shopIssue } = readShop(shop);
+  const p = runPipeline(project, copy);
   const diagnostics: Diagnostic[] = [...p.diagnostics];
   if (shopIssue) diagnostics.push(shopIssue);
 

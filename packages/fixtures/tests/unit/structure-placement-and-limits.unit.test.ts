@@ -654,7 +654,7 @@ describe("options", () => {
     expect(generateStructures(p, shop).parts.map((x) => x.name)).not.toContain("Bottom");
   });
   it("warns topBottom, cornerJoint; grainWraps only for true", () => {
-    expect(diags(opt(form(), { topBottom: "sides-between" }))).toContain(
+    expect(diags(opt(form(), { topBottom: "mitered" }))).toContain(
       "warning:not-built-yet@topBottom",
     );
     expect(diags(opt(box(), { cornerJoint: "half-blind" }))).toContain(

@@ -338,7 +338,7 @@ describe("a form that cannot be built", () => {
     if (!structure) throw new Error("no structure");
     const odd: Project = {
       ...base,
-      structures: [{ ...structure, options: { ...structure.options, back: "applied" } }],
+      structures: [{ ...structure, options: { ...structure.options, back: "paneled" } }],
     };
     expect(rules(odd)).toContain("warning:not-built-yet");
   });
