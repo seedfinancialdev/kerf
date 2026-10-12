@@ -40,6 +40,22 @@ describe("joints between large patterns", () => {
       { patterns: [fixed("Slab", count, "1/64in"), fixed("G", count, "1/64in")] },
     );
 
+  it("works out exactly 100,000 pairs (250 x 400) and refuses one more guest (250 x 401)", () => {
+    const pair = (hosts: number, guests: number): Project =>
+      boards(
+        [slab("Slab", "20in"), slab("G", "20in")],
+        [
+          { name: "Slab", part: "Slab", at: ["0in", "0in", "0in"] },
+          { name: "G", part: "G", at: ["0in", "0in", "0in"] },
+        ],
+        [{ type: "dado", host: "Slab", guest: "G" }],
+        { patterns: [fixed("Slab", hosts, "1/64in"), fixed("G", guests, "1/64in")] },
+      );
+    const rules = (p: Project) => solve(p, shop).diagnostics.map((d) => d.rule);
+    expect(rules(pair(250, 400))).not.toContain("joint-too-many-pairs");
+    expect(rules(pair(250, 401))).toContain("joint-too-many-pairs");
+  });
+
   it("works out 316 x 316 = 99,856 pairs and refuses 317 x 317 = 100,489, once", () => {
     const ok = solve(stacked(316, "20in"), shop).diagnostics.map((d) => d.rule);
     expect(ok).not.toContain("joint-too-many-pairs");

@@ -1,0 +1,101 @@
+[
+  {
+    "id": "rabbet-end0-shoulder-loose",
+    "file": "packages/core/src/joints/rabbet.ts",
+    "find": "g.max[0] === width]",
+    "replace": "g.max[0] <= width]",
+    "why": "a board with a gap at the shoulder is accepted as seated"
+  },
+  {
+    "id": "rabbet-end1-shoulder-loose",
+    "file": "packages/core/src/joints/rabbet.ts",
+    "find": "g.min[0] === L - width]",
+    "replace": "g.min[0] >= L - width]",
+    "why": "a board with a gap at the far shoulder is accepted"
+  },
+  {
+    "id": "rabbet-edge0-shoulder-loose",
+    "file": "packages/core/src/joints/rabbet.ts",
+    "find": "g.max[1] === width]",
+    "replace": "g.max[1] <= width]",
+    "why": "a gap at the edge shoulder is accepted"
+  },
+  {
+    "id": "rabbet-edge1-uses-guest-thickness",
+    "file": "packages/core/src/joints/rabbet.ts",
+    "find": "g.min[1] === W - width]",
+    "replace": "g.min[1] === W - guest.part.thickness]",
+    "why": "the far edge shoulder is measured from the board, not the step"
+  },
+  {
+    "id": "rabbet-equal-width-rejected",
+    "file": "packages/core/src/joints/rabbet.ts",
+    "find": "if (width < guestThickness)",
+    "replace": "if (width <= guestThickness)",
+    "why": "a step exactly as wide as the board is refused"
+  },
+  {
+    "id": "rabbet-narrow-accepted",
+    "file": "packages/core/src/joints/rabbet.ts",
+    "find": "if (width < guestThickness) return",
+    "replace": "if (false) return",
+    "why": "a step narrower than the board is accepted",
+    "equivalent": "the shoulder test that follows rejects a narrower step too; only the message changes"
+  },
+  {
+    "id": "rabbet-half-width-strict",
+    "file": "packages/core/src/joints/rabbet.ts",
+    "find": "shoulder && 2 * width <= dim(name)",
+    "replace": "shoulder && 2 * width < dim(name)",
+    "why": "a step exactly half the board is refused"
+  },
+  {
+    "id": "rabbet-overhang-edge0",
+    "file": "packages/core/src/joints/rabbet.ts",
+    "find": "g.min[1] >= 0 && g.max[1] <= width",
+    "replace": "g.max[1] <= width",
+    "why": "a board hanging off the near edge is accepted"
+  },
+  {
+    "id": "rabbet-overhang-end1",
+    "file": "packages/core/src/joints/rabbet.ts",
+    "find": "g.max[0] <= L && g.min[0] >= L - width",
+    "replace": "g.min[0] >= L - width",
+    "why": "a board hanging past the far end is accepted"
+  },
+  {
+    "id": "joint-pair-cap-off-by-one",
+    "file": "packages/core/src/joints/derive.ts",
+    "find": "candidates.length > MAX_JOINT_PAIRS",
+    "replace": "candidates.length >= MAX_JOINT_PAIRS",
+    "why": "a joint of exactly the limit is refused"
+  },
+  {
+    "id": "joint-overlap-not-exempt",
+    "file": "packages/core/src/joints/derive.ts",
+    "find": "!joinedGuest.has(gi) && !reportedGuest.has(gi) && !overlapGuest.has(gi)",
+    "replace": "!joinedGuest.has(gi) && !reportedGuest.has(gi)",
+    "why": "an interpenetrating pattern guest is called 'does not touch'"
+  },
+  {
+    "id": "joint-failures-uncounted",
+    "file": "packages/core/src/joints/types.ts",
+    "find": "raised += 1;",
+    "replace": "",
+    "why": "a failure past the shown limit is not counted"
+  },
+  {
+    "id": "joint-flush-count",
+    "file": "packages/core/src/joints/types.ts",
+    "find": "count: hidden,",
+    "replace": "count: hidden + 1,",
+    "why": "the 'and N more' count is one too many"
+  },
+  {
+    "id": "dado-stop-ignored",
+    "file": "packages/core/src/joints/dado.ts",
+    "find": "runEnd -= stop;",
+    "replace": "runEnd -= 0;",
+    "why": "a dado's stop is ignored"
+  }
+]

@@ -15,7 +15,8 @@
     "lint": "biome check --error-on-warnings . && pnpm lint:deps && pnpm lint:headers",
     "lint:deps": "node scripts/lint-deps.mjs",
     "lint:headers": "node scripts/check-headers.mjs",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "mutate": "node scripts/mutation/run.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
