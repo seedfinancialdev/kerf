@@ -1,24 +1,23 @@
 [
   {
     "id": "form-top-length",
-    "file": "packages/core/src/structures/generate.ts",
-    "find": "const inner = `${W} - 2*${T}`;",
-    "replace": "const inner = `${W} - 1*${T}`;",
+    "file": "packages/core/src/structures/case.ts",
+    "find": "const railLength = sidesBetween ? W : `${W} - 2*${T}`;",
+    "replace": "const railLength = sidesBetween ? W : `${W} - 1*${T}`;",
     "why": "top and bottom are one board thickness too long"
   },
   {
     "id": "form-bays-rounding",
-    "file": "packages/core/src/structures/generate.ts",
-    "find": "snap(add(mul(bay, rational(BigInt(k))), mul(tn, rational(BigInt(k - 1)))), b.units)",
-    "replace": "Math.floor(Number(add(mul(bay, rational(BigInt(k))), mul(tn, rational(BigInt(k - 1)))).num)) / 1",
-    "why": "partitions are floored instead of snapped half to even",
-    "equivalent": "partition positions are exact integers in the fixtures used; kept as documentation"
+    "file": "packages/core/src/structures/openings.ts",
+    "find": "snap(add(mul(bay, rational(BigInt(k + 1))), mul(this.tn, rational(BigInt(k)))), b.units)",
+    "replace": "Number(add(mul(bay, rational(BigInt(k + 1))), mul(this.tn, rational(BigInt(k)))).num / 1n)",
+    "why": "partition faces are truncated instead of snapped half to even"
   },
   {
     "id": "form-back-position",
-    "file": "packages/core/src/structures/generate.ts",
-    "find": "back = b.instance(\"back\", \"back\", backDef, [T, \"0in\", \"0in\"], {",
-    "replace": "back = b.instance(\"back\", \"back\", backDef, [\"0in\", \"0in\", \"0in\"], {",
+    "file": "packages/core/src/structures/case.ts",
+    "find": "[T, \"0in\", \"0in\"], { name: \"Back\", orientation: 16 });",
+    "replace": "[\"0in\", \"0in\", \"0in\"], { name: \"Back\", orientation: 16 });",
     "why": "the inset back starts at the outside of the case"
   },
   {
