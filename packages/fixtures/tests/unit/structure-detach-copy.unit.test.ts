@@ -10,11 +10,13 @@ import {
   attachCopyIn,
   buildCutList,
   detachCopyIn,
+  detachPartIn,
   detachReferencedBoards,
   generateStructures,
   type Project,
   ProjectFormatError,
   parseProject,
+  removeStructureIn,
   serializeProject,
   solve,
   solveModel,
@@ -137,5 +139,89 @@ describe("detachReferencedBoards()", () => {
     const result = detachReferencedBoards(made);
     expect(result.detached).toEqual([]);
     expect(result.project).toEqual(made);
+  });
+});
+
+describe("a detached copy and the rest of the form", () => {
+  const made = (): Project => generateStructures(form(), shop);
+  const copyOf = (p: Project) => p.instances.find((i) => i.detachedFrom !== undefined);
+
+  it("attaching it again after regeneration leaves no joint pointing at it", () => {
+    const regenerated = generateStructures(detachCopyIn(made(), shelfPattern(made()).id, 1), shop);
+    const copy = copyOf(regenerated);
+    if (!copy) throw new Error("no detached copy");
+    const restored = attachCopyIn(regenerated, copy.id);
+    expect(solve(restored, shop).diagnostics.map((d) => d.rule)).not.toContain("invalid-project");
+    expect(generateStructures(restored, shop)).toEqual(generateStructures(made(), shop));
+  });
+
+  it("refuses to attach it while something you added refers to it", () => {
+    const detached = detachCopyIn(made(), shelfPattern(made()).id, 1);
+    const copy = copyOf(detached);
+    const top = detached.instances.find((i) => i.name === "Top");
+    if (!copy || !top) throw new Error("form did not generate the boards");
+    const joined: Project = {
+      ...detached,
+      joints: [
+        ...detached.joints,
+        {
+          id: "01K7M3Q8ZD00000000B1000097",
+          type: "dado",
+          host: top.id,
+          guest: copy.id,
+          params: {},
+        },
+      ],
+    };
+    expect(() => attachCopyIn(joined, copy.id)).toThrow(/something you added/i);
+  });
+
+  it("is said to be stale, and left where it is, when the number of shelves changes", () => {
+    const detached = detachCopyIn(made(), shelfPattern(made()).id, 3);
+    const eight = withParam(detached, "shelf_count", "8");
+    const rules = solve(eight, shop).diagnostics.map((d) => `${d.severity}:${d.rule}`);
+    expect(rules).toContain("warning:detached-copy-stale");
+    // The row is made in full again: 8 shelves plus the board that was taken out.
+    expect(
+      solveModel(generateStructures(eight, shop)).instances.filter((i) =>
+        i.name.startsWith("Shelf"),
+      ),
+    ).toHaveLength(9);
+  });
+
+  it("does not take the name of a shelf the form makes later", () => {
+    const detached = detachCopyIn(made(), shelfPattern(made()).id, 0);
+    const names = detached.parts.map((p) => p.name);
+    // The form's own numbering for several shelf openings is "Shelf 1", "Shelf 2", and so on.
+    expect(names.filter((n) => /^Shelf \d+$/.test(n))).toEqual([]);
+  });
+
+  it("refuses a copy number that is not 0 or more", () => {
+    const base = made();
+    expect(() => detachCopyIn(base, shelfPattern(base).id, -1)).toThrow(RangeError);
+    expect(() => detachCopyIn(base, shelfPattern(base).id, 1.5)).toThrow(RangeError);
+  });
+
+  it("takes a structure away and leaves its detached boards as your own", () => {
+    const detached = detachPartIn(
+      made(),
+      made().parts.find((p) => p.source?.role === "top")?.id ?? "",
+    );
+    const structureId = detached.structures[0]?.id ?? "";
+    const released = removeStructureIn(detached, structureId);
+    expect(released.structures).toEqual([]);
+    expect(released.parts.map((p) => p.name)).toEqual(["Top"]);
+    expect(released.parts[0]?.source).toBeUndefined();
+    // It is an ordinary project again: it solves and it saves.
+    expect(solve(released, shop).diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+    expect(() => serializeProject(released)).not.toThrow();
+  });
+});
+
+describe("malformed input to the detach functions", () => {
+  it("is a typed error, not a TypeError", () => {
+    expect(() => detachCopyIn(null as unknown as Project, "x", 0)).toThrow(ProjectFormatError);
+    expect(() => attachCopyIn({} as unknown as Project, "x")).toThrow(ProjectFormatError);
+    expect(() => detachReferencedBoards({} as unknown as Project)).toThrow(ProjectFormatError);
   });
 });

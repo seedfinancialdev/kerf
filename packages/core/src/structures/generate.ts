@@ -19,7 +19,7 @@ import type { Quantity } from "../expr/evaluate";
 import type { Diagnostic } from "../outputs";
 import { type ProjectFormatError, validateProject } from "../project-file";
 import { solveModel } from "../solve/model";
-import type { Id, Joint, PartDef, Project, ShopProfile, Structure } from "../types";
+import type { Id, Instance, Joint, Project, ShopProfile, Structure } from "../types";
 import { BOX_SPEC, generateBox } from "./box";
 import { Builder, empty, type Generated, type PatternHosts } from "./builder";
 import { CASE_SPEC, generateCase } from "./case";
@@ -120,28 +120,29 @@ function orphanWarnings(base: Project, made: Made): Diagnostic[] {
     }));
 }
 
-/** A generated board whose size was changed by hand while the form still controls it. */
-function editedWarnings(project: Project, made: Made): Diagnostic[] {
-  const generatedParts = new Map<Id, PartDef>(made.parts.map((p) => [p.id, p]));
-  return project.parts
-    .filter((part) => {
-      const generated = generatedParts.get(part.id);
-      return (
-        generated &&
-        part.source !== undefined &&
-        !part.detached &&
-        (part.length !== generated.length ||
-          part.width !== generated.width ||
-          part.thickness !== generated.thickness)
-      );
-    })
-    .map((part) => ({
-      severity: "warning",
-      rule: "generated-part-edited",
-      message: `${part.name} was changed by hand, but the form still controls it; detach it to keep the change.`,
-      part: part.id,
-      field: part.name,
-    }));
+/**
+ * A copy taken out of a row of N shelves, when the row now has a different number. Its index no
+ * longer means the same shelf, so it is left where it is and the row is made in full.
+ */
+function isStale(copy: Instance, made: Made): boolean {
+  const from = copy.detachedFrom;
+  const hosts = from && made.patternHosts.get(from.pattern);
+  return from?.of !== undefined && hosts !== undefined && hosts.count !== from.of;
+}
+
+function staleCopies(base: Project, made: Made): Diagnostic[] {
+  return base.instances
+    .filter((copy) => isStale(copy, made))
+    .map((copy) => {
+      const rows = copy.detachedFrom;
+      const now = rows && made.patternHosts.get(rows.pattern)?.count;
+      return {
+        severity: "warning" as const,
+        rule: "detached-copy-stale" as const,
+        message: `${copy.name ?? "A board"} was taken out of a row of ${rows?.of} shelves and the row now has ${now}. It is left where you put it and the row is made in full; put it back in the row or delete it.`,
+        field: copy.name ?? "a detached board",
+      };
+    });
 }
 
 /** The dados a copy taken out of a shelf row keeps: the ones the form gave the row. */
@@ -169,7 +170,6 @@ function fresh<T extends { id: Id }>(have: readonly T[], add: readonly T[]): T[]
 
 /** Joins what was kept with what was made, dropping what a detached board leaves without a place. */
 function merge(
-  project: Project,
   base: Project,
   made: Made,
 ): {
@@ -179,7 +179,7 @@ function merge(
   const diagnostics = [
     ...made.diagnostics,
     ...orphanWarnings(base, made),
-    ...editedWarnings(project, made),
+    ...staleCopies(base, made),
   ];
 
   // A detached part is kept as saved; so are its placements and patterns.
@@ -194,7 +194,7 @@ function merge(
   // Members taken out of a pattern by hand stay out when the pattern is made again.
   const skipsOf = (patternId: Id): number[] =>
     base.instances
-      .filter((i) => i.detachedFrom?.pattern === patternId)
+      .filter((i) => i.detachedFrom?.pattern === patternId && !isStale(i, made))
       .flatMap((i) => (i.detachedFrom ? [i.detachedFrom.index] : []))
       .sort((a, b) => a - b);
   const instanceDef = new Map(made.instances.map((i) => [i.id, i.def]));
@@ -250,5 +250,5 @@ export function generate(
 ): { project: Project; diagnostics: Diagnostic[] } {
   const base = withoutGenerated(project);
   if (project.structures.length === 0) return { project: base, diagnostics: [] };
-  return merge(project, base, runGenerators(project, base, shop));
+  return merge(base, runGenerators(project, base, shop));
 }

@@ -50,27 +50,12 @@ function readCaseForm(b: Builder): CaseForm | undefined {
   if (!carcase) return undefined;
   const { size } = b.structure;
 
-  let topBottom = b.option("topBottom") ?? "between-sides";
-  if (topBottom !== "between-sides" && topBottom !== "sides-between") {
-    b.report(
-      "warning",
-      "not-built-yet",
-      `A case with "${topBottom}" is not built yet; the top and bottom go between the sides.`,
-      "topBottom",
-    );
-    topBottom = "between-sides";
-  }
-
-  let style = b.option("back") ?? (b.option("backStock") ? "inset-rabbet" : "none");
-  if (style !== "none" && style !== "inset-rabbet" && style !== "applied") {
-    b.report(
-      "warning",
-      "not-built-yet",
-      `A case back of "${style}" is not built yet; the case is built without a back.`,
-      "back",
-    );
-    style = "none";
-  }
+  const topBottom = b.choice("topBottom", ["between-sides", "sides-between"], "between-sides");
+  const style = b.choice(
+    "back",
+    ["none", "inset-rabbet", "applied"],
+    b.option("backStock") ? "inset-rabbet" : "none",
+  );
   const backStock = style === "none" ? undefined : b.stock("backStock");
   let back: CaseForm["back"];
   if (backStock) back = { style: style === "applied" ? "applied" : "inset", stock: backStock };

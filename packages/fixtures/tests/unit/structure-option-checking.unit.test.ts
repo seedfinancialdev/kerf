@@ -9,6 +9,7 @@ import {
   buildCutList,
   detachPartIn,
   generateStructures,
+  generateStructuresChecked,
   type Project,
   solve,
   withoutGenerated,
@@ -80,7 +81,7 @@ describe("choices the form does not know", () => {
     const rules = diagnostics(withOption(boxForm(), { bottom: "grove" })).map(
       (d) => `${d.severity}:${d.rule}`,
     );
-    expect(rules).toContain("warning:not-built-yet");
+    expect(rules).toContain("error:invalid-option");
   });
 
   it("a stock choice of the wrong type is a wrong setting, not a deleted stock", () => {
@@ -109,5 +110,42 @@ describe("what saving keeps", () => {
   it("leaves nothing the form generates", () => {
     const stripped = withoutGenerated(generateStructures(form(), shop));
     expect(stripped.parts).toEqual([]);
+  });
+});
+
+describe("settings the form does not know", () => {
+  it("a setting no such form has is named, so a typo is not silent", () => {
+    const rules = diagnostics(withOption(form(), { bakRabbetDepth: "3/8in" })).map(
+      (d) => `${d.severity}:${d.rule}`,
+    );
+    expect(rules).toContain("warning:unknown-option");
+  });
+
+  it("a value that is not one of the choices lists the choices", () => {
+    const found = diagnostics(withOption(form(), { back: "Applied" })).find(
+      (d) => d.rule === "invalid-option",
+    );
+    expect(found?.message).toMatch(/none, inset-rabbet, applied/);
+  });
+});
+
+describe("a roundover taken from the shop's bits", () => {
+  it("says when no bit the shop owns fits, instead of making no roundover quietly", () => {
+    const noBits = {
+      ...shop,
+      tools: shop.tools.map((t) => (t.type === "router" ? { ...t, roundoverBits: [] } : t)),
+    };
+    const rules = solve(withOption(form(), { shelfRoundover: "auto" }), noBits).diagnostics.map(
+      (d) => `${d.severity}:${d.rule}`,
+    );
+    expect(rules).toContain("warning:roundover-no-bit");
+  });
+});
+
+describe("generating with a shop profile", () => {
+  it("rejects a shop that is not a shop profile with the shop's own error", () => {
+    const bad = { ...shop, tools: "x" } as unknown as typeof shop;
+    const checked = generateStructuresChecked(form(), bad);
+    expect(checked.diagnostics.map((d) => d.rule)).toContain("invalid-shop");
   });
 });

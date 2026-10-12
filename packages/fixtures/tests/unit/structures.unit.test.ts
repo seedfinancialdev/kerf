@@ -340,6 +340,6 @@ describe("a form that cannot be built", () => {
       ...base,
       structures: [{ ...structure, options: { ...structure.options, back: "paneled" } }],
     };
-    expect(rules(odd)).toContain("warning:not-built-yet");
+    expect(rules(odd)).toContain("error:invalid-option");
   });
 });

@@ -39,27 +39,8 @@ function readBoxForm(b: Builder): BoxForm | undefined {
   if (!wall) return undefined;
   const { size } = b.structure;
 
-  let corner = b.option("cornerJoint") ?? "through-dovetail";
-  if (corner !== "through-dovetail" && corner !== "rabbet") {
-    b.report(
-      "warning",
-      "not-built-yet",
-      `A box corner of "${corner}" is not built yet; the corners are through dovetails.`,
-      "cornerJoint",
-    );
-    corner = "through-dovetail";
-  }
-
-  let bottom = b.option("bottom") ?? "groove";
-  if (bottom !== "groove" && bottom !== "none") {
-    b.report(
-      "warning",
-      "not-built-yet",
-      `A box bottom of "${bottom}" is not built yet; the bottom sits in a groove.`,
-      "bottom",
-    );
-    bottom = "groove";
-  }
+  const corner = b.choice("cornerJoint", ["through-dovetail", "rabbet"], "through-dovetail");
+  const bottom = b.choice("bottom", ["groove", "none"], "groove");
   const bottomStock = bottom === "none" ? undefined : b.stock("bottomStock");
   if (bottom === "groove" && !bottomStock) return undefined;
 

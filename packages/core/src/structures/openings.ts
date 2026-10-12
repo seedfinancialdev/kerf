@@ -186,7 +186,7 @@ export class Divider {
         generatedBy: b.from("shelf"),
       };
       b.out.patterns.push(pattern);
-      b.patternHosts.set(pattern.id, { left: left.id, right: right.id, params: c.dado });
+      b.patternHosts.set(pattern.id, { left: left.id, right: right.id, params: c.dado, count: n });
       guests.push(pattern.id);
     } else {
       for (const [i, height] of heights.entries()) {

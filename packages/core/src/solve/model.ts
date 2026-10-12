@@ -17,7 +17,7 @@
 import { ExpressionError } from "../expr/errors";
 import { evaluateQuantity, type Quantity } from "../expr/evaluate";
 import { type Node, parseExpression, partKey, referencesOf, slug, stockKey } from "../expr/parser";
-import { formatLength, gridSize, LengthRangeError, snapToGrid, type UnitSystem } from "../length";
+import { gridSize, LengthRangeError, snapToGrid, type UnitSystem } from "../length";
 import type { Diagnostic } from "../outputs";
 import { validateProject } from "../project-file";
 import {
@@ -33,6 +33,7 @@ import {
 } from "../rational";
 import type { RuleId } from "../rules";
 import type { EdgeRef, Id, Instance, Len, Param, PartDef, Pattern, Project } from "../types";
+import { INCH, MM } from "../units";
 import { MAX_PATTERN_COUNT } from "./limits";
 import { extentOf, isOrientationIndex } from "./orientation";
 
@@ -128,16 +129,23 @@ class Solver {
   /**
    * Stock thickness is read exactly into every expression, while a part's own size is snapped to
    * the grid once. A thickness between grid lines therefore makes boards that should meet differ
-   * by a hair, so it is named at the source.
+   * by up to a grid step, which can stop a joint from seating at all, so it is named at the source.
+   * Only stock something uses is checked.
    */
   checkStockOnGrid(): void {
     const grid = gridSize(this.units);
+    const used = new Set(this.project.parts.map((p) => p.stock));
+    for (const structure of this.project.structures) {
+      for (const value of Object.values(structure.options)) {
+        if (typeof value === "string") used.add(value);
+      }
+    }
     for (const stock of this.project.stock) {
-      if (stock.thickness % grid === 0) continue;
+      if (!used.has(stock.id) || stock.thickness % grid === 0) continue;
       const step = this.units === "metric" ? "0.01 mm" : '1/64"';
       this.warn(
         "stock-off-grid",
-        `${stock.name} is ${formatLength(stock.thickness, this.units)} thick, which is not a whole number of ${step} steps, so boards cut from it can be a hair off where they meet. Enter its thickness in this project's units.`,
+        `${stock.name} is ${exactThickness(stock.thickness)} thick, which is not a whole number of ${step} steps, so boards cut from it may fail to meet where they should (a joint may not seat). Give its thickness in the units this project uses, or set the project's units to match its stock.`,
         { field: stock.name },
       );
     }
@@ -782,6 +790,18 @@ function describe(error: unknown): string {
   } catch {
     return "an error that could not be described";
   }
+}
+
+/** A thickness shown exactly enough to see why it is off the grid: "0.7188 in (18.26 mm)". */
+function exactThickness(units: Len): string {
+  // Whole-number arithmetic, rounded half up at the last place; this is for the message only.
+  const decimal = (scale: number, places: number): string => {
+    const factor = 10n ** BigInt(places);
+    const scaled = (2n * BigInt(units) * factor + BigInt(scale)) / (2n * BigInt(scale));
+    const text = scaled.toString().padStart(places + 1, "0");
+    return `${text.slice(0, -places)}.${text.slice(-places)}`;
+  };
+  return `${decimal(INCH, 4)} in (${decimal(MM, 2)} mm)`;
 }
 
 const emptyModel = (diagnostics: Diagnostic[]): SolvedModel => ({

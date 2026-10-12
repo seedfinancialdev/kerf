@@ -84,3 +84,35 @@ describe("stock that is not on the project's grid", () => {
     );
   });
 });
+
+describe("the off-grid message", () => {
+  it("shows the exact thickness in both units and does not say the board is merely a hair off", () => {
+    const base = metricBookcase();
+    const odd: Project = {
+      ...base,
+      stock: base.stock.map((s, i) =>
+        i === 0 ? { ...s, name: "3/4 plywood", thickness: 146050 } : s,
+      ),
+    };
+    const found = solve(odd, shop).diagnostics.find((d) => d.rule === "stock-off-grid");
+    expect(found?.message).toMatch(/0\.7188 in \(18\.26 mm\)/);
+    expect(found?.message).not.toMatch(/a hair/);
+  });
+
+  it("is not raised for stock nothing uses", () => {
+    const base = metricBookcase();
+    const spare: Project = {
+      ...base,
+      stock: [
+        ...base.stock,
+        {
+          ...(base.stock[0] as Project["stock"][number]),
+          id: "01K7M3Q8ZD00000000B1000700",
+          name: "spare",
+          thickness: 146050,
+        },
+      ],
+    };
+    expect(solve(spare, shop).diagnostics.map((d) => d.rule)).not.toContain("stock-off-grid");
+  });
+});

@@ -338,6 +338,8 @@ function readInstance(value: unknown, path: string): Instance {
       pattern: detachedFrom.id("pattern"),
       index: detachedFrom.integer("index", 0, MAX_PATTERN_COUNT),
     };
+    const of = detachedFrom.optionalInteger("of", 1, MAX_PATTERN_COUNT);
+    if (of !== undefined) instance.detachedFrom.of = of;
     detachedFrom.done();
   }
   r.done();

@@ -9,6 +9,7 @@ export {
   detachedPart,
   detachPartIn,
   detachReferencedBoards,
+  removeStructureIn,
 } from "./detach";
 export { generate, generateFrom } from "./generate";
 export { generatedId } from "./ids";

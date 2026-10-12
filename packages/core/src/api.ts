@@ -16,6 +16,7 @@ import type {
 } from "./outputs";
 import { runPipeline, solveProject } from "./pipeline";
 import { ProjectFormatError, validateProject } from "./project-file";
+import { shopProblem } from "./shop";
 import { detachedPart, generateFrom } from "./structures";
 import type { Id, PartDef, Project, ShopProfile } from "./types";
 
@@ -102,9 +103,14 @@ export function generateStructuresChecked(
   project: Project,
   shop: ShopProfile,
 ): { project: Project; diagnostics: Diagnostic[] } {
-  const generated = generateFrom(project, shop);
+  // The shop is checked like any input; an invalid one is said and generation goes on without it.
+  const shopIssue = shopProblem(shop);
+  const generated = generateFrom(project, shopIssue ? undefined : shop);
   if (!generated.ok) throw generated.problem;
-  return { project: generated.project, diagnostics: generated.diagnostics };
+  return {
+    project: generated.project,
+    diagnostics: shopIssue ? [shopIssue, ...generated.diagnostics] : generated.diagnostics,
+  };
 }
 
 /**

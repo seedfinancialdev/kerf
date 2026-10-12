@@ -12,11 +12,19 @@
 
 import { ExpressionError } from "../expr/errors";
 import { evaluateQuantity } from "../expr/evaluate";
+import { validateProject } from "../project-file";
 import { type SolvedModel, solveModel } from "../solve/model";
-import type { Id, Instance, PartDef, Pattern, Project } from "../types";
+import type { GeneratedFrom, Id, Instance, PartDef, Pattern, Project } from "../types";
 import { generatedId } from "./ids";
 import { lit } from "./lengths";
 import { generatedBoardsReferencedByHand } from "./strip";
+
+/** The project as a checked copy; a project that is not valid is a ProjectFormatError. */
+function checked(project: Project): Project {
+  const result = validateProject(project);
+  if (result.problem) throw result.problem;
+  return result.project;
+}
 
 function generatedPart(project: Project, partId: Id): PartDef {
   const part = project.parts.find((p) => p.id === partId);
@@ -50,7 +58,8 @@ function frozenPart(part: PartDef, model: SolvedModel): PartDef {
  * worked out.
  */
 export function detachedPart(project: Project, partId: Id): PartDef {
-  return frozenPart(generatedPart(project, partId), solveModel(project));
+  const valid = checked(project);
+  return frozenPart(generatedPart(valid, partId), solveModel(valid));
 }
 
 /** A length or count expression as an exact literal, or as written when it does not evaluate. */
@@ -69,7 +78,8 @@ function frozenExpression(expr: string, model: SolvedModel): string {
  * The project with one generated part detached: its size, its places and the pattern repeating it
  * are written down as exact lengths. Throws RangeError as `detachedPart` does.
  */
-export function detachPartIn(project: Project, partId: Id): Project {
+export function detachPartIn(input: Project, partId: Id): Project {
+  const project = checked(input);
   const model = solveModel(project);
   const detached = frozenPart(generatedPart(project, partId), model);
   // Where each placement is now. A pattern's source is its first member.
@@ -108,10 +118,16 @@ export function detachPartIn(project: Project, partId: Id): Project {
  * The project with a detached part handed back to its structure (undo). Throws RangeError for a
  * part that does not exist or was not generated.
  */
-export function attachPartIn(project: Project, partId: Id): Project {
+export function attachPartIn(input: Project, partId: Id): Project {
+  const project = checked(input);
   const part = generatedPart(project, partId);
   const { detached: _detached, ...rest } = part;
   return { ...project, parts: project.parts.map((p) => (p.id === partId ? rest : p)) };
+}
+
+/** How many members of the pattern are made now. */
+function members(model: SolvedModel, patternId: Id): number {
+  return model.instances.filter((i) => i.pattern?.id === patternId).length;
 }
 
 /**
@@ -120,7 +136,11 @@ export function attachPartIn(project: Project, partId: Id): Project {
  * the copy keeps its joints. This is "editing one shelf detaches only that shelf".
  * Throws RangeError for a pattern or member that does not exist, or one the form did not make.
  */
-export function detachCopyIn(project: Project, patternId: Id, index: number): Project {
+export function detachCopyIn(input: Project, patternId: Id, index: number): Project {
+  const project = checked(input);
+  if (!Number.isInteger(index) || index < 0) {
+    throw new RangeError("Copies are numbered from 0; give the number of the copy to take out.");
+  }
   const pattern = project.patterns.find((p) => p.id === patternId);
   if (!pattern) throw new RangeError(`The project has no repeated board "${patternId}".`);
   const source = project.instances.find((i) => i.id === pattern.source);
@@ -138,7 +158,10 @@ export function detachCopyIn(project: Project, patternId: Id, index: number): Pr
   }
 
   const { structure } = def.source;
-  const label = `${def.name} ${index + 1}`;
+  // "Shelf copy 2" cannot be one of the numbered names a form gives a second row ("Shelf 2").
+  const taken = new Set(project.parts.map((p) => p.name));
+  let label = `${def.name} copy ${index + 1}`;
+  for (let n = 2; taken.has(label); n += 1) label = `${def.name} copy ${index + 1} (${n})`;
   const partId = generatedId(structure, `detached:${patternId}:${index}`);
   const alone: PartDef = {
     ...def,
@@ -160,7 +183,11 @@ export function detachCopyIn(project: Project, patternId: Id, index: number): Pr
     def: partId,
     name: label,
     position: { x: lit(member.position.x), y: lit(member.position.y), z: lit(member.position.z) },
-    detachedFrom: { pattern: patternId, index },
+    detachedFrom: {
+      pattern: patternId,
+      index,
+      of: (pattern.skip?.length ?? 0) + members(model, patternId),
+    },
   };
   const skipped = [...(pattern.skip ?? []), index].sort((a, b) => a - b);
   return {
@@ -175,15 +202,30 @@ export function detachCopyIn(project: Project, patternId: Id, index: number): Pr
  * Puts a detached copy back into the row it came from: the inverse of `detachCopyIn`, which is
  * what undo does. Throws RangeError for an instance that is not a detached copy.
  */
-export function attachCopyIn(project: Project, instanceId: Id): Project {
+export function attachCopyIn(input: Project, instanceId: Id): Project {
+  const project = checked(input);
   const copy = project.instances.find((i) => i.id === instanceId);
   if (!copy?.detachedFrom) {
     throw new RangeError("That board was not taken out of a row, so there is nothing to put back.");
+  }
+  const handMade =
+    project.joints.some(
+      (j) => j.generatedBy === undefined && (j.host === instanceId || j.guest === instanceId),
+    ) ||
+    project.matchSets.some((m) => m.generatedBy === undefined && m.members.includes(instanceId)) ||
+    project.instances.some((i) => i.generatedBy === undefined && i.parent === instanceId);
+  if (handMade) {
+    throw new RangeError(
+      `Something you added (a joint, a grain match or a part fixed to it) refers to "${copy.name ?? "that board"}"; remove that first, then put it back in the row.`,
+    );
   }
   return {
     ...project,
     parts: project.parts.filter((p) => p.id !== copy.def),
     instances: project.instances.filter((i) => i.id !== instanceId),
+    // The joints and grain matches the form made for the copy go with it.
+    joints: project.joints.filter((j) => j.host !== instanceId && j.guest !== instanceId),
+    matchSets: project.matchSets.filter((m) => !m.members.includes(instanceId)),
     patterns: project.patterns.map((p) => {
       if (p.id !== copy.detachedFrom?.pattern) return p;
       const skip = (p.skip ?? []).filter((n) => n !== copy.detachedFrom?.index);
@@ -198,10 +240,11 @@ export function attachCopyIn(project: Project, instanceId: Id): Project {
  * set, a copy), so that the project can be saved. Returns the project and the boards detached,
  * so the app can say which. Changes nothing when nothing refers to a generated board.
  */
-export function detachReferencedBoards(project: Project): {
+export function detachReferencedBoards(input: Project): {
   project: Project;
   detached: PartDef[];
 } {
+  const project = checked(input);
   let current = project;
   const detached: PartDef[] = [];
   for (const defId of generatedBoardsReferencedByHand(project)) {
@@ -213,4 +256,49 @@ export function detachReferencedBoards(project: Project): {
     current = next;
   }
   return { project: current, detached };
+}
+
+/**
+ * The project without one structure. Its boards that were detached are kept, as ordinary boards of
+ * your own; everything else it generated goes. Throws RangeError for a structure the project does
+ * not have.
+ */
+export function removeStructureIn(input: Project, structureId: Id): Project {
+  const project = checked(input);
+  if (!project.structures.some((s) => s.id === structureId)) {
+    throw new RangeError(`The project has no structure "${structureId}".`);
+  }
+  const ofThis = (from: GeneratedFrom | undefined): boolean => from?.structure === structureId;
+  const keptParts = new Set(
+    project.parts.filter((p) => !ofThis(p.source) || p.detached).map((p) => p.id),
+  );
+  const instances = project.instances
+    .filter((i) => !ofThis(i.generatedBy) || keptParts.has(i.def))
+    .map((i) => {
+      if (!ofThis(i.generatedBy)) return i;
+      const { generatedBy: _from, detachedFrom: _copy, ...own } = i;
+      return own;
+    });
+  const keptInstances = new Set(instances.map((i) => i.id));
+  return {
+    ...project,
+    structures: project.structures.filter((s) => s.id !== structureId),
+    parts: project.parts
+      .filter((p) => keptParts.has(p.id))
+      .map((p) => {
+        if (!ofThis(p.source)) return p;
+        const { source: _source, detached: _detached, ...own } = p;
+        return own;
+      }),
+    instances,
+    patterns: project.patterns
+      .filter((p) => keptInstances.has(p.source))
+      .map((p) => {
+        if (!ofThis(p.generatedBy)) return p;
+        const { generatedBy: _from, skip: _skip, ...own } = p;
+        return own;
+      }),
+    joints: project.joints.filter((j) => !ofThis(j.generatedBy)),
+    matchSets: project.matchSets.filter((m) => !ofThis(m.generatedBy)),
+  };
 }

@@ -75,6 +75,8 @@ export interface PatternHosts {
   left: Id;
   right: Id;
   params: Record<string, string>;
+  /** How many shelves the row has, so a copy taken out of it knows which row it left. */
+  count: number;
 }
 
 export class Builder {
@@ -173,10 +175,46 @@ export class Builder {
     return false;
   }
 
-  /** Reads every option the form has, so a wrong one is said even if nothing else uses it. */
+  /**
+   * A text option that must be one of `allowed`. Anything else is said, with the choices, and
+   * `fallback` is used so the rest of the form can still be checked.
+   */
+  choice<const T extends string>(key: string, allowed: readonly T[], fallback: T): T {
+    const value = this.option(key);
+    if (value === undefined) return fallback;
+    const found = allowed.find((a) => a === value);
+    if (found !== undefined) return found;
+    this.report(
+      "error",
+      "invalid-option",
+      `The form's "${key}" must be one of: ${allowed.join(", ")}.`,
+      key,
+    );
+    return fallback;
+  }
+
+  /**
+   * Reads every option the form has, so a wrong one is said even if nothing else uses it, and
+   * names any setting the form does not have (usually a typo that would otherwise do nothing).
+   */
   checkOptions(): void {
     for (const key of this.spec.textOptions) this.option(key);
     for (const key of this.spec.flags) this.flag(key);
+    const known = new Set([
+      ...Object.keys(this.spec.stockLabels),
+      ...this.spec.textOptions,
+      ...this.spec.flags,
+    ]);
+    for (const key of Object.keys(this.structure.options)) {
+      if (!known.has(key)) {
+        this.report(
+          "warning",
+          "unknown-option",
+          `The form has a setting "${key}" that a ${this.structure.type} does not use.`,
+          key,
+        );
+      }
+    }
   }
 
   private badOption(key: string, wanted: string): void {
@@ -288,5 +326,12 @@ export function roundoverFor(
   if (option !== "auto") return option;
   const fitting = b.roundoverBits.filter((radius) => radius > 0 && radius * 2 <= thickness);
   const largest = Math.max(0, ...fitting);
-  return largest > 0 ? lit(largest) : undefined;
+  if (largest > 0) return lit(largest);
+  b.report(
+    "warning",
+    "roundover-no-bit",
+    "The shelves are to be rounded over with a bit from your shop, but none of your roundover bits fits their thickness, so no edge profile is made.",
+    "shelf roundover",
+  );
+  return undefined;
 }

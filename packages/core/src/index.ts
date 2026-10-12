@@ -32,6 +32,7 @@ export {
   detachPartIn,
   detachReferencedBoards,
   projectFromTemplate,
+  removeStructureIn,
   STOCK_OPTIONS,
   TEMPLATES,
   withoutGenerated,

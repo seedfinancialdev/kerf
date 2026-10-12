@@ -75,7 +75,7 @@ export interface Instance {
   parent?: Id; // assembly instance, optional
   generatedBy?: GeneratedFrom; // set on instances a structure generated
   /** A copy taken out of a pattern by hand: which pattern, and which member it replaced. */
-  detachedFrom?: { pattern: Id; index: number };
+  detachedFrom?: { pattern: Id; index: number; of?: number };
 }
 
 export interface Pattern {

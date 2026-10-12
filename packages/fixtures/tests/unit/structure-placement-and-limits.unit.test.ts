@@ -262,27 +262,6 @@ describe("bays and partitions (positions by hand)", () => {
 });
 
 describe("rules not yet pinned", () => {
-  it("generated-part-edited: a hand edit to a generated board's size warns, and the form wins", () => {
-    const made = generateStructures(form(), shop);
-    for (const key of ["length", "width", "thickness"] as const) {
-      const edited = {
-        ...made,
-        parts: made.parts.map((p) => (p.source?.role === "top" ? { ...p, [key]: "10in" } : p)),
-      };
-      const r = generateStructuresChecked(edited, shop);
-      expect(r.diagnostics.map((d) => `${d.severity}:${d.rule}@${d.field}`)).toContain(
-        "warning:generated-part-edited@Top",
-      );
-    }
-  });
-  it("a detached board edited by hand is not warned", () => {
-    const made = generateStructures(form(), shop);
-    const d = detachPartIn(made, must(made.parts.find((p) => p.source?.role === "top")).id);
-    const edited = { ...d, parts: d.parts.map((p) => (p.detached ? { ...p, length: "10in" } : p)) };
-    expect(generateStructuresChecked(edited, shop).diagnostics.map((x) => x.rule)).not.toContain(
-      "generated-part-edited",
-    );
-  });
   it("joint-dropped: a detached wall whose placement was deleted loses its 3 joints and the grain wrap", () => {
     const made = generateStructures(box(), shop);
     const front = must(made.parts.find((p) => p.source?.role === "front"));
@@ -657,10 +636,10 @@ describe("options", () => {
   });
   it("warns topBottom, cornerJoint; grainWraps only for true", () => {
     expect(diags(opt(form(), { topBottom: "mitered" }))).toContain(
-      "warning:not-built-yet@topBottom",
+      "error:invalid-option@topBottom",
     );
     expect(diags(opt(box(), { cornerJoint: "half-blind" }))).toContain(
-      "warning:not-built-yet@cornerJoint",
+      "error:invalid-option@cornerJoint",
     );
     expect(generateStructures(opt(box(), { grainWraps: false }), shop).matchSets).toEqual([]);
   });
