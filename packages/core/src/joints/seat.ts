@@ -62,7 +62,7 @@ export function seatOf(
         contact.kind === "overlap"
           ? `${guest.instance.name} overlaps ${host.instance.name}; it should sit against its face.`
           : `${guest.instance.name} does not touch ${host.instance.name}, so there is nothing to join.`,
-        { joint: jointId, part: guest.part.id },
+        { joint: jointId, part: guest.part.id, instances: [guest.instance.id, host.instance.id] },
       );
     }
     return undefined;
@@ -75,7 +75,7 @@ export function seatOf(
       ctx.error(
         "joint-no-contact",
         `${guest.instance.name} does not sit flat against ${host.instance.name}.`,
-        { joint: jointId, part: guest.part.id },
+        { joint: jointId, part: guest.part.id, instances: [guest.instance.id, host.instance.id] },
       );
     }
     return undefined;

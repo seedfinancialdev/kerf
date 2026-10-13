@@ -193,6 +193,7 @@ export function deriveJoints(project: Project, model: SolvedModel): Derived {
             : `${lost.length} parts (starting with ${first.instance.name}) do not meet any of the parts they should be joined to for ${JOINT_WORD[joint.type]}.`,
         joint: joint.id,
         part: first.part.id,
+        instances: lost.map((guest) => guest.instance.id),
         field: `${first.instance.name} ${joint.type}`,
         ...(lost.length > 1 ? { count: lost.length } : {}),
       });

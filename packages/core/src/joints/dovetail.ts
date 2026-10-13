@@ -129,7 +129,12 @@ export function deriveDovetail(
   guest: Frame,
   quiet = false,
 ): PairCut | undefined {
-  const where = { joint: joint.id, part: host.part.id, field: `${host.instance.name} dovetail` };
+  const where = {
+    joint: joint.id,
+    part: host.part.id,
+    instances: [guest.instance.id, host.instance.id],
+    field: `${host.instance.name} dovetail`,
+  };
   const hostName = host.instance.name;
   const guestName = guest.instance.name;
   const notCorner = (): undefined => {

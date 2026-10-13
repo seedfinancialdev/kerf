@@ -204,6 +204,16 @@ describe("joints", () => {
     expect(d[0]?.count).toBeUndefined();
     // The joint is named in shop words, not by its key (code review I2: "throughDovetail").
     expect(d[0]?.message).toBe("Guest does not meet Host for a dado, so there is nothing to join.");
+    // It names the guest it is about by instance, so an editor can tell one board's joint error
+    // from another's of the same row (second-pass re-review, minor 2).
+    expect(d[0]?.instances).toEqual([p.instances.find((i) => i.name === "Guest")?.id]);
+  });
+  it("a dado error names the guest and the host it lies between, by instance", () => {
+    // The guest stands 2" in on a 5" run along a 6" host width, so its end runs past the face.
+    const p = dadoP({}, ["2in", "2in", "3/4in"]);
+    const d = solve(p, shop).diagnostics.find((x) => x.rule === "dado-outside-face");
+    const id = (name: string) => p.instances.find((i) => i.name === name)?.id;
+    expect(d?.instances).toEqual([id("Guest"), id("Host")]);
   });
   it("guests of a pattern that overlap the host are reported as one aggregate, not per pair", () => {
     const p = boards(

@@ -18,7 +18,12 @@ export function deriveDado(ctx: DeriveContext, joint: Joint, seat: Seat): PairCu
   const [L, W, T] = dimsOf(host);
   const hostName = host.instance.name;
   const guestName = guest.instance.name;
-  const where = { joint: joint.id, part: host.part.id, field: `${hostName} dado` };
+  const where = {
+    joint: joint.id,
+    part: host.part.id,
+    instances: [guest.instance.id, host.instance.id],
+    field: `${hostName} dado`,
+  };
 
   if (hostFace.axis !== 2) {
     ctx.error(

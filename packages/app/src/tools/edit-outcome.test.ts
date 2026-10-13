@@ -211,4 +211,23 @@ describe("firstNewError() on a board a take-over renamed (second-pass review M4)
       firstNewError({ ...was, diagnostics: [before] }, { ...now, diagnostics: [after] }, renamed),
     ).toBeNull();
   });
+
+  it("does not take a per-rule summary whose number fell for a new error (second-pass re-review, minor 1)", () => {
+    // 30 problems of one rule: 25 listed and "5 more …" summed up. A change that removes one leaves
+    // "4 more …": fewer problems, so nothing new.
+    const summary = (n: number) => ({
+      severity: "error" as const,
+      rule: "overlap" as const,
+      message: `${n} more problems like this one are not listed, such as: Top and Back …`,
+      count: n,
+      summary: true as const,
+    });
+    expect(
+      firstNewError(
+        { ...was, diagnostics: [summary(5)] },
+        { ...now, diagnostics: [summary(4)] },
+        renamed,
+      ),
+    ).toBeNull();
+  });
 });

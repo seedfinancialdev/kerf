@@ -22,7 +22,12 @@ export function deriveRabbet(ctx: DeriveContext, joint: Joint, seat: Seat): Pair
   const [L, W, T] = dimsOf(host);
   const hostName = host.instance.name;
   const guestName = guest.instance.name;
-  const where = { joint: joint.id, part: host.part.id, field: `${hostName} rabbet` };
+  const where = {
+    joint: joint.id,
+    part: host.part.id,
+    instances: [guest.instance.id, host.instance.id],
+    field: `${hostName} rabbet`,
+  };
   const notSeated = (why: string): undefined => {
     ctx.error(
       "rabbet-not-seated",

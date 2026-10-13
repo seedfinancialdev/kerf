@@ -60,7 +60,10 @@ export function firstNewError(
   after: Solved,
   renamed: readonly Renamed[],
 ): Diagnostic | null {
-  const errors = (list: readonly Diagnostic[]) => list.filter((d) => d.severity === "error");
+  // A per-rule summary's words carry how many problems are hidden, so they change whenever that
+  // number does; it is left out and a change is judged by the problems listed (ADR 015, limit 20).
+  const errors = (list: readonly Diagnostic[]) =>
+    list.filter((d) => d.severity === "error").filter((d) => !d.summary);
   const key = (d: Diagnostic): string => JSON.stringify([d.rule, d.part, d.message]);
   const known = new Map<string, number>();
   for (const d of errors(before.diagnostics))
