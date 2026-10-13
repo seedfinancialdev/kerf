@@ -55,7 +55,7 @@ export interface KerfState {
 }
 
 export interface KerfActions {
-  /** Records `edit` as one named change and solves it. A `notice` is shown with Undo; any other Undo notice is cleared, a plain one stays. */
+  /** Records `edit` as one named change and solves it; an edit that leaves the project as it was is ignored. A `notice` is shown with Undo; any other Undo notice is cleared, a plain one stays. */
   apply(edit: Edit, notice?: string): void;
   /** Shows `project` and solves it without recording it (while dragging). */
   preview(project: Project): void;
@@ -216,6 +216,9 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
 
       apply: (edit, notice) => {
         const h = get().history;
+        // A change that changes nothing (a field left as it was) is not a History entry, and it
+        // leaves the notice alone: nothing happened, so there is nothing to clear.
+        if (h && serializeProject(currentProject(h)) === serializeProject(edit.project)) return;
         show({
           history: h ? record(h, edit) : startHistory(edit),
           previewed: null,

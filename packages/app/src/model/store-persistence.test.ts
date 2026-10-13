@@ -8,7 +8,7 @@
 import { serializeProject } from "@kerf/core";
 import { describe, expect, it } from "vitest";
 import { memoryStorage } from "../testing/memory-storage";
-import { setUnits, startProject } from "./commands";
+import { setSize, setUnits, startProject } from "./commands";
 import { type AppStorage, createStorage } from "./storage";
 import { createKerfStore, shownProject } from "./store";
 
@@ -95,7 +95,9 @@ describe("a browser store that cannot be written", () => {
     const p = shownProject(s.getState());
     if (!p) throw new Error("no project");
     expect(s.getState().solved?.result.cutList.lines).toHaveLength(3);
-    s.getState().apply(setUnits(p, "imperial"));
+    const resized = setSize(p, p.structures[0]?.id ?? "", "w", '30"');
+    if (!resized.ok) throw new Error(resized.message);
+    s.getState().apply(resized.edit);
     expect(s.getState().notice).toBeNull();
     expect(s.getState().solved?.result.cutList.lines).toHaveLength(3);
     expect(s.getState().history?.entries).toHaveLength(2);

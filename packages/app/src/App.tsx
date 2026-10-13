@@ -8,8 +8,10 @@
 import { type ReactNode, useEffect } from "react";
 import type { KerfStore } from "./model/store";
 import { HintLine } from "./ui/HintLine";
+import { HistoryPanel } from "./ui/HistoryPanel";
 import { Inspector } from "./ui/Inspector";
 import { Notice } from "./ui/Notice";
+import { ProjectTree } from "./ui/ProjectTree";
 import { TopBar } from "./ui/TopBar";
 import { KerfProvider, useKerf } from "./ui/useKerf";
 import { useShortcuts } from "./ui/useShortcuts";
@@ -34,7 +36,10 @@ function Window({ model }: { model: ReactNode }) {
       <HintLine />
       <Notice />
       <div className="workspace">
-        <aside aria-label="Project" className="panel panel-left" />
+        <aside aria-label="Project" className="panel panel-left">
+          <ProjectTree />
+          <HistoryPanel />
+        </aside>
         <main className="center">
           <section aria-label="Model" className="model">
             {model}

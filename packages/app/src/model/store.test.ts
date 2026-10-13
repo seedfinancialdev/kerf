@@ -224,6 +224,25 @@ describe("createKerfStore()", () => {
     expect(s.getState().history).toBe(before);
   });
 
+  it("records nothing for a change that changes nothing", () => {
+    const s = fresh();
+    s.getState().apply(startProject("Bookcase", "imperial"));
+    const p = shownProject(s.getState());
+    if (!p) throw new Error("no project");
+    s.getState().apply({ label: "Nothing", project: structuredClone(p) });
+    expect(s.getState().history?.entries).toHaveLength(1);
+  });
+
+  it("keeps an Undo notice when a change that changes nothing is ignored", () => {
+    const s = fresh();
+    s.getState().apply(startProject("Bookcase", "imperial"));
+    s.getState().say("Resized", true);
+    const p = shownProject(s.getState());
+    if (!p) throw new Error("no project");
+    s.getState().apply({ label: "Nothing", project: structuredClone(p) });
+    expect(s.getState().notice).toEqual({ text: "Resized", undo: true });
+  });
+
   it("drops the preview on undo and shows the previous entry", () => {
     const s = fresh();
     s.getState().apply(startProject("Bookcase", "imperial"));
