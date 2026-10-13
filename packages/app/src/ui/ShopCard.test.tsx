@@ -5,7 +5,7 @@
 // Interaction spec, "4. Joinery from your shop": the first-launch checklist (table saw kerf, dado
 // stack max width, router bits, roundover bits, hand tools for dovetails). ADR 015, D4.
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { STARTER_SHOP } from "../model/starter";
 import { createStorage } from "../model/storage";
@@ -56,5 +56,30 @@ describe("<ShopCard>", () => {
     fireEvent.blur(bits);
     expect(store.getState().shop).toEqual(STARTER_SHOP);
     expect(screen.getByText(/^"big"/)).toBeTruthy();
+  });
+
+  it("refuses a negative blade kerf with the engine's reason and keeps the shop as it was", () => {
+    const store = setup();
+    const kerf = screen.getByLabelText("Blade kerf");
+    fireEvent.change(kerf, { target: { value: '-1/8"' } });
+    fireEvent.blur(kerf);
+    expect(store.getState().shop).toEqual(STARTER_SHOP);
+    expect(screen.getByText(/kerf/i, { selector: ".field-problem" })).toBeTruthy();
+  });
+
+  it("says why a tick is refused instead of flipping it back in silence (silent-failure review M1)", () => {
+    const store = setup();
+    // A shop whose router holds a bit of no size: any change to it is refused by the engine.
+    const broken = {
+      ...STARTER_SHOP,
+      tools: STARTER_SHOP.tools.map((t) =>
+        t.type === "router" ? { ...t, roundoverBits: [-25_400] } : t,
+      ),
+    };
+    act(() => store.getState().setShop(broken));
+    fireEvent.click(screen.getByLabelText("Dado stack"));
+    expect(store.getState().shop).toEqual(broken);
+    expect(store.getState().notice?.kind).toBe("said");
+    expect(store.getState().notice?.text).toMatch(/\S/);
   });
 });

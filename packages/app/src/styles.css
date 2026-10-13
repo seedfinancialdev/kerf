@@ -294,7 +294,7 @@ select:focus-visible,
 
 .template-card {
   width: 100%;
-  min-height: 56px;
+  min-height: var(--template-card-min-height);
 }
 
 .primary {

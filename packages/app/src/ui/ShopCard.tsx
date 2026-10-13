@@ -6,14 +6,37 @@
 // max width, router with straight bits and roundover bits, hand tools for dovetails). Every change
 // is checked by the engine (`shopProblem`) before it is kept.
 
-import { formatLength, type Len, parseLength, type ShopProfile, shopProblem } from "@kerf/core";
+import {
+  ExpressionError,
+  formatLength,
+  INCH,
+  type Len,
+  parseLength,
+  type ShopProfile,
+  shopProblem,
+} from "@kerf/core";
 import { useKerf, useKerfStore } from "../state/useKerf";
 import { NumberField } from "./NumberField";
 
 type Tool = ShopProfile["tools"][number];
-const IN = 203_200;
 
-/** "1/8\", 1/4\"" → lengths, or the first entry that is not a length. */
+/** The widest dado a newly ticked dado stack cuts: 3/4", as in the starter shop (model/starter.ts). */
+const NEW_DADO_STACK_WIDTH = (3 * INCH) / 4;
+
+/**
+ * A length typed into the card, in inches (ADR 015, rule 11: the shop card shows inches), or why
+ * it is not one. Only the engine's reading errors are a reason; anything else is a fault in Kerf.
+ */
+function readShopLength(text: string): Len | string {
+  try {
+    return parseLength(text, "imperial");
+  } catch (error) {
+    if (error instanceof ExpressionError) return error.message;
+    throw error;
+  }
+}
+
+/** "1/8\", 1/4\"" → lengths, or why the first entry that is not a length was refused. */
 function readBits(text: string): Len[] | string {
   const parts = text
     .split(",")
@@ -21,17 +44,20 @@ function readBits(text: string): Len[] | string {
     .filter((t) => t !== "");
   const out: Len[] = [];
   for (const part of parts) {
-    try {
-      out.push(parseLength(part, "imperial"));
-    } catch {
-      return `"${part}" is not a bit size; write sizes like 1/4", 1/2".`;
-    }
+    const bit = readShopLength(part);
+    if (typeof bit === "string") return `"${part}" is not a bit size; write sizes like 1/4", 1/2".`;
+    out.push(bit);
   }
   return out;
 }
 
 const showBits = (bits: Len[]): string => bits.map((b) => formatLength(b, "imperial")).join(", ");
 
+/**
+ * The user's shop: blade kerf, dado stack, router bits and dovetails by hand. A change is kept
+ * only when the engine accepts the whole shop; a typed value it refuses stays in its box with the
+ * reason, and a refused tick is explained on the notice line.
+ */
 export function ShopCard() {
   const store = useKerfStore();
   const shop = useKerf((s) => s.shop);
@@ -48,6 +74,16 @@ export function ShopCard() {
     store.getState().setShop(next);
     return null;
   };
+  /** A tick has no box to show a reason under, so a refusal goes to the notice line. */
+  const tick = (next: ShopProfile): void => {
+    const refusal = save(next);
+    if (refusal !== null) store.getState().say(refusal);
+  };
+  /** Saves the shop `withLength` makes from a typed length, or says why the text is not one. */
+  const saveLength = (text: string, withLength: (length: Len) => ShopProfile): string | null => {
+    const length = readShopLength(text);
+    return typeof length === "string" ? length : save(withLength(length));
+  };
   const withTool = (type: Tool["type"], replacement: Tool | undefined): ShopProfile => ({
     ...shop,
     tools: [...shop.tools.filter((t) => t.type !== type), ...(replacement ? [replacement] : [])],
@@ -58,23 +94,19 @@ export function ShopCard() {
       <NumberField
         label="Blade kerf"
         display={formatLength(shop.kerf, "imperial")}
-        onSubmit={(text) => {
-          try {
-            return save({ ...shop, kerf: parseLength(text, "imperial") });
-          } catch (e) {
-            return e instanceof Error ? e.message : "That is not a length.";
-          }
-        }}
+        onSubmit={(text) => saveLength(text, (kerf) => ({ ...shop, kerf }))}
       />
       <label className="check">
         <input
           type="checkbox"
           checked={dado !== undefined}
           onChange={(e) =>
-            save(
+            tick(
               withTool(
                 "dadoStack",
-                e.target.checked ? { type: "dadoStack", maxWidth: (3 * IN) / 4 } : undefined,
+                e.target.checked
+                  ? { type: "dadoStack", maxWidth: NEW_DADO_STACK_WIDTH }
+                  : undefined,
               ),
             )
           }
@@ -85,18 +117,9 @@ export function ShopCard() {
         <NumberField
           label="Widest dado"
           display={formatLength(dado.maxWidth, "imperial")}
-          onSubmit={(text) => {
-            try {
-              return save(
-                withTool("dadoStack", {
-                  type: "dadoStack",
-                  maxWidth: parseLength(text, "imperial"),
-                }),
-              );
-            } catch (e) {
-              return e instanceof Error ? e.message : "That is not a length.";
-            }
-          }}
+          onSubmit={(text) =>
+            saveLength(text, (maxWidth) => withTool("dadoStack", { type: "dadoStack", maxWidth }))
+          }
         />
       )}
       <label className="check">
@@ -104,7 +127,7 @@ export function ShopCard() {
           type="checkbox"
           checked={router !== undefined}
           onChange={(e) =>
-            save(
+            tick(
               withTool(
                 "router",
                 e.target.checked
@@ -145,7 +168,7 @@ export function ShopCard() {
           type="checkbox"
           checked={hand?.dovetails === true}
           onChange={(e) =>
-            save(
+            tick(
               withTool(
                 "handTools",
                 e.target.checked ? { type: "handTools", dovetails: true } : undefined,
