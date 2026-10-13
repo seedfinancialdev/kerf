@@ -132,12 +132,18 @@ describe("proposeJoint()", () => {
     });
   });
 
-  it("refuses a dado in the Back too, when asked for the other type", () => {
-    const p = looseBoards();
-    expect(proposeJoint(p, shop, idOf(p, "Top"), idOf(p, "Back"), JOINT, "dado")).toMatchObject({
-      ok: false,
-    });
-  });
+  it.each(["dado", "rabbet"] as const)(
+    "refuses a %s in the Back too, with the thinner-board reason, when that type is asked for",
+    (type) => {
+      // ADR 015, rule 6: a thinner host is refused with the reason, whichever type is asked for.
+      const p = looseBoards();
+      expect(proposeJoint(p, shop, idOf(p, "Top"), idOf(p, "Back"), JOINT, type)).toEqual({
+        ok: false,
+        reason:
+          "Back is thinner than Top, so Kerf won't cut a joint into it; glue or nail it in place.",
+      });
+    },
+  );
 
   it('refuses a loose shelf against the Back (23/32" shelf, 1/4" back)', () => {
     const p = looseBoards();
