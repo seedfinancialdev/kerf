@@ -418,6 +418,53 @@ describe("pending tool state", () => {
   });
 });
 
+describe("a tool action under way (final branch review I1 and M1)", () => {
+  /** The bookcase recorded, then Width 30" recorded, so there is an entry to undo. */
+  const resized = () => {
+    const s = fresh();
+    s.getState().begin(startProject("Bookcase", "imperial"));
+    const p = shownProject(s.getState());
+    if (!p) throw new Error("no project");
+    const r = setSize(p, p.structures[0]?.id ?? "", "w", '30"');
+    if (!r.ok) throw new Error(r.message);
+    s.getState().apply(r.edit);
+    return { s, wide: p };
+  };
+
+  it("is dropped with its preview when the tool changes, so the recorded project shows again", () => {
+    const { s, wide } = resized();
+    s.getState().setTool("move");
+    s.getState().preview(wide);
+    s.getState().setTool("select");
+    expect(s.getState().previewed).toBeNull();
+    // The recorded entry is Width 30": shelves 29-1/16" cut (5905500), not the previewed 35-1/16".
+    expect(shelfCut(s)).toBe(5_905_500);
+  });
+
+  it.each([
+    ["undo", (s: ReturnType<typeof fresh>) => s.getState().undo()],
+    [
+      "redo",
+      (s: ReturnType<typeof fresh>) => {
+        s.getState().undo();
+        s.getState().setPending({ tool: "board", from: { placed: null, point: [0, 0, 0] } });
+        s.getState().redo();
+      },
+    ],
+    ["jumpTo", (s: ReturnType<typeof fresh>) => s.getState().jumpTo(0)],
+    [
+      "begin",
+      (s: ReturnType<typeof fresh>) => s.getState().begin(startProject("Bookcase", "imperial")),
+    ],
+  ])("is dropped for every tool when History moves by %s", (_, move) => {
+    const { s } = resized();
+    s.getState().setTool("board");
+    s.getState().setPending({ tool: "board", from: { placed: null, point: [0, 0, 0] } });
+    move(s);
+    expect(s.getState().pending).toBeNull();
+  });
+});
+
 describe("the tape and guide lines", () => {
   const measured = () => {
     const s = fresh();

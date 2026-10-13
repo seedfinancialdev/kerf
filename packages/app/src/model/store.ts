@@ -54,7 +54,7 @@ export interface KerfState {
   shop: ShopProfile;
   notice: Notice | null;
   tool: ToolId;
-  /** What the active tool has started and not finished; cleared when the tool changes. */
+  /** What the active tool has started and not finished; cleared when the tool changes or History is stepped through. */
   pending: Pending | null;
   /** The Join tool's suggestion for the two boards clicked; cleared when the tool changes. */
   proposal: Proposal | null;
@@ -85,7 +85,7 @@ export interface KerfState {
 export interface KerfActions {
   /** Records `edit` as one named change and solves it; an edit that leaves the project as it was is ignored. A `notice` is shown with Undo; any other Undo notice is cleared, a plain one stays. */
   apply(edit: Edit, notice?: string): void;
-  /** Records a project that starts afresh (New, Open) as one History entry, even if equal to the shown one, noting when it began. */
+  /** Records a project that starts afresh (New, Open) as one History entry, even if equal to the shown one, noting when it began; drops the active tool's action. */
   begin(edit: Edit): void;
   /** Sets how the model is drawn for a file's thumbnail; null when no view can draw it. */
   setThumbnailSource(source: (() => Promise<Uint8Array | undefined>) | null): void;
@@ -101,11 +101,11 @@ export interface KerfActions {
   commit(label: string): void;
   /** Drops the preview and shows the recorded project again. */
   cancelPreview(): void;
-  /** Steps back one change; drops any preview. Does nothing at the first entry. */
+  /** Steps back one change; drops any preview and the active tool's action. Does nothing at the first entry. */
   undo(): void;
-  /** Steps forward one change; drops any preview. Does nothing at the last entry. */
+  /** Steps forward one change; drops any preview and the active tool's action. Does nothing at the last entry. */
   redo(): void;
-  /** Shows History entry `index`. Throws RangeError for an index outside the list. */
+  /** Shows History entry `index`, dropping any preview and the active tool's action. Throws RangeError for an index outside the list. */
   jumpTo(index: number): void;
   /** Moves to a workflow step. */
   setStep(step: Step): void;
@@ -113,7 +113,7 @@ export interface KerfActions {
   select(selection: Selection): void;
   /** Uses and saves the shop, then solves again with it. */
   setShop(shop: ShopProfile): void;
-  /** Picks the active tool. */
+  /** Picks the active tool, dropping the last one's action and any preview it drew. */
   setTool(tool: ToolId): void;
   /** Sets or clears the active tool's half-finished action. */
   setPending(pending: Pending | null): void;
@@ -260,6 +260,14 @@ export function createKerfStore(deps: {
       if (moved) keep(get().history);
     };
 
+    /**
+     * Moves History to `history` when the user steps through it or starts afresh. Whatever a tool
+     * had started was measured on the project that is no longer shown, so it is dropped with the
+     * preview (final branch review I1, M1); a tool that records its own change keeps its action.
+     */
+    const moveHistory = (history: History, patch: Partial<KerfState> = {}): void =>
+      show({ history, previewed: null, pending: null, notice: keepPlainNotice(), ...patch });
+
     /** A notice that offers Undo describes one change, so it goes when History moves (ruling R13). */
     const keepPlainNotice = (): Notice | null => {
       const { notice } = get();
@@ -310,15 +318,8 @@ export function createKerfStore(deps: {
         set({ created });
         // Unlike `apply`, a project equal to the shown one is still recorded: the user opened a file.
         const h = get().history;
-        show({
-          history: h ? record(h, edit) : startHistory(edit),
-          previewed: null,
-          notice: keepPlainNotice(),
-          // A measurement belongs to the project it was taken on (ruling R42).
-          tape: null,
-          guides: [],
-          pending: get().pending?.tool === "tape" ? null : get().pending,
-        });
+        // A measurement belongs to the project it was taken on (ruling R42).
+        moveHistory(h ? record(h, edit) : startHistory(edit), { tape: null, guides: [] });
       },
       setThumbnailSource: (thumbnail) => set({ thumbnail }),
       hover: (hovered) => set({ hovered }),
@@ -350,15 +351,15 @@ export function createKerfStore(deps: {
       cancelPreview: () => show({ previewed: null }),
       undo: () => {
         const h = get().history;
-        if (h) show({ history: undo(h), previewed: null, notice: keepPlainNotice() });
+        if (h) moveHistory(undo(h));
       },
       redo: () => {
         const h = get().history;
-        if (h) show({ history: redo(h), previewed: null, notice: keepPlainNotice() });
+        if (h) moveHistory(redo(h));
       },
       jumpTo: (index) => {
         const h = get().history;
-        if (h) show({ history: jumpTo(h, index), previewed: null, notice: keepPlainNotice() });
+        if (h) moveHistory(jumpTo(h, index));
       },
       setStep: (step) => {
         // Each step shows its own panel, so a board picked on one step does not cover the next.
@@ -370,7 +371,13 @@ export function createKerfStore(deps: {
         saveShop(deps.storage, shop);
         show({ shop });
       },
-      setTool: (tool) => set({ tool, pending: null, proposal: null }),
+      setTool: (tool) => {
+        const dropped = { tool, pending: null, proposal: null };
+        // A preview belongs to the tool that drew it; leaving it would show (and Save) a change
+        // that is not in History (final branch review I1).
+        if (get().previewed) show({ ...dropped, previewed: null });
+        else set(dropped);
+      },
       setProposal: (proposal) => set({ proposal }),
       setTape: (tape) => set({ tape }),
       addGuide: (from, to) => set({ guides: [...get().guides, [from, to]] }),
