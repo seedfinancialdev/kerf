@@ -111,7 +111,111 @@ describe("proposeJoint()", () => {
     // wholly inside the step at the host's end or edge).
     const p = looseBoards();
     const r = proposeJoint(p, shop, idOf(p, "Right side"), SHELF, JOINT, "rabbet");
-    expect(r.ok).toBe(false);
+    expect(r).toEqual({
+      ok: false,
+      reason:
+        "Loose shelf is not seated against the rabbet in Right side: it does not sit in a step against an end or edge.",
+    });
+  });
+
+  it("refuses through dovetails for boards that only touch, with the engine's reason", () => {
+    const p = looseBoards();
+    const r = proposeJoint(p, shop, idOf(p, "Right side"), SHELF, JOINT, "throughDovetail");
+    expect(r).toEqual({
+      ok: false,
+      reason:
+        "Loose shelf and Right side do not meet at a right-angle corner, so they cannot be dovetailed.",
+    });
+  });
+
+  it("offers a preferred type that seats, in place of the contact rule's choice", () => {
+    // The top at the end of a side is a rabbet by contact; a dado of 23/32 ÷ 3 = 15/64" also seats.
+    const p = looseBoards();
+    const r = proposeJoint(p, shop, idOf(p, "Top"), idOf(p, "Right side"), JOINT, "dado");
+    expect(r).toMatchObject({ ok: true, joint: { type: "dado" } });
+    if (r.ok)
+      expect(r.description).toBe('Top in a dado in Right side, 23/32" wide and 15/64" deep');
+  });
+
+  it("refuses a joint id the project already uses", () => {
+    const p = looseBoards();
+    p.joints = [{ id: JOINT, type: "dado", host: idOf(p, "Right side"), guest: SHELF, params: {} }];
+    expect(proposeJoint(p, shop, idOf(p, "Right side"), SHELF, JOINT)).toEqual({
+      ok: false,
+      reason: "That joint already exists; pick a different id for the new one.",
+    });
+  });
+
+  it("refuses a project that cannot be placed", () => {
+    const p = looseBoards();
+    p.instances = p.instances.map((i) => ({ ...i, def: "01K7M3Q8ZD00000000T9000098" }));
+    expect(proposeJoint(p, shop, idOf(p, "Right side"), SHELF, JOINT)).toEqual({
+      ok: false,
+      reason: "The project has a problem that stops Kerf placing its boards; fix it first.",
+    });
+  });
+
+  it("refuses one board of a row, and says to detach it", () => {
+    const g = generateStructures(loadProject("bookcase", "structure"), shop);
+    const member = "01K7M3Q8ZD000000VD1W6VCPZA:0";
+    const side = g.instances.find((i) => i.name === "Right side");
+    expect(proposeJoint(g, shop, member, side?.id ?? "", JOINT)).toEqual({
+      ok: false,
+      reason: "Shelf 1 is one of a row; detach it first to join it on its own.",
+    });
+  });
+
+  it("proposes through dovetails, with hand tools, for boards crossing at a corner", () => {
+    const box = generateStructures(loadProject("box", "structure"), shop);
+    const p: Project = {
+      ...box,
+      structures: [],
+      joints: [],
+      matchSets: [],
+      patterns: [],
+      parts: box.parts.map(({ source: _s, detached: _d, ...part }) => part),
+      instances: box.instances.map(({ generatedBy: _, ...i }) => i),
+    };
+    const r = proposeJoint(p, shop, idOf(p, "Front"), idOf(p, "Side A"), JOINT);
+    expect(r).toMatchObject({
+      ok: true,
+      joint: { type: "throughDovetail" },
+      tool: "handTools",
+      missing: false,
+    });
+  });
+
+  it("refuses two boards lying face to face", () => {
+    const p = looseBoards();
+    const top = p.instances.find((i) => i.name === "Loose shelf");
+    if (!top) throw new Error("no shelf");
+    p.instances.push({
+      ...top,
+      id: "01K7M3Q8ZD00000000T9000003",
+      name: "Stacked shelf",
+      position: { ...top.position, z: "36in + 23/32in" },
+    });
+    expect(proposeJoint(p, shop, SHELF, "01K7M3Q8ZD00000000T9000003", JOINT)).toEqual({
+      ok: false,
+      reason:
+        "Loose shelf and Stacked shelf lie face to face; glue them, there is no joint to cut.",
+    });
+  });
+
+  it("refuses two boards meeting end to end", () => {
+    const p = looseBoards();
+    const side = p.instances.find((i) => i.name === "Right side");
+    if (!side) throw new Error("no side");
+    p.instances.push({
+      ...side,
+      id: "01K7M3Q8ZD00000000T9000004",
+      name: "Taller side",
+      position: { ...side.position, z: "72in" },
+    });
+    expect(proposeJoint(p, shop, side.id, "01K7M3Q8ZD00000000T9000004", JOINT)).toEqual({
+      ok: false,
+      reason: "Right side and Taller side meet end to end; Kerf has no joint for that yet.",
+    });
   });
 
   it("does not change the project it is given", () => {

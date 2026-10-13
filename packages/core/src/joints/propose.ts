@@ -7,7 +7,7 @@
 // so a joint the engine would reject is never offered.
 
 import { formatLength } from "../length";
-import type { MachiningSetup } from "../outputs";
+import type { Diagnostic, MachiningSetup } from "../outputs";
 import { toolFor } from "../outputs/machining";
 import { runPipeline } from "../pipeline";
 import { type Box, boxOf, boxToLocal, contactOf, type Frame, faceAt } from "../solve/assembly";
@@ -25,10 +25,16 @@ const refuse = (reason: string): JointProposal => ({ ok: false, reason });
  * The guest's other dimension may run to the host's far side either way (ADR 013, D4).
  */
 function sitsInStep(host: Frame, guest: Frame, patch: Box): boolean {
+  // A wrong guess here shows up as the trial solve's error, so the proposal is never offered.
   const thicknessAcross = patch.max[0] - patch.min[0] === guest.part.thickness ? 0 : 1;
   const size = thicknessAcross === 0 ? host.part.length : host.part.width;
   return patch.min[thicknessAcross] === 0 || patch.max[thicknessAcross] === size;
 }
+
+const isError = (d: Diagnostic): boolean => d.severity === "error";
+
+/** Identifies a problem across two solves, so errors the new joint causes can be told from old ones. */
+const errorKey = (d: Diagnostic): string => [d.rule, d.part, d.joint, d.message].join("|");
 
 /** Host is the board touched on its broad face; null when neither or both are. */
 function hostAndGuest(a: Frame, b: Frame, axis: 0 | 1 | 2, at: number): [Frame, Frame] | string {
@@ -55,6 +61,8 @@ export function proposeJoint(
   jointId: Id,
   prefer?: Joint["type"],
 ): JointProposal {
+  if (project.joints.some((j) => j.id === jointId))
+    return refuse("That joint already exists; pick a different id for the new one.");
   const p = runPipeline(project, shop);
   if (!p.project)
     return refuse("The project has a problem that stops Kerf placing its boards; fix it first.");
@@ -98,7 +106,8 @@ export function proposeJoint(
     params: {},
   };
   const trial = runPipeline({ ...p.project, joints: [...p.project.joints, joint] }, shop);
-  const problem = trial.diagnostics.find((d) => d.severity === "error" && d.joint === jointId);
+  const known = new Set(p.diagnostics.filter(isError).map(errorKey));
+  const problem = trial.diagnostics.find((d) => isError(d) && !known.has(errorKey(d)));
   if (problem) return refuse(problem.message);
   const cut = trial.derived.pairs.find((pair) => pair.joint === jointId)?.machined[0];
   if (!cut) return refuse(`Kerf could not work out the cuts for ${guest.instance.name}.`);
