@@ -6,6 +6,20 @@
 module.exports = {
   forbidden: [
     {
+      name: "app-uses-core-public-api",
+      comment: "The app calls the engine only through @kerf/core; internals can change (ADR 015).",
+      severity: "error",
+      from: { path: "^packages/app/" },
+      to: { path: ["^packages/core/src/internal\\.ts$", "^packages/core/src/(?!index\\.ts$)"] },
+    },
+    {
+      name: "app-product-not-fixtures",
+      comment: "Test fixtures are for tests; the shipped app never imports them.",
+      severity: "error",
+      from: { path: "^packages/app/src/(?!.*\\.test\\.tsx?$)" },
+      to: { path: "^packages/fixtures/" },
+    },
+    {
       name: "core-imports-no-other-package",
       comment: "packages/core is the source of truth; it imports nothing from other packages.",
       severity: "error",
