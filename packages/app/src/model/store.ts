@@ -23,8 +23,10 @@ import {
 import { afterHistoryMoved, dismiss, type NoticeLine, tell, warn, warningsFirst } from "./notices";
 import {
   NOT_KEPT,
+  OPEN_STORED_FAULT,
   readSections,
   restoreProject,
+  setAsideStoredProject,
   storageNotice,
   UNITS_NOT_KEPT,
   writeProject,
@@ -62,6 +64,25 @@ function stillThere(selection: Selection, solved: Solved | null): Selection {
   const present = new Set(solved?.result.placements.map((p) => p.instance));
   const instances = selection.instances.filter((id) => present.has(id));
   return instances.length > 0 ? { kind: "boards", instances } : NOTHING;
+}
+
+/**
+ * The stored project, solved, or why it could not be opened. A fault in Kerf while solving it is
+ * logged and the project set aside, like one that cannot be read, so the app always starts
+ * (ADR 015, rule 11).
+ */
+function openStoredProject(
+  storage: AppStorage,
+  solveFor: (project: Project) => Solved | null,
+): { history: History | null; problem?: string; solved: Solved | null } {
+  const restored = restoreProject(storage);
+  if (!restored.history) return { ...restored, solved: null };
+  try {
+    return { ...restored, solved: solveFor(currentProject(restored.history)) };
+  } catch (error) {
+    console.error(error);
+    return { ...setAsideStoredProject(storage, OPEN_STORED_FAULT), solved: null };
+  }
 }
 
 /**
@@ -122,11 +143,7 @@ export function createKerfStore(deps: {
   const solveFor = (project: Project | null, shop: ShopProfile): Solved | null =>
     solveShown(project, shop, clock);
 
-  const restored = restoreProject(deps.storage);
-  const solvedAtStart = solveFor(
-    restored.history ? currentProject(restored.history) : null,
-    loaded.shop,
-  );
+  const restored = openStoredProject(deps.storage, (project) => solveFor(project, loaded.shop));
   const startup = warningsFirst(
     [loaded.problem, restored.problem, storageNotice(deps.storage)].filter(
       (w): w is string => w !== undefined,
@@ -189,7 +206,7 @@ export function createKerfStore(deps: {
     };
 
     return {
-      ...startingState(deps.storage, restored.history, loaded.shop, solvedAtStart, startup),
+      ...startingState(deps.storage, restored.history, loaded.shop, restored.solved, startup),
 
       ...viewActions(set, get),
 
@@ -224,6 +241,7 @@ export function createKerfStore(deps: {
         show({ history: history ? record(history, edit) : startHistory(edit), previewed: null });
       },
       cancelPreview: () => show({ previewed: null }),
+      abandonAction: () => show({ previewed: null, pending: null, proposal: null }),
       // With nothing to step to, History has not moved, so nothing it clears is cleared.
       undo: () => {
         const h = get().history;

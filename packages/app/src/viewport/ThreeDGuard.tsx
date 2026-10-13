@@ -9,7 +9,8 @@
 // has its own advice in shop words; the browser's or the engine's own text goes to the console
 // only, for a bug report (final fix re-review N1, N6).
 
-import { Component, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import { Boundary } from "../state/Boundary";
 import { useKerfStore } from "../state/useKerf";
 
 /** Said when the view itself cannot start: WebGL is off or unavailable. */
@@ -38,37 +39,6 @@ export function viewFailure(error: unknown): string {
 export const ENGINE_NOT_LOADED =
   "The 3D view could not load what draws the cuts, so boards are shown as plain blanks. " +
   "Reload the page, or use an up-to-date browser.";
-
-interface BoundaryProps {
-  /** What takes the children's place once they failed; given the error, for the words. */
-  fallback(error: unknown): ReactNode;
-  retryOn: unknown;
-  onFailure(error: unknown): void;
-  children: ReactNode;
-}
-
-class Boundary extends Component<BoundaryProps, { failed: { error: unknown } | null }> {
-  override state: { failed: { error: unknown } | null } = { failed: null };
-
-  static getDerivedStateFromError(error: unknown): { failed: { error: unknown } } {
-    return { failed: { error } };
-  }
-
-  override componentDidCatch(error: unknown): void {
-    this.props.onFailure(error);
-  }
-
-  override componentDidUpdate(previous: BoundaryProps): void {
-    if (this.state.failed && previous.retryOn !== this.props.retryOn) {
-      this.setState({ failed: null });
-    }
-  }
-
-  override render(): ReactNode {
-    const { failed } = this.state;
-    return failed ? this.props.fallback(failed.error) : this.props.children;
-  }
-}
 
 /**
  * Draws `children`, which use WebGL or the geometry engine. If they fail, the raw error is logged,

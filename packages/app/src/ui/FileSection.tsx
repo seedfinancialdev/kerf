@@ -5,62 +5,15 @@
 // Save and Open (design spec, "Saving"). Opening is one History entry, so it can be undone.
 
 import { useRef } from "react";
-import {
-  fileNameFor,
-  OPEN_FAULT,
-  openKerfBytes,
-  SAVE_FAULT,
-  saveFailureReason,
-  saveKerfBytes,
-} from "../model/files";
-import { shownProject } from "../model/store";
+import { OPEN_FAULT, openKerfBytes } from "../model/files";
 import { useKerf, useKerfStore } from "../state/useKerf";
-
-/**
- * Hands the browser `bytes` as a download; the link is attached while clicked, as Firefox needs.
- */
-function download(bytes: Uint8Array, name: string): void {
-  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/zip" }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
-}
+import { saveShownProject } from "./save";
 
 /** Save and Open. `now` is the clock for the file's modified time (default: the real one). */
 export function FileSection({ now = () => new Date() }: { now?: () => Date }) {
   const store = useKerfStore();
   const hasProject = useKerf((s) => s.history !== null);
   const input = useRef<HTMLInputElement>(null);
-
-  const save = async (): Promise<void> => {
-    const s = store.getState();
-    const project = shownProject(s);
-    if (!project) return;
-    const stamp = now().toISOString();
-    // A view that cannot draw its picture must not stop the save: the file just has no thumbnail.
-    const thumbnail = await Promise.resolve()
-      .then(() => s.thumbnail?.())
-      .catch(() => undefined);
-    try {
-      download(
-        saveKerfBytes(project, { created: s.created ?? stamp, modified: stamp }, thumbnail),
-        fileNameFor(project),
-      );
-    } catch (error) {
-      const reason = saveFailureReason(error);
-      if (reason !== undefined) {
-        s.say(`The file could not be saved: ${reason}`);
-        return;
-      }
-      // A fault in Kerf, not in the project: the stack is what a bug report needs.
-      console.error(error);
-      s.say(SAVE_FAULT);
-    }
-  };
 
   /**
    * Reading the file can fail for reasons outside Kerf (the file was moved, the disk is gone); a
@@ -102,7 +55,11 @@ export function FileSection({ now = () => new Date() }: { now?: () => Date }) {
           e.target.value = "";
         }}
       />
-      <button type="button" onClick={() => void save()} disabled={!hasProject}>
+      <button
+        type="button"
+        onClick={() => void saveShownProject(store, now())}
+        disabled={!hasProject}
+      >
         Save
       </button>
     </div>

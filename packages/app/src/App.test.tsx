@@ -5,12 +5,13 @@
 // Interaction spec, "Workflow modules" and "Screen layout"; design spec, "Layout".
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { App } from "./App";
 import { startProject } from "./model/commands";
 import { createStorage } from "./model/storage";
-import { createKerfStore } from "./model/store";
+import { createKerfStore, shownProject } from "./model/store";
 import { memoryStorage } from "./testing/memory-storage";
+import { boardTool } from "./tools/board";
 
 /** Changes the store the way a click would: inside `act`, so the screen has redrawn afterwards. */
 function change(run: () => void): void {
@@ -248,6 +249,88 @@ describe("<App>", () => {
       change(() => store.getState().undo());
       quiet.mockRestore();
       expect(screen.getByRole("region", { name: "Model" }).textContent).toBe("the model");
+    });
+  });
+
+  describe("when Kerf itself fails outside the 3D view (PR review errors-I1)", () => {
+    const ACTION_FAULT =
+      "Kerf hit a problem and could not finish what you just did. Please report it.";
+    const WINDOW_FAULT =
+      "Kerf hit a problem and can't show its window. Save a copy of your project, then reload " +
+      "the page. Please report the problem.";
+    const fault = new TypeError("x is undefined");
+    let logged: MockInstance;
+    beforeEach(() => {
+      logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    });
+    afterEach(() => vi.restoreAllMocks());
+
+    /** The bookcase with Board's first click made and a drag previewed, as a tool leaves it. */
+    function midAction() {
+      const store = renderApp();
+      change(() => {
+        store.getState().apply(startProject("Bookcase", "imperial"));
+        store.getState().setTool("board");
+        store.getState().setPending({ tool: "board", from: { placed: null, point: [0, 0, 0] } });
+        store.getState().preview(startProject("Blank case", "imperial").project);
+      });
+      return store;
+    }
+
+    it("says so when a tool fails on a typed size, logs it, and drops the tool's action and preview", () => {
+      const store = midAction();
+      vi.spyOn(boardTool, "measure").mockImplementation(() => {
+        throw fault;
+      });
+      const box = screen.getByLabelText("Measurements");
+      fireEvent.change(box, { target: { value: '24"' } });
+      fireEvent.keyDown(box, { key: "Enter" });
+      expect(store.getState().notice).toEqual({ text: ACTION_FAULT, kind: "said" });
+      expect(logged).toHaveBeenCalledWith(fault);
+      expect(store.getState().pending).toBeNull();
+      expect(store.getState().previewed).toBeNull();
+    });
+
+    it("says so when a panel's button fails, and logs it", () => {
+      const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+      // The drawer takes the action when it is drawn, so it fails from the first click.
+      vi.spyOn(store.getState(), "setDrawerTab").mockImplementation(() => {
+        throw fault;
+      });
+      render(<App store={store} model={null} />);
+      fireEvent.click(screen.getByRole("tab", { name: "Sheets" }));
+      expect(store.getState().notice).toEqual({ text: ACTION_FAULT, kind: "said" });
+      expect(logged).toHaveBeenCalledWith(fault);
+    });
+
+    it("says so when a promise fails with nothing to catch it, and logs it", () => {
+      const store = renderApp();
+      const event = Object.assign(new Event("unhandledrejection", { cancelable: true }), {
+        reason: fault,
+      });
+      act(() => {
+        window.dispatchEvent(event);
+      });
+      expect(store.getState().notice).toEqual({ text: ACTION_FAULT, kind: "said" });
+      expect(logged).toHaveBeenCalledWith(fault);
+    });
+
+    it("keeps Save and says what to do when a panel fails while it is drawn", () => {
+      const store = renderApp();
+      change(() => store.getState().apply(startProject("Bookcase", "imperial")));
+      const solved = store.getState().solved;
+      if (!solved) throw new Error("not solved");
+      // A cut list missing from the solve: the Cut list tab throws while it draws.
+      change(() =>
+        store.setState({
+          solved: { ...solved, result: { ...solved.result, cutList: undefined as never } },
+        }),
+      );
+      expect(screen.getByText(WINDOW_FAULT)).toBeTruthy();
+      const save = screen.getByRole("button", { name: "Save" }) as HTMLButtonElement;
+      expect(save.disabled).toBe(false);
+      expect(shownProject(store.getState())).not.toBeNull();
+      expect(logged).toHaveBeenCalled();
     });
   });
 });

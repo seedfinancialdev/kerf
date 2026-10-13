@@ -140,6 +140,15 @@ body {
   color: var(--color-text-muted);
 }
 
+/* The window's place after a fault while drawing it (ui/WindowGuard.tsx): the words, Save. */
+.window-lost {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  max-width: 40rem;
+  padding: var(--space-5);
+}
+
 .model-view {
   position: absolute;
   inset: 0;

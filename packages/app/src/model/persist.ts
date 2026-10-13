@@ -28,11 +28,16 @@ export function storageNotice(storage: AppStorage): string | undefined {
 }
 
 /**
+ * Said when Kerf itself fails opening the stored project: the fault is logged for a bug report and
+ * never blamed on the project.
+ */
+export const OPEN_STORED_FAULT = "Kerf hit a problem opening your last project; please report it.";
+
+/**
  * The stored project as the first History entry, or why it could not be opened. A stored project
- * the engine rejects is set aside under the first free key of `kerf.project.setAside`,
- * `kerf.project.setAside.2`, … so an earlier copy is never overwritten, and it is never deleted;
- * if even that write fails it is left where it was. Throws anything but the engine's
- * ProjectFormatError, which would be a fault in Kerf rather than in the stored project.
+ * that cannot be opened is set aside (`setAsideStoredProject`), whether the engine rejects it or
+ * Kerf itself fails on it, so a fault never stops the app starting; a fault is logged for a bug
+ * report. Never throws.
  */
 export function restoreProject(storage: AppStorage): { history: History | null; problem?: string } {
   const text = storage.read("kerf.project");
@@ -42,15 +47,35 @@ export function restoreProject(storage: AppStorage): { history: History | null; 
       history: startHistory({ label: "Opened your last project", project: parseProject(text) }),
     };
   } catch (error) {
-    if (!(error instanceof ProjectFormatError)) throw error;
-    const told = `Your last project could not be opened: ${DAMAGED_CONTENTS}.`;
-    // The stored text may be the only copy, so it is removed only once the set-aside copy exists.
-    if (!storage.write(freeSetAsideKey(storage), text)) {
-      return { history: null, problem: `${told} It was left where it was.` };
-    }
-    storage.remove("kerf.project");
-    return { history: null, problem: `${told} It was set aside in this browser.` };
+    return setAsideStoredProject(storage, whyNotOpened(error));
   }
+}
+
+/** Why the stored project could not be opened, in shop words; a fault in Kerf is logged. */
+function whyNotOpened(error: unknown): string {
+  if (error instanceof ProjectFormatError) {
+    return `Your last project could not be opened: ${DAMAGED_CONTENTS}.`;
+  }
+  console.error(error);
+  return OPEN_STORED_FAULT;
+}
+
+/**
+ * Sets the stored project aside under the first free key of `kerf.project.setAside`,
+ * `kerf.project.setAside.2`, … so an earlier copy is never overwritten, and says so after `told`.
+ * The stored text may be the only copy, so it is removed only once the set-aside copy exists; if
+ * that write fails it is left where it was. Never throws.
+ */
+export function setAsideStoredProject(
+  storage: AppStorage,
+  told: string,
+): { history: null; problem: string } {
+  const text = storage.read("kerf.project");
+  if (text === undefined || !storage.write(freeSetAsideKey(storage), text)) {
+    return { history: null, problem: `${told} It was left where it was.` };
+  }
+  storage.remove("kerf.project");
+  return { history: null, problem: `${told} It was set aside in this browser.` };
 }
 
 /** The first set-aside key that holds nothing yet. */

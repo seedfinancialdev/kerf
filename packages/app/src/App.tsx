@@ -4,7 +4,7 @@
 
 // The Kerf window (Interaction spec, "Screen layout"; design spec, "Layout"). The model view is
 // passed in, so the window can be drawn without WebGL in tests, and a failure inside it stays
-// inside it (ThreeDGuard).
+// inside it (ThreeDGuard); any other fault in Kerf is caught and said (WindowGuard).
 
 import { type ReactNode, useEffect } from "react";
 import type { KerfStore } from "./model/store-types";
@@ -18,6 +18,7 @@ import { ProjectTree } from "./ui/ProjectTree";
 import { ToolRow } from "./ui/ToolRow";
 import { TopBar } from "./ui/TopBar";
 import { useShortcuts } from "./ui/useShortcuts";
+import { WindowGuard } from "./ui/WindowGuard";
 import { ThreeDGuard, viewFailure } from "./viewport/ThreeDGuard";
 
 /**
@@ -27,7 +28,9 @@ import { ThreeDGuard, viewFailure } from "./viewport/ThreeDGuard";
 export function App({ store, model }: { store: KerfStore; model: ReactNode }) {
   return (
     <KerfProvider store={store}>
-      <Window model={model} />
+      <WindowGuard>
+        <Window model={model} />
+      </WindowGuard>
     </KerfProvider>
   );
 }

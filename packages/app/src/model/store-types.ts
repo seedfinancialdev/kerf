@@ -110,13 +110,13 @@ export interface KerfActions {
   /** Drops the preview and shows the recorded project again. */
   cancelPreview(): void;
   /**
-   * Steps back one change; drops any preview and the active tool's action, even at the first entry,
-   * where History stays put.
+   * Steps back one change, dropping any preview and the active tool's action. At the first entry
+   * History stays put and nothing changes.
    */
   undo(): void;
   /**
-   * Steps forward one change; drops any preview and the active tool's action, even at the last
-   * entry, where History stays put.
+   * Steps forward one change, dropping any preview and the active tool's action. At the last entry
+   * History stays put and nothing changes.
    */
   redo(): void;
   /**
@@ -134,6 +134,11 @@ export interface KerfActions {
   setTool(tool: ToolId): void;
   /** Sets or clears the active tool's half-finished action. */
   setPending(pending: Pending | null): void;
+  /**
+   * Drops whatever the active tool had started, its Join proposal and any preview, after a fault
+   * in Kerf stopped the action half way, so nothing half done stays on screen.
+   */
+  abandonAction(): void;
   /** Sets or clears the Join tool's suggestion. */
   setProposal(proposal: Proposal | null): void;
   /** Shows what the Tape measured, or clears the reading. */
