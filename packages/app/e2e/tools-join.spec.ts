@@ -8,7 +8,7 @@
 
 import { expect, test } from "@playwright/test";
 
-test("two clicks with Join propose a dado for a shelf of a row, and change nothing until accepted", async ({
+test("two clicks with Join refuse a shelf of a row against the thinner back, and change nothing", async ({
   page,
 }) => {
   await page.goto("/");
@@ -24,18 +24,11 @@ test("two clicks with Join propose a dado for a shelf of a row, and change nothi
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.6);
   // At the default camera the first click lands on the back and the second on the second shelf, a
-  // board of a row; the engine proposes a dado with the shelf taken out of its row first.
+  // board of a row. The back is the thinner board, so Join says so (nothing is changed).
   await expect(
-    page.getByText('Shelf copy 2 in a dado in Back, 23/32" wide and 5/64" deep'),
+    page.getByText(
+      "Back is thinner than Shelf copy 2, so Kerf won't cut a joint into it; glue or nail it in place.",
+    ),
   ).toBeVisible();
-  await expect(
-    page.getByText("Accepting makes Back and Shelf 2 (now Shelf copy 2) custom."),
-  ).toBeVisible();
-  const history = page.getByRole("listbox", { name: "History" }).getByRole("option");
-  await expect(history).toHaveCount(1);
-  await page.getByRole("button", { name: "Accept", exact: true }).click();
-  await expect(history).toHaveCount(2);
-  await expect(
-    page.getByRole("option", { name: "Joined Shelf copy 2 to Back with a dado" }),
-  ).toBeVisible();
+  await expect(page.getByRole("listbox", { name: "History" }).getByRole("option")).toHaveCount(1);
 });

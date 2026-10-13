@@ -82,6 +82,42 @@ describe("proposeJoint()", () => {
       expect(r.description).toBe('Top in a rabbet in Right side, 23/32" wide and 23/64" deep');
   });
 
+  it("refuses to cut into the thinner board: Top and Back, in either click order", () => {
+    // Back is 1/4 plywood (50800 units) and Top is 3/4 plywood (23/32" = 146050 units). The Back
+    // is touched on its broad face, so it would host; 50800 < 146050, so the pair is refused.
+    const p = looseBoards();
+    for (const [first, second] of [
+      ["Top", "Back"],
+      ["Back", "Top"],
+    ] as const) {
+      expect(proposeJoint(p, shop, idOf(p, first), idOf(p, second), JOINT)).toEqual({
+        ok: false,
+        reason:
+          "Back is thinner than Top, so Kerf won't cut a joint into it; glue or nail it in place.",
+      });
+    }
+  });
+
+  it("refuses a dado in the Back too, when asked for the other type", () => {
+    const p = looseBoards();
+    expect(proposeJoint(p, shop, idOf(p, "Top"), idOf(p, "Back"), JOINT, "dado")).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it('refuses a loose shelf against the Back (23/32" shelf, 1/4" back)', () => {
+    const p = looseBoards();
+    const back = p.instances.find((i) => i.name === "Back");
+    const shelf = p.instances.find((i) => i.id === SHELF);
+    if (!back || !shelf) throw new Error("fixture changed");
+    // The loose shelf lies at 36", spanning the sides; the Back is behind it, touching its rear edge.
+    expect(proposeJoint(p, shop, SHELF, back.id, JOINT)).toEqual({
+      ok: false,
+      reason:
+        "Back is thinner than Loose shelf, so Kerf won't cut a joint into it; glue or nail it in place.",
+    });
+  });
+
   it("says the tool is missing in a shop with no dado stack or straight bit", () => {
     const bare: ShopProfile = { kerf: 25_400, tools: [] };
     const p = looseBoards();

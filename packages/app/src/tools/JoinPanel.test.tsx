@@ -88,22 +88,6 @@ describe("<JoinPanel>", () => {
       return { store, project, named };
     };
 
-    it("tells the user both boards are now custom, and detaches them", () => {
-      const { store, project, named } = formSetup();
-      const proposed = propose(project, loadShopProfile(), named("Top"), named("Back"));
-      act(() => store.getState().setProposal(proposed));
-      fireEvent.click(screen.getByRole("button", { name: "Accept" }));
-      expect(store.getState().notice?.text).toBe(
-        "Top and Back are now custom; the form won't change them.",
-      );
-      expect(store.getState().history?.entries.at(-1)?.label).toBe(
-        "Joined Top to Back with a rabbet",
-      );
-      const after = store.getState().solved?.result.placements ?? [];
-      expect(after.find((x) => x.name === "Top")?.detached).toBe(true);
-      expect(after.find((x) => x.name === "Back")?.detached).toBe(true);
-    });
-
     it("tells the user only the form board is now custom when the other was drawn by hand", () => {
       const { store, project } = formSetup();
       const ply = project.stock.find((s) => s.name === "3/4 plywood")?.id ?? "";
@@ -133,39 +117,60 @@ describe("<JoinPanel>", () => {
       );
     });
 
-    it("says before Accept which boards will become custom", () => {
+    it("says before Accept which boards will become custom, showing a changed name", () => {
       const { store, project, named } = formSetup();
+      const proposed = propose(project, loadShopProfile(), named("Right side"), named("Back"));
       act(() =>
-        store
-          .getState()
-          .setProposal(propose(project, loadShopProfile(), named("Shelf 2"), named("Back"))),
+        store.getState().setProposal({
+          ...proposed,
+          result: {
+            ok: true,
+            joint: { id: "j", type: "dado", host: "h", guest: "g", params: {} },
+            tool: "dadoStack",
+            missing: false,
+            description: "Shelf copy 2 in a dado in Back",
+          },
+          taken: [
+            { from: "Shelf 2", to: "Shelf copy 2" },
+            { from: "Back", to: "Back" },
+          ],
+        }),
       );
       expect(
         screen.getByText("Accepting makes Shelf 2 (now Shelf copy 2) and Back custom."),
       ).toBeTruthy();
     });
 
-    it("gives a form shelf and the back a proposal that Accept carries out", () => {
+    it("shows the reason when a form shelf is joined to the thinner back", () => {
       const { store, project, named } = formSetup();
       act(() =>
         store
           .getState()
           .setProposal(propose(project, loadShopProfile(), named("Shelf 1"), named("Back"))),
       );
-      fireEvent.click(screen.getByRole("button", { name: "Accept" }));
-      expect(store.getState().history?.entries.at(-1)?.label).toBe(
-        "Joined Shelf copy 1 to Back with a dado",
+      expect(screen.getByRole("note").textContent).toBe(
+        "Back is thinner than Shelf copy 1, so Kerf won't cut a joint into it; glue or nail it in place.",
       );
-      expect(store.getState().notice?.text).toBe(
-        "Shelf 1 (now Shelf copy 1) and Back are now custom; the form won't change them.",
-      );
-      const after = store.getState().solved?.result.placements ?? [];
-      expect(after.find((x) => x.name === "Shelf copy 1")?.detached).toBe(true);
     });
 
     it("a refused Accept leaves History and the project as they were", () => {
-      const { store, project, named } = formSetup();
-      const proposed = propose(project, loadShopProfile(), named("Top"), named("Back"));
+      const { store, project } = formSetup();
+      const ply = project.stock.find((s) => s.name === "3/4 plywood")?.id ?? "";
+      store
+        .getState()
+        .apply(
+          drawBoard(
+            project,
+            ply,
+            [146_050, 203_200 / 4, 36 * 203_200],
+            { axis: 0, size: 7_023_100 },
+            { axis: 1, size: 11 * 203_200 },
+          ),
+        );
+      const now = shownProject(store.getState()) as Project;
+      const placed = (name: string) =>
+        store.getState().solved?.result.placements.find((x) => x.name === name) as PlacedPart;
+      const proposed = propose(now, loadShopProfile(), placed("Right side"), placed("Board 1"));
       const { result } = proposed;
       if (!result.ok) throw new Error(result.reason);
       act(() =>
@@ -174,11 +179,12 @@ describe("<JoinPanel>", () => {
           result: { ...result, joint: { ...result.joint, type: "throughDovetail" } },
         }),
       );
+      const entries = store.getState().history?.entries.length;
       fireEvent.click(screen.getByRole("button", { name: "Accept" }));
-      expect(store.getState().history?.entries).toHaveLength(1);
-      expect(shownProject(store.getState())).toEqual(project);
+      expect(store.getState().history?.entries).toHaveLength(entries ?? 0);
+      expect(shownProject(store.getState())).toEqual(now);
       expect(store.getState().notice?.text).toBe(
-        "Top and Back do not meet at a right-angle corner, so they cannot be dovetailed.",
+        "Board 1 and Right side do not meet at a right-angle corner, so they cannot be dovetailed.",
       );
     });
   });

@@ -13,6 +13,7 @@ import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { bookcaseWithShelf } from "../testing/bookcase-with-shelf";
 import { memoryStorage } from "../testing/memory-storage";
+import { drawBoard } from "./board";
 import { acceptProposal, joinTool, propose, takeOverNotice } from "./join";
 import type { ModelHit } from "./pointer";
 
@@ -80,26 +81,42 @@ describe("Join", () => {
 
 describe("taking over form boards", () => {
   const form = () => startProject("Bookcase", "imperial").project;
+  /** The form's project with "Board 1", a 3/4" shelf drawn by hand between the sides at 36". */
+  const withDrawnBoard = (p: Project): Project => {
+    const ply = p.stock.find((st) => st.name === "3/4 plywood")?.id ?? "";
+    return drawBoard(
+      p,
+      ply,
+      [146_050, 50_800, 36 * 203_200],
+      { axis: 0, size: 7_023_100 },
+      { axis: 1, size: 11 * 203_200 },
+    ).project;
+  };
 
-  it("detaches both boards of a row copy and a single board, then joins them", () => {
-    const p = form();
-    const r = acceptProposal(p, shop, placed(p, "Shelf 1"), placed(p, "Back"), "dado");
+  it("takes over a form side and joins a hand-drawn board to it", () => {
+    const p = withDrawnBoard(form());
+    const r = acceptProposal(p, shop, placed(p, "Right side"), placed(p, "Board 1"), "dado");
     if (!r.ok) throw new Error(r.message);
-    expect(r.edit.label).toBe("Joined Shelf copy 1 to Back with a dado");
-    expect(r.notice).toBe(
-      "Shelf 1 (now Shelf copy 1) and Back are now custom; the form won't change them.",
-    );
+    expect(r.edit.label).toBe("Joined Board 1 to Right side with a dado");
+    expect(r.notice).toBe("Right side is now custom; the form won't change it.");
     const after = solve(r.edit.project, shop).placements;
-    expect(after.find((x) => x.name === "Shelf copy 1")?.detached).toBe(true);
-    expect(after.find((x) => x.name === "Back")?.detached).toBe(true);
-    expect(after.find((x) => x.name === "Shelf 2")?.detached).toBe(false);
+    expect(after.find((x) => x.name === "Right side")?.detached).toBe(true);
+    expect(after.find((x) => x.name === "Board 1")?.detached).toBe(false);
   });
 
-  it("proposes a dado for a form shelf and the back, naming the boards that were clicked", () => {
+  it("refuses a form shelf and the back: the back is the thinner board", () => {
+    // The Back is 1/4" plywood (50800 units), the shelf 3/4" (146050): no joint is cut into the Back.
     const p = form();
     const shelf = placed(p, "Shelf 1");
     const r = propose(p, shop, shelf, placed(p, "Back"));
-    expect(r).toMatchObject({ a: shelf.instance, result: { ok: true, joint: { type: "dado" } } });
+    expect(r).toMatchObject({
+      a: shelf.instance,
+      result: {
+        ok: false,
+        reason:
+          "Back is thinner than Shelf copy 1, so Kerf won't cut a joint into it; glue or nail it in place.",
+      },
+    });
   });
 
   it("lists the boards Accept will take over, with the name each will have", () => {

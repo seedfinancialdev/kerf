@@ -86,6 +86,10 @@ export function proposeJoint(
     const pair = hostAndGuest(a, b, contact.axis, contact.patch.min[contact.axis]);
     if (typeof pair === "string") return refuse(pair);
     [host, guest] = pair;
+    if (host.part.thickness < guest.part.thickness)
+      return refuse(
+        `${host.instance.name} is thinner than ${guest.instance.name}, so Kerf won't cut a joint into it; glue or nail it in place.`,
+      );
     const patch = boxToLocal(host, contact.patch);
     type = sitsInStep(host, guest, patch) ? "rabbet" : "dado";
   } else if (contact.kind === "overlap") {
