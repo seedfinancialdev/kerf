@@ -69,11 +69,14 @@ export function NumberField({ label, display, onSubmit, scrub }: Props) {
     [],
   );
 
-  // A value changed elsewhere (Undo, another field) replaces whatever was being typed.
-  useEffect(() => {
+  // A value changed elsewhere (Undo, another field) replaces whatever was being typed. Done while
+  // rendering, as React advises for state that follows a prop, so no render shows a stale box.
+  const [shownFor, setShownFor] = useState(display);
+  if (shownFor !== display) {
+    setShownFor(display);
     setTyped(null);
     setProblem(null);
-  }, [display]);
+  }
 
   const submit = (): void => {
     if (typed === null || typed === display) return;
