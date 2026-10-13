@@ -541,6 +541,16 @@ describe("handBack()", () => {
     );
   });
 
+  it("says the boards cannot be placed, without throwing, when the engine rejects the project", () => {
+    const p = start().project;
+    const taken = addRoundover(p, placementNamed(p, "Top"), ["edge1/face1"], IN / 8, shop).project;
+    const top = placementNamed(taken, "Top");
+    // A stock thinner than nothing is not a project the engine accepts (Domain model, "Stock").
+    const [first, ...others] = taken.stock;
+    const broken = { ...taken, stock: [{ ...first, thickness: -1 }, ...others] } as Project;
+    expect(handBack(broken, top, shop)).toEqual({ ok: false, message: UNPLACEABLE });
+  });
+
   it("says what to remove first when a joint you added names the board", () => {
     const p = start().project;
     const sample = generateStructures(p, shop).joints[0];

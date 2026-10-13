@@ -439,27 +439,33 @@ export function addRoundover(
  * Hands a taken-over board back to its form (Domain model: "Undo re-attaches"). A copy taken out
  * of a row goes back into the row. Like `detachForEdit`, the engine re-attaches within the
  * generated project, so the form is generated first and what it made is dropped again.
- * A board that something you added refers to (a joint, a grain match) is refused with `ok: false`
- * and a message saying what to remove first.
+ * Comes back `ok: false`, saying why, when the project's boards cannot be placed, or when the
+ * engine refuses: a board that something you added refers to (a joint, a grain match) is refused
+ * with what to remove first. Anything else is a fault in Kerf and is thrown.
  */
 export function handBack(project: Project, placed: PlacedPart, shop: ShopProfile): EditResult {
+  let generated: Project;
   try {
-    const generated = generateStructures(project, shop);
-    const own = instanceOf(generated, placed);
-    const attached = own?.detachedFrom
+    generated = generateStructures(project, shop);
+  } catch (error) {
+    if (!(error instanceof ProjectFormatError)) throw error;
+    return { ok: false, message: UNPLACEABLE };
+  }
+  const own = instanceOf(generated, placed);
+  let attached: Project;
+  try {
+    attached = own?.detachedFrom
       ? attachCopyIn(generated, own.id)
       : attachPartIn(generated, own?.def ?? placed.part);
-    return {
-      ok: true,
-      edit: {
-        project: withoutGenerated(attached),
-        label: `${placed.name} follows the form again`,
-      },
-    };
   } catch (error) {
-    if (error instanceof RangeError) return { ok: false, message: error.message };
-    throw error;
+    // The engine's documented refusals are RangeErrors already in shop words.
+    if (!(error instanceof RangeError)) throw error;
+    return { ok: false, message: error.message };
   }
+  return {
+    ok: true,
+    edit: { project: withoutGenerated(attached), label: `${placed.name} follows the form again` },
+  };
 }
 
 /** Every stock a part or a structure's form uses (ADR 015, rule 4: units follow the stock). */
