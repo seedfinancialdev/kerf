@@ -23,21 +23,13 @@ import { dispatchPointer } from "../tools/dispatch";
 import { useKerf, useKerfStore } from "../ui/useKerf";
 import { geometryOf } from "./board-geometry";
 import { type BoardLook, boardLooks } from "./board-looks";
-import {
-  cameraPosition,
-  FOV_DEGREES,
-  fitView,
-  isFramed,
-  orbit,
-  pan,
-  type View,
-  zoom,
-} from "./camera";
+import { cameraPosition, FOV_DEGREES, fitView, isFramed, type View } from "./camera";
 import { followDrag, followsDrag } from "./follow-drag";
 import { matrixOf, toScene } from "./frames";
 import { meshFor } from "./meshes";
 import { usePalette } from "./palette";
 import { useGeometry } from "./useGeometry";
+import { listenForViewDrags } from "./view-drag";
 
 const INCHES = (n: number): number => n / INCH;
 
@@ -149,59 +141,18 @@ function ThumbnailSource() {
   return null;
 }
 
-interface Drag {
-  x: number;
-  y: number;
-  panning: boolean;
-}
-
 /** Middle-drag orbits, Shift+middle-drag pans, the wheel zooms; after O or H the left button does too. */
 function Navigation({ view, change }: { view: View; change(update: (v: View) => View): void }) {
   const { camera, gl, size } = useThree();
   const mode = useKerf((s) => s.navigation);
-  const drag = useRef<Drag | null>(null);
   useEffect(() => {
     camera.position.set(...cameraPosition(view));
     camera.lookAt(...view.target);
   }, [camera, view]);
-  useEffect(() => {
-    const el = gl.domElement;
-    const down = (e: PointerEvent): void => {
-      const left = e.button === 0 && mode !== null;
-      if (e.button === 1) e.preventDefault();
-      if (e.button === 1 || left)
-        drag.current = {
-          x: e.clientX,
-          y: e.clientY,
-          panning: e.shiftKey || (left && mode === "pan"),
-        };
-    };
-    const move = (e: PointerEvent): void => {
-      const d = drag.current;
-      if (!d) return;
-      const dx = e.clientX - d.x;
-      const dy = e.clientY - d.y;
-      drag.current = { ...d, x: e.clientX, y: e.clientY };
-      change((v) => (d.panning ? pan(v, dx, dy, size.height) : orbit(v, dx, dy)));
-    };
-    const up = (): void => {
-      drag.current = null;
-    };
-    const wheel = (e: WheelEvent): void => {
-      e.preventDefault();
-      change((v) => zoom(v, e.deltaY));
-    };
-    el.addEventListener("pointerdown", down);
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    el.addEventListener("wheel", wheel, { passive: false });
-    return () => {
-      el.removeEventListener("pointerdown", down);
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      el.removeEventListener("wheel", wheel);
-    };
-  }, [gl, change, size.height, mode]);
+  useEffect(
+    () => listenForViewDrags(gl.domElement, { mode, height: size.height, change }),
+    [gl, change, size.height, mode],
+  );
   return null;
 }
 
