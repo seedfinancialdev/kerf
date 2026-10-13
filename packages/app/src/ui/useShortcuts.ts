@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Keyboard shortcuts for the whole window. Typing in a field is left alone, so Ctrl+Z there undoes
-// the typing, not the project.
+// the typing, not the project. A select, checkbox or radio keeps only the keys it uses itself, so
+// Ctrl/⌘+Z and the tool keys still work after a choice in one (final branch review I4).
 
 import { useEffect } from "react";
 import { toolForKey } from "../tools/tools";
@@ -11,19 +12,29 @@ import { useKerfStore } from "./useKerf";
 
 /** Controls that press or move with the keyboard, so Space and the arrows must reach them and not act on the model. */
 const SPACE_CONTROLS =
-  '[role="toolbar"], [role="button"], [role="tab"], [role="menuitem"], [role="checkbox"], [role="option"], [role="treeitem"], button, a[href], summary';
+  '[role="toolbar"], [role="button"], [role="tab"], [role="menuitem"], [role="checkbox"], [role="option"], [role="treeitem"], button, a[href], summary, input[type="checkbox"], input[type="radio"], input[type="range"]';
 
 /** True when the key press is aimed at a control that uses the key itself (a tab, a list, a button). */
 function onWidget(e: KeyboardEvent): boolean {
   return e.target instanceof Element && e.target.closest(SPACE_CONTROLS) !== null;
 }
 
-/** True when the key press is aimed at a text field, a menu or an editable area, not at the app. */
+/** Input types that take typed text; every other input (checkbox, radio, range…) is pressed or moved instead. */
+const TEXT_INPUTS = new Set(["text", "search", "number", "email", "url", "tel", "password"]);
+
+/** True when the key press is aimed at a text field or an editable area, where keys are typing. */
 export function isTyping(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLElement &&
-    (target.isContentEditable || ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName))
-  );
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable || target.tagName === "TEXTAREA") return true;
+  return target instanceof HTMLInputElement && TEXT_INPUTS.has(target.type);
+}
+
+/**
+ * True when a focused select keeps the key: it picks its options by letters, Space and the arrows,
+ * so only Ctrl/⌘ shortcuts reach the app from it.
+ */
+function forSelect(e: KeyboardEvent): boolean {
+  return e.target instanceof HTMLSelectElement && !(e.ctrlKey || e.metaKey);
 }
 
 /** SketchUp's red, green and blue directions: the arrow keys that lock a move to x, y or z. */
@@ -34,7 +45,7 @@ export function useShortcuts(): void {
   const store = useKerfStore();
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (isTyping(e.target)) return;
+      if (isTyping(e.target) || forSelect(e)) return;
       if (e.key === " " && onWidget(e)) return;
       const s = store.getState();
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {

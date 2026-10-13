@@ -105,6 +105,64 @@ describe("<App>", () => {
     expect(store.getState().history?.at).toBe(1);
   });
 
+  describe("after a choice in a select, checkbox or radio (final branch review I4)", () => {
+    /** A control of the kind given, in the page and focused, as after the user picked in it. */
+    const focused = (make: () => HTMLElement) => {
+      const control = make();
+      document.body.append(control);
+      control.focus();
+      return control;
+    };
+    const input = (type: string) => () => Object.assign(document.createElement("input"), { type });
+
+    it.each([
+      ["select", () => document.createElement("select")],
+      ["checkbox", input("checkbox")],
+      ["radio", input("radio")],
+    ])("undoes with Ctrl+Z from a %s", (_, make) => {
+      const store = renderApp();
+      change(() => {
+        store.getState().apply(startProject("Bookcase", "imperial"));
+        store.getState().apply(startProject("Blank case", "imperial"));
+      });
+      const control = focused(make);
+      fireEvent.keyDown(control, { key: "z", ctrlKey: true });
+      control.remove();
+      expect(store.getState().history?.at).toBe(0);
+    });
+
+    it.each([
+      ["checkbox", input("checkbox")],
+      ["radio", input("radio")],
+    ])("picks a tool from its key on a %s, but leaves Space to it", (_, make) => {
+      const store = renderApp();
+      const control = focused(make);
+      fireEvent.keyDown(control, { key: "p" });
+      expect(store.getState().tool).toBe("pushPull");
+      fireEvent.keyDown(control, { key: " " });
+      control.remove();
+      expect(store.getState().tool).toBe("pushPull");
+    });
+
+    it("leaves letters and Space to a select, which picks its options by them", () => {
+      const store = renderApp();
+      const control = focused(() => document.createElement("select"));
+      fireEvent.keyDown(control, { key: "p" });
+      fireEvent.keyDown(control, { key: " " });
+      control.remove();
+      expect(store.getState().tool).toBe("select");
+    });
+
+    it("leaves the arrows to a radio, which moves between its choices by them", () => {
+      const store = renderApp();
+      fireEvent.keyDown(window, { key: "m" });
+      const control = focused(input("radio"));
+      fireEvent.keyDown(control, { key: "ArrowUp" });
+      control.remove();
+      expect(store.getState().pending).toBeNull();
+    });
+  });
+
   it("undoes with Cmd+Z", () => {
     const store = renderApp();
     change(() => {
