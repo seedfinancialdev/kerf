@@ -146,6 +146,8 @@ describe("boardBetween()", () => {
     const r = between(base());
     if (!r.ok) throw new Error(r.message);
     const box = placed(r.edit.project, "Board 1").box;
+    // From the right side's inner face, 23/32" = 146050, to the left side's, 36" − 23/32" =
+    // 7315200 − 146050 = 7169150; 1" in from the front (above) and 36" up, as typed.
     expect(box.min).toEqual([146_050, 203_200, 36 * IN]);
     expect(box.max[0]).toBe(7_169_150);
   });
@@ -273,6 +275,8 @@ describe("the Board tool", () => {
   it("starts a board where the sight line meets the floor", () => {
     const s = started();
     down(s, null, floorRay);
+    // Straight down from scene (40, 10, 4) in, the line meets the floor (scene y = 0) at (40, 0, 4).
+    // Scene (x, y, z) is project (x, −z, y) (scene/frames.ts), so project (40in, −4in, 0).
     expect(s.getState().pending).toEqual({
       tool: "board",
       from: { placed: null, point: [40 * IN, -4 * IN, 0] },
@@ -304,6 +308,8 @@ describe("the Board tool", () => {
     down(s, null, floorRay);
     expect(boardTool.measure?.('24", 6"', s)).toBeNull();
     const board = placed(current(s), "Board 1");
+    // From the floor point (40in, −4in, 0): 40 + 24 = 64in long, −4 + 6 = 2in wide, and as thick
+    // as the 3/4 plywood, 23/32" = 146050.
     expect(board.box).toEqual({ min: [40 * IN, -4 * IN, 0], max: [64 * IN, 2 * IN, 146_050] });
     expect(s.getState().selection).toEqual({ kind: "boards", instances: [board.instance] });
     expect(s.getState().history?.entries.at(-1)?.label).toBe("Added Board 1");
