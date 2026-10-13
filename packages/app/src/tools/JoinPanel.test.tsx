@@ -16,7 +16,7 @@ import { memoryStorage } from "../testing/memory-storage";
 import { KerfProvider } from "../ui/useKerf";
 import { drawBoard } from "./board";
 import { JoinPanel } from "./JoinPanel";
-import { acceptProposal, propose } from "./join";
+import { propose } from "./join";
 
 afterEach(cleanup);
 
@@ -138,9 +138,11 @@ describe("<JoinPanel>", () => {
       act(() =>
         store
           .getState()
-          .setProposal(propose(project, loadShopProfile(), named("Shelf 1"), named("Back"))),
+          .setProposal(propose(project, loadShopProfile(), named("Shelf 2"), named("Back"))),
       );
-      expect(screen.getByText("Accepting makes Shelf 1 and Back custom.")).toBeTruthy();
+      expect(
+        screen.getByText("Accepting makes Shelf 2 (now Shelf copy 2) and Back custom."),
+      ).toBeTruthy();
     });
 
     it("gives a form shelf and the back a proposal that Accept carries out", () => {

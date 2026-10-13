@@ -355,7 +355,7 @@ describe("pending tool state", () => {
       const start = () => {
         s.getState().setTool("join");
         s.getState().setPending({ tool: "join", first: a });
-        s.getState().setProposal({ a, b: a, result: { ok: false, reason: "No." } });
+        s.getState().setProposal({ a, b: a, result: { ok: false, reason: "No." }, taken: [] });
       };
       start();
       return { s, start, sizeEdit };
@@ -365,7 +365,7 @@ describe("pending tool state", () => {
       const { s, sizeEdit } = withProposal();
       s.getState().apply(sizeEdit());
       s.getState().setPending({ tool: "join", first: "x" });
-      s.getState().setProposal({ a: "x", b: "y", result: { ok: false, reason: "No." } });
+      s.getState().setProposal({ a: "x", b: "y", result: { ok: false, reason: "No." }, taken: [] });
       s.getState().undo();
       expect(s.getState().proposal).toBeNull();
       expect(s.getState().pending).toBeNull();

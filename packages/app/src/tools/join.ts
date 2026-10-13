@@ -7,6 +7,7 @@
 // hand-made joint may not name a generated board (ADR 014, "After review").
 
 import {
+  generateStructures,
   type Instance,
   type Joint,
   type JointProposal,
@@ -17,7 +18,7 @@ import {
 } from "@kerf/core";
 import { detachForEdit, type Edit, instanceOf } from "../model/commands";
 import { newId } from "../model/ids";
-import type { Proposal } from "../model/pending";
+import type { Proposal, TakenOver } from "../model/pending";
 import { shownProject } from "../model/store";
 import type { ToolHandler } from "./handler";
 import { newProblem } from "./new-problem";
@@ -29,14 +30,13 @@ export const JOINT_WORD: Record<Joint["type"], string> = {
   throughDovetail: "through dovetails",
 };
 
-/** A board the form made that Join takes over: its name before and after. */
-export interface TakenOver {
-  from: string;
-  to: string;
-}
-
 /** True for a board the form still makes, which Join takes over before cutting a joint in it. */
 export const isFormBoard = (p: PlacedPart): boolean => p.source !== undefined && !p.detached;
+
+/** The boards by name, a changed name shown beside the old one: "Shelf 1 (now Shelf copy 1) and Back". */
+export function namesTaken(taken: readonly TakenOver[]): string {
+  return taken.map((t) => (t.from === t.to ? t.from : `${t.from} (now ${t.to})`)).join(" and ");
+}
 
 /**
  * The sentence that tells the user which boards were taken over and that the form will leave them
@@ -51,37 +51,52 @@ export function takeOverNotice(taken: readonly TakenOver[]): string | undefined 
       ? `${first.from} is now custom; the form won't change it.`
       : `${first.from} becomes ${first.to}, custom; the form won't change it.`;
   }
-  const named = taken.map((t) => (t.from === t.to ? t.from : `${t.from} (now ${t.to})`));
-  return `${named.join(" and ")} are now custom; the form won't change them.`;
+  return `${namesTaken(taken)} are now custom; the form won't change them.`;
 }
 
+const GONE = "That board is no longer in the project; click it again.";
+
 type TakeOver =
-  | { ok: true; project: Project; a: Instance; b: Instance; taken: TakenOver[] }
+  | {
+      ok: true;
+      project: Project;
+      a: Instance;
+      b: Instance;
+      names: [string, string];
+      taken: TakenOver[];
+    }
   | { ok: false; message: string };
 
 /**
  * `project` with boards `a` and `b` taken over, as an edit would leave them, and their instances
  * there. Shared by `propose` and `acceptProposal` so the engine is asked about the boards Accept
- * will cut. Says why when a board cannot be taken over or is no longer in the project.
+ * will cut. Says why when a board cannot be taken over, is no longer in the project, or is already
+ * joined to the other (by a joint of the form too).
  */
 function takeOver(project: Project, shop: ShopProfile, a: PlacedPart, b: PlacedPart): TakeOver {
   let next: Project;
   try {
     next = detachForEdit(detachForEdit(project, a, shop).project, b, shop).project;
   } catch (error) {
-    if (error instanceof RangeError) return { ok: false, message: error.message };
+    if (error instanceof RangeError) return { ok: false, message: GONE };
     throw error;
   }
   const ia = instanceOf(next, a);
   const ib = instanceOf(next, b);
-  if (!ia || !ib) return { ok: false, message: "One of the boards is no longer in the project." };
+  if (!ia || !ib) return { ok: false, message: GONE };
+  const nameA = ia.name ?? a.name;
+  const nameB = ib.name ?? b.name;
+  const joined = generateStructures(next, shop).joints.some(
+    (j) => (j.host === ia.id && j.guest === ib.id) || (j.host === ib.id && j.guest === ia.id),
+  );
+  if (joined) return { ok: false, message: `${nameA} and ${nameB} are already joined.` };
   const taken = [
-    { placed: a, now: ia },
-    { placed: b, now: ib },
+    { placed: a, to: nameA },
+    { placed: b, to: nameB },
   ]
     .filter((x) => isFormBoard(x.placed))
-    .map((x) => ({ from: x.placed.name, to: x.now.name ?? x.placed.name }));
-  return { ok: true, project: next, a: ia, b: ib, taken };
+    .map((x) => ({ from: x.placed.name, to: x.to }));
+  return { ok: true, project: next, a: ia, b: ib, names: [nameA, nameB], taken };
 }
 
 /**
@@ -100,7 +115,7 @@ export function propose(
   const result: JointProposal = taken.ok
     ? proposeJoint(taken.project, shop, taken.a.id, taken.b.id, newId(), prefer)
     : { ok: false, reason: taken.message };
-  return { a: a.instance, b: b.instance, result };
+  return { a: a.instance, b: b.instance, result, taken: taken.ok ? taken.taken : [] };
 }
 
 /** What Accept does: the edit, and the notice about boards it took over (if any). */
@@ -123,7 +138,8 @@ export function acceptProposal(
   if (!taken.ok) return taken;
   const r = proposeJoint(taken.project, shop, taken.a.id, taken.b.id, newId(), type);
   if (!r.ok) return { ok: false, message: r.reason };
-  const [host, guest] = r.joint.host === taken.a.id ? [taken.a, taken.b] : [taken.b, taken.a];
+  const [hostName, guestName] =
+    r.joint.host === taken.a.id ? taken.names : [taken.names[1], taken.names[0]];
   const joined = { ...taken.project, joints: [...taken.project.joints, r.joint] };
   const problem = newProblem(project, joined, shop);
   if (problem) return { ok: false, message: problem };
@@ -131,7 +147,7 @@ export function acceptProposal(
     ok: true,
     edit: {
       project: joined,
-      label: `Joined ${guest.name} to ${host.name} with ${JOINT_WORD[type]}`,
+      label: `Joined ${guestName} to ${hostName} with ${JOINT_WORD[type]}`,
     },
     notice: takeOverNotice(taken.taken),
   };

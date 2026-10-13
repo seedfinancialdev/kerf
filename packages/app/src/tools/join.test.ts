@@ -59,7 +59,22 @@ describe("Join", () => {
       placed(again, "Board 1"),
       "dado",
     );
-    expect(r).toEqual({ ok: false, message: "Two dados on Right side overlap." });
+    expect(r).toEqual({ ok: false, message: "Right side and Board 1 are already joined." });
+  });
+
+  it("never prints undefined in the label when the board has no name of its own", () => {
+    const p = bookcaseWithShelf();
+    const unnamed = {
+      ...p,
+      instances: p.instances.map((i) => (i.name === "Board 1" ? { ...i, name: undefined } : i)),
+    };
+    const shelf = solve(unnamed, shop).placements.find(
+      (x) => x.instance === p.instances.find((i) => i.name === "Board 1")?.id,
+    );
+    if (!shelf) throw new Error("no unnamed board");
+    const r = acceptProposal(unnamed, shop, placed(unnamed, "Right side"), shelf, "dado");
+    if (!r.ok) throw new Error(r.message);
+    expect(r.edit.label).toBe(`Joined ${shelf.name} to Right side with a dado`);
   });
 });
 
@@ -87,6 +102,15 @@ describe("taking over form boards", () => {
     expect(r).toMatchObject({ a: shelf.instance, result: { ok: true, joint: { type: "dado" } } });
   });
 
+  it("lists the boards Accept will take over, with the name each will have", () => {
+    const p = form();
+    const r = propose(p, shop, placed(p, "Shelf 2"), placed(p, "Back"));
+    expect(r.taken).toEqual([
+      { from: "Shelf 2", to: "Shelf copy 2" },
+      { from: "Back", to: "Back" },
+    ]);
+  });
+
   it("refuses a form shelf and a board it does not touch, with the engine's reason", () => {
     const p = form();
     const r = propose(p, shop, placed(p, "Shelf 1"), placed(p, "Top"));
@@ -96,17 +120,23 @@ describe("taking over form boards", () => {
     });
   });
 
-  it("gives the engine's reason for a form shelf and the side that already holds it in a dado", () => {
+  it("says a form shelf and the side that already holds it in a dado are already joined", () => {
     const p = form();
     const r = propose(p, shop, placed(p, "Shelf 1"), placed(p, "Right side"));
-    expect(r.result).toEqual({ ok: false, reason: "Two dados on Right side overlap." });
+    expect(r.result).toEqual({
+      ok: false,
+      reason: "Shelf copy 1 and Right side are already joined.",
+    });
   });
 
   it("says why, and does not throw, when a board cannot be taken over", () => {
     const p = form();
     const gone = { ...placed(p, "Right side"), part: "no-such-part" };
     const r = acceptProposal(p, shop, gone, placed(p, "Shelf 1"), "dado");
-    expect(r).toEqual({ ok: false, message: 'The project has no part "no-such-part".' });
+    expect(r).toEqual({
+      ok: false,
+      message: "That board is no longer in the project; click it again.",
+    });
   });
 });
 

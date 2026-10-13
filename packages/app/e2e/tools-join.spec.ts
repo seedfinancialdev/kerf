@@ -28,7 +28,9 @@ test("two clicks with Join propose a dado for a shelf of a row, and change nothi
   await expect(
     page.getByText('Shelf copy 2 in a dado in Back, 23/32" wide and 5/64" deep'),
   ).toBeVisible();
-  await expect(page.getByText("Accepting makes Shelf 2 and Back custom.")).toBeVisible();
+  await expect(
+    page.getByText("Accepting makes Back and Shelf 2 (now Shelf copy 2) custom."),
+  ).toBeVisible();
   const history = page.getByRole("listbox", { name: "History" }).getByRole("option");
   await expect(history).toHaveCount(1);
   await page.getByRole("button", { name: "Accept", exact: true }).click();

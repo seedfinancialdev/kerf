@@ -15,11 +15,19 @@ export interface ModelHit {
   normal: Vec3;
 }
 
+/** A board the form made that Join takes over: its name before and after. */
+export interface TakenOver {
+  from: string;
+  to: string;
+}
+
 /** What the Join tool suggests for two boards, shown until it is accepted or the tool changes. */
 export interface Proposal {
   a: Id;
   b: Id;
   result: JointProposal;
+  /** The boards Accept will take over from the form, so the panel can say so before it is pressed. */
+  taken: readonly TakenOver[];
 }
 
 /** The line of sight under the pointer, in scene inches (display only): where it starts and which way it goes. */
