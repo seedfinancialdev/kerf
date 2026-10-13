@@ -32,6 +32,34 @@ describe("newProblem()", () => {
     expect(newProblem(clean, withBoard(clean, onTheFloorClear), shop)).toBeNull();
   });
 
+  it("is null when the change brings only a warning", () => {
+    // Shelves at two set heights with a count of 3: the engine warns that the count is ignored
+    // (structures/openings.ts, "division-ignored"), which is a warning, not an error.
+    const p = startProject("Blank case", "imperial").project;
+    const structure = p.structures[0];
+    const opening = structure?.openings[0];
+    if (!structure || !opening) throw new Error("no opening");
+    const warned: Project = {
+      ...p,
+      structures: [
+        {
+          ...structure,
+          openings: [
+            {
+              ...opening,
+              division: { type: "shelves", count: "3", spacing: ["12in", "24in"] },
+            },
+          ],
+        },
+      ],
+    };
+    const diagnostics = solve(warned, shop).diagnostics;
+    expect(diagnostics.map((d) => [d.severity, d.rule])).toEqual([
+      ["warning", "division-ignored"],
+    ]);
+    expect(newProblem(p, warned, shop)).toBeNull();
+  });
+
   it("names the error a change brings, in the engine's words", () => {
     expect(newProblem(clean, withBoard(clean, insideRightSide), shop)).toMatch(
       /occupy the same space/,

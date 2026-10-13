@@ -207,6 +207,16 @@ describe("a size typed anywhere (Interaction spec, Measurements; final branch re
     },
   );
 
+  it.each(["ctrlKey", "metaKey", "altKey"])(
+    "leaves a digit held with %s to the shortcut it makes",
+    (modifier) => {
+      waiting();
+      fireEvent.keyDown(document.body, { key: "1", [modifier]: true });
+      expect(document.activeElement).not.toBe(box());
+      expect(box().value).toBe("");
+    },
+  );
+
   it("leaves the tool keys to pick tools", () => {
     const { store } = waiting();
     fireEvent.keyDown(document.body, { key: "m" });

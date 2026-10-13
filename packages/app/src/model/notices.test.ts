@@ -24,6 +24,13 @@ describe("the notice line", () => {
     expect(dismiss(line).notice).toEqual({ text: "second", kind: "warning" });
   });
 
+  it("shows waiting warnings oldest first when several arrive behind one shown", () => {
+    const line = warn(warn(warn(empty, "first"), "second"), "third");
+    expect(line.waiting).toEqual(["second", "third"]);
+    expect(dismiss(line).notice?.text).toBe("second");
+    expect(dismiss(dismiss(line)).notice?.text).toBe("third");
+  });
+
   it("does not queue a warning that is already shown or waiting", () => {
     const line = warn(warn(warn(empty, "first"), "second"), "first");
     expect(warn(line, "second")).toEqual(line);
