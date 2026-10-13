@@ -20,8 +20,9 @@ export interface Diagnostic {
   /**
    * The placed boards a problem is about, by instance id, when it is about particular boards: the
    * two boards in one space, or a joint's guest and then its host (the guests, for guests that
-   * meet nothing). It lets an editor tell which board it changed, and tell one copy of a row from
-   * another, which `part` cannot.
+   * meet nothing). An entry that stands for several repeats (`count`) names every board of them,
+   * each once, in the order first named. It lets an editor tell which board it changed, and tell
+   * one copy of a row from another, which `part` cannot.
    */
   instances?: readonly Id[];
   /**

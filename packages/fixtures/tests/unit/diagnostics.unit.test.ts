@@ -32,6 +32,23 @@ describe("condense", () => {
     const out = condense([d({}), d({}), d({ count: 3 })]);
     expect(out).toEqual([d({ count: 5 })]);
   });
+  it("repeats on different boards keep every board they name, each once, in order (PR review types-M1)", () => {
+    // Four shelves in one side's too-deep dados: one line, count 4, naming all four and the side.
+    const out = condense([
+      d({ instances: ["s1", "side"] }),
+      d({ instances: ["s2", "side"] }),
+      d({ instances: ["s3", "side"], count: 2 }),
+    ]);
+    expect(out).toEqual([d({ instances: ["s1", "side", "s2", "s3"], count: 4 })]);
+  });
+  it("a repeat that names no boards leaves the boards the others name", () => {
+    expect(condense([d({ instances: ["a", "b"] }), d({})])).toEqual([
+      d({ instances: ["a", "b"], count: 2 }),
+    ]);
+    expect(condense([d({}), d({ instances: ["a", "b"] })])).toEqual([
+      d({ instances: ["a", "b"], count: 2 }),
+    ]);
+  });
   it("same rule and field but a different message stay separate", () => {
     expect(condense([d({ message: "a" }), d({ message: "b" })])).toHaveLength(2);
   });

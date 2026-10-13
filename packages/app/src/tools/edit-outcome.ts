@@ -19,6 +19,7 @@ import {
   solve,
 } from "@kerf/core";
 import { instanceOf } from "../model/commands";
+import { boardsOf } from "../model/problem-boards";
 import { followsForm, takenOver, takeOverNotice } from "../model/take-over";
 
 /** A board the change took over and the engine renamed: its instance now, and before. */
@@ -37,12 +38,6 @@ function renamedBy(before: readonly PlacedPart[], next: Project): Renamed[] {
     const saved = instanceOf(next, b);
     return saved && saved.id !== b.instance ? [{ now: saved.id, was: b.instance }] : [];
   });
-}
-
-/** The boards an error is about: its pair when it names one, else every copy of its board. */
-function boardsOf(d: Diagnostic, placements: readonly PlacedPart[]): Id[] {
-  if (d.instances) return [...d.instances];
-  return placements.filter((p) => p.part === d.part).map((p) => p.instance);
 }
 
 type Solved = Pick<SolveResult, "diagnostics" | "placements">;

@@ -3,8 +3,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Diagnostics reach the user, so a flood of near-identical ones is itself a defect. After the whole
-// pipeline has run, the same problem on the same field is said once with a count, and no rule
-// shows more than RULE_LIMIT entries; the rest are summarised in one extra entry.
+// pipeline has run, the same problem on the same field is said once with a count, naming every
+// board the repeats are about, and no rule shows more than RULE_LIMIT entries; the rest are
+// summarised in one extra entry.
 
 import type { Diagnostic } from "./outputs";
 
@@ -18,8 +19,13 @@ export function condense(list: Diagnostic[]): Diagnostic[] {
       "\u0000",
     );
     const found = merged.get(key);
-    if (found) found.count = (found.count ?? 1) + (d.count ?? 1);
-    else merged.set(key, { ...d });
+    if (!found) merged.set(key, { ...d });
+    else {
+      found.count = (found.count ?? 1) + (d.count ?? 1);
+      // One line for all the repeats still names every board they are about, so each can be shown.
+      const boards = [...new Set([...(found.instances ?? []), ...(d.instances ?? [])])];
+      if (boards.length > 0) found.instances = boards;
+    }
   }
 
   const shown = new Map<string, number>();

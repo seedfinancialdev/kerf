@@ -10,9 +10,11 @@ import { solve } from "@kerf/core";
 import { loadShopProfile } from "@kerf/fixtures";
 import { describe, expect, it } from "vitest";
 import { setOption, startProject } from "../model/commands";
+import { drawBoard } from "../tools/board";
 import { boardLooks } from "./board-looks";
 
 const shop = loadShopProfile();
+const IN = 203_200;
 
 describe("boardLooks()", () => {
   it("draws every board of a sound bookcase with its cuts and none red", () => {
@@ -37,6 +39,35 @@ describe("boardLooks()", () => {
     expect(looks).toHaveLength(9);
     expect(looks.every((l) => l.geometry === "blank")).toBe(true);
     const red = looks.filter((l) => l.tone === "error").map((l) => l.placed.name);
-    expect(red.sort()).toEqual(["Left side", "Right side"]);
+    // Each dado error names the shelf in the dado and the side holding it (Diagnostic.instances),
+    // so the four shelves and the two sides are red; the top and bottom sit in rabbets, and the
+    // back in its own rabbets (Operation specs, "Golden test: bookcase"), so they are not.
+    expect(red.sort()).toEqual([
+      "Left side",
+      "Right side",
+      "Shelf 1",
+      "Shelf 2",
+      "Shelf 3",
+      "Shelf 4",
+    ]);
+  });
+
+  it("reds only the two boards in one space, not every copy of a shelf's row (PR review types-M1)", () => {
+    // A 6" × 6" board drawn from Shelf 2's corner lies inside Shelf 2: the overlap names those two.
+    const { project } = startProject("Bookcase", "imperial");
+    const shelf = solve(project, shop).placements.find((p) => p.name === "Shelf 2");
+    const ply = project.stock.find((s) => s.name === "3/4 plywood")?.id ?? "";
+    if (!shelf) throw new Error("no Shelf 2");
+    const inShelf = drawBoard(
+      project,
+      ply,
+      shelf.box.min,
+      { axis: 0, size: 6 * IN },
+      { axis: 1, size: 6 * IN },
+    ).project;
+    const red = boardLooks(solve(inShelf, shop), inShelf)
+      .filter((l) => l.tone === "error")
+      .map((l) => l.placed.name);
+    expect(red.sort()).toEqual(["Board 1", "Shelf 2"]);
   });
 });
