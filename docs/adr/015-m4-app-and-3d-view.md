@@ -100,12 +100,16 @@ maintainer decides which become work.
     History has no arrow, Home or End keys, and every entry is a tab stop. Long hints and names
     are clipped.
 20. Two full solves run for each Board attempt (the figure is reported by the timing test), and the
-    row-shelf height is read off the solve.
+    row-shelf height is read off the solve. Push/Pull, Move and Edge also solve the project before
+    and after each recorded change to word its notice (`editNotice`, ruling R45), on top of the
+    store's own solve: three solves per recorded change, none per preview frame.
 21. Tests not yet written: a light-theme App test (the end-to-end test covers it), Section
     collapse beyond its open state, the `setupText` branches, tab focus, an unmount in the middle
     of a drag of a viewport tool (a size-field drag is covered), and the two-board take-over notice
     beyond its unit test. The tape end-to-end test and the arrow-key tests were not seen failing
-    first. One mutant of the half-to-even tie in the Tape is equivalent, and the empty-History
+    first, and the number field's Enter-then-leave fix (a size taken with Enter is not recorded
+    back on leaving the field) is guarded only by the companion end-to-end test: its unit test
+    passes before and after the fix. One mutant of the half-to-even tie in the Tape is equivalent, and the empty-History
     branch cannot be reached.
 22. The rules above quote UI strings; a later wording change cites this ADR.
 23. Small tidying left: `tools/pointer.ts` re-exports `ModelHit`, `ModelPointer` and `ToolHandler`;
