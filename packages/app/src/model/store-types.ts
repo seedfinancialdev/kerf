@@ -46,6 +46,11 @@ export interface KerfState {
   waiting: readonly string[];
   /** The Undo offer an answer covers, shown again when the answer goes (notices.ts). */
   held: Notice | null;
+  /**
+   * Boards the 3D view failed to draw since History last moved, by instance: they are drawn plain
+   * with a badge, and the inspector says so (ADR 015, rule 10).
+   */
+  notDrawn: readonly Id[];
   tool: ToolId;
   /**
    * What the active tool has started and not finished; cleared when the tool changes or History is
@@ -172,6 +177,8 @@ export interface KerfActions {
   warn(text: string): void;
   /** As `warn`, but only the first time this session: a fault that recurs is not said again. */
   warnOnce(text: string): void;
+  /** Notes that the 3D view failed to draw board `instance`; forgotten when History moves. */
+  boardNotDrawn(instance: Id): void;
   /** Clears the notice and shows the next waiting warning. */
   dismissNotice(): void;
   /**

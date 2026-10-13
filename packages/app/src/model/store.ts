@@ -117,6 +117,7 @@ function startingState(
     sections: readSections(storage),
     created: storage.read("kerf.created") ?? null,
     thumbnail: null,
+    notDrawn: [],
     hovered: null,
     navigation: null,
     fitRequest: 0,
@@ -179,7 +180,8 @@ export function createKerfStore(deps: {
         selection,
         pending,
         ...notices,
-        ...(moved ? { proposal: null } : {}),
+        // The view tries every board again once History moves (Viewport.tsx).
+        ...(moved ? { proposal: null, notDrawn: [] } : {}),
       });
       if (moved) keep(get().history);
     };
@@ -285,6 +287,9 @@ export function createKerfStore(deps: {
       say: (text, undoable = false) =>
         set(tell(line(), { text, kind: undoable ? "undo" : "said" })),
       warn: (text) => set(warn(line(), text)),
+      boardNotDrawn: (instance) => {
+        if (!get().notDrawn.includes(instance)) set({ notDrawn: [...get().notDrawn, instance] });
+      },
       warnOnce: (text) => {
         if (warnedOnce.has(text)) return;
         warnedOnce.add(text);

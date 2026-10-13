@@ -63,6 +63,21 @@ function UndrawnNotes({ placed, result }: { placed: PlacedPart[]; result: SolveR
   });
 }
 
+/** Why the 3D view draws a picked board plain when drawing it failed in Kerf (ADR 015, rule 10). */
+const NOT_DRAWN = "Kerf hit a problem drawing it.";
+
+/** A note for each picked board the 3D view failed to draw; it needs only the store. */
+function NotDrawnNotes({ placed }: { placed: PlacedPart[] }) {
+  const notDrawn = useKerf((s) => s.notDrawn);
+  return placed
+    .filter((p) => notDrawn.includes(p.instance))
+    .map((p) => (
+      <p key={p.instance} className="problem warning">
+        The 3D view shows {p.name} without its cuts: {NOT_DRAWN}
+      </p>
+    ));
+}
+
 /** The facts about the picked boards, their problems, and a way to hand a taken-over one back. */
 export function BoardInspector({ instances }: { instances: Id[] }) {
   const store = useKerfStore();
@@ -120,6 +135,7 @@ export function BoardInspector({ instances }: { instances: Id[] }) {
       <ThreeDGuard told={BOARD_FAULT} retryOn={history}>
         <UndrawnNotes placed={placed} result={result} />
       </ThreeDGuard>
+      <NotDrawnNotes placed={placed} />
       <Problems parts={new Set(placed.map((p) => p.part))} />
     </div>
   );

@@ -503,6 +503,19 @@ describe("Undo and Redo with nothing to step to (code review M1)", () => {
   });
 });
 
+describe("boards the 3D view could not draw (PR review errors-M7)", () => {
+  it("are remembered, each once, until History moves, when the view tries them again", () => {
+    const s = fresh();
+    s.getState().apply(startProject("Bookcase", "imperial"));
+    s.getState().boardNotDrawn("a");
+    s.getState().boardNotDrawn("b");
+    s.getState().boardNotDrawn("a");
+    expect(s.getState().notDrawn).toEqual(["a", "b"]);
+    s.getState().apply(startProject("Blank case", "imperial"));
+    expect(s.getState().notDrawn).toEqual([]);
+  });
+});
+
 describe("the tape and guide lines", () => {
   const measured = () => {
     const s = fresh();

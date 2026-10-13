@@ -44,19 +44,22 @@ export const ENGINE_NOT_LOADED =
  * Draws `children`, which use WebGL or the geometry engine. If they fail, the raw error is logged,
  * the user is warned once a session with `told` (a sentence, or one chosen from the error), and
  * `fallback` takes their place (default nothing; with `showsTold`, the sentence itself) until
- * `retryOn` changes, when they are tried again: a one-off fault does not end the view.
+ * `retryOn` changes, when they are tried again: a one-off fault does not end the view. `onFault`
+ * hears of each fault, so the owner can say which part it was after the one warning is gone.
  */
 export function ThreeDGuard({
   told,
   fallback = null,
   showsTold = false,
   retryOn,
+  onFault,
   children,
 }: {
   told: string | ((error: unknown) => string);
   fallback?: ReactNode;
   showsTold?: boolean;
   retryOn?: unknown;
+  onFault?: () => void;
   children: ReactNode;
 }) {
   const store = useKerfStore();
@@ -64,6 +67,7 @@ export function ThreeDGuard({
   const failed = (error: unknown): void => {
     console.error(error);
     store.getState().warnOnce(words(error));
+    onFault?.();
   };
   const instead = (error: unknown): ReactNode =>
     showsTold ? <p className="model-empty">{words(error)}</p> : fallback;

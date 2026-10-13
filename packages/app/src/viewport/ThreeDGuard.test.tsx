@@ -114,4 +114,16 @@ describe("<ThreeDGuard>", () => {
     act(() => screen.getByRole("button", { name: "Undo" }).click());
     expect(screen.getByText("the model")).toBeTruthy();
   });
+
+  it("tells its owner which part failed, so a board drawn plain can say why (PR review errors-M7)", () => {
+    const failed = vi.fn();
+    render(
+      <KerfProvider store={fresh()}>
+        <ThreeDGuard told={BOARD_FAULT} onFault={failed}>
+          <Broken />
+        </ThreeDGuard>
+      </KerfProvider>,
+    );
+    expect(failed).toHaveBeenCalledTimes(1);
+  });
 });

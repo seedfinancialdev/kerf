@@ -213,4 +213,14 @@ describe("<BoardInspector>", () => {
       expect(screen.queryByText(/without its cuts/)).toBeNull();
     });
   });
+
+  it("says a picked board the 3D view could not draw is shown plain (PR review errors-M7)", () => {
+    const store = setup(topOf);
+    const [top] = topOf(store);
+    if (!top) throw new Error("no top");
+    act(() => store.getState().boardNotDrawn(top));
+    expect(
+      screen.getByText("The 3D view shows Top without its cuts: Kerf hit a problem drawing it."),
+    ).toBeTruthy();
+  });
 });

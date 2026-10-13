@@ -164,25 +164,28 @@ export function Viewport() {
       <ThumbnailSource />
       {view && <Navigation view={view} change={change} />}
       {looks.map((look) => {
-        const board = (drawCuts: boolean) => (
+        const board = (drawCuts: boolean, faulted = false) => (
           <Board
             look={look}
             ready={drawCuts}
+            faulted={faulted}
             color={palette[look.tone]}
             selected={selected.has(look.placed.instance)}
             glow={palette.accent}
             warning={palette.warning}
           />
         );
-        // A fault drawing one board leaves that board plain, the rest drawn. It is tried again
-        // when History changes, not on every preview of a drag (second-pass review M3); a failure
-        // of the geometry engine itself is a result of meshFor, with the badge, not a throw.
+        // A fault drawing one board leaves that board plain with the badge, the rest drawn, and
+        // the inspector says so (ADR 015, rule 10). It is tried again when History changes, not
+        // on every preview of a drag (second-pass review M3); a failure of the geometry engine
+        // itself is a result of meshFor, with the badge, not a throw.
         return (
           <ThreeDGuard
             key={look.placed.instance}
             told={BOARD_FAULT}
-            fallback={board(false)}
+            fallback={board(false, true)}
             retryOn={history}
+            onFault={() => store.getState().boardNotDrawn(look.placed.instance)}
           >
             {board(ready)}
           </ThreeDGuard>

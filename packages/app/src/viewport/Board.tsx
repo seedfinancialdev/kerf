@@ -21,6 +21,8 @@ import { meshFor } from "./meshes";
 interface BoardProps {
   look: BoardLook;
   ready: boolean;
+  /** True when drawing this board failed, so it is drawn plain with the badge (ADR 015, rule 10). */
+  faulted?: boolean;
   color: string;
   selected: boolean;
   glow: string;
@@ -29,7 +31,15 @@ interface BoardProps {
 }
 
 /** One board of the model; see the file header. */
-export function Board({ look, ready, color, selected, glow, warning }: BoardProps) {
+export function Board({
+  look,
+  ready,
+  faulted = false,
+  color,
+  selected,
+  glow,
+  warning,
+}: BoardProps) {
   const store = useKerfStore();
   const { placed } = look;
   // An engine fault is asked about again once History moves, not on every preview frame.
@@ -65,7 +75,7 @@ export function Board({ look, ready, color, selected, glow, warning }: BoardProp
           emissiveIntensity={selected ? 0.35 : 0}
         />
       </mesh>
-      {built?.ok === false && <WarningBadge placed={placed} color={warning} />}
+      {(faulted || built?.ok === false) && <WarningBadge placed={placed} color={warning} />}
     </>
   );
 }
