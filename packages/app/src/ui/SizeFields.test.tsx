@@ -112,7 +112,7 @@ describe("<SizeFields>", () => {
     ]);
   });
 
-  it("records nothing when let go at a refused size, and keeps saying why, as Push/Pull and Move do (PR review errors-M6)", () => {
+  it("records nothing when let go at a refused size, and keeps saying why, as Push/Pull and Move do", () => {
     const store = setup();
     const label = screen.getByText("Width");
     fireEvent.pointerDown(label, { clientX: 0, pointerId: 1, button: 0 });

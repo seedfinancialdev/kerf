@@ -30,7 +30,7 @@ describe("createStorage()", () => {
     expect(createStorage(memory()).read("kerf.theme")).toBeUndefined();
   });
 
-  describe("when a key cannot be read (PR review errors-M2)", () => {
+  describe("when a key cannot be read", () => {
     it("says so, and does not write over what the key holds", () => {
       const backing = unreadable(["kerf.project"]);
       backing.setItem("kerf.project", "the last project");

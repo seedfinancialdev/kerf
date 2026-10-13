@@ -32,7 +32,7 @@ describe("condense", () => {
     const out = condense([d({}), d({}), d({ count: 3 })]);
     expect(out).toEqual([d({ count: 5 })]);
   });
-  it("repeats on different boards keep every board they name, each once, in order (PR review types-M1)", () => {
+  it("repeats on different boards keep every board they name, each once, in order", () => {
     // Four shelves in one side's too-deep dados: one line, count 4, naming all four and the side.
     const out = condense([
       d({ instances: ["s1", "side"] }),

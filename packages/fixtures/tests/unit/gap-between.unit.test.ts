@@ -91,7 +91,7 @@ describe("gapBetween()", () => {
     expect(lengthOf(p, gap.start)).toBe(2 * 203_200);
   });
 
-  describe("with a stock whose name holds a quote or a backslash (PR review tests-M1)", () => {
+  describe("with a stock whose name holds a quote or a backslash", () => {
     /**
      * The hand-made bookcase with its 3/4 plywood renamed `name`, every expression that names it
      * rewritten with `written`, the name as an expression's quoted text spells it.

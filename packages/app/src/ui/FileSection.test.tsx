@@ -151,7 +151,7 @@ describe("Save", () => {
     await waitFor(() => expect(saved.revoked).toEqual(["blob:kerf-test"]));
   });
 
-  it("saves without a picture when the thumbnail source fails, and logs why (PR review errors-M1)", async () => {
+  it("saves without a picture when the thumbnail source fails, and logs why", async () => {
     stubDownload();
     const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const store = setup();
@@ -164,7 +164,7 @@ describe("Save", () => {
     expect(logged).toHaveBeenCalledWith(failure);
   });
 
-  it("saves without a picture when the picture is not a usable PNG, and logs why (silent-failure review M4; PR review errors-M1)", async () => {
+  it("saves without a picture when the picture is not a usable PNG, and logs why (silent-failure review M4)", async () => {
     stubDownload();
     const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const store = setup();

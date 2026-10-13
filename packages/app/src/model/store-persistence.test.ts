@@ -305,7 +305,7 @@ describe("a stored project the engine rejects (code review I1, silent-failure re
   });
 });
 
-describe("section open state that storage holds damaged (PR review tests-M3)", () => {
+describe("section open state that storage holds damaged", () => {
   // persist.ts, readSections: a damaged value only loses which sections were open, so the app
   // starts with none remembered, and keeps any entry that is still a yes or no.
   it.each([
@@ -324,7 +324,7 @@ describe("section open state that storage holds damaged (PR review tests-M3)", (
   });
 });
 
-describe("work the browser could not read at start (PR review errors-M2)", () => {
+describe("work the browser could not read at start", () => {
   const PROJECT_UNREADABLE =
     "Your last project could not be read from this browser, so Kerf started without it. It is " +
     "left as it was; use Save to keep a copy of new work.";

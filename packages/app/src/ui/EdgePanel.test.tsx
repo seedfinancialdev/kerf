@@ -95,7 +95,7 @@ describe("<EdgePanel>", () => {
     expect(shownProject(store.getState())).toBe(before);
   });
 
-  describe("when the shop's bits change while the panel is open (code review M2)", () => {
+  describe("when the shop's bits change while the panel is open", () => {
     const IN = 203_200;
     const withBits = (store: ReturnType<typeof setup>, roundoverBits: number[]) =>
       act(() =>

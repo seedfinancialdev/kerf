@@ -115,7 +115,7 @@ describe("<ThreeDGuard>", () => {
     expect(screen.getByText("the model")).toBeTruthy();
   });
 
-  it("tells its owner which part failed, so a board drawn plain can say why (PR review errors-M7)", () => {
+  it("tells its owner which part failed, so a board drawn plain can say why", () => {
     const failed = vi.fn();
     render(
       <KerfProvider store={fresh()}>

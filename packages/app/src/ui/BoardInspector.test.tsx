@@ -214,7 +214,7 @@ describe("<BoardInspector>", () => {
     });
   });
 
-  it("says a picked board the 3D view could not draw is shown plain (PR review errors-M7)", () => {
+  it("says a picked board the 3D view could not draw is shown plain", () => {
     const store = setup(topOf);
     const [top] = topOf(store);
     if (!top) throw new Error("no top");

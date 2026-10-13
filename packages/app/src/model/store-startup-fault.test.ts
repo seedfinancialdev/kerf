@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// ADR 015, rule 11 and the PR review (errors-I1): a fault in Kerf while it opens the stored project
-// never stops the app starting. The stored project is set aside, as one the engine rejects is, and
-// the user is told. No real project makes the engine fault, so its entry points are replaced here
+// ADR 015, rule 11: a fault in Kerf while it opens the stored project never stops the app
+// starting. The stored project is set aside, as one the engine rejects is, and the user is told.
+// No real project makes the engine fault, so its entry points are replaced here
 // (UNIT_TEST_STANDARD §3: a mock only where the real thing cannot do it), and only for the start.
 
 import { serializeProject } from "@kerf/core";

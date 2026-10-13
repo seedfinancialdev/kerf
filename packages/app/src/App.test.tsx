@@ -252,7 +252,7 @@ describe("<App>", () => {
     });
   });
 
-  describe("when Kerf itself fails outside the 3D view (PR review errors-I1)", () => {
+  describe("when Kerf itself fails outside the 3D view", () => {
     const ACTION_FAULT =
       "Kerf hit a problem and could not finish what you just did. Please report it.";
     const WINDOW_FAULT =

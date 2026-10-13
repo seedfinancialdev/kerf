@@ -473,7 +473,7 @@ describe("a tool action under way (final branch review I1 and M1)", () => {
   });
 });
 
-describe("Undo and Redo with nothing to step to (code review M1)", () => {
+describe("Undo and Redo with nothing to step to", () => {
   /** One entry only, with Join's first click, its proposal and an Undo offer on screen. */
   const startedJoin = () => {
     const s = fresh();
@@ -503,7 +503,7 @@ describe("Undo and Redo with nothing to step to (code review M1)", () => {
   });
 });
 
-describe("boards the 3D view could not draw (PR review errors-M7)", () => {
+describe("boards the 3D view could not draw", () => {
   it("are remembered, each once, until History moves, when the view tries them again", () => {
     const s = fresh();
     s.getState().apply(startProject("Bookcase", "imperial"));

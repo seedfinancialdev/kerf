@@ -204,7 +204,7 @@ describe("firstNewError() on a board a take-over renamed (second-pass review M4)
     expect(error).toBe(brought);
   });
 
-  it("names a new joint error on the renamed copy although another shelf of its row already had one (PR review tests-I1)", () => {
+  it("names a new joint error on the renamed copy although another shelf of its row already had one", () => {
     // A joint error names its guest, then its host (core outputs.ts, Diagnostic.instances), so
     // Shelf 1's error is not on Shelf 3, although both are copies of one part.
     const right = now.placements.find((p) => p.name === "Right side");

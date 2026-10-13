@@ -52,7 +52,7 @@ describe("boardLooks()", () => {
     ]);
   });
 
-  it("reds only the two boards in one space, not every copy of a shelf's row (PR review types-M1)", () => {
+  it("reds only the two boards in one space, not every copy of a shelf's row", () => {
     // A 6" × 6" board drawn from Shelf 2's corner lies inside Shelf 2: the overlap names those two.
     const { project } = startProject("Bookcase", "imperial");
     const shelf = solve(project, shop).placements.find((p) => p.name === "Shelf 2");

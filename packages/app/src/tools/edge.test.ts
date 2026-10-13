@@ -15,7 +15,7 @@ import { BOTH_FRONT_EDGES, roundEdges as tryRoundEdges } from "./edge";
 const shop = loadShopProfile();
 /**
  * The canonical bookcase saves its shelf row by hand (a pattern no form makes), so the engine can
- * take no one shelf out of it (code review I1; ADR 015, known limit 25).
+ * take no one shelf out of it (ADR 015, known limit 25).
  */
 const HAND_ROW =
   "Shelf 1 is one of a row made by hand, and Kerf can't change one board of that row on its own yet.";
