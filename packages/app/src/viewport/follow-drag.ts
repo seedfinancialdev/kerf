@@ -6,7 +6,7 @@
 // every move and the release even when the pointer leaves the boards or the canvas.
 
 import type { Camera } from "three";
-import type { KerfStore } from "../model/store";
+import type { KerfState, KerfStore } from "../model/store";
 import { dispatchDrag } from "../tools/dispatch";
 import { sightLine } from "./sight-line";
 
@@ -14,8 +14,26 @@ import { sightLine } from "./sight-line";
 const DRAG_PIXELS = 3;
 
 /**
+ * True when a press on a board began something to drag: a Push/Pull or a Move, while the left
+ * button picks. Join, Tape and Board wait for a second click, which a cancelled pointer must not
+ * clear (silent-failure review M7); after O or H the left button drags the view (review I5).
+ */
+export function followsDrag(state: KerfState): boolean {
+  const tool = state.pending?.tool;
+  return state.navigation === null && (tool === "pushPull" || tool === "move");
+}
+
+/** True when the store has ended the drag's action: another tool, History moved, or navigation began. */
+function abandoned(now: KerfState, before: KerfState): boolean {
+  return now.tool !== before.tool || now.pending === null || now.navigation !== null;
+}
+
+/**
  * Follows `down`'s pointer on `canvas` until it is released or taken away. A release goes to the
- * tool; a cancelled pointer (the browser took it) records nothing and drops the preview.
+ * tool; a cancelled pointer (the browser took it) records nothing and drops the preview. A drag
+ * whose action the store ends (the tool changes, History moves, O or H) stops at once, so its
+ * release cannot record on top of the change (final branch review I1). A pointer that is already
+ * gone is not followed: the press stays a click.
  */
 export function followDrag(
   store: KerfStore,
@@ -23,7 +41,13 @@ export function followDrag(
   canvas: HTMLElement,
   camera: Camera,
 ): void {
-  canvas.setPointerCapture(down.pointerId);
+  try {
+    canvas.setPointerCapture(down.pointerId);
+  } catch (error) {
+    // NotFoundError or InvalidStateError: the pointer was released or taken before the capture.
+    if (error instanceof DOMException) return;
+    throw error;
+  }
   const began = sightLine(down, canvas, camera);
   let dragged = false;
   const keys = (e: PointerEvent) => ({ shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey });
@@ -33,6 +57,7 @@ export function followDrag(
     if (dragged) dispatchDrag(store, "move", sightLine(e, canvas, camera), keys(e));
   };
   const end = (): void => {
+    unsubscribe();
     canvas.removeEventListener("pointermove", move);
     canvas.removeEventListener("pointerup", up);
     canvas.removeEventListener("pointercancel", cancel);
@@ -45,11 +70,21 @@ export function followDrag(
     dispatchDrag(store, "up", dragged ? sightLine(e, canvas, camera) : began, keys(e));
     canvas.releasePointerCapture(down.pointerId);
   };
+  const drop = (): void => {
+    const s = store.getState();
+    if (s.previewed) s.cancelPreview();
+    if (s.pending) s.setPending(null);
+  };
   const cancel = (): void => {
     end();
-    store.getState().cancelPreview();
-    store.getState().setPending(null);
+    drop();
   };
+  const unsubscribe = store.subscribe((now, before) => {
+    if (!abandoned(now, before)) return;
+    end();
+    drop();
+    canvas.releasePointerCapture(down.pointerId);
+  });
   canvas.addEventListener("pointermove", move);
   canvas.addEventListener("pointerup", up);
   canvas.addEventListener("pointercancel", cancel);

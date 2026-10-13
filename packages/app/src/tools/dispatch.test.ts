@@ -13,7 +13,7 @@ import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { memoryStorage } from "../testing/memory-storage";
 import { fromScene } from "../viewport/frames";
-import { axisOf, dispatchPointer } from "./dispatch";
+import { axisOf, dispatchDrag, dispatchPointer } from "./dispatch";
 
 describe("axisOf()", () => {
   it("turns scene up into project up (z)", () => {
@@ -79,5 +79,27 @@ describe("a click on empty space with a line of sight", () => {
     canvas.dispatchEvent(new MouseEvent("click", { clientX: 100, clientY: 100 }));
     expect(store.getState().history?.entries.length).toBe(before);
     expect(store.getState().pending).toBeNull();
+  });
+});
+
+describe("dispatchDrag() after O or H (silent-failure review I5)", () => {
+  it("leaves a waiting Push/Pull alone, so orbiting the view records nothing", () => {
+    const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+    store.getState().apply(startProject("Bookcase", "imperial"));
+    store.getState().setTool("pushPull");
+    const side = store.getState().solved?.result.placements.find((p) => p.partName === "Side");
+    if (!side) throw new Error("no side");
+    // A click on the side's top end, sighted at scene height 10", waiting for a distance; then O,
+    // then a drag sighted 2" higher along the end's line (scene y is project z): a 2" pull.
+    const end = { placed: side, point: [0, 0, side.box.max[2]] as const, normal: side.frame.x };
+    const sighted = (y: number) => ({ origin: [0, y, 50] as const, dir: [0, 0, -1] as const });
+    store.getState().setPending({ tool: "pushPull", hit: end, dragged: null, ray: sighted(10) });
+    store.getState().setNavigation("orbit");
+    const before = store.getState().history?.entries.length;
+    const ray = sighted(12);
+    dispatchDrag(store, "move", ray, { shift: false, ctrl: false });
+    dispatchDrag(store, "up", ray, { shift: false, ctrl: false });
+    expect(store.getState().previewed).toBeNull();
+    expect(store.getState().history?.entries.length).toBe(before);
   });
 });

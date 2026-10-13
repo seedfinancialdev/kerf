@@ -33,7 +33,7 @@ import {
   type View,
   zoom,
 } from "./camera";
-import { followDrag } from "./follow-drag";
+import { followDrag, followsDrag } from "./follow-drag";
 import { matrixOf, toScene } from "./frames";
 import { meshFor } from "./meshes";
 import { usePalette } from "./palette";
@@ -63,7 +63,7 @@ function Board({ look, ready, color, selected, glow }: BoardProps) {
     e.stopPropagation();
     dispatchPointer(store, "down", e, placed);
     // A tool that began something to drag hears the rest of the drag wherever the pointer goes.
-    if (store.getState().pending !== null && e.nativeEvent.target instanceof HTMLElement) {
+    if (followsDrag(store.getState()) && e.nativeEvent.target instanceof HTMLElement) {
       followDrag(store, e.nativeEvent, e.nativeEvent.target, e.camera);
     }
   };

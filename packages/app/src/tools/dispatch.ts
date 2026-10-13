@@ -60,7 +60,8 @@ export function dispatchPointer(
 
 /**
  * Sends a pointer event of a drag that has begun to the active tool: wherever the pointer is, even
- * off every board, with only its line of sight to measure by.
+ * off every board, with only its line of sight to measure by. While O or H has the left button,
+ * the drag moves the view, never the model (silent-failure review I5).
  */
 export function dispatchDrag(
   store: KerfStore,
@@ -68,5 +69,7 @@ export function dispatchDrag(
   ray: Ray,
   keys: { shift: boolean; ctrl: boolean },
 ): void {
-  handlerFor(store.getState().tool).pointer?.({ kind, hit: null, ray, ...keys }, store);
+  const s = store.getState();
+  if (s.navigation) return;
+  handlerFor(s.tool).pointer?.({ kind, hit: null, ray, ...keys }, store);
 }
