@@ -29,6 +29,11 @@ export interface Diagnostic {
   field?: string;
   /** How many times this same problem occurred, when it was reported once for all of them. */
   count?: number;
+  /**
+   * True for the one entry that sums up a rule's problems past the per-rule limit: its message
+   * already says how many (`count`) are not listed, so it is not counted again on screen.
+   */
+  summary?: true;
 }
 
 export type Vec3 = readonly [Len, Len, Len];

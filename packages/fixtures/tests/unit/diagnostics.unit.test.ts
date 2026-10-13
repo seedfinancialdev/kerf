@@ -17,10 +17,10 @@ describe("condense", () => {
     list.push(d({ field: "x1", count: 3 }), d({ field: "x2", count: 3 }));
     const out = condense(list);
     expect(out).toHaveLength(26);
-    expect(out[25]).toMatchObject({ severity: "error", rule: "overlap", count: 6 });
-    // The number is the count (Problems shows "(6 times)"); the words give an example, no rule id.
+    expect(out[25]).toMatchObject({ severity: "error", rule: "overlap", count: 6, summary: true });
+    // The words say how many are not listed and give one as an example, with no rule id.
     expect(out[25]?.message).toBe(
-      `More problems like this one are not listed: ${list[25]?.message}`,
+      `6 more problems like this one are not listed, such as: ${list[25]?.message}`,
     );
   });
   it("26 entries leave exactly one in the summary", () => {

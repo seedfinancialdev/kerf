@@ -22,7 +22,8 @@ export function Problems({ parts }: { parts?: Set<Id> }) {
         <li key={i} className={d.severity === "error" ? "problem error" : "problem warning"}>
           {d.severity === "error" ? "Error: " : "Warning: "}
           {d.message}
-          {d.count !== undefined && d.count > 1 ? ` (${d.count} times)` : ""}
+          {/* A summary's words already give its number (core diagnostics.ts). */}
+          {!d.summary && d.count !== undefined && d.count > 1 ? ` (${d.count} times)` : ""}
         </li>
       ))}
     </ul>

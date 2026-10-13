@@ -93,8 +93,9 @@ describe("problems past the per-rule limit", () => {
       message: `Board ${i} and Board ${i + 1} occupy the same space and are not joined.`,
     }));
     const overflow = condense(many).at(-1);
+    // One is past the limit: the words are singular and give that one as the example.
     expect(overflow?.message).toBe(
-      `More problems like this one are not listed: Board ${RULE_LIMIT} and Board ${
+      `1 more problem like this one is not listed, such as: Board ${RULE_LIMIT} and Board ${
         RULE_LIMIT + 1
       } occupy the same space and are not joined.`,
     );
