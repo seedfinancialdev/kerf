@@ -164,6 +164,7 @@ describe("the Push/Pull tool", () => {
   const event = (kind: ModelPointer["kind"], hit: ModelHit | null): ModelPointer => ({
     kind,
     hit,
+    ray: null,
     shift: false,
     ctrl: false,
   });
@@ -321,6 +322,43 @@ describe("the Push/Pull tool", () => {
     pushPullTool.pointer?.(event("up", at(placed, -40)), s);
     expect(s.getState().notice?.text).toBeTruthy();
     expect(s.getState().pending).toBeNull();
+  });
+
+  describe("by the pointer's line of sight", () => {
+    // The top's length runs along project x (scene x), so a sight line straight down the scene's z
+    // at scene x = n meets the top's end line at n inches.
+    const sight = (x: number) => ({ origin: [x, 5, 50], dir: [0, 0, -1] }) as const;
+    const seen = (kind: ModelPointer["kind"], x: number, h: ModelHit | null = null) =>
+      ({ kind, hit: h, ray: sight(x), shift: false, ctrl: false }) satisfies ModelPointer;
+
+    it("lengthens by the distance the sight line travelled, and records a release off the boards", () => {
+      const s = started();
+      const placed = top();
+      expect(placed.frame.x).toEqual([1, 0, 0]);
+      pushPullTool.pointer?.(seen("down", 0, endOf(placed)), s);
+      pushPullTool.pointer?.(seen("move", 1), s);
+      expect(s.getState().previewed).not.toBeNull();
+      pushPullTool.pointer?.(seen("up", 1), s);
+      expect(lengthOfTop(s)).toBe(7_023_100 + IN);
+      expect(s.getState().history?.entries.at(-1)?.label).toBe('Lengthened Top by 1"');
+    });
+
+    it("does not add up: the same sight line twice previews the same length", () => {
+      const s = started();
+      pushPullTool.pointer?.(seen("down", 0, endOf(top())), s);
+      pushPullTool.pointer?.(seen("move", 1), s);
+      const once = s.getState().previewed;
+      pushPullTool.pointer?.(seen("move", 1), s);
+      expect(s.getState().previewed).toBe(once);
+    });
+
+    it("shortens when the sight line travels back the other way", () => {
+      const s = started();
+      pushPullTool.pointer?.(seen("down", 0, endOf(top())), s);
+      pushPullTool.pointer?.(seen("move", -1), s);
+      pushPullTool.pointer?.(seen("up", -1), s);
+      expect(lengthOfTop(s)).toBe(7_023_100 - IN);
+    });
   });
 
   it("drops the preview when the drag is released off the model", () => {

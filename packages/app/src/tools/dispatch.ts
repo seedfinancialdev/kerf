@@ -7,6 +7,7 @@
 
 import { gridSize, type PlacedPart, type Vec3 } from "@kerf/core";
 import type { ThreeEvent } from "@react-three/fiber";
+import type { Ray } from "../model/pending";
 import { type KerfStore, shownProject } from "../model/store";
 import { fromScene } from "../viewport/frames";
 import { handlerFor, type ModelHit } from "./pointer";
@@ -39,8 +40,23 @@ export function dispatchPointer(
       normal: axisOf(n.x, n.y, n.z),
     };
   }
+  const ray =
+    "ray" in e ? { origin: e.ray.origin.toArray(), dir: e.ray.direction.toArray() } : null;
   handlerFor(s.tool).pointer?.(
-    { kind, hit, shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey },
+    { kind, hit, ray: ray as Ray | null, shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey },
     store,
   );
+}
+
+/**
+ * Sends a pointer event of a drag that has begun to the active tool: wherever the pointer is, even
+ * off every board, with only its line of sight to measure by.
+ */
+export function dispatchDrag(
+  store: KerfStore,
+  kind: "move" | "up",
+  ray: Ray,
+  keys: { shift: boolean; ctrl: boolean },
+): void {
+  handlerFor(store.getState().tool).pointer?.({ kind, hit: null, ray, ...keys }, store);
 }

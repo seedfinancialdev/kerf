@@ -7,6 +7,7 @@
 
 import {
   formatLength,
+  gridSize,
   type Len,
   type PlacedPart,
   type Project,
@@ -15,9 +16,11 @@ import {
   type Vec3,
 } from "@kerf/core";
 import { detachForEdit, type Edit, type EditResult, instanceOf } from "../model/commands";
+import type { Pending } from "../model/pending";
 import { literalFor, readLength } from "../model/size";
 import type { KerfStore } from "../model/store";
-import { recordedProject, type ToolHandler } from "./handler";
+import { travelOnAxis } from "./drag";
+import { type ModelPointer, recordedProject, type ToolHandler } from "./handler";
 
 export type BoardFace = "end0" | "end1" | "edge0" | "edge1";
 
@@ -35,6 +38,7 @@ export function faceOf(placed: PlacedPart, normal: Vec3): BoardFace | "thickness
 }
 
 const NO_DISTANCE = "A distance of zero changes nothing.";
+type PushPullPending = Extract<Pending, { tool: "pushPull" }>;
 const THICKNESS_LOCKED = "A board's thickness is set by its stock. Pick an end or an edge.";
 
 /**
@@ -109,6 +113,21 @@ export function travelAlong(from: Vec3, to: Vec3, normal: Vec3): Len {
 }
 
 /**
+ * How far the pointer has dragged the face outward, measured along the face's own line from where
+ * the drag began, so the board that is moving never feeds back into the measure. Without a line of
+ * sight the point under the pointer is used. Null when there is nothing to measure by.
+ */
+function dragTravel(e: ModelPointer, pending: PushPullPending, project: Project): Len | null {
+  const { point, normal } = pending.hit;
+  if (e.ray && pending.ray) {
+    const axis = normal.findIndex((n) => n !== 0) as 0 | 1 | 2;
+    const along = travelOnAxis(e.ray, pending.ray, point, axis, gridSize(project.units));
+    return along * (normal[axis] ?? 1);
+  }
+  return e.hit ? travelAlong(point, e.hit.point, normal) : null;
+}
+
+/**
  * Applies one Push/Pull, with the take-over notice when the form made the board. A board taken out
  * of a row gets a new instance, so a pick of it follows (the store prunes picks only when History
  * moves).
@@ -143,13 +162,13 @@ export const pushPullTool: ToolHandler = {
         s.say(THICKNESS_LOCKED);
         return;
       }
-      s.setPending({ tool: "pushPull", hit: e.hit, dragged: null });
+      s.setPending({ tool: "pushPull", hit: e.hit, dragged: null, ray: e.ray });
       return;
     }
     if (s.pending?.tool !== "pushPull") return;
     const pending = s.pending;
-    const { placed, normal, point } = pending.hit;
-    const distance = e.hit ? travelAlong(point, e.hit.point, normal) : null;
+    const { placed, normal } = pending.hit;
+    const distance = dragTravel(e, pending, project);
     const r =
       distance === null || distance === 0
         ? null

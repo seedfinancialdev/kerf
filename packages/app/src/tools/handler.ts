@@ -6,12 +6,17 @@
 // tool can name these types without importing the table that imports it.
 
 import type { Project } from "@kerf/core";
-import type { ModelHit } from "../model/pending";
+import type { ModelHit, Ray } from "../model/pending";
 import type { KerfState, KerfStore } from "../model/store";
 
 export interface ModelPointer {
   kind: "down" | "move" | "up";
   hit: ModelHit | null;
+  /**
+   * The pointer's line of sight, set during a drag even when the pointer is off every board.
+   * Drags are measured with it against a fixed line or plane, never against the moving board.
+   */
+  ray: Ray | null;
   shift: boolean;
   ctrl: boolean;
 }

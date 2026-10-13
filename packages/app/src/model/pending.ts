@@ -15,15 +15,23 @@ export interface ModelHit {
   normal: Vec3;
 }
 
+/** The line of sight under the pointer, in scene inches (display only): where it starts and which way it goes. */
+export interface Ray {
+  origin: readonly [number, number, number];
+  dir: readonly [number, number, number];
+}
+
 /** A tool's half-finished action, waiting for its next click or typed size. */
 export type Pending =
   | { tool: "join"; first: Id }
   | { tool: "tape"; from: Vec3 }
   | { tool: "board"; from: ModelHit }
-  | { tool: "pushPull"; hit: ModelHit; dragged: string | null }
+  | { tool: "pushPull"; hit: ModelHit; dragged: string | null; ray: Ray | null }
   | {
       tool: "move";
       from: Vec3;
+      /** The line of sight where the drag began; every later position is measured against it. */
+      ray: Ray | null;
       placed: PlacedPart[];
       /** The direction locked with an arrow key (x, y, z), or null to follow the largest. */
       axis: 0 | 1 | 2 | null;

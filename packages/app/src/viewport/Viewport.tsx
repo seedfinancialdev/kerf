@@ -16,6 +16,7 @@ import { useKerf, useKerfStore } from "../ui/useKerf";
 import { geometryOf } from "./board-geometry";
 import { type BoardLook, boardLooks } from "./board-looks";
 import { cameraPosition, FOV_DEGREES, fitView, orbit, pan, type View, zoom } from "./camera";
+import { followDrag } from "./follow-drag";
 import { matrixOf, toScene } from "./frames";
 import { meshFor } from "./meshes";
 import { usePalette } from "./palette";
@@ -40,19 +41,21 @@ function Board({ look, ready, color, selected, glow }: BoardProps) {
   const geometry = useMemo(() => geometryOf(built, placed.size), [built, length, width, thickness]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   const matrix = useMemo(() => new Matrix4().fromArray(matrixOf(placed.frame)), [placed.frame]);
-  const send = (kind: "down" | "move" | "up") => (e: ThreeEvent<PointerEvent>) => {
-    if (kind === "down" && e.button !== 0) return;
+  const down = (e: ThreeEvent<PointerEvent>): void => {
+    if (e.button !== 0) return;
     e.stopPropagation();
-    dispatchPointer(store, kind, e, placed);
+    dispatchPointer(store, "down", e, placed);
+    // A tool that began something to drag hears the rest of the drag wherever the pointer goes.
+    if (store.getState().pending !== null && e.nativeEvent.target instanceof HTMLElement) {
+      followDrag(store, e.nativeEvent, e.nativeEvent.target, e.camera);
+    }
   };
   return (
     <mesh
       geometry={geometry}
       matrix={matrix}
       matrixAutoUpdate={false}
-      onPointerDown={send("down")}
-      onPointerMove={send("move")}
-      onPointerUp={send("up")}
+      onPointerDown={down}
       onPointerOver={() => store.getState().hover(placed.instance)}
       onPointerOut={() => store.getState().hover(null)}
     >

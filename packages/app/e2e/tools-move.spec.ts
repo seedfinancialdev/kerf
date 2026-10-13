@@ -14,6 +14,8 @@ test("moves the top by a typed distance and undoes it", async ({ page }) => {
   await page.getByRole("button", { name: "Shape" }).click();
   await page.getByTestId("part-group-tops").click();
   await page.keyboard.press("m");
+  // The tree row still has the keyboard, and the arrows belong to it; hand it back to the window.
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await page.keyboard.press("ArrowUp");
   await page.getByLabel("Measurements").fill('2"');
   await page.getByLabel("Measurements").press("Enter");

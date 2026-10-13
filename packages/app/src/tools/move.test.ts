@@ -10,6 +10,7 @@ import { type PlacedPart, type Project, solve, type Vec3 } from "@kerf/core";
 import { loadShopProfile } from "@kerf/fixtures";
 import { describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
+import type { Pending } from "../model/pending";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { memoryStorage } from "../testing/memory-storage";
@@ -186,7 +187,13 @@ describe("the Move tool", () => {
     kind: ModelPointer["kind"],
     h: ModelHit | null,
     keys: { ctrl?: boolean; shift?: boolean } = {},
-  ): ModelPointer => ({ kind, hit: h, shift: keys.shift ?? false, ctrl: keys.ctrl ?? false });
+  ): ModelPointer => ({
+    kind,
+    hit: h,
+    ray: null,
+    shift: keys.shift ?? false,
+    ctrl: keys.ctrl ?? false,
+  });
   const topOf = (s: Store) => {
     const found = s.getState().solved?.result.placements.find((p) => p.partName === "Top");
     if (!found) throw new Error("no top");
@@ -195,8 +202,16 @@ describe("the Move tool", () => {
   const entries = (s: Store) => s.getState().history?.entries.length;
   const pick = (s: Store, ...placed: PlacedPart[]) =>
     s.getState().select({ kind: "boards", instances: placed.map((p) => p.instance) });
-  const lock = (s: Store, axis: 0 | 1 | 2) =>
-    s.getState().setPending({ tool: "move", from: [0, 0, 0], placed: [], axis, last: null });
+  const lock = (s: Store, axis: 0 | 1 | 2, was: Pending | null = null) =>
+    s.getState().setPending({
+      tool: "move",
+      from: [0, 0, 0],
+      placed: [],
+      last: null,
+      ray: null,
+      ...(was?.tool === "move" ? was : {}),
+      axis,
+    });
   const drag = (s: Store, placed: PlacedPart, to: Vec3, keys = {}) => {
     moveTool.pointer?.(event("down", hit(placed, [0, 0, 0])), s);
     moveTool.pointer?.(event("move", hit(placed, to), keys), s);
@@ -286,6 +301,65 @@ describe("the Move tool", () => {
     expect(now?.[0]?.box.min[2]).toBe(shelf.box.min[2] + IN);
   });
 
+  describe("by the pointer's line of sight", () => {
+    // Scene is y up, so a sight line straight down the scene's z at scene height h meets the
+    // up line through the origin at h inches: project (x, y, z) is scene (x, z, -y).
+    const sight = (height: number) => ({ origin: [0, height, 50], dir: [0, 0, -1] }) as const;
+    const seen = (kind: ModelPointer["kind"], height: number, h: ModelHit | null = null) =>
+      ({ kind, hit: h, ray: sight(height), shift: false, ctrl: false }) satisfies ModelPointer;
+
+    it("lifts the top exactly 2 inches when the sight line rises 2 inches on the up lock", () => {
+      const s = started();
+      const top = topOf(s);
+      lock(s, 2);
+      moveTool.pointer?.({ ...seen("down", 0, hit(top, [0, 0, 0])) }, s);
+      moveTool.pointer?.(seen("move", 2), s);
+      moveTool.pointer?.(seen("up", 2), s);
+      expect(topOf(s).box.min[2]).toBe(top.box.min[2] + 2 * IN);
+      expect(s.getState().history?.entries.at(-1)?.label).toBe('Moved Top 2"');
+    });
+
+    it("does not add up: the same sight line twice gives the same preview and the same lift", () => {
+      const s = started();
+      const top = topOf(s);
+      lock(s, 2);
+      moveTool.pointer?.(seen("down", 0, hit(top, [0, 0, 0])), s);
+      moveTool.pointer?.(seen("move", 2), s);
+      const once = s.getState().previewed;
+      moveTool.pointer?.(seen("move", 2), s);
+      expect(s.getState().previewed).toBe(once);
+      moveTool.pointer?.(seen("up", 2), s);
+      expect(topOf(s).box.min[2]).toBe(top.box.min[2] + 2 * IN);
+    });
+
+    it("records a release that is off every board, because the sight line is all it needs", () => {
+      const s = started();
+      const top = topOf(s);
+      const before = entries(s);
+      moveTool.pointer?.(seen("down", 0, hit(top, [0, 0, 0])), s);
+      moveTool.pointer?.(seen("up", 3), s);
+      expect(entries(s)).toBe((before ?? 0) + 1);
+      expect(s.getState().history?.entries.at(-1)?.label).toBe('Moved Top 3"');
+    });
+
+    it("measures on the plane facing the viewer when no direction is locked", () => {
+      const s = started();
+      const top = topOf(s);
+      moveTool.pointer?.(seen("down", 0, hit(top, [0, 0, 0])), s);
+      moveTool.pointer?.(seen("up", 2), s);
+      expect(topOf(s).box.min[2]).toBe(top.box.min[2] + 2 * IN);
+    });
+
+    it("lets a lock set mid-drag take over from where the drag began", () => {
+      const s = started();
+      const top = topOf(s);
+      moveTool.pointer?.(seen("down", 0, hit(top, [0, 0, 0])), s);
+      lock(s, 2, s.getState().pending);
+      moveTool.pointer?.(seen("up", 1), s);
+      expect(topOf(s).box.min[2]).toBe(top.box.min[2] + IN);
+    });
+  });
+
   it("records nothing and shows no preview when a drag returns to where it started", () => {
     const s = started();
     const top = topOf(s);
@@ -358,6 +432,14 @@ describe("the Move tool", () => {
     const s = started();
     expect(moveTool.prompt?.(s.getState())).toBe("Select boards first");
     pick(s, topOf(s));
-    expect(moveTool.prompt?.(s.getState())).toBe('Distance, e.g. 2"');
+    expect(moveTool.prompt?.(s.getState())).toBe(
+      "Distance (left to right unless you press an arrow key)",
+    );
+    lock(s, 2);
+    expect(moveTool.prompt?.(s.getState())).toBe('Distance up, e.g. 2"');
+    lock(s, 0);
+    expect(moveTool.prompt?.(s.getState())).toBe('Distance left to right, e.g. 2"');
+    lock(s, 1);
+    expect(moveTool.prompt?.(s.getState())).toBe('Distance back to front, e.g. 2"');
   });
 });

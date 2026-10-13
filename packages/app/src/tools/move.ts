@@ -9,6 +9,7 @@
 
 import {
   formatLength,
+  gridSize,
   type Id,
   type Instance,
   type PlacedPart,
@@ -18,9 +19,11 @@ import {
 } from "@kerf/core";
 import { detachForEdit, type Edit, instanceOf } from "../model/commands";
 import { newId } from "../model/ids";
+import type { Pending } from "../model/pending";
 import { literalFor, readLength } from "../model/size";
 import type { KerfState, KerfStore } from "../model/store";
-import { recordedProject, type ToolHandler } from "./handler";
+import { pointOnAxis, pointOnPlane, viewAxis } from "./drag";
+import { type ModelPointer, recordedProject, type ToolHandler } from "./handler";
 
 export type MoveMode = "move" | "copy" | "mirror";
 
@@ -29,6 +32,8 @@ export type MoveResult = { ok: true; edit: Edit; picked: Id[] } | { ok: false; m
 
 type Axis = 0 | 1 | 2;
 const AXES = ["x", "y", "z"] as const;
+/** What each locked axis is called at the bench. */
+const DIRECTION = ["left to right", "back to front", "up"] as const;
 const NO_DISTANCE = "A distance of zero changes nothing.";
 const NO_BOARDS = "Select the boards to move first.";
 
@@ -150,6 +155,34 @@ export function moveBoards(
   };
 }
 
+type MovePending = Extract<Pending, { tool: "move" }>;
+
+/**
+ * How far the pointer has dragged, measured against what was fixed when the drag began: the locked
+ * line, or else the plane facing the viewer. Without a line of sight (a test, a plain pointer) the
+ * point under the pointer is used. Null when there is nothing to measure by.
+ */
+function dragDelta(e: ModelPointer, pending: MovePending, project: Project): Vec3 | null {
+  const { from, ray: began, axis } = pending;
+  if (e.ray && began) {
+    const grid = gridSize(project.units);
+    if (axis !== null) {
+      return lockedDelta(
+        pointOnAxis(began, from, axis, grid),
+        pointOnAxis(e.ray, from, axis, grid),
+        axis,
+      );
+    }
+    const facing = viewAxis(began);
+    return lockedDelta(
+      pointOnPlane(began, from, facing, grid),
+      pointOnPlane(e.ray, from, facing, grid),
+      null,
+    );
+  }
+  return e.hit ? lockedDelta(from, e.hit.point, axis) : null;
+}
+
 /** The placed boards the user has picked, as the engine last placed them. */
 function selectedBoards(state: KerfState): PlacedPart[] {
   const { selection, solved } = state;
@@ -202,6 +235,7 @@ export const moveTool: ToolHandler = {
       s.setPending({
         tool: "move",
         from: e.hit.point,
+        ray: e.ray,
         placed: dragged,
         axis: pending?.axis ?? null,
         last: null,
@@ -209,13 +243,15 @@ export const moveTool: ToolHandler = {
       return;
     }
     if (!pending || pending.placed.length === 0) return;
-    if (!e.hit) {
-      s.cancelPreview();
-      s.setPending(null);
+    const delta = dragDelta(e, pending, project);
+    if (!delta) {
+      if (e.kind === "up") {
+        s.cancelPreview();
+        s.setPending(null);
+      }
       return;
     }
     const mode = modeOf(e);
-    const delta = lockedDelta(pending.from, e.hit.point, pending.axis);
     const r = moveBoards(project, pending.placed, delta, mode, s.shop);
     if (e.kind === "move") {
       const key = previewKey(delta, mode);
@@ -237,7 +273,13 @@ export const moveTool: ToolHandler = {
       s.setPending(null);
     } else if (pending.last !== null) s.setPending(null);
   },
-  prompt: (s) => (selectedBoards(s).length === 0 ? "Select boards first" : 'Distance, e.g. 2"'),
+  prompt(s) {
+    if (selectedBoards(s).length === 0) return "Select boards first";
+    const axis = s.pending?.tool === "move" ? s.pending.axis : null;
+    return axis === null
+      ? "Distance (left to right unless you press an arrow key)"
+      : `Distance ${DIRECTION[axis]}, e.g. 2"`;
+  },
   measure(text, store) {
     const s = store.getState();
     const project = recordedProject(store);

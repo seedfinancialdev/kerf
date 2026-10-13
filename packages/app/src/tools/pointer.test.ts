@@ -18,7 +18,7 @@ const hitOn = (instance: string): ModelHit => ({
 });
 const store = () => createKerfStore({ storage: createStorage(memoryStorage()) });
 const click = (s: ReturnType<typeof store>, hit: ModelHit | null, shift = false) =>
-  handlerFor("select").pointer?.({ kind: "down", hit, shift, ctrl: false }, s);
+  handlerFor("select").pointer?.({ kind: "down", hit, ray: null, shift, ctrl: false }, s);
 
 describe("the Select tool", () => {
   it("picks the board clicked, replacing the pick", () => {

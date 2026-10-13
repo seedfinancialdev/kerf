@@ -141,9 +141,14 @@ describe("the arrow keys while moving", () => {
     const store = setup();
     fireEvent.keyDown(window, { key: "m" });
     act(() =>
-      store
-        .getState()
-        .setPending({ tool: "move", from: [1, 2, 3], placed: [], axis: null, last: "a" }),
+      store.getState().setPending({
+        tool: "move",
+        from: [1, 2, 3],
+        placed: [],
+        axis: null,
+        last: "a",
+        ray: null,
+      }),
     );
     fireEvent.keyDown(window, { key: "ArrowUp" });
     expect(store.getState().pending).toEqual({
@@ -152,7 +157,29 @@ describe("the arrow keys while moving", () => {
       placed: [],
       axis: 2,
       last: "a",
+      ray: null,
     });
+  });
+
+  it("let go of the lock when the same arrow is pressed again", () => {
+    const store = setup();
+    fireEvent.keyDown(window, { key: "m" });
+    fireEvent.keyDown(window, { key: "ArrowUp" });
+    fireEvent.keyDown(window, { key: "ArrowUp" });
+    expect(store.getState().pending).toMatchObject({ tool: "move", axis: null });
+  });
+
+  it("are left to the tree, a list, a tab or a button when one has the keyboard", () => {
+    const store = setup();
+    fireEvent.keyDown(window, { key: "m" });
+    for (const role of ["treeitem", "option", "tab", "button", "toolbar"]) {
+      const widget = document.createElement("div");
+      widget.setAttribute("role", role);
+      document.body.append(widget);
+      fireEvent.keyDown(widget, { key: "ArrowUp" });
+      widget.remove();
+    }
+    expect(store.getState().pending).toBeNull();
   });
 
   it("do nothing in other tools, and are left to a field being typed in", () => {
