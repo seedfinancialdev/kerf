@@ -4,6 +4,7 @@
 
 // The right panel (Interaction spec, "Inspector"): what the current step offers.
 
+import { ShapeStep } from "./ShapeStep";
 import { StartStep } from "./StartStep";
 import { useKerf } from "./useKerf";
 
@@ -12,6 +13,8 @@ export function Inspector() {
   switch (step) {
     case "Start":
       return <StartStep />;
+    case "Shape":
+      return <ShapeStep />;
     default:
       return null;
   }
