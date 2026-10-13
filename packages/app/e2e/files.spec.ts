@@ -7,11 +7,9 @@
 
 import { readFile } from "node:fs/promises";
 
-import { isMilestoneActive } from "@kerf/fixtures";
 import { expect, test } from "@playwright/test";
 
 test("saves the bookcase and opens it again", async ({ page }) => {
-  test.fail(!isMilestoneActive("M4"), "M4: the app is not built yet");
   await page.goto("/");
   await page.getByRole("button", { name: "New" }).click();
   await page.getByRole("button", { name: "Bookcase" }).click();
@@ -31,7 +29,6 @@ test("saves the bookcase and opens it again", async ({ page }) => {
 });
 
 test("refuses a damaged file and keeps the project", async ({ page }) => {
-  test.fail(!isMilestoneActive("M4"), "M4: the app is not built yet");
   await page.goto("/");
   await page.getByRole("button", { name: "New" }).click();
   await page.getByRole("button", { name: "Bookcase" }).click();
