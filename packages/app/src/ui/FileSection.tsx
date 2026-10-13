@@ -5,20 +5,24 @@
 // Save and Open (design spec, "Saving"). Opening is one History entry, so it can be undone.
 
 import { useRef } from "react";
-import { fileNameFor, openKerfBytes, saveKerfBytes } from "../model/files";
+import { fileNameFor, openKerfBytes, saveFailureReason, saveKerfBytes } from "../model/files";
 import { shownProject } from "../model/store";
 import { useKerf, useKerfStore } from "./useKerf";
 
+/** Hands the browser `bytes` as a download; the link is attached while clicked, as Firefox needs. */
 function download(bytes: Uint8Array, name: string): void {
   const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/zip" }));
   const a = document.createElement("a");
   a.href = url;
   a.download = name;
+  document.body.append(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-export function FileSection() {
+/** Save and Open. `now` is the clock for the file's modified time (default: the real one). */
+export function FileSection({ now = () => new Date() }: { now?: () => Date }) {
   const store = useKerfStore();
   const hasProject = useKerf((s) => s.history !== null);
   const input = useRef<HTMLInputElement>(null);
@@ -27,18 +31,29 @@ export function FileSection() {
     const s = store.getState();
     const project = shownProject(s);
     if (!project) return;
-    const now = new Date().toISOString();
-    const thumbnail = s.thumbnail ? await s.thumbnail() : undefined;
-    download(
-      saveKerfBytes(project, { created: s.created ?? now, modified: now }, thumbnail),
-      fileNameFor(project),
-    );
+    const stamp = now().toISOString();
+    // A view that cannot draw its picture must not stop the save: the file just has no thumbnail.
+    const thumbnail = await Promise.resolve()
+      .then(() => s.thumbnail?.())
+      .catch(() => undefined);
+    try {
+      download(
+        saveKerfBytes(project, { created: s.created ?? stamp, modified: stamp }, thumbnail),
+        fileNameFor(project),
+      );
+    } catch (error) {
+      s.say(`The file could not be saved: ${saveFailureReason(error)}`);
+    }
   };
 
   const open = async (file: File): Promise<void> => {
-    const r = openKerfBytes(new Uint8Array(await file.arrayBuffer()));
-    if (r.ok) store.getState().begin({ label: `Opened ${file.name}`, project: r.project });
-    else store.getState().say(r.message);
+    try {
+      const r = openKerfBytes(new Uint8Array(await file.arrayBuffer()));
+      if (r.ok) store.getState().begin({ label: `Opened ${file.name}`, project: r.project });
+      else store.getState().say(r.message);
+    } catch {
+      store.getState().say("This file could not be read.");
+    }
   };
 
   return (

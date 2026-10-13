@@ -24,18 +24,42 @@ export function saveKerfBytes(
   );
 }
 
-/** Reads a .kerf file. A damaged or newer file gives a plain message instead of a project. */
+/**
+ * Reads a .kerf file. A damaged or newer file gives a plain message instead of a project. The
+ * engine's messages carry file paths ("$.name: ...") that mean nothing in the shop, so only the
+ * newer-version one, which is already plain and tells the user what to do, is passed on. @kerf/io
+ * has no typed error for it, so it is recognised by its wording.
+ */
 export function openKerfBytes(
   bytes: Uint8Array,
 ): { ok: true; project: Project } | { ok: false; message: string } {
   try {
     return { ok: true, project: readKerf(bytes).project };
   } catch (error) {
-    if (error instanceof KerfFormatError || error instanceof ProjectFormatError) {
+    if (error instanceof KerfFormatError && /newer version of Kerf/.test(error.message)) {
       return { ok: false, message: `This file could not be opened: ${error.message}` };
+    }
+    if (error instanceof KerfFormatError) {
+      return {
+        ok: false,
+        message: "This file could not be opened: it is not a Kerf file, or it is damaged.",
+      };
+    }
+    if (error instanceof ProjectFormatError) {
+      return {
+        ok: false,
+        message: "This file could not be opened: its contents are damaged or do not make sense.",
+      };
     }
     throw error;
   }
+}
+
+/** A plain reason a save failed, for "The file could not be saved: <reason>." */
+export function saveFailureReason(error: unknown): string {
+  if (error instanceof KerfFormatError) return "the picture of the model was not usable.";
+  if (error instanceof ProjectFormatError) return "the project's contents do not make sense.";
+  return "something went wrong while writing it.";
 }
 
 /** A file name from the project name, with characters file systems reject replaced. */
