@@ -26,14 +26,14 @@ export interface Scrub {
   onScrub(value: Len): void;
   /** Called once when the pointer is released after a drag that changed the value. */
   onScrubEnd(): void;
+  /** Called when the browser takes the pointer away mid-drag; the drag's changes are dropped. */
+  onScrubCancel(): void;
 }
 
 interface Props {
   label: string;
   /** The value as shown when not editing ("36\""). */
   display: string;
-  /** What the field holds (an expression); typing replaces it. */
-  expr: string;
   /** Takes typed text; returns the reason it was refused, or null. */
   onSubmit(text: string): string | null;
   scrub?: Scrub;
@@ -53,7 +53,9 @@ export function NumberField({ label, display, onSubmit, scrub }: Props) {
 
   const submit = (): void => {
     if (text === display) return;
-    setProblem(onSubmit(text));
+    const refusal = onSubmit(text);
+    setProblem(refusal);
+    if (refusal === null) setText(display);
   };
 
   const onPointerDown = (e: PointerEvent<HTMLLabelElement>): void => {
@@ -76,6 +78,11 @@ export function NumberField({ label, display, onSubmit, scrub }: Props) {
     drag.current = null;
     if (scrub && d?.moved) scrub.onScrubEnd();
   };
+  const onPointerCancel = (): void => {
+    const d = drag.current;
+    drag.current = null;
+    if (scrub && d?.moved) scrub.onScrubCancel();
+  };
 
   const messageId = `${id}-problem`;
   return (
@@ -86,6 +93,8 @@ export function NumberField({ label, display, onSubmit, scrub }: Props) {
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
+        onLostPointerCapture={onPointerCancel}
       >
         {label}
       </label>

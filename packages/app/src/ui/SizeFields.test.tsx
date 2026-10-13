@@ -59,4 +59,38 @@ describe("<SizeFields>", () => {
     ]);
     expect(shelfCut(store)).toBe(6_489_700);
   });
+
+  it("records nothing for a typed size equal to the current one, and shows the size again", () => {
+    const store = setup();
+    const width = screen.getByLabelText("Width") as HTMLInputElement;
+    fireEvent.change(width, { target: { value: '36.0"' } });
+    fireEvent.blur(width);
+    fireEvent.blur(width);
+    expect(store.getState().history?.entries).toHaveLength(1);
+    expect(width.value).toBe('36"');
+  });
+
+  it("records nothing and leaves no preview when a drag ends where it started", () => {
+    const store = setup();
+    const label = screen.getByText("Width");
+    fireEvent.pointerDown(label, { clientX: 0, pointerId: 1, button: 0 });
+    fireEvent.pointerMove(label, { clientX: -40, pointerId: 1 });
+    fireEvent.pointerMove(label, { clientX: 0, pointerId: 1 });
+    fireEvent.pointerMove(label, { clientX: 1, pointerId: 1 });
+    fireEvent.pointerUp(label, { clientX: 1, pointerId: 1 });
+    expect(store.getState().history?.entries).toHaveLength(1);
+    expect(store.getState().previewed).toBeNull();
+  });
+
+  it("drops the preview when the pointer is cancelled mid-drag", () => {
+    const store = setup();
+    const label = screen.getByText("Width");
+    fireEvent.pointerDown(label, { clientX: 0, pointerId: 1, button: 0 });
+    fireEvent.pointerMove(label, { clientX: -40, pointerId: 1 });
+    expect(store.getState().previewed).not.toBeNull();
+    fireEvent.pointerCancel(label, { pointerId: 1 });
+    expect(store.getState().previewed).toBeNull();
+    expect(store.getState().history?.entries).toHaveLength(1);
+    expect((screen.getByLabelText("Width") as HTMLInputElement).value).toBe('36"');
+  });
 });

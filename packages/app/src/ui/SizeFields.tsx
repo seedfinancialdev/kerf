@@ -5,7 +5,7 @@
 // A structure's overall size (Interaction spec, "Overall size first"), shown in Start and in Shape.
 // Typing records one change; dragging previews every step and records one change on release.
 
-import { formatLength, type Id, type Len } from "@kerf/core";
+import { formatLength, type Id, type Len, type Project } from "@kerf/core";
 import { useRef } from "react";
 import { type Edit, setSize } from "../model/commands";
 import { type SizeKey, sizeLabel, sizeOrder } from "../model/labels";
@@ -30,7 +30,7 @@ export function SizeFields({ structure }: { structure: Id }) {
 
 function SizeField({ structure, sizeKey }: { structure: Id; sizeKey: SizeKey }) {
   const store = useKerfStore();
-  const project = useKerf((s) => s.history && shownProject(s));
+  const project = useKerf((s) => (s.history ? shownProject(s) : null));
   const lastDrag = useRef<Edit | null>(null);
   const s = project?.structures.find((x) => x.id === structure);
   if (!project || !s) return null;
@@ -41,14 +41,19 @@ function SizeField({ structure, sizeKey }: { structure: Id; sizeKey: SizeKey }) 
     const h = store.getState().history;
     return h?.entries[h.at]?.project ?? project;
   };
+  const sizeIn = (p: Project): Len | undefined => {
+    const expression = p.structures.find((x) => x.id === structure)?.size[sizeKey];
+    return expression === undefined ? undefined : lengthOf(expression, p);
+  };
   return (
     <NumberField
       label={sizeLabel(s.type, sizeKey)}
-      expr={expr}
       display={value === undefined ? expr : formatLength(value, project.units)}
       onSubmit={(text) => {
         const r = setSize(recorded(), structure, sizeKey, text);
         if (!r.ok) return r.message;
+        // A size equal to the current one is not a change (ADR 015, rule 2 / R16).
+        if (sizeIn(r.edit.project) === sizeIn(recorded())) return null;
         store.getState().apply(r.edit);
         return null;
       }}
@@ -65,8 +70,17 @@ function SizeField({ structure, sizeKey }: { structure: Id; sizeKey: SizeKey }) 
                 store.getState().preview(r.edit.project);
               },
               onScrubEnd: () => {
-                if (lastDrag.current) store.getState().commit(lastDrag.current.label);
+                const last = lastDrag.current;
                 lastDrag.current = null;
+                if (last && sizeIn(last.project) !== sizeIn(recorded())) {
+                  store.getState().commit(last.label);
+                } else {
+                  store.getState().cancelPreview();
+                }
+              },
+              onScrubCancel: () => {
+                lastDrag.current = null;
+                store.getState().cancelPreview();
               },
             }
       }
