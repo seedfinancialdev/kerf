@@ -8,6 +8,7 @@
 import { formatLength, type Id, type PartShape, type PlacedPart, type Project } from "@kerf/core";
 import { handBack } from "../model/commands";
 import { shownProject } from "../model/store";
+import { EdgePanel } from "../tools/EdgePanel";
 import { meshFor } from "../viewport/meshes";
 import { useGeometry } from "../viewport/useGeometry";
 import { Problems } from "./Problems";
@@ -49,6 +50,7 @@ export function BoardInspector({ instances }: { instances: Id[] }) {
   const project = useKerf((s) => shownProject(s));
   const result = useKerf((s) => s.solved?.result);
   const shop = useKerf((s) => s.shop);
+  const tool = useKerf((s) => s.tool);
   const { ready } = useGeometry();
   if (!project || !result) return null;
   const placed = result.placements.filter((p) => instances.includes(p.instance));
@@ -71,6 +73,7 @@ export function BoardInspector({ instances }: { instances: Id[] }) {
   return (
     <div className="step-panel">
       <h2 className="board-title">{title}</h2>
+      {tool === "edge" && <EdgePanel placed={placed} />}
       <Section title="Board">
         {sameBoard ? (
           <dl className="facts">
