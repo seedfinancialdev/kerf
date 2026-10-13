@@ -15,7 +15,16 @@ import { dispatchPointer } from "../tools/dispatch";
 import { useKerf, useKerfStore } from "../ui/useKerf";
 import { geometryOf } from "./board-geometry";
 import { type BoardLook, boardLooks } from "./board-looks";
-import { cameraPosition, FOV_DEGREES, fitView, orbit, pan, type View, zoom } from "./camera";
+import {
+  cameraPosition,
+  FOV_DEGREES,
+  fitView,
+  isFramed,
+  orbit,
+  pan,
+  type View,
+  zoom,
+} from "./camera";
 import { followDrag } from "./follow-drag";
 import { matrixOf, toScene } from "./frames";
 import { meshFor } from "./meshes";
@@ -183,8 +192,8 @@ function FirstPicture({ drawn }: { drawn(): void }) {
 }
 
 interface ModelCanvasProps {
-  /** True once the view has been fitted to the boards, so the next frame shows them. */
-  fitted: boolean;
+  /** True once the next frame shows the model framed (see `isFramed`). */
+  framed: boolean;
   /** A click that hit no board. */
   missed(e: MouseEvent): void;
   children: ReactNode;
@@ -194,10 +203,10 @@ interface ModelCanvasProps {
  * The canvas, and "Drawing the model…" over it until its first picture of the fitted view is up.
  * The canvas is on the page a few frames before the 3D view starts listening and draws, and until
  * then a click lands on nothing; the line tells the user (and a browser test) to wait. The wait
- * starts once the view is fitted, in the same commit that moves the camera, so the frame it waits
- * for is taken from the fitted view.
+ * starts once the model is framed, in the same commit that moves the camera, so the frame it waits
+ * for is taken from the fitted view; with no boards there is nothing to fit, so the first frame does.
  */
-function ModelCanvas({ fitted, missed, children }: ModelCanvasProps) {
+function ModelCanvas({ framed, missed, children }: ModelCanvasProps) {
   const [drawn, setDrawn] = useState(false);
   const markDrawn = useCallback(() => setDrawn(true), []);
   return (
@@ -208,8 +217,9 @@ function ModelCanvas({ fitted, missed, children }: ModelCanvasProps) {
         onPointerMissed={missed}
       >
         {children}
-        {fitted && !drawn && <FirstPicture drawn={markDrawn} />}
+        {framed && !drawn && <FirstPicture drawn={markDrawn} />}
       </Canvas>
+      {/* No live region: Notice owns role="status", and announcing a line that lasts a few frames helps no one. */}
       {!drawn && <p className="model-drawing">Drawing the model…</p>}
     </div>
   );
@@ -272,7 +282,7 @@ export function Viewport() {
 
   return (
     <ModelCanvas
-      fitted={view !== null}
+      framed={isFramed(view, placements.length)}
       missed={(e) => {
         if (e.button !== 2) dispatchPointer(store, "down", e, null);
       }}

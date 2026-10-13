@@ -6,7 +6,7 @@
 // floats, so they are compared to a hand calculation within 0.1.
 
 import { describe, expect, it } from "vitest";
-import { cameraPosition, fitView, orbit, pan, zoom } from "./camera";
+import { cameraPosition, fitView, isFramed, orbit, pan, zoom } from "./camera";
 
 describe("fitView()", () => {
   it("frames the 36 × 72 × 12 bookcase from its centre", () => {
@@ -43,5 +43,21 @@ describe("pan()", () => {
   it("moves the target toward the viewer's left when the pointer drags right", () => {
     const v = { ...fitView([0, 0, 0], [10, 10, 10]), yaw: 0, pitch: 0 };
     expect(pan(v, 100, 0, 500).target[0]).toBeGreaterThan(v.target[0]);
+  });
+});
+
+// The model area says "Drawing the model…" until a framed picture is up (Viewport.tsx); an empty
+// project has nothing to fit, so its first picture is already framed and the line must go.
+describe("isFramed()", () => {
+  it("waits for the fit while there are boards and no view yet", () => {
+    expect(isFramed(null, 11)).toBe(false);
+  });
+
+  it("is framed once the view has been fitted to the boards", () => {
+    expect(isFramed(fitView([0, 0, -12], [36, 72, 0]), 11)).toBe(true);
+  });
+
+  it("is framed straight away when there are no boards to fit", () => {
+    expect(isFramed(null, 0)).toBe(true);
   });
 });

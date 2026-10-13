@@ -37,6 +37,14 @@ export function fitView(min: [number, number, number], max: [number, number, num
   return { target, distance, yaw: DEFAULT_YAW, pitch: DEFAULT_PITCH };
 }
 
+/**
+ * Whether the next frame shows the model framed as it should be: the view has been fitted to the
+ * `boards` (a count), or there are none to fit. Until then the model area says it is drawing.
+ */
+export function isFramed(view: View | null, boards: number): boolean {
+  return view !== null || boards === 0;
+}
+
 /** Where the camera stands for `v`, in scene inches. */
 export function cameraPosition(v: View): [number, number, number] {
   const c = Math.cos(v.pitch);
