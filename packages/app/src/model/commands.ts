@@ -29,6 +29,7 @@ import {
   type Stock,
   type Structure,
   TEMPLATES,
+  type UserOp,
   withoutGenerated,
 } from "@kerf/core";
 import { newId } from "./ids";
@@ -275,6 +276,18 @@ export function setShelfRoundover(project: Project, structure: Id, radius: Len |
 }
 
 /**
+ * The operations without any roundover on `edges`: an edge has one roundover, so a new one
+ * replaces the old, and "None" removes it. An operation left with no edges is dropped.
+ */
+export function withoutRoundoverOn(ops: UserOp[], edges: EdgeRef[]): UserOp[] {
+  return ops.flatMap((op) => {
+    if (op.type !== "roundover") return [op];
+    const kept = op.edges.filter((e) => !edges.includes(e));
+    return kept.length === 0 ? [] : [{ ...op, edges: kept }];
+  });
+}
+
+/**
  * Takes over a board the form made so it can be edited by hand (Interaction spec, "Tweak":
  * "detaches only that board"). A member of a row is taken out of the row on its own.
  * The engine detaches within the generated project (the saved one holds no generated boards), so
@@ -326,7 +339,9 @@ export function addRoundover(
   const op = { id: newId(), type: "roundover" as const, edges, radius: exactLiteral(radius) };
   const next = {
     ...taken.project,
-    parts: taken.project.parts.map((d) => (d.id === partId ? { ...d, ops: [...d.ops, op] } : d)),
+    parts: taken.project.parts.map((d) =>
+      d.id === partId ? { ...d, ops: [...withoutRoundoverOn(d.ops, edges), op] } : d,
+    ),
   };
   return {
     project: next,

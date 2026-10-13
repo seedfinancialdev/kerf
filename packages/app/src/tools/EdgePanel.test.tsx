@@ -4,23 +4,24 @@
 
 // The labels the end-to-end test uses: Radius (options from the shop's bits) and "Both front edges".
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { startProject } from "../model/commands";
+import { setShelves, startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
 import { memoryStorage } from "../testing/memory-storage";
 import { Inspector } from "../ui/Inspector";
 import { KerfProvider } from "../ui/useKerf";
+import { EdgePanel } from "./EdgePanel";
 
-function setup() {
+function setup(boards = "Shelf") {
   const store = createKerfStore({ storage: createStorage(memoryStorage()) });
   store.getState().apply(startProject("Bookcase", "imperial"));
   store.getState().setStep("Joinery");
   const shelves =
     store
       .getState()
-      .solved?.result.placements.filter((p) => p.partName === "Shelf")
+      .solved?.result.placements.filter((p) => p.partName === boards)
       .map((p) => p.instance) ?? [];
   store.getState().select({ kind: "boards", instances: shelves });
   store.getState().setTool("edge");
@@ -44,5 +45,50 @@ describe("<EdgePanel>", () => {
     fireEvent.change(screen.getByLabelText("Radius"), { target: { value: "25400" } });
     fireEvent.click(screen.getByRole("button", { name: "Both front edges" }));
     expect(shownProject(store.getState())?.structures[0]?.options.shelfRoundover).toBe("3.175mm");
+  });
+
+  it("rounds the ticked edges", () => {
+    const store = setup("Top");
+    fireEvent.click(screen.getByLabelText("Back edge, show face"));
+    fireEvent.click(screen.getByRole("button", { name: "Round the ticked edges" }));
+    expect(shownProject(store.getState())?.parts.find((d) => d.name === "Top")?.ops).toMatchObject([
+      { type: "roundover", edges: ["edge0/face1"], radius: "3.175mm" },
+    ]);
+  });
+
+  it("says so, and records nothing, when None is chosen for a board with no roundover", () => {
+    const store = setup("Top");
+    const before = shownProject(store.getState());
+    fireEvent.change(screen.getByLabelText("Radius"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Both front edges" }));
+    expect(store.getState().notice?.text).toBe("There's no roundover on those edges to remove.");
+    expect(shownProject(store.getState())).toBe(before);
+  });
+
+  it("says why a board cannot be taken over, and leaves the project alone", () => {
+    // A pick made while the row had four shelves; the form now makes two, so shelf 4 is gone.
+    const store = setup();
+    const shelves = store
+      .getState()
+      .solved?.result.placements.filter((p) => p.partName === "Shelf");
+    const gone = shelves?.[3];
+    const project = shownProject(store.getState());
+    const structure = project?.structures[0];
+    if (!gone || !project || !structure) throw new Error("no shelves to pick");
+    const fewer = setShelves(project, structure.id, structure.openings[0]?.id ?? "", "2", "even");
+    if (!fewer.ok) throw new Error(fewer.message);
+    act(() => store.getState().apply(fewer.edit));
+    const before = shownProject(store.getState());
+    cleanup();
+    render(
+      <KerfProvider store={store}>
+        <EdgePanel placed={[gone]} />
+      </KerfProvider>,
+    );
+    fireEvent.change(screen.getByLabelText("Radius"), { target: { value: "25400" } });
+    fireEvent.click(screen.getByLabelText("Back edge, show face"));
+    fireEvent.click(screen.getByRole("button", { name: "Round the ticked edges" }));
+    expect(store.getState().notice?.text).toMatch(/no copy 4 of/i);
+    expect(shownProject(store.getState())).toBe(before);
   });
 });

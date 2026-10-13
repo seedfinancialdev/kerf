@@ -37,7 +37,9 @@ export function EdgePanel({ placed }: { placed: PlacedPart[] }) {
     const project = shownProject(store.getState());
     if (!project) return;
     try {
-      store.getState().apply(roundEdges(project, placed, edges, radius, store.getState().shop));
+      const r = roundEdges(project, placed, edges, radius, store.getState().shop);
+      if (r.ok) store.getState().apply(r.edit);
+      else store.getState().say(r.message);
     } catch (error) {
       if (!(error instanceof RangeError)) throw error;
       store.getState().say(error.message);
