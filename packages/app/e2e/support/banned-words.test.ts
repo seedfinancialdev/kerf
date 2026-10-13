@@ -30,6 +30,10 @@ describe("bannedWordsIn()", () => {
     ).toEqual([]);
   });
 
+  it("still reports a bare face next to an allowed shop phrase", () => {
+    expect(bannedWordsIn("Round the show face, then the face")).toEqual(["face"]);
+  });
+
   it("does not flag a word that merely contains a banned word", () => {
     expect(bannedWordsIn("Surface, facet, meshwork")).toEqual([]);
   });
