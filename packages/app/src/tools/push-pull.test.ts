@@ -101,9 +101,12 @@ describe("pushPull()", () => {
 });
 
 describe("pushPull() on a side, where the board's length runs up the case", () => {
-  // Hand calculation from the placements (solve of the starter bookcase): the Right side has
-  // x = +z, y = +y and its thickness along -x (box x 0..146050); the Left side the same way
-  // round (box x 7169150..7315200). Both are 14630400 long and 2438400 wide.
+  // From the orientation table, not the solve. The Right side stands at orientation 17
+  // (STANDING_ACROSS): ADR 003 row 17 sends local X (length) to +Z and local Y (width) to +Y, so
+  // end1 is its top (max z), end0 its bottom, edge1 its front (max y), edge0 its back. The Left
+  // side is orientation 23 (X to -Z, Y to +Y), mirrored: ADR 013, D2 reflects a mirrored board
+  // across its local Y-Z plane, flipping its length, so its length also runs to +Z and the faces
+  // map the same way.
   const cases = [
     { side: "Right side", face: "end1", axis: 2, moved: "max", fixed: "min", sign: 1 },
     { side: "Right side", face: "end0", axis: 2, moved: "min", fixed: "max", sign: -1 },

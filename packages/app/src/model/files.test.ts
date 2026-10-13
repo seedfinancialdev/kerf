@@ -67,10 +67,11 @@ describe("files", () => {
       zipSync({ "project.json": strToU8(text), "meta.json": strToU8(meta) }),
     );
     for (const r of [damaged, newer]) {
-      if (!r.ok) {
-        expect(r.message).not.toContain("$");
-        expect(bannedWordsIn(r.message)).toEqual([]);
-      }
+      expect(r.ok).toBe(false);
+      const message = r.ok ? "" : r.message;
+      expect(message).not.toBe("");
+      expect(message).not.toContain("$");
+      expect(bannedWordsIn(message)).toEqual([]);
     }
   });
 

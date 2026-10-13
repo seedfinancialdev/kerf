@@ -26,9 +26,18 @@ function setup(template: TemplateName = "Bookcase") {
 }
 
 describe("the Joinery step", () => {
-  it("lists the joints", () => {
+  it("lists the shelves' dados once for each side, 23/32\" wide and 1/4\" deep", () => {
+    // Operation specs, bookcase: the shelves sit in 23/32" x 1/4" dados in each side. The form
+    // joins its row of shelves to each side with one joint (structures/openings.ts), so there is
+    // one line per side.
     setup();
-    expect(screen.getAllByText(/^Shelf in dados in /).length).toBeGreaterThan(0);
+    const rows = screen
+      .getAllByText(/^Shelf in dados in /)
+      .map((e) => [e.textContent, e.closest("li")?.querySelector(".joint-detail")?.textContent]);
+    expect(rows.sort()).toEqual([
+      ["Shelf in dados in Left side", '23/32" wide, 1/4" deep'],
+      ["Shelf in dados in Right side", '23/32" wide, 1/4" deep'],
+    ]);
   });
 
   it("accepts all, then says so", () => {

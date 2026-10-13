@@ -35,13 +35,21 @@ describe("treeRows()", () => {
     );
   });
 
-  it("badges the boards an error is about", () => {
+  it("badges the boards an error is about, and only those", () => {
+    // A dado as deep as the 23/32" side is thick cuts through it: one error for each of the two
+    // shelf-row dado joints (one in each side), both on the Side part. No other board has one.
     const p = startProject("Bookcase", "imperial").project;
     const s = p.structures[0];
     if (!s) throw new Error("no structure");
     s.options.dadoDepth = "23/32in";
-    const shelves = rowsOf(p).find((r) => r.label === "Shelf" || r.label === "Side");
-    expect(shelves?.problems).toBeGreaterThan(0);
+    const badges = rowsOf(p).flatMap((r) => (r.kind === "group" ? [[r.label, r.problems]] : []));
+    expect(badges).toEqual([
+      ["Side", 2],
+      ["Top", 0],
+      ["Bottom", 0],
+      ["Shelf", 0],
+      ["Back", 0],
+    ]);
   });
 
   it("says an empty opening is empty", () => {

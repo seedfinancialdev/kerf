@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Where scene floats become project integers: surface directions and the grid snap
-// (Interaction spec, "Measurements": the grid is 1/64" in inches, 0.5 mm in metric).
+// (Domain model, "Units & precision": the grid is 1/64" in inches and 0.01 mm in metric).
 
 import { INCH } from "@kerf/core";
 import { PerspectiveCamera } from "three";
