@@ -24,11 +24,15 @@ export type CountReading = { ok: true; expr: Expr; value: number } | { ok: false
 
 const capitalised = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** Evaluates `text` over the project's names, without `self` so a field cannot refer to itself. */
+/**
+ * Evaluates `text` over the project's names, without `self` so a field cannot refer to itself.
+ * `label` is what the field is called on screen, for the message when it does.
+ */
 function evaluate(
   text: string,
   project: Project,
   self?: string,
+  label = self && capitalised(self),
 ): { q: Quantity } | { message: string } {
   const scope: Record<string, Quantity> = { ...solveModel(project).scope };
   if (self !== undefined) delete scope[self];
@@ -37,16 +41,20 @@ function evaluate(
   } catch (error) {
     if (!(error instanceof ExpressionError)) throw error;
     if (self !== undefined && new RegExp(`\\b${self}\\b`).test(text)) {
-      return { message: `${capitalised(self)} can't be worked out from itself.` };
+      return { message: `${label} can't be worked out from itself.` };
     }
     return { message: error.message };
   }
 }
 
-/** A length typed by the user, as the expression to store and its snapped value. Refuses one beyond what a project allows. */
-export function readLength(text: string, project: Project, self?: string): Reading {
+/**
+ * A length typed by the user, as the expression to store and its snapped value. Refuses one beyond
+ * what a project allows. `self` is the parameter the field edits, which the text may not use;
+ * `label` names the field in that refusal (default: the parameter's name).
+ */
+export function readLength(text: string, project: Project, self?: string, label?: string): Reading {
   if (text.trim() === "") return { ok: false, message: 'Type a length, like 30" or 762mm.' };
-  const r = evaluate(text, project, self);
+  const r = evaluate(text, project, self, label);
   if ("message" in r) return { ok: false, message: r.message };
   if (r.q.kind !== "length")
     return { ok: false, message: `"${text.trim()}" is not a length; add a unit (in, " or mm)` };

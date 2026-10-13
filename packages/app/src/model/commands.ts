@@ -96,8 +96,8 @@ export function setSize(project: Project, structure: Id, key: SizeKey, text: str
   const current = s.size[key];
   const label = sizeLabel(s.type, key);
   const param = paramNamed(project, current);
-  const read = readLength(text, project, param?.name);
-  if (!read.ok) return { ok: false, message: read.message.replace(/^\w+ can't/, `${label} can't`) };
+  const read = readLength(text, project, param?.name, label);
+  if (!read.ok) return read;
   if (read.value <= 0) return { ok: false, message: `${label} must be more than zero.` };
   const before = lengthOf(current, project);
   const next = param

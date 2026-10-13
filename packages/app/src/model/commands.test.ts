@@ -112,6 +112,15 @@ describe("setSize()", () => {
     expect(JSON.stringify(p)).toBe(before);
   });
 
+  it("names the field as it is labelled, not by its parameter, when it refers to itself", () => {
+    // The keepsake box's Length is the parameter box_length (core structures/templates.ts).
+    const p = startProject("Keepsake box", "imperial").project;
+    expect(setSize(p, structureOf(p).id, "w", 'box_length + 1"')).toEqual({
+      ok: false,
+      message: "Length can't be worked out from itself.",
+    });
+  });
+
   it.each(['0"', '-1"'])("refuses a width of %s: a size must be more than zero", (text) => {
     const p = start().project;
     expect(setSize(p, structureOf(p).id, "w", text)).toEqual({
