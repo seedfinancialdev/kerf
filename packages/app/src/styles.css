@@ -389,13 +389,13 @@ button[aria-pressed="true"] {
   border-radius: var(--radius-1);
   background: var(--color-surface-raised);
 }
-.joint.missing {
-  border-left: 3px solid var(--color-warning);
-}
 .joint-detail,
 .joint-shop {
   color: var(--color-text-muted);
   font-size: var(--font-size-small);
+}
+.joint.missing .joint-shop {
+  color: var(--color-warning);
 }
 .ok {
   margin: 0;

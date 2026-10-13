@@ -9,6 +9,8 @@ import { formatLength, type Id, type JointCut, type JointSummary, type Project }
 
 export interface JoineryRow {
   joint: Id;
+  /** Unique among the rows: the joint plus the kind and size of this cut. */
+  key: string;
   /** "Shelf in dados in Right side". */
   text: string;
   /** Cut sizes: `23/32" wide, 1/4" deep`, or the number of dovetail corners. */
@@ -46,6 +48,7 @@ export function joineryRows(joints: JointSummary[], units: Project["units"]): Jo
   return joints.flatMap((j) =>
     j.cuts.map((cut) => ({
       joint: j.joint,
+      key: `${j.joint}|${cut.kind}|${cut.width}|${cut.depth}`,
       text: `${j.guest} in ${KIND[cut.kind]} in ${j.host}`,
       detail:
         cut.kind === "dovetail"

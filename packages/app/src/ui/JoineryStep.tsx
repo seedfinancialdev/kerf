@@ -30,10 +30,7 @@ export function JoineryStep() {
       <Section title="Proposed joints">
         <ul className="joint-list">
           {rows.map((row) => (
-            <li
-              key={`${row.joint}:${row.text}`}
-              className={row.missing ? "joint missing" : "joint"}
-            >
+            <li key={row.key} className={row.missing ? "joint missing" : "joint"}>
               <span className="joint-text">{row.text}</span>
               <span className="joint-detail">{row.detail}</span>
               <span className="joint-shop">{row.shop}</span>
