@@ -12,7 +12,7 @@ import { fromScene } from "../viewport/frames";
 import { handlerFor, type ModelHit } from "./pointer";
 
 /** A scene direction back to the signed project axis it is closest to. */
-function axisOf(x: number, y: number, z: number): Vec3 {
+export function axisOf(x: number, y: number, z: number): Vec3 {
   const project = [x, -z, y];
   const sizes = project.map(Math.abs);
   const k = sizes.indexOf(Math.max(...sizes));

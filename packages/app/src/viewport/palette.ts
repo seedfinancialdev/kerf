@@ -13,6 +13,8 @@ export interface Palette {
   error: string;
   accent: string;
   grain: string;
+  /** The light from below, softly. */
+  ground: string;
 }
 
 function read(): Palette {
@@ -24,6 +26,7 @@ function read(): Palette {
     error: token("--color-error"),
     accent: token("--color-accent"),
     grain: token("--color-focus"),
+    ground: token("--color-border"),
   };
 }
 

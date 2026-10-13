@@ -6,65 +6,35 @@
 // toned by stock, red when the engine reports an error on it, lit when selected, its grain shown on
 // hover; SketchUp navigation. Picks go to the active tool through tools/dispatch.ts.
 
-import type { PartShape, PlacedPart, Project } from "@kerf/core";
+import { INCH, type PlacedPart } from "@kerf/core";
 import { Canvas, type ThreeEvent, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BufferAttribute, BufferGeometry, Matrix4 } from "three";
 import { shownProject } from "../model/store";
 import { dispatchPointer } from "../tools/dispatch";
 import { useKerf, useKerfStore } from "../ui/useKerf";
+import { geometryOf } from "./board-geometry";
+import { type BoardLook, boardLooks } from "./board-looks";
 import { cameraPosition, FOV_DEGREES, fitView, orbit, pan, type View, zoom } from "./camera";
 import { matrixOf, toScene } from "./frames";
-import { type MeshResult, meshFor } from "./meshes";
-import { type Palette, usePalette } from "./palette";
+import { meshFor } from "./meshes";
+import { usePalette } from "./palette";
 import { useGeometry } from "./useGeometry";
 
-const INCHES = (n: number): number => n / 203_200;
-
-/** The plain blank as triangles (ADR 015, rules 8 and 10), when a shape is withheld or fails. */
-function blankGeometry(size: PlacedPart["size"]): BufferGeometry {
-  const [l, w, t] = [size.length, size.width, size.thickness].map(INCHES) as [
-    number,
-    number,
-    number,
-  ];
-  const g = new BufferGeometry();
-  g.setAttribute(
-    "position",
-    new BufferAttribute(
-      new Float32Array([0, 0, 0, l, 0, 0, l, w, 0, 0, w, 0, 0, 0, t, l, 0, t, l, w, t, 0, w, t]),
-      3,
-    ),
-  );
-  g.setIndex([
-    0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 1, 2, 6, 1, 6, 5, 2, 3, 7, 2, 7, 6, 3, 0,
-    4, 3, 4, 7,
-  ]);
-  g.computeVertexNormals();
-  return g;
-}
-
-function geometryOf(built: MeshResult | undefined, size: PlacedPart["size"]): BufferGeometry {
-  if (!built?.ok) return blankGeometry(size);
-  const g = new BufferGeometry();
-  g.setAttribute("position", new BufferAttribute(built.mesh.positions, 3));
-  g.setIndex(new BufferAttribute(built.mesh.indices, 1));
-  g.computeVertexNormals();
-  return g;
-}
+const INCHES = (n: number): number => n / INCH;
 
 interface BoardProps {
-  placed: PlacedPart;
-  shape: PartShape | undefined;
+  look: BoardLook;
   ready: boolean;
   color: string;
   selected: boolean;
   glow: string;
 }
 
-function Board({ placed, shape, ready, color, selected, glow }: BoardProps) {
+function Board({ look, ready, color, selected, glow }: BoardProps) {
   const store = useKerfStore();
-  const built = ready && shape ? meshFor(shape) : undefined;
+  const { placed } = look;
+  const built = ready && look.geometry === "cut" ? meshFor(look.shape) : undefined;
   const { length, width, thickness } = placed.size;
   // biome-ignore lint/correctness/useExhaustiveDependencies: the size is read through its three numbers, so an equal size from a new solve keeps the geometry.
   const geometry = useMemo(() => geometryOf(built, placed.size), [built, length, width, thickness]);
@@ -86,11 +56,7 @@ function Board({ placed, shape, ready, color, selected, glow }: BoardProps) {
       onPointerOver={() => store.getState().hover(placed.instance)}
       onPointerOut={() => store.getState().hover(null)}
     >
-      <meshStandardMaterial
-        color={color}
-        emissive={selected ? glow : "#000000"}
-        emissiveIntensity={selected ? 0.35 : 0}
-      />
+      <meshStandardMaterial color={color} emissive={glow} emissiveIntensity={selected ? 0.35 : 0} />
     </mesh>
   );
 }
@@ -164,6 +130,7 @@ function Navigation({ view, change }: { view: View; change(update: (v: View) => 
     const el = gl.domElement;
     const down = (e: PointerEvent): void => {
       const left = e.button === 0 && mode !== null;
+      if (e.button === 1) e.preventDefault();
       if (e.button === 1 || left)
         drag.current = {
           x: e.clientX,
@@ -220,13 +187,6 @@ function sceneBounds(
   return [min, max];
 }
 
-function colorOf(project: Project, placed: PlacedPart, broken: boolean, palette: Palette): string {
-  if (broken) return palette.error;
-  return project.stock.find((s) => s.id === placed.stock)?.kind === "sheet"
-    ? palette.sheet
-    : palette.solid;
-}
-
 export function Viewport() {
   const store = useKerfStore();
   const project = useKerf((s) => shownProject(s));
@@ -234,6 +194,7 @@ export function Viewport() {
   const selection = useKerf((s) => s.selection);
   const hovered = useKerf((s) => s.hovered);
   const fitRequest = useKerf((s) => s.fitRequest);
+  const created = useKerf((s) => s.created);
   const palette = usePalette();
   const { ready, failure } = useGeometry();
   const [view, setView] = useState<View | null>(null);
@@ -248,19 +209,16 @@ export function Viewport() {
         .say(`The 3D view could not start (${failure}), so boards are shown as plain blanks.`);
   }, [failure, store]);
 
-  // Fit when boards first appear and whenever Shift+Z asks. Later edits keep the user's view, so
+  // Fit when boards first appear, when another project is started or opened, and whenever Shift+Z asks. Later edits keep the user's view, so
   // the placements are read from the store here but deliberately not watched.
   // biome-ignore lint/correctness/useExhaustiveDependencies: refitting on every edit would fight the user.
   useEffect(() => {
     const boards = store.getState().solved?.result.placements ?? [];
     if (boards.length > 0) setView(fitView(...sceneBounds(boards)));
-  }, [hasBoards, fitRequest, store]);
+  }, [hasBoards, fitRequest, created, store]);
 
   if (!project || !result) return <p className="model-empty">Start a project to see it here.</p>;
-  const shapes = new Map(result.shapes.map((x) => [x.definition, x]));
-  const broken = new Set(
-    result.diagnostics.flatMap((d) => (d.severity === "error" && d.part ? [d.part] : [])),
-  );
+  const looks = boardLooks(result, project);
   const selected = new Set(selection.kind === "boards" ? selection.instances : []);
   const hoveredBoard = placements.find((p) => p.instance === hovered);
 
@@ -268,20 +226,21 @@ export function Viewport() {
     <Canvas
       camera={{ fov: FOV_DEGREES, near: 0.1, far: 10_000 }}
       gl={{ preserveDrawingBuffer: true }}
-      onPointerMissed={(e) => dispatchPointer(store, "down", e, null)}
+      onPointerMissed={(e) => {
+        if (e.button !== 2) dispatchPointer(store, "down", e, null);
+      }}
     >
-      <hemisphereLight intensity={0.9} groundColor="#3a3d42" />
+      <hemisphereLight intensity={0.9} groundColor={palette.ground} />
       <directionalLight position={[60, 120, -80]} intensity={1.4} />
       <ThumbnailSource />
       {view && <Navigation view={view} change={change} />}
-      {placements.map((p) => (
+      {looks.map((look) => (
         <Board
-          key={p.instance}
-          placed={p}
-          shape={shapes.get(p.shape)}
+          key={look.placed.instance}
+          look={look}
           ready={ready}
-          color={colorOf(project, p, broken.has(p.part), palette)}
-          selected={selected.has(p.instance)}
+          color={palette[look.tone]}
+          selected={selected.has(look.placed.instance)}
           glow={palette.accent}
         />
       ))}

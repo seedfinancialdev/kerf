@@ -185,8 +185,12 @@ describe("<BoardInspector>", () => {
       ).toBeTruthy();
     });
 
-    it("shows no warning for a board whose cuts can be drawn", () => {
-      setup(topOf);
+    it("shows no warning for a board whose cuts can be drawn, once the engine is ready", async () => {
+      withCuts([]);
+      // The warning is only decided once the engine is ready; let that settle before asserting.
+      await act(async () => {
+        await initGeometry();
+      });
       expect(screen.queryByText(/without its cuts/)).toBeNull();
     });
   });
