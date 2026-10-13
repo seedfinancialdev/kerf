@@ -167,3 +167,54 @@ select:focus-visible,
   outline: 2px solid var(--color-focus);
   outline-offset: 1px;
 }
+
+.fields {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.number-field {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: var(--space-1) var(--space-2);
+  align-items: center;
+}
+
+.number-field label,
+.field label {
+  color: var(--color-text-muted);
+}
+
+.scrub-label {
+  cursor: ew-resize;
+  user-select: none;
+  touch-action: none;
+}
+
+.number-field input,
+.field input,
+.field select {
+  min-width: 0;
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-1);
+  font: inherit;
+  font-variant-numeric: var(--font-numeric);
+}
+
+.number-field input {
+  text-align: right;
+}
+
+.number-field input[aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+
+.field-problem {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--color-error);
+  font-size: var(--font-size-small);
+}

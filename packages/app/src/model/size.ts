@@ -10,6 +10,7 @@ import {
   type Expr,
   ExpressionError,
   evaluateQuantity,
+  formatLength,
   type Len,
   type Project,
   type Quantity,
@@ -93,4 +94,12 @@ export function exactLiteral(len: Len): Expr {
   if (millionths === 0) return `${sign}${whole}mm`;
   const fraction = millionths.toString().padStart(6, "0").replace(/0+$/, "");
   return `${sign}${whole}.${fraction}mm`;
+}
+
+/**
+ * A length as the expression a field stores: an inch fraction for imperial (exact on the 1/64"
+ * grid, and the form a woodworker reads) or an exact millimetre literal for metric.
+ */
+export function literalFor(len: Len, units: Project["units"]): Expr {
+  return units === "imperial" ? formatLength(len, "imperial") : exactLiteral(len);
 }

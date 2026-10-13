@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 import { startProject } from "./commands";
-import { exactLiteral, readCount, readLength, readPosition } from "./size";
+import { exactLiteral, literalFor, readCount, readLength, readPosition } from "./size";
 
 const bookcase = startProject("Bookcase", "imperial").project;
 
@@ -104,5 +104,16 @@ describe("exactLiteral()", () => {
 
   it("writes a whole number of millimetres without a decimal point", () => {
     expect(exactLiteral(80_000)).toBe("10mm");
+  });
+});
+
+describe("literalFor()", () => {
+  it("writes an inch value as the fraction a woodworker reads", () => {
+    // 35-1/16" = 7124700 units; formatLength's own form is a valid literal (Domain model, "Literals").
+    expect(literalFor(7_124_700, "imperial")).toBe('35-1/16"');
+  });
+
+  it("writes a metric value exactly, never rounded to 0.1 mm", () => {
+    expect(literalFor(80, "metric")).toBe("0.01mm");
   });
 });
