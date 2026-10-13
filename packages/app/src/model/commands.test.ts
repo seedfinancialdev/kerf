@@ -81,6 +81,14 @@ describe("setSize()", () => {
     });
     expect(JSON.stringify(p)).toBe(before);
   });
+
+  it.each(['0"', '-1"'])("refuses a width of %s: a size must be more than zero", (text) => {
+    const p = start().project;
+    expect(setSize(p, structureOf(p).id, "w", text)).toEqual({
+      ok: false,
+      message: "Width must be more than zero.",
+    });
+  });
 });
 
 describe("setShelves()", () => {

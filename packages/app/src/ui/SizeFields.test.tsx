@@ -93,4 +93,19 @@ describe("<SizeFields>", () => {
     expect(store.getState().history?.entries).toHaveLength(1);
     expect((screen.getByLabelText("Width") as HTMLInputElement).value).toBe('36"');
   });
+
+  it("keeps the last good preview when a drag step would make the size zero, and records that", () => {
+    const store = setup();
+    const label = screen.getByText("Width");
+    fireEvent.pointerDown(label, { clientX: 0, pointerId: 1, button: 0 });
+    // -2300 px = 575 steps of 1/16" = 35-15/16": the width is 1/16" left.
+    fireEvent.pointerMove(label, { clientX: -2300, pointerId: 1 });
+    // -2400 px = 600 steps = 37-1/2" narrower: below zero, refused; the 1/16" preview stays.
+    fireEvent.pointerMove(label, { clientX: -2400, pointerId: 1 });
+    fireEvent.pointerUp(label, { clientX: -2400, pointerId: 1 });
+    expect(store.getState().history?.entries.map((e) => e.label)).toEqual([
+      "New bookcase",
+      'Width 36" → 1/16"',
+    ]);
+  });
 });

@@ -81,8 +81,8 @@ function setParam(project: Project, param: Param, expr: Expr): Project {
 
 /**
  * Changes one overall size, typed by the user (ADR 015, rule 3: a named parameter is edited).
- * Typed text that is not a length comes back as `ok: false` with a message to show.
- * Throws RangeError for a structure the project does not have.
+ * Typed text that is not a length, or a size of zero or less, comes back as `ok: false` with a
+ * message to show. Throws RangeError for a structure the project does not have.
  */
 export function setSize(project: Project, structure: Id, key: SizeKey, text: string): EditResult {
   const s = structureIn(project, structure);
@@ -91,6 +91,7 @@ export function setSize(project: Project, structure: Id, key: SizeKey, text: str
   const param = paramNamed(project, current);
   const read = readLength(text, project, param?.name);
   if (!read.ok) return { ok: false, message: read.message.replace(/^\w+ can't/, `${label} can't`) };
+  if (read.value <= 0) return { ok: false, message: `${label} must be more than zero.` };
   const before = lengthOf(current, project);
   const next = param
     ? setParam(project, param, read.expr)
