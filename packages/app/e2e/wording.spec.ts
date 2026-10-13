@@ -8,7 +8,21 @@
 import { expect, type Page, test } from "@playwright/test";
 import { bannedWordsIn } from "./support/banned-words";
 
-const shown = (page: Page) => page.locator("body").innerText();
+const TOOL_NAMES: Record<string, string> = {
+  b: "Board",
+  p: "Push/Pull",
+  m: "Move",
+  j: "Join",
+  f: "Edge profile",
+  t: "Tape",
+};
+
+/** The text on screen; empty text means the screen was not read, so it fails rather than passes. */
+async function shown(page: Page): Promise<string> {
+  const text = await page.locator("body").innerText();
+  expect(text.trim()).not.toBe("");
+  return text;
+}
 
 test("no screen of the core flow shows a banned word", async ({ page }) => {
   await page.goto("/");
@@ -22,6 +36,8 @@ test("no screen of the core flow shows a banned word", async ({ page }) => {
     await page.getByRole("button", { name: step }).click();
     for (const tab of ["Shopping", "Cut list", "Sheets", "Setups", "Assembly"]) {
       await page.getByRole("tab", { name: tab }).click();
+      await expect(page.getByRole("tab", { name: tab, selected: true })).toBeVisible();
+      await expect(page.getByRole("tabpanel")).toBeVisible();
       seen.push(await shown(page));
     }
   }
@@ -29,6 +45,9 @@ test("no screen of the core flow shows a banned word", async ({ page }) => {
   seen.push(await shown(page));
   for (const key of ["b", "p", "m", "j", "f", "t"]) {
     await page.keyboard.press(key);
+    await expect(
+      page.getByRole("button", { name: new RegExp(`^${TOOL_NAMES[key]}\\b`), pressed: true }),
+    ).toBeVisible();
     seen.push(await shown(page));
   }
   expect(bannedWordsIn(seen.join("\n"))).toEqual([]);

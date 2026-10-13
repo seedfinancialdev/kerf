@@ -16,6 +16,8 @@ test("a width change reaches the cut list in under 100 ms", async ({ page }) => 
   await expect(model.getByText("Drawing the model…")).toBeHidden();
   await page.getByRole("tab", { name: "Cut list" }).click();
   await expect(page.getByTestId("cutlist-line")).toHaveCount(3);
+  // The 36" bookcase: 36 - 15/16 = 35-1/16" (hand calculation; bookcase.spec's 30" gives 29-1/16").
+  await expect(page.getByTestId("cutlist-line").nth(1)).toContainText('35-1/16"');
 
   const ms = await page.evaluate(async () => {
     const label = [...document.querySelectorAll("label")].find((l) => l.textContent === "Width");
@@ -29,8 +31,17 @@ test("a width change reaches the cut list in under 100 ms", async ({ page }) => 
     input.blur();
     const line = () =>
       document.querySelectorAll('[data-testid="cutlist-line"]')[1]?.textContent ?? "";
-    while (!line().includes('29-1/16"')) await new Promise((r) => requestAnimationFrame(r));
+    while (!line().includes('29-1/16"')) {
+      if (performance.now() - start > 2000) {
+        throw new Error("the cut list never showed the 30-inch size");
+      }
+      await new Promise((r) => requestAnimationFrame(r));
+    }
     return performance.now() - start;
+  });
+  test.info().annotations.push({
+    type: "width change to cut list",
+    description: `${ms.toFixed(1)} ms`,
   });
   expect(ms).toBeLessThan(100);
 });
