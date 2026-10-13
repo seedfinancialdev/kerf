@@ -120,3 +120,13 @@ export function generateStructuresChecked(
 export function detachPart(project: Project, part: Id): PartDef {
   return detachedPart(project, part);
 }
+
+// Build plan (M4)
+
+/**
+ * The order to put each structure together, written from its form: dry-fit, glue, square, and
+ * for a case the back last. Each step names the placed boards it touches. Empty for a project
+ * with no structure or one that cannot be solved. Never throws; the project and the shop profile
+ * are not changed.
+ */
+export { assemblyOrder } from "./outputs/assembly-order";

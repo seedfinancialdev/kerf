@@ -322,6 +322,12 @@ export interface SolveResult {
   blocked: boolean;
 }
 
+/** One step of putting the piece together, and the placed boards it names. */
+export interface AssemblyStep {
+  text: string;
+  parts: Id[];
+}
+
 export interface BuildPlan {
   cutList: CutList;
   nesting: NestingResult;
