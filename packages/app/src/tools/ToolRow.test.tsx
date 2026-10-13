@@ -5,8 +5,10 @@
 // "Icons always carry text labels" (Interaction spec); keys as SketchUp.
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { App } from "../App";
+import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { memoryStorage } from "../testing/memory-storage";
@@ -120,6 +122,80 @@ describe("<Measurements>", () => {
     expect(store.getState().tool).toBe("select");
     fireEvent.keyDown(document.body, { key: "p" });
     expect(store.getState().tool).toBe("pushPull");
+  });
+});
+
+describe("a size typed anywhere (Interaction spec, Measurements; final branch review I5)", () => {
+  /** The bookcase, Push/Pull picked, and the Top's right end clicked: the tool waits for a distance. */
+  function waiting() {
+    const store = setup();
+    act(() => {
+      store.getState().apply(startProject("Bookcase", "imperial"));
+      store.getState().setTool("pushPull");
+    });
+    const top = store.getState().solved?.result.placements.find((p) => p.partName === "Top");
+    if (!top) throw new Error("no top");
+    act(() =>
+      store.getState().setPending({
+        tool: "pushPull",
+        hit: { placed: top, point: [0, 0, 0], normal: top.frame.x },
+        dragged: null,
+        ray: null,
+      }),
+    );
+    return { store, top };
+  }
+  const box = () => screen.getByLabelText("Measurements") as HTMLInputElement;
+
+  it('goes to the Measurements box, so 2" Enter lengthens the clicked end by 2"', async () => {
+    const { store } = waiting();
+    await userEvent.keyboard('2"{Enter}');
+    // The Top is 34-9/16" (7023100); 2" more is 36-9/16" (7429500).
+    expect(store.getState().history?.entries.at(-1)?.label).toBe('Lengthened Top by 2"');
+    expect(
+      store.getState().solved?.result.placements.find((p) => p.partName === "Top")?.size.length,
+    ).toBe(7_429_500);
+  });
+
+  it.each(["2", "-", ".", "/", "'", '"'])(
+    "starts the box with %s and gives it the keyboard",
+    (key) => {
+      waiting();
+      fireEvent.keyDown(document.body, { key });
+      expect(document.activeElement).toBe(box());
+      expect(box().value).toBe(key);
+    },
+  );
+
+  it("leaves the tool keys to pick tools", () => {
+    const { store } = waiting();
+    fireEvent.keyDown(document.body, { key: "m" });
+    expect(store.getState().tool).toBe("move");
+    expect(document.activeElement).not.toBe(box());
+  });
+
+  it("does nothing while no tool waits for a size", () => {
+    const store = setup();
+    act(() => store.getState().apply(startProject("Bookcase", "imperial")));
+    act(() => store.getState().setTool("pushPull"));
+    fireEvent.keyDown(document.body, { key: "2" });
+    act(() => {
+      store.getState().setTool("join");
+      store.getState().setPending({ tool: "join", first: "a" });
+    });
+    fireEvent.keyDown(document.body, { key: "2" });
+    expect(document.activeElement).not.toBe(box());
+    expect(box().value).toBe("");
+  });
+
+  it("leaves a key typed in another field to that field", () => {
+    waiting();
+    const field = document.createElement("input");
+    document.body.append(field);
+    field.focus();
+    fireEvent.keyDown(field, { key: "2" });
+    field.remove();
+    expect(box().value).toBe("");
   });
 });
 

@@ -23,7 +23,7 @@ function onWidget(e: KeyboardEvent): boolean {
 const TEXT_INPUTS = new Set(["text", "search", "number", "email", "url", "tel", "password"]);
 
 /** True when the key press is aimed at a text field or an editable area, where keys are typing. */
-export function isTyping(target: EventTarget | null): boolean {
+function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable || target.tagName === "TEXTAREA") return true;
   return target instanceof HTMLInputElement && TEXT_INPUTS.has(target.type);
@@ -37,6 +37,11 @@ function forSelect(e: KeyboardEvent): boolean {
   return e.target instanceof HTMLSelectElement && !(e.ctrlKey || e.metaKey);
 }
 
+/** True when a focused text field or select keeps the key press, so the app must not act on it. */
+export function keptByField(e: KeyboardEvent): boolean {
+  return isTyping(e.target) || forSelect(e);
+}
+
 /** SketchUp's red, green and blue directions: the arrow keys that lock a move to x, y or z. */
 const AXIS_KEYS: Partial<Record<string, 0 | 1 | 2>> = { ArrowRight: 0, ArrowLeft: 1, ArrowUp: 2 };
 
@@ -45,7 +50,7 @@ export function useShortcuts(): void {
   const store = useKerfStore();
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (isTyping(e.target) || forSelect(e)) return;
+      if (keptByField(e)) return;
       if (e.key === " " && onWidget(e)) return;
       const s = store.getState();
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {

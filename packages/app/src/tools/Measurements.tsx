@@ -5,18 +5,25 @@
 // The Measurements box (Interaction spec: "the type-anywhere Measurements box work[s] the same" as
 // SketchUp): typed sizes go to the active tool.
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useKerf, useKerfStore } from "../ui/useKerf";
+import { keptByField } from "../ui/useShortcuts";
 import { handlerFor } from "./pointer";
+
+/** The keys a typed size starts with: a digit, a minus sign, a point, a fraction bar, feet or inches. */
+const SIZE_START = /^[0-9\-./'"]$/;
 
 /**
  * The box under the model where a size is typed for the active tool. Enter sends it; a refusal is
  * shown in plain words until the text or the tool changes; Escape hands the keyboard back to the
- * window so tool keys work again.
+ * window so tool keys work again. While the tool waits for a size (it has begun an action and
+ * takes typed sizes), a size typed anywhere outside a field comes here, as in SketchUp; letters
+ * are left to pick tools.
  */
 export function Measurements() {
   const store = useKerfStore();
   const id = useId();
+  const box = useRef<HTMLInputElement>(null);
   const tool = useKerf((s) => s.tool);
   const prompt = useKerf((s) => handlerFor(s.tool).prompt?.(s) ?? "");
   const [text, setText] = useState("");
@@ -25,6 +32,19 @@ export function Measurements() {
   if (refusal && refusal.tool !== tool) setProblem(null);
   const problem = refusal?.tool === tool ? refusal.text : null;
   const problemId = `${id}-problem`;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.ctrlKey || e.metaKey || e.altKey || !SIZE_START.test(e.key) || keptByField(e)) return;
+      const s = store.getState();
+      if (s.pending === null || !handlerFor(s.tool).measure) return;
+      e.preventDefault();
+      setText(e.key);
+      setProblem(null);
+      box.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [store]);
   const submit = (): void => {
     if (text.trim() === "") return;
     const handler = handlerFor(tool);
@@ -38,6 +58,7 @@ export function Measurements() {
     <div className="measurements">
       <label htmlFor={id}>Measurements</label>
       <input
+        ref={box}
         id={id}
         value={text}
         placeholder={prompt}
