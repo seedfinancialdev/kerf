@@ -6,7 +6,8 @@
 
 import type { Project } from "@kerf/core";
 import fc from "fast-check";
-import { withParam } from "./index";
+import { handMadeBookcase } from "./builders";
+import { loadProject, withParam } from "./index";
 
 /** Quarter-inch steps as a literal the expression grammar accepts: 36in, 36-1/4in, 36-1/2in. */
 function quarterInches(quarters: number): string {
@@ -55,6 +56,45 @@ export function applyBoxEdit(project: Project, edit: BoxEdit): Project {
   next = withParam(next, "box_width", quarterInches(edit.width));
   return withParam(next, "box_height", quarterInches(edit.height));
 }
+
+/**
+ * Each reference project, the hand-made one and the form, resized at random within its edit's
+ * range: "every fixture" for an invariant that must hold whatever the project.
+ */
+export const resizedFixture: fc.Arbitrary<Project> = fc.oneof(
+  bookcaseEdit.map((e) => applyBookcaseEdit(loadProject("bookcase"), e)),
+  bookcaseEdit.map((e) => applyBookcaseEdit(loadProject("bookcase", "structure"), e)),
+  boxEdit.map((e) => applyBoxEdit(loadProject("box"), e)),
+  boxEdit.map((e) => applyBoxEdit(loadProject("box", "structure"), e)),
+);
+
+/** The bookcase built by hand with no joints yet (`handMadeBookcase`), resized at random. */
+export const resizedHandMadeBookcase: fc.Arbitrary<Project> = bookcaseEdit.map((e) =>
+  applyBookcaseEdit(handMadeBookcase(), e),
+);
+
+/** A right-angle orientation (ADR 003, 0-23) and whether the copy is mirrored (ADR 013, D2). */
+export interface Turn {
+  orientation: number;
+  mirrored: boolean;
+}
+
+/** One turn for each of up to 16 saved boards, so every orientation and mirroring is reached. */
+export const turns: fc.Arbitrary<Turn[]> = fc.array(
+  fc.record({ orientation: fc.integer({ min: 0, max: 23 }), mirrored: fc.boolean() }),
+  { minLength: 16, maxLength: 16 },
+);
+
+/** The project with its n-th saved board turned by `turns[n]`; generated boards are left alone. */
+export function applyTurns(project: Project, list: readonly Turn[]): Project {
+  return {
+    ...project,
+    instances: project.instances.map((i, n) => ({ ...i, ...list[n % list.length] })),
+  };
+}
+
+/** A width in 1/64" grid steps, 12" to 96": every width a case's gap can be bound across. */
+export const widthSixtyFourths: fc.Arbitrary<number> = fc.integer({ min: 12 * 64, max: 96 * 64 });
 
 /** The spec's harness: 1,000 random valid edits per run. */
 export const RUNS = 1000;

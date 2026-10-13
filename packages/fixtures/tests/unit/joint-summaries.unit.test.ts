@@ -89,8 +89,12 @@ describe("solve().joints", () => {
     const tails = solve(box, shop).joints.filter((j) => j.type === "throughDovetail");
     // Keepsake box: four through-dovetail corners.
     expect(tails.reduce((n, j) => n + j.pairs, 0)).toBe(4);
-    expect(tails.every((j) => j.cuts.every((c) => c.tool === "handTools" && !c.missing))).toBe(
-      true,
-    );
+    // Each corner joint lists one dovetail cut, made by hand; none may be left empty, or an
+    // "every cut" check would pass with nothing to check (branch deferred row 3).
+    for (const j of tails) {
+      expect(j.cuts.map((c) => [c.kind, c.tool, c.missing])).toEqual([
+        ["dovetail", "handTools", false],
+      ]);
+    }
   });
 });

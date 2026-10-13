@@ -4,8 +4,16 @@
 
 // ADR 015 rule 8: where each placed board sits, for the viewport and selection.
 
-import { type PlacedPart, type Project, solve, type Vec3 } from "@kerf/core";
+import {
+  detachPartIn,
+  generateStructures,
+  type PlacedPart,
+  type Project,
+  solve,
+  type Vec3,
+} from "@kerf/core";
 import { describe, expect, it } from "vitest";
+import { handMadeBookcase } from "../../src/builders";
 import { loadProject, loadShopProfile } from "../../src/index";
 
 const shop = loadShopProfile();
@@ -81,6 +89,58 @@ describe("solve().placements", () => {
     expect(shelf?.source?.role).toBe("shelf");
     expect(shelf?.detached).toBe(false);
     expect(shelf?.pattern?.index).toBeTypeOf("number");
+  });
+
+  it("names each shelf of the row <row id>:<index>, from 0 for the first", () => {
+    // PlacedPart.instance: "`<patternId>:<index>` for a member of a row"; the row's source is its
+    // first member, index 0 (structures/detach.ts). The bookcase's row has 4 shelves.
+    const shelves = solve(form, shop).placements.filter((p) => p.source?.role === "shelf");
+    const row = shelves[0]?.pattern?.id;
+    expect(shelves.map((p) => p.instance)).toEqual([0, 1, 2, 3].map((i) => `${row}:${i}`));
+    expect(shelves.map((p) => p.pattern)).toEqual(
+      [0, 1, 2, 3].map((index) => ({ id: row, index })),
+    );
+  });
+
+  it("says a board the form made is detached once it is taken over by hand", () => {
+    const top = solve(form, shop).placements.find((p) => p.name === "Top");
+    if (!top) throw new Error("no top");
+    // The parts a form makes are written into the project first, as the app's take-over does.
+    const after = solve(detachPartIn(generateStructures(form, shop), top.part), shop).placements;
+    expect(after.find((p) => p.name === "Top")?.detached).toBe(true);
+    expect(after.find((p) => p.name === "Bottom")?.detached).toBe(false);
+  });
+
+  it("gives a board made by hand no source, and never calls it detached", () => {
+    for (const p of solve(handMadeBookcase(), shop).placements) {
+      expect(p.source).toBeUndefined();
+      expect(p.detached).toBe(false);
+    }
+  });
+
+  it("frames the right side from its inside face: length up, width to the front", () => {
+    // Orientation 17 (ADR 003): local X (length) to +Z, Y (width) to +Y, Z (thickness) to -X.
+    // Thickness runs from the inside face at x = 23/32" (146050) out to x = 0.
+    const right = solve(form, shop).placements.find((p) => p.name === "Right side");
+    expect(right?.frame).toEqual({
+      origin: [T, 0, 0],
+      x: [0, 0, 1],
+      y: [0, 1, 0],
+      z: [-1, 0, 0],
+    });
+  });
+
+  it("frames the mirrored left side from its inside face, its length still running up", () => {
+    // Orientation 23 (ADR 003): X to -Z, Y to +Y, Z to +X; mirrored, the length is reflected
+    // (ADR 013, D2), so it runs to +Z from the bottom. Thickness runs from the inside face at
+    // x = 36 - 23/32 (7169150) out to the case's outside at 36".
+    const left = solve(form, shop).placements.find((p) => p.name === "Left side");
+    expect(left?.frame).toEqual({
+      origin: [7_169_150, 0, 0],
+      x: [0, 0, 1],
+      y: [0, 1, 0],
+      z: [1, 0, 0],
+    });
   });
 
   it("says a shelf is the Shelf part, 34-9/16 visible and cut at 35-1/16", () => {

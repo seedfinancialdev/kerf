@@ -10,7 +10,7 @@ import { gapBetween, solve, solveModel } from "@kerf/core";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { handMadeBookcase } from "../../src/builders";
-import { RUNS } from "../../src/edits";
+import { RUNS, widthSixtyFourths } from "../../src/edits";
 import { loadShopProfile, withParam } from "../../src/index";
 
 const shop = loadShopProfile();
@@ -23,7 +23,7 @@ describe("gap binding", () => {
     const gap = gapBetween(base, id("Right side"), id("Left side"));
     if (!gap.ok) throw new Error(gap.reason);
     fc.assert(
-      fc.property(fc.integer({ min: 12 * 64, max: 96 * 64 }), (sixtyFourths) => {
+      fc.property(widthSixtyFourths, (sixtyFourths) => {
         const p = withParam(base, "width", `${sixtyFourths}/64in`);
         const measured = solveModel({
           ...p,
