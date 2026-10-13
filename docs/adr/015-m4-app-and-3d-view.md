@@ -40,7 +40,7 @@ through `@kerf/core`. Design: `docs/superpowers/specs/2026-10-12-m4-app-3d-view-
 
 ## Consequences
 
-- New public API: `assemblyOrder`, `proposeJoint`, `gapBetween`, `orientationFor` (the orientation index for a board's length and width axes, used by the Board tool), `edgeName`, `JOINT_NAME` and `JOINT_WORD` (the shop words for edges and joints, used by the engine's own messages and the app's panels alike), and `STOCK_FIELDS` (the stock fields each kind of form reads, so the app and the engine share one list); `SolveResult` gains `placements` and `joints`; case and box forms accept `joineryReviewed`.
+- New public API: `assemblyOrder`, `proposeJoint`, `gapBetween`, `orientationFor` (the orientation index for a board's length and width axes, used by the Board tool), `edgeName`, `JOINT_NAME` and `JOINT_WORD` (the shop words for edges and joints, used by the engine's own messages and the app's panels alike), `STOCK_FIELDS` (the stock fields each kind of form reads, so the app and the engine share one list) and `MAX_COUNT` (the most boards of one kind a form makes, so the app refuses a larger count of shelves or bays before building an opening for each); `SolveResult` gains `placements` and `joints`; case and box forms accept `joineryReviewed`.
 
 ## Known limits
 

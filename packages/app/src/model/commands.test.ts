@@ -150,6 +150,93 @@ describe("setShelves()", () => {
   });
 });
 
+describe("setShelves() at set heights", () => {
+  it("puts each shelf's underside at the height typed, from the case's bottom", () => {
+    // ADR 014, D9: a set height is the underside of a shelf measured from the case's bottom.
+    // 12" = 2438400 and 24" = 4876800 units.
+    const p = startProject("Blank case", "imperial").project;
+    const opening = structureOf(p).openings[0]?.id ?? "";
+    const r = setShelves(p, structureOf(p).id, opening, "2", ['12"', '24"']);
+    if (!r.ok) throw new Error(r.message);
+    expect(r.edit.label).toBe("Added 2 shelves");
+    const undersides = solve(r.edit.project, shop)
+      .placements.filter((x) => x.source?.role === "shelf")
+      .map((x) => x.box.min[2])
+      .sort((a, b) => a - b);
+    expect(undersides).toEqual([12 * IN, 24 * IN]);
+  });
+});
+
+describe("splitBays()", () => {
+  const blank = () => {
+    const p = startProject("Blank case", "imperial").project;
+    return { p, structure: structureOf(p).id, opening: structureOf(p).openings[0]?.id ?? "" };
+  };
+  const partitions = (p: Project) =>
+    solve(p, shop).placements.filter((x) => x.name.startsWith("Partition"));
+
+  it("splits an empty case into 3 bays with 2 partitions", () => {
+    // n bays need n - 1 partitions between them: 3 - 1 = 2 (as in structures.unit.test.ts).
+    const { p, structure, opening } = blank();
+    const r = splitBays(p, structure, opening, "3");
+    if (!r.ok) throw new Error(r.message);
+    expect(r.edit.label).toBe("Split into 3 bays");
+    expect(r.edit.project.structures[0]?.openings[0]?.children).toHaveLength(3);
+    expect(partitions(r.edit.project)).toHaveLength(2);
+  });
+
+  it("accepts 2 bays, the fewest that divide an opening: 1 partition", () => {
+    const { p, structure, opening } = blank();
+    const r = splitBays(p, structure, opening, "2");
+    if (!r.ok) throw new Error(r.message);
+    expect(partitions(r.edit.project)).toHaveLength(1);
+  });
+
+  it("refuses 1 bay, which divides nothing", () => {
+    const { p, structure, opening } = blank();
+    expect(splitBays(p, structure, opening, "1")).toEqual({
+      ok: false,
+      message: "Bays need a number of 2 or more.",
+    });
+  });
+
+  it("accepts 64 bays, the most a form makes (MAX_COUNT in core)", () => {
+    const { p, structure, opening } = blank();
+    const r = splitBays(p, structure, opening, "64");
+    if (!r.ok) throw new Error(r.message);
+    expect(r.edit.project.structures[0]?.openings[0]?.children).toHaveLength(64);
+  });
+
+  it("refuses 65 bays, one past the most, without building the openings", () => {
+    const { p, structure, opening } = blank();
+    expect(splitBays(p, structure, opening, "65")).toEqual({
+      ok: false,
+      message: "Type a whole number up to 64.",
+    });
+  });
+
+  it("refuses a billion bays at once, rather than building a billion openings", () => {
+    const { p, structure, opening } = blank();
+    expect(splitBays(p, structure, opening, "1000000000")).toEqual({
+      ok: false,
+      message: "Type a whole number up to 64.",
+    });
+  });
+});
+
+describe("clearDivision()", () => {
+  it("empties the bookcase's opening: no division, no sub-openings and no shelves", () => {
+    const p = start().project;
+    const edit = clearDivision(p, structureOf(p).id, structureOf(p).openings[0]?.id ?? "");
+    expect(edit.label).toBe("Emptied the opening");
+    expect(edit.project.structures[0]?.openings[0]).toEqual({
+      id: structureOf(p).openings[0]?.id,
+      children: [],
+    });
+    expect(shelfLine(edit.project)).toBeUndefined();
+  });
+});
+
 describe("addPartition()", () => {
   it("labels a partition at a third and the solve has a board named Partition", () => {
     const p = startProject("Blank case", "imperial").project;

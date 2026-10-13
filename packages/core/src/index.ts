@@ -31,6 +31,7 @@ export {
   detachCopyIn,
   detachPartIn,
   detachReferencedBoards,
+  MAX_COUNT,
   projectFromTemplate,
   removeStructureIn,
   STOCK_FIELDS,

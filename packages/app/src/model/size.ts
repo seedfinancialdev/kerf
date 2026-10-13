@@ -13,6 +13,7 @@ import {
   formatLength,
   type Len,
   LengthRangeError,
+  MAX_COUNT,
   type Project,
   type Quantity,
   snapToGrid,
@@ -68,13 +69,19 @@ export function readLength(text: string, project: Project, self?: string, label?
   }
 }
 
-/** A whole number typed by the user (a count of shelves or bays). */
+/**
+ * A whole number typed by the user (a count of shelves or bays), from 0 to `MAX_COUNT`, the most
+ * boards of one kind the engine's forms make. A larger count is refused here, before the app builds
+ * one opening per bay (final tests review I2).
+ */
 export function readCount(text: string, project: Project, self?: string): CountReading {
   const r = evaluate(text, project, self);
   if ("message" in r) return { ok: false, message: r.message };
   const { kind, value } = r.q;
   if (kind === "length" || value.den !== 1n || value.num < 0n)
     return { ok: false, message: "Type a whole number, like 4." };
+  if (value.num > BigInt(MAX_COUNT))
+    return { ok: false, message: `Type a whole number up to ${MAX_COUNT}.` };
   return { ok: true, expr: text.trim(), value: Number(value.num) };
 }
 

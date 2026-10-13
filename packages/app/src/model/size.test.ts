@@ -74,6 +74,28 @@ describe("readCount()", () => {
     });
   });
 
+  it("reads 0 as none: an opening may be emptied of shelves", () => {
+    expect(readCount("0", bookcase)).toEqual({ ok: true, expr: "0", value: 0 });
+  });
+
+  it("refuses a negative count", () => {
+    expect(readCount("-1", bookcase)).toEqual({
+      ok: false,
+      message: "Type a whole number, like 4.",
+    });
+  });
+
+  it("reads 64, the most boards of one kind a form makes (MAX_COUNT in core)", () => {
+    expect(readCount("64", bookcase)).toEqual({ ok: true, expr: "64", value: 64 });
+  });
+
+  it("refuses 65, one past the most a form makes", () => {
+    expect(readCount("65", bookcase)).toEqual({
+      ok: false,
+      message: "Type a whole number up to 64.",
+    });
+  });
+
   it("refuses a fraction of a shelf", () => {
     expect(readCount("5/2", bookcase)).toEqual({
       ok: false,

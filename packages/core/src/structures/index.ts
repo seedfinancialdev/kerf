@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
+export { MAX_COUNT } from "./builder";
 export {
   attachCopyIn,
   attachPartIn,
