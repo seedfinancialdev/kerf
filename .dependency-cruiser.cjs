@@ -10,7 +10,7 @@ module.exports = {
       comment: "The app calls the engine only through @kerf/core; internals can change (ADR 015).",
       severity: "error",
       from: { path: "^packages/app/" },
-      to: { path: ["^packages/core/src/internal\\.ts$", "^packages/core/src/(?!index\\.ts$)"] },
+      to: { path: "^packages/core/src/(?!index\\.ts$)" },
     },
     {
       name: "app-product-not-fixtures",

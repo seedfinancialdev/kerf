@@ -235,6 +235,10 @@ calculation.
 
 ## Not in M4
 
+Everything below is unbuilt or only partly built; ADR 015, "Known limits", carries the same list
+with the reasons. Type-anywhere Measurements is built (a digit, `-`, `.`, `/`, `'` or `"` goes to
+the Measurements box while a tool waits for a size).
+
 - Picking an opening in the 3D model: the engine does not report where an opening is, and working
   it out in the app would put woodworking maths outside the engine. Openings are picked in the
   project tree (as the end-to-end test does). Adding opening boxes to the engine is a follow-up.
@@ -242,8 +246,14 @@ calculation.
 - A board drawn between two boards a form made (every template's sides): the engine binds only
   boards saved in the project, so the Board tool refuses them in shop words and points to Divide or
   taking a side over first (ADR 015, rule 7; the maintainer's decision, 2026-10-13).
+- Board by dragging on the floor or on a board's face: it is a click, then a typed size.
+- Each step changing what the model highlights: the case outline in Shape and the coloured joint
+  cuts in Joinery. The viewport does not follow the step.
+- A freely resizable build-plan drawer: it is tall or short.
+- The board inspector listing a board's operations, and clicking a board to see its joints.
+- Select picking joints and edges in the 3D view (boards are picked; openings come from the tree).
+- Escape cancels a tool, and also clears the selection, which the drag tools make visible.
 - The shop card shows inches only.
-
 - The build plan PDF and `.skp` import (M5).
 - Two structures placed apart in one project: they still share the origin (ADR 014, known limits).
 - Fit-a-space sizing, drawers, doors, icon-only toolbar mode (v1).

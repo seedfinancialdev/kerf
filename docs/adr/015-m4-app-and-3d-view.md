@@ -40,23 +40,68 @@ through `@kerf/core`. Design: `docs/superpowers/specs/2026-10-12-m4-app-3d-view-
 
 ## Consequences
 
-- New public API: `assemblyOrder`, `proposeJoint`, `gapBetween`, `orientationFor` (the orientation index for a board's length and width axes, used by the Board tool), `edgeName`, `JOINT_NAME` and `JOINT_WORD` (the shop words for edges and joints, used by the engine's own messages and the app's panels alike); `SolveResult` gains `placements` and `joints`; case and box forms accept `joineryReviewed`.
-- Known limits: openings are picked in the project tree, not in the 3D view, because the engine does not report where an opening is; two structures in one project still share the origin (ADR 014); history is not kept across a reload; the PDF and `.skp` import are M5.
-- Known limit: the app's store (`model/store.ts`) still has several jobs (final branch review M5).
-  Only the stateless persistence moved to `model/persist.ts`, without changing behaviour: reading
-  and setting aside the stored project (`restoreProject`), writing it (`writeProject`), reading
-  section open state (`readSections`), the start-up "this browser keeps nothing" warning
-  (`storageNotice`) and the not-kept wording (`NOT_KEPT`, `UNITS_NOT_KEPT`). Still in the store:
-  `keep()` (writing each recorded change back) and the once-only flags that decide when a not-kept
-  notice is shown for the project, the shop and the units; the reads and writes of the theme
-  (`kerf.theme`), the units for new projects (`kerf.units`), section open state (`kerf.sections`)
-  and when the project began (`kerf.created`); view-only state (`hovered`, `navigation`,
-  `fitRequest`); and the viewport's thumbnail callback. They stay because each one is tied to the
-  store's own state changes and notices (a write happens inside the action that changes the
-  value, and a failed write decides which notice shows), or, for the view state and the
-  thumbnail, because moving them changes what every screen and its tests read. Neither is a
-  mechanical split, so both are left for a later milestone.
-- Known limit: a stored project the engine rejects is kept in browser storage
-  (`kerf.project.setAside`, then `.2`, `.3`, … so none is overwritten), but nothing in the app
-  offers it back yet; recovering it means reading browser storage by hand. A download of the
-  set-aside copy is a later feature (silent-failure review M5).
+- New public API: `assemblyOrder`, `proposeJoint`, `gapBetween`, `orientationFor` (the orientation index for a board's length and width axes, used by the Board tool), `edgeName`, `JOINT_NAME` and `JOINT_WORD` (the shop words for edges and joints, used by the engine's own messages and the app's panels alike), and `STOCK_FIELDS` (the stock fields each kind of form reads, so the app and the engine share one list); `SolveResult` gains `placements` and `joints`; case and box forms accept `joineryReviewed`.
+
+## Known limits
+
+What M4 does not do, or does only in part. Each is listed in the pull request's "not done" list; the
+maintainer decides which become work.
+
+1. Openings are picked in the project tree, not in the 3D view, because the engine does not report
+   where an opening is.
+2. Two structures in one project still share the origin (ADR 014).
+3. History is not kept across a reload.
+4. The PDF and `.skp` import are M5.
+5. Board cannot be drawn between two boards a form made (rule 7), nor between two boards one above
+   the other. It refuses both in shop words.
+6. Three tools are only partly built. Board is a click then a typed size, not a drag on the floor or
+   a board's face. Select picks boards, not joints or edges, in the 3D view. Escape also clears the
+   selection, not only the tool.
+7. The steps do not change what the model highlights (the case outline in Shape, the coloured joint
+   cuts in Joinery). The build-plan drawer is tall or short, not freely resizable. The board
+   inspector does not list a board's operations, and clicking a board does not show its joints.
+8. Edge profile: the radius choice ignores the board's current roundover, and "None" on a mixed
+   pick changes only the hand-made boards. A roundover that conflicts on a taken-over shelf has no
+   message of its own in the Edge panel.
+9. The app's store (`model/store.ts`) still has several jobs (final branch review M5). Moved out
+   without changing behaviour: browser persistence to `model/persist.ts` (`restoreProject`,
+   `writeProject`, `readSections`, `storageNotice`, `NOT_KEPT`, `UNITS_NOT_KEPT`), the types to
+   `model/store-types.ts`, the actions that only set view state to `model/view-actions.ts`, and the
+   solve and starting state to functions of their own. Still in `createKerfStore` (about 165
+   lines): `keep()` (writing each recorded change back), the once-only flags that decide when a
+   not-kept notice is shown for the project, the shop and the units, the reads and writes of the
+   theme, the units for new projects, section open state and when the project began, the view
+   state itself (`hovered`, `navigation`, `fitRequest`) and the viewport's thumbnail callback. They
+   stay because each is tied to the store's own state changes and notices (a write happens inside
+   the action that changes the value, and a failed write decides which notice shows), or, for the
+   view state and the thumbnail, because moving them changes what every screen and its tests read.
+10. A stored project the engine rejects is kept in browser storage (`kerf.project.setAside`, then
+    `.2`, `.3`, … so none is overwritten), but nothing in the app offers it back yet; recovering it
+    means reading browser storage by hand. A project that cannot be set aside is left where it was,
+    and the notice comes back on each reload. A download of the set-aside copy is a later feature
+    (silent-failure review M5).
+11. Files: Open stamps the project's start time afresh, and `kerf.created` is kept apart from the
+    project. The app version in `meta.json` is bumped by hand. The "newer file" message is picked by
+    its wording until `@kerf/io` raises a typed error. `begin` and `apply` repeat one shape.
+12. Units: a metric length can read "18.0 mm" with a trailing `.0` (`formatLength` in core; fix it
+    there). The units and the work have separate "not kept" notices.
+13. Engine inputs: a parameter cycle through other parameters is not detected; a position of zero or
+    less is accepted and the solver reports it; an empty count has a general wording.
+14. `proposeJoint` matches an error that carries no rule by its words, and compares the errors of the
+    two solves as a set, which hides one that exactly repeats an old one.
+15. Join: "Joinery accepted" stays after a corner joint is changed (the maintainer to confirm), and
+    the sentence for a missing tool does not name the cut.
+16. Problems: a diagnostic that names no board never shows when a board is picked.
+17. In Chrome, middle-button autoscroll can start over the view.
+18. A mirror copy is mirrored where it stands, as the Interaction spec words it.
+19. The project tree and History have no roving tab stop and no Arrow, Home or End keys. Long hints
+    and names are clipped.
+20. Two full solves run for each Board attempt (the figure is reported by the timing test), and the
+    row-shelf height is read off the solve.
+21. Tests not yet written: a light-theme App test (the end-to-end test covers it), Section
+    collapse, the `setupText` branches, tab focus, the Space guard on controls that are not
+    buttons, the two-board take-over notice beyond its unit test, and an unmount in the middle of
+    a drag. The tape end-to-end test and the arrow-key tests were not seen failing first. One
+    mutant of the half-to-even tie in the Tape is equivalent, and the empty-History branch cannot
+    be reached.
+22. The rules above quote UI strings; a later wording change cites this ADR.
