@@ -7,7 +7,7 @@
 
 import type { Id, Project, Structure } from "@kerf/core";
 import { setOption } from "../model/commands";
-import { CHOICES, optionLabel } from "../model/labels";
+import { CHOICES, DEFAULT_CORNER_JOINT, optionLabel } from "../model/labels";
 import { readLength } from "../model/size";
 import { shownProject } from "../model/store";
 import { Choice } from "./Choice";
@@ -101,7 +101,7 @@ function BoxForm({ project, structure }: FormProps) {
         <StockChoice project={project} structure={structure} field="wallStock" />
         <Choice
           label="Corners"
-          value={text(structure, "cornerJoint", "through-dovetail")}
+          value={text(structure, "cornerJoint", DEFAULT_CORNER_JOINT)}
           options={CHOICES.cornerJoint}
           onChange={(v) => set("cornerJoint", v)}
         />

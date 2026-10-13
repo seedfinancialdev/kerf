@@ -7,7 +7,7 @@
 
 import { acceptJoinery, setOption } from "../model/commands";
 import { joineryRows } from "../model/joinery";
-import { CHOICES } from "../model/labels";
+import { CHOICES, DEFAULT_CORNER_JOINT } from "../model/labels";
 import { shownProject } from "../model/store";
 import { Choice } from "./Choice";
 import { Section } from "./Section";
@@ -43,7 +43,7 @@ export function JoineryStep() {
             value={
               typeof box.options.cornerJoint === "string"
                 ? box.options.cornerJoint
-                : "through-dovetail"
+                : DEFAULT_CORNER_JOINT
             }
             options={CHOICES.cornerJoint}
             onChange={(v) => store.getState().apply(setOption(project, box.id, "cornerJoint", v))}

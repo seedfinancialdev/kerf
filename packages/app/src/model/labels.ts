@@ -40,6 +40,9 @@ export const CHOICES = {
   ],
 } as const satisfies Record<string, ReadonlyArray<{ value: string; label: string }>>;
 
+/** The corner joint a box starts with: the first choice offered. */
+export const DEFAULT_CORNER_JOINT: string = CHOICES.cornerJoint[0].value;
+
 const OPTION_LABELS: Record<string, string> = {
   carcaseStock: "Carcase stock",
   backStock: "Back stock",
