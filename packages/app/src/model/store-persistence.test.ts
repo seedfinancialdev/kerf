@@ -233,3 +233,20 @@ describe("warnings that must not be lost (ADR 015, rule 11: the app says so once
     expect(s.getState().notice).toEqual({ text: nothingKept, kind: "warning" });
   });
 });
+
+describe("a shop change the browser cannot keep (silent-failure review I3)", () => {
+  it("is used until the page closes, and the user is told once", () => {
+    const s = createKerfStore({ storage: createStorage(memoryStorage(true)) });
+    // Blade kerf 1/8" = 203200 / 8 = 25400.
+    const shop = { ...s.getState().shop, kerf: 25_400 };
+    s.getState().setShop(shop);
+    expect(s.getState().shop.kerf).toBe(25_400);
+    expect(s.getState().notice).toEqual({
+      text: "Your shop couldn't be kept in this browser; it applies until you close the page.",
+      kind: "warning",
+    });
+    s.getState().dismissNotice();
+    s.getState().setShop({ ...shop, kerf: 12_700 });
+    expect(s.getState().notice).toBeNull();
+  });
+});

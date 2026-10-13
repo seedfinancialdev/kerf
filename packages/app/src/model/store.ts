@@ -40,7 +40,7 @@ import {
   writeProject,
 } from "./persist";
 import { NOTHING, type Selection } from "./selection";
-import { loadShop, saveShop } from "./shop";
+import { loadShop, SHOP_NOT_KEPT, saveShop } from "./shop";
 import type { Step } from "./steps";
 import type { AppStorage } from "./storage";
 
@@ -128,7 +128,7 @@ export interface KerfActions {
   setStep(step: Step): void;
   /** Sets what is picked. */
   select(selection: Selection): void;
-  /** Uses and saves the shop, then solves again with it. */
+  /** Uses and saves the shop, then solves again with it. When the browser cannot keep it, says so once. */
   setShop(shop: ShopProfile): void;
   /** Picks the active tool, dropping the last one's action and any preview it drew. */
   setTool(tool: ToolId): void;
@@ -203,8 +203,10 @@ export function createKerfStore(deps: {
     ),
   );
 
-  /** True once the user has been told that work is not being kept (the notice is given once). */
+  // True once the user has been told that a kind of work is not being kept (each is said once).
+  // Without storage at all the start-up warning has already said so for the project and the shop.
   let toldNotKept = !deps.storage.available;
+  let toldShopNotKept = !deps.storage.available;
   let toldUnitsNotKept = false;
 
   return createStore<KerfState & KerfActions>()((set, get) => {
@@ -340,8 +342,11 @@ export function createKerfStore(deps: {
       },
       select: (selection) => set({ selection }),
       setShop: (shop) => {
-        saveShop(deps.storage, shop);
+        const kept = saveShop(deps.storage, shop);
         show({ shop });
+        if (kept || toldShopNotKept) return;
+        toldShopNotKept = true;
+        set(warn(line(), SHOP_NOT_KEPT));
       },
       setTool: (tool) => {
         const dropped = { tool, pending: null, proposal: null };

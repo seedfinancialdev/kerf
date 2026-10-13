@@ -31,7 +31,11 @@ export function loadShop(storage: AppStorage): { shop: ShopProfile; problem?: st
   return { shop: parsed as ShopProfile };
 }
 
-/** Keeps the shop in the browser; a failed write is the caller's to notice through `storage.available`. */
-export function saveShop(storage: AppStorage, shop: ShopProfile): void {
-  storage.write("kerf.shop", JSON.stringify(shop));
+/** Shown once when the shop could not be written to browser storage (ADR 015, rule 11). */
+export const SHOP_NOT_KEPT =
+  "Your shop couldn't be kept in this browser; it applies until you close the page.";
+
+/** Keeps the shop in the browser; false when the browser would not take it. */
+export function saveShop(storage: AppStorage, shop: ShopProfile): boolean {
+  return storage.write("kerf.shop", JSON.stringify(shop));
 }
