@@ -7,12 +7,15 @@
 // gap expression (ADR 015, rule 7) as its length, so it follows every resize.
 
 import {
+  formatLength,
   gapBetween,
   gridSize,
   type Id,
   type Len,
   orientationFor,
   type Project,
+  type ShopProfile,
+  solve,
   solveModel,
   type Vec3,
 } from "@kerf/core";
@@ -65,13 +68,17 @@ function addBoard(
   };
 }
 
-/** The engine's complaint about the board that was just added, if it has one. */
-function problemOn(project: Project, instance: Id): string | null {
-  const def = project.instances.find((i) => i.id === instance)?.def;
-  const found = solveModel(project).diagnostics.find(
-    (d) => d.severity === "error" && d.part === def,
-  );
-  return found?.message ?? null;
+/**
+ * The first error the new board brings that `before` did not have, from a full solve (assembly
+ * checks such as two boards in the same space only run there), or null.
+ */
+function newProblem(before: Project, after: Project, shop: ShopProfile): string | null {
+  const errors = (p: Project): string[] =>
+    solve(p, shop)
+      .diagnostics.filter((d) => d.severity === "error")
+      .map((d) => d.message);
+  const known = new Set(errors(before));
+  return errors(after).find((m) => !known.has(m)) ?? null;
 }
 
 /**
@@ -106,11 +113,14 @@ export function drawBoard(
 }
 
 /**
- * A board spanning the gap between boards `a` and `b`, lying flat with its low face `height` up,
- * `widthSize` wide (the depth the two boards share when null). Its length is the engine's gap
- * expression, so it follows every resize. Comes back `ok: false`, saying why, when the boards have
- * no gap to span (the engine's reason), when they are one above the other, for a width of zero or
- * less, or when the engine rejects the new board.
+ * A board spanning the gap between boards `a` and `b`, lying flat with its low face `height` up
+ * (the height of the first click, so a board is fitted where the user pointed; ADR 015, rule 7).
+ * It sits flush with the front edges of the two boards (the far end of the span they share, ruling
+ * R35). `widthSize` is measured back from there; null reaches back to the nearest other board
+ * crossing the gap at that height (the back panel), or the full shared span. Its length is the
+ * engine's gap expression, so it follows every resize. Comes back `ok: false`, saying why, when
+ * the boards have no gap (the engine's reason), are one above the other, there is no free room, the
+ * width is zero or less, or the full solve finds a new error.
  */
 export function boardBetween(
   project: Project,
@@ -119,6 +129,7 @@ export function boardBetween(
   b: Id,
   height: Len,
   widthSize: Len | null,
+  shop: ShopProfile,
 ): BetweenResult {
   const gap = gapBetween(project, a, b);
   if (!gap.ok) return { ok: false, message: gap.reason };
@@ -132,22 +143,52 @@ export function boardBetween(
   }
   if (widthSize !== null && widthSize <= 0) return { ok: false, message: NO_SIZE };
   const widthAxis: Axis = lengthAxis === 0 ? 1 : 0;
-  const key = AXES[widthAxis];
-  // Line the new board up with the boards across the gap: from the later of their near faces to the earlier of their far faces.
-  const spanned = solveModel(project).instances.filter((i) => i.id === a || i.id === b);
-  const near = Math.max(...spanned.map((i) => i.position[key]));
-  const far = Math.min(...spanned.map((i) => i.position[key] + i.extent[key]));
+  const across = AXES[widthAxis];
+  const along = gap.axis;
+  const solved = solveModel(project).instances;
+  const spanned = solved.filter((i) => i.id === a || i.id === b);
+  const near = Math.max(...spanned.map((i) => i.position[across]));
+  const front = Math.min(...spanned.map((i) => i.position[across] + i.extent[across]));
+  const [low, high] = [...spanned].sort((x, y) => x.position[along] - y.position[along]);
+  const gapStart = (low?.position[along] ?? 0) + (low?.extent[along] ?? 0);
+  const gapEnd = high?.position[along] ?? gapStart;
+  const thickness = project.stock.find((s) => s.id === stock)?.thickness ?? 0;
+  // Other boards crossing the gap at the new board's height, behind its front: the nearest bounds it.
+  const limit = Math.max(
+    near,
+    ...solved
+      .filter(
+        (i) =>
+          i.id !== a &&
+          i.id !== b &&
+          i.position[along] < gapEnd &&
+          i.position[along] + i.extent[along] > gapStart &&
+          i.position.z < height + thickness &&
+          i.position.z + i.extent.z > height &&
+          i.position[across] + i.extent[across] <= front,
+      )
+      .map((i) => i.position[across] + i.extent[across]),
+  );
+  const room = front - limit;
+  if (room <= 0) return { ok: false, message: "There is no free room between those boards there." };
+  if (widthSize !== null && widthSize > room) {
+    return {
+      ok: false,
+      message: `There is no room for a board that wide there; the most is ${formatLength(room, project.units)}.`,
+    };
+  }
+  const width = widthSize ?? room;
   const position = { x: "0in", y: "0in", z: literalFor(height, project.units) };
-  position[key] = literalFor(near, project.units);
-  position[gap.axis] = gap.start;
+  position[across] = literalFor(front - width, project.units);
+  position[along] = gap.start;
   const made = addBoard(
     project,
     stock,
-    { length: gap.length, width: literalFor(widthSize ?? far - near, project.units) },
+    { length: gap.length, width: literalFor(width, project.units) },
     position,
     orientationFor(unit(lengthAxis), unit(widthAxis)),
   );
-  const problem = problemOn(made.project, made.instance);
+  const problem = newProblem(project, made.project, shop);
   if (problem) return { ok: false, message: problem };
   const names = [a, b].map((id) => project.instances.find((i) => i.id === id)?.name ?? "a board");
   return {
@@ -190,7 +231,7 @@ function fitBetween(
   second: Id,
 ): void {
   const s = store.getState();
-  const r = boardBetween(project, stock, first.instance, second, first.point[2], null);
+  const r = boardBetween(project, stock, first.instance, second, first.point[2], null, s.shop);
   if (r.ok) {
     s.apply(r.edit);
     pick(store, r.picked);
@@ -241,9 +282,11 @@ export const boardTool: ToolHandler = {
     if (!stock) return NO_STOCK;
     const sizes = text.split(",").map((t) => t.trim());
     if (sizes.length !== 2) return 'Type the length and width, like 24", 6".';
-    const [length, width] = sizes.map((t) => readLength(t, project));
-    if (!length?.ok) return length?.message ?? NO_SIZE;
-    if (!width?.ok) return width?.message ?? NO_SIZE;
+    const [lengthText = "", widthText = ""] = sizes;
+    const length = readLength(lengthText, project);
+    if (!length.ok) return length.message;
+    const width = readLength(widthText, project);
+    if (!width.ok) return width.message;
     if (length.value <= 0 || width.value <= 0) return NO_SIZE;
     const drawn = drawBoard(
       project,
@@ -252,7 +295,7 @@ export const boardTool: ToolHandler = {
       { axis: 0, size: length.value },
       { axis: 1, size: width.value },
     );
-    const problem = problemOn(drawn.project, drawn.picked);
+    const problem = newProblem(project, drawn.project, s.shop);
     if (problem) return problem;
     s.apply(drawn);
     pick(store, drawn.picked);

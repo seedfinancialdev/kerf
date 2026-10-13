@@ -62,3 +62,22 @@ describe("dispatchPointer()", () => {
     });
   });
 });
+
+describe("a click on empty space with a line of sight", () => {
+  it.each(["move", "pushPull"] as const)("does nothing for the %s tool", (tool) => {
+    const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+    store.getState().apply(startProject("Bookcase", "imperial"));
+    store.getState().setTool(tool);
+    const before = store.getState().history?.entries.length;
+    const canvas = document.createElement("canvas");
+    canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 200 }) as DOMRect;
+    const camera = new PerspectiveCamera(50, 1, 0.1, 1000);
+    camera.position.set(3, 50, 4);
+    camera.lookAt(3, 0, 4);
+    camera.updateMatrixWorld();
+    canvas.addEventListener("click", (e) => dispatchPointer(store, "down", e, null, camera));
+    canvas.dispatchEvent(new MouseEvent("click", { clientX: 100, clientY: 100 }));
+    expect(store.getState().history?.entries.length).toBe(before);
+    expect(store.getState().pending).toBeNull();
+  });
+});
