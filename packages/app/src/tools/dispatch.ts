@@ -3,13 +3,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Turns a pointer event on the model into what a tool needs: the board, the point on the grid and
-// the surface's direction, in project terms. The only place scene floats become project integers.
+// the surface's direction, in project terms. Together with drag.ts, the only place scene floats become project integers.
 
 import { gridSize, type PlacedPart, type Vec3 } from "@kerf/core";
 import type { ThreeEvent } from "@react-three/fiber";
 import type { Ray } from "../model/pending";
 import { type KerfStore, shownProject } from "../model/store";
 import { fromScene } from "../viewport/frames";
+import { sightLine } from "../viewport/sight-line";
 import { handlerFor, type ModelHit } from "./pointer";
 
 /** A scene direction back to the signed project axis it is closest to. */
@@ -40,10 +41,14 @@ export function dispatchPointer(
       normal: axisOf(n.x, n.y, n.z),
     };
   }
+  // The same arithmetic as every later move of the drag, so a click starts where it ends.
+  const canvas = "nativeEvent" in e ? e.nativeEvent.target : null;
   const ray =
-    "ray" in e ? { origin: e.ray.origin.toArray(), dir: e.ray.direction.toArray() } : null;
+    "camera" in e && canvas instanceof HTMLElement
+      ? sightLine(e.nativeEvent, canvas, e.camera)
+      : null;
   handlerFor(s.tool).pointer?.(
-    { kind, hit, ray: ray as Ray | null, shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey },
+    { kind, hit, ray, shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey },
     store,
   );
 }

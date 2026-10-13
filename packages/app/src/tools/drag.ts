@@ -7,12 +7,18 @@
 // sight is projected onto a line or plane chosen when the drag began, so the same line of sight
 // always gives the same point. Scene floats come in (inches, y up) and snapped project lengths go out.
 
-import { INCH, type Len, type Vec3 } from "@kerf/core";
+import { INCH, type Len, MAX_LENGTH, type Vec3 } from "@kerf/core";
 import type { Ray } from "../model/pending";
 import { fromScene, toScene } from "../viewport/frames";
 
 type Triple = readonly [number, number, number];
 type Axis = 0 | 1 | 2;
+
+/** Below this, 1 − cos² of the angle between sight line and axis, they are treated as parallel. */
+const PARALLEL = 1e-6;
+
+/** Keeps a projected length inside what the project allows, so a grazing sight line cannot run off. */
+const capped = (len: Len): Len => Math.max(-MAX_LENGTH, Math.min(MAX_LENGTH, len));
 
 const dot = (a: Triple, b: Triple): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const minus = (a: Triple, b: Triple): Triple => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -40,11 +46,11 @@ export function pointOnAxis(ray: Ray, from: Vec3, axis: Axis, grid: Len): Vec3 {
   const w = minus(sceneOf(from), ray.origin);
   const b = dot(a, d);
   const apart = 1 - b * b;
-  if (apart < 1e-9) return from;
+  if (apart < PARALLEL) return from;
   const s = (b * dot(d, w) - dot(a, w)) / apart;
   const at = [0, 1, 2].map((i) => (sceneOf(from)[i] ?? 0) + s * (a[i] ?? 0)) as unknown as Triple;
   const out: [Len, Len, Len] = [from[0], from[1], from[2]];
-  out[axis] = fromScene(at, grid)[axis];
+  out[axis] = capped(fromScene(at, grid)[axis]);
   return out;
 }
 
@@ -57,11 +63,11 @@ export function pointOnAxis(ray: Ray, from: Vec3, axis: Axis, grid: Len): Vec3 {
 export function pointOnPlane(ray: Ray, from: Vec3, normal: Axis, grid: Len): Vec3 {
   const n = sceneAxis(normal);
   const facing = dot(unit(ray.dir), n);
-  if (Math.abs(facing) < 1e-9) return from;
+  if (Math.abs(facing) < 1e-6) return from;
   const t = dot(minus(sceneOf(from), ray.origin), n) / facing;
   const d = unit(ray.dir);
   const at = [0, 1, 2].map((i) => (ray.origin[i] ?? 0) + t * (d[i] ?? 0)) as unknown as Triple;
-  return fromScene(at, grid);
+  return fromScene(at, grid).map(capped) as unknown as Vec3;
 }
 
 /** The project axis the line of sight runs most nearly along: the plane facing the viewer. */

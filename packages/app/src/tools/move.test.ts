@@ -332,11 +332,22 @@ describe("the Move tool", () => {
       expect(topOf(s).box.min[2]).toBe(top.box.min[2] + 2 * IN);
     });
 
+    it("records nothing for a release with no move before it", () => {
+      const s = started();
+      const before = entries(s);
+      lock(s, 2);
+      moveTool.pointer?.(seen("down", 0, hit(topOf(s), [0, 0, 0])), s);
+      moveTool.pointer?.(seen("up", 2), s);
+      expect(entries(s)).toBe(before);
+      expect(s.getState().history?.entries[0]?.project.parts.some((d) => d.detached)).toBeFalsy();
+    });
+
     it("records a release that is off every board, because the sight line is all it needs", () => {
       const s = started();
       const top = topOf(s);
       const before = entries(s);
       moveTool.pointer?.(seen("down", 0, hit(top, [0, 0, 0])), s);
+      moveTool.pointer?.(seen("move", 3), s);
       moveTool.pointer?.(seen("up", 3), s);
       expect(entries(s)).toBe((before ?? 0) + 1);
       expect(s.getState().history?.entries.at(-1)?.label).toBe('Moved Top 3"');
@@ -346,6 +357,7 @@ describe("the Move tool", () => {
       const s = started();
       const top = topOf(s);
       moveTool.pointer?.(seen("down", 0, hit(top, [0, 0, 0])), s);
+      moveTool.pointer?.(seen("move", 2), s);
       moveTool.pointer?.(seen("up", 2), s);
       expect(topOf(s).box.min[2]).toBe(top.box.min[2] + 2 * IN);
     });
@@ -355,6 +367,7 @@ describe("the Move tool", () => {
       const top = topOf(s);
       moveTool.pointer?.(seen("down", 0, hit(top, [0, 0, 0])), s);
       lock(s, 2, s.getState().pending);
+      moveTool.pointer?.(seen("move", 1), s);
       moveTool.pointer?.(seen("up", 1), s);
       expect(topOf(s).box.min[2]).toBe(top.box.min[2] + IN);
     });

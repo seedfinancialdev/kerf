@@ -5,7 +5,7 @@
 // A drag is measured against a line or plane fixed when it began, not against the board that is
 // moving under the pointer. Scene is y up; project (x, y, z) is scene (x, z, −y), in inches.
 
-import { INCH } from "@kerf/core";
+import { INCH, MAX_LENGTH } from "@kerf/core";
 import { describe, expect, it } from "vitest";
 import { pointOnAxis, pointOnPlane, travelOnAxis, viewAxis } from "./drag";
 
@@ -39,10 +39,30 @@ describe("pointOnAxis()", () => {
   });
 });
 
+describe("pointOnAxis() with a sight line that nearly follows the line", () => {
+  it("stays at the start when the sight line is almost parallel", () => {
+    // 0.0005 off parallel: 1 − cos² is about 2.5e-7, under the threshold.
+    const ray = { origin: [0, 0, 20], dir: [0, 1, 0.0005] } as const;
+    expect(pointOnAxis(ray, [0, 0, 0], 2, grid)).toEqual([0, 0, 0]);
+  });
+
+  it("never leaves the project's range, however far the sight line meets the line", () => {
+    // The sight line crosses the up line at 200000 inches below, twice the longest length.
+    const ray = { origin: [0, 0, 2000], dir: [0, 1, 0.01] } as const;
+    expect(pointOnAxis(ray, [0, 0, 0], 2, grid)).toEqual([0, 0, -MAX_LENGTH]);
+  });
+});
+
 describe("pointOnPlane()", () => {
   it("meets the plane 2 inches up: scene (3, 2, 4) is project (3, −4, 2) inches", () => {
     const ray = { origin: [3, 10, 4], dir: [0, -1, 0] } as const;
     expect(pointOnPlane(ray, [0, 0, 2 * INCH], 2, grid)).toEqual([3 * INCH, -4 * INCH, 2 * INCH]);
+  });
+
+  it("never leaves the project's range for a sight line that grazes the plane", () => {
+    const ray = { origin: [0, 5, 0], dir: [1, -0.00001, 0] } as const;
+    const [x] = pointOnPlane(ray, [0, 0, 2 * INCH], 2, grid);
+    expect(Math.abs(x)).toBeLessThanOrEqual(MAX_LENGTH);
   });
 
   it("stays at the start for a sight line parallel to the plane", () => {

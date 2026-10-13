@@ -27,3 +27,25 @@ test("moves the top by a typed distance and undoes it", async ({ page }) => {
     "true",
   );
 });
+
+test("lifts a shelf by dragging it upward, even past the top of the model", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "New" }).click();
+  await page.getByRole("button", { name: "Bookcase" }).click();
+  await page.getByRole("button", { name: "Shape" }).click();
+  const model = page.getByRole("region", { name: "Model" });
+  await expect(model.locator("canvas")).toBeVisible();
+  const box = await model.boundingBox();
+  if (!box) throw new Error("no model area");
+  await page.waitForTimeout(1500); // the 3D view has fitted the bookcase
+  await page.keyboard.press("m");
+  await page.keyboard.press("ArrowUp");
+  // At the default view the bottom shelf's top face sits about a quarter of the way down the model.
+  const x = box.x + box.width * 0.485;
+  await page.mouse.move(x, box.y + box.height * 0.235);
+  await page.mouse.down();
+  await page.mouse.move(x, box.y + box.height * 0.18, { steps: 5 });
+  await page.mouse.move(x, box.y - 30, { steps: 10 });
+  await page.mouse.up();
+  await expect(page.getByRole("option", { name: /^Moved / })).toBeVisible();
+});

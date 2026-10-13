@@ -264,14 +264,13 @@ export const moveTool: ToolHandler = {
       }
       return;
     }
-    if (r.ok) return finish(store, pending.placed, r);
+    // Only a drag that showed a preview is recorded; a click never is.
+    if (r.ok && pending.last !== null) return finish(store, pending.placed, r);
     // Nothing is recorded. A click that has not moved keeps its pick so a distance can be typed;
     // a drag that ended with nothing to record is over.
     s.cancelPreview();
-    if (!isZero(delta)) {
-      s.say(r.message);
-      s.setPending(null);
-    } else if (pending.last !== null) s.setPending(null);
+    if (!r.ok && !isZero(delta)) s.say(r.message);
+    if (pending.last !== null || !r.ok) s.setPending(null);
   },
   prompt(s) {
     if (selectedBoards(s).length === 0) return "Select boards first";

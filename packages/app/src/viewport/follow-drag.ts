@@ -5,22 +5,13 @@
 // Keeps a drag going once a tool has begun one: the canvas captures the pointer, so the tool hears
 // every move and the release even when the pointer leaves the boards or the canvas.
 
-import { type Camera, Raycaster, Vector2 } from "three";
-import type { Ray } from "../model/pending";
+import type { Camera } from "three";
 import type { KerfStore } from "../model/store";
 import { dispatchDrag } from "../tools/dispatch";
+import { sightLine } from "./sight-line";
 
-/** The line of sight under a pointer event, in scene inches. */
-function rayOf(e: PointerEvent, canvas: HTMLElement, camera: Camera): Ray {
-  const box = canvas.getBoundingClientRect();
-  const at = new Vector2(
-    ((e.clientX - box.left) / box.width) * 2 - 1,
-    -((e.clientY - box.top) / box.height) * 2 + 1,
-  );
-  const caster = new Raycaster();
-  caster.setFromCamera(at, camera);
-  return { origin: caster.ray.origin.toArray(), dir: caster.ray.direction.toArray() };
-}
+/** How far the pointer must travel before a press is a drag and not a click. */
+const DRAG_PIXELS = 3;
 
 /**
  * Follows `down`'s pointer on `canvas` until it is released or taken away. A release goes to the
@@ -33,10 +24,13 @@ export function followDrag(
   camera: Camera,
 ): void {
   canvas.setPointerCapture(down.pointerId);
+  const began = sightLine(down, canvas, camera);
+  let dragged = false;
   const keys = (e: PointerEvent) => ({ shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey });
   const move = (e: PointerEvent): void => {
-    if (e.pointerId === down.pointerId)
-      dispatchDrag(store, "move", rayOf(e, canvas, camera), keys(e));
+    if (e.pointerId !== down.pointerId) return;
+    dragged ||= Math.hypot(e.clientX - down.clientX, e.clientY - down.clientY) >= DRAG_PIXELS;
+    if (dragged) dispatchDrag(store, "move", sightLine(e, canvas, camera), keys(e));
   };
   const end = (): void => {
     canvas.removeEventListener("pointermove", move);
@@ -47,7 +41,8 @@ export function followDrag(
   const up = (e: PointerEvent): void => {
     if (e.pointerId !== down.pointerId) return;
     end();
-    dispatchDrag(store, "up", rayOf(e, canvas, camera), keys(e));
+    // A click that never left its pixel is released where it began, so it moves nothing.
+    dispatchDrag(store, "up", dragged ? sightLine(e, canvas, camera) : began, keys(e));
     canvas.releasePointerCapture(down.pointerId);
   };
   const cancel = (): void => {
