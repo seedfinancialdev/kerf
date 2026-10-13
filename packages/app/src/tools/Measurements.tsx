@@ -6,6 +6,7 @@
 // SketchUp): typed sizes go to the active tool.
 
 import { useEffect, useId, useRef, useState } from "react";
+import type { ToolId } from "../model/store";
 import { useKerf, useKerfStore } from "../ui/useKerf";
 import { keptByField } from "../ui/useShortcuts";
 import { handlerFor } from "./pointer";
@@ -28,8 +29,8 @@ export function Measurements() {
   const prompt = useKerf((s) => handlerFor(s.tool).prompt?.(s) ?? "");
   const [text, setText] = useState("");
   // A refusal belongs to the tool that gave it, so it is not shown once another tool is picked.
-  const [refusal, setProblem] = useState<{ tool: string; text: string } | null>(null);
-  if (refusal && refusal.tool !== tool) setProblem(null);
+  const [refusal, setRefusal] = useState<{ tool: ToolId; text: string } | null>(null);
+  if (refusal && refusal.tool !== tool) setRefusal(null);
   const problem = refusal?.tool === tool ? refusal.text : null;
   const problemId = `${id}-problem`;
   useEffect(() => {
@@ -39,7 +40,7 @@ export function Measurements() {
       if (s.pending === null || !handlerFor(s.tool).measure) return;
       e.preventDefault();
       setText(e.key);
-      setProblem(null);
+      setRefusal(null);
       box.current?.focus();
     };
     window.addEventListener("keydown", onKey);
@@ -51,7 +52,7 @@ export function Measurements() {
     const refused = handler.measure
       ? handler.measure(text, store)
       : "This tool takes no typed size.";
-    setProblem(refused ? { tool, text: refused } : null);
+    setRefusal(refused ? { tool, text: refused } : null);
     if (!refused) setText("");
   };
   return (
@@ -66,7 +67,7 @@ export function Measurements() {
         aria-describedby={problem ? problemId : undefined}
         onChange={(e) => {
           setText(e.target.value);
-          setProblem(null);
+          setRefusal(null);
         }}
         onKeyDown={(e) => {
           if (e.key === "Enter") submit();

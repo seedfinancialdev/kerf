@@ -4,40 +4,51 @@
 
 // Interaction spec, Select: a click picks a board, Shift adds, empty space picks nothing.
 
-import type { PlacedPart } from "@kerf/core";
 import { describe, expect, it } from "vitest";
+import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { memoryStorage } from "../testing/memory-storage";
 import { handlerFor, type ModelHit } from "./pointer";
 
-const hitOn = (instance: string): ModelHit => ({
-  placed: { instance } as PlacedPart,
-  point: [0, 0, 0],
-  normal: [0, 0, 1],
-});
-const store = () => createKerfStore({ storage: createStorage(memoryStorage()) });
+const store = () => {
+  const s = createKerfStore({ storage: createStorage(memoryStorage()) });
+  s.getState().apply(startProject("Bookcase", "imperial"));
+  return s;
+};
+/** A click on the bookcase's board with this name. */
+const hitOn = (name: "Top" | "Bottom"): ModelHit => {
+  const placed = store()
+    .getState()
+    .solved?.result.placements.find((p) => p.partName === name);
+  if (!placed) throw new Error(`no ${name}`);
+  return { placed, point: [0, 0, 0], normal: placed.frame.z };
+};
+const id = (name: "Top" | "Bottom") => hitOn(name).placed.instance;
 const click = (s: ReturnType<typeof store>, hit: ModelHit | null, shift = false) =>
   handlerFor("select").pointer?.({ kind: "down", hit, ray: null, shift, ctrl: false }, s);
 
 describe("the Select tool", () => {
   it("picks the board clicked, replacing the pick", () => {
     const s = store();
-    click(s, hitOn("a"));
-    click(s, hitOn("b"));
-    expect(s.getState().selection).toEqual({ kind: "boards", instances: ["b"] });
+    click(s, hitOn("Top"));
+    click(s, hitOn("Bottom"));
+    expect(s.getState().selection).toEqual({ kind: "boards", instances: [id("Bottom")] });
   });
 
   it("adds a board to the pick with Shift", () => {
     const s = store();
-    click(s, hitOn("a"));
-    click(s, hitOn("b"), true);
-    expect(s.getState().selection).toEqual({ kind: "boards", instances: ["a", "b"] });
+    click(s, hitOn("Top"));
+    click(s, hitOn("Bottom"), true);
+    expect(s.getState().selection).toEqual({
+      kind: "boards",
+      instances: [id("Top"), id("Bottom")],
+    });
   });
 
   it("picks nothing when empty space is clicked", () => {
     const s = store();
-    click(s, hitOn("a"));
+    click(s, hitOn("Top"));
     click(s, null);
     expect(s.getState().selection).toEqual({ kind: "none" });
   });

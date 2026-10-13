@@ -35,6 +35,19 @@ describe("<ToolRow>", () => {
     expect(store.getState().selection).toEqual({ kind: "none" });
   });
 
+  it("drops a drag's preview on Escape, so nothing unrecorded stays on screen (final branch review I1)", () => {
+    const store = setup();
+    act(() => store.getState().apply(startProject("Bookcase", "imperial")));
+    const recorded = store.getState().solved;
+    act(() => {
+      store.getState().setTool("move");
+      store.getState().preview(startProject("Blank case", "imperial").project);
+    });
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(store.getState().previewed).toBeNull();
+    expect(store.getState().solved?.result.placements).toEqual(recorded?.result.placements);
+  });
+
   it("leaves E alone and keeps the navigation keys working", () => {
     const store = setup();
     fireEvent.keyDown(window, { key: "e" });
