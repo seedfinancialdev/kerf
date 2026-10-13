@@ -30,6 +30,7 @@ body {
 }
 
 .topbar {
+  grid-row: 1;
   display: flex;
   align-items: center;
   gap: var(--space-4);
@@ -82,6 +83,7 @@ body {
 }
 
 .hint {
+  grid-row: 2;
   margin: 0;
   padding: 0 var(--space-4);
   line-height: var(--hint-height);
@@ -93,6 +95,7 @@ body {
 }
 
 .workspace {
+  grid-row: 4;
   display: grid;
   grid-template-columns: var(--panel-left-width) minmax(0, 1fr) var(--panel-right-width);
   min-height: 0;
@@ -129,6 +132,7 @@ body {
 }
 
 .notice {
+  grid-row: 3;
   display: flex;
   gap: var(--space-3);
   align-items: center;
@@ -138,7 +142,8 @@ body {
 }
 
 .notice:empty {
-  display: none;
+  padding: 0;
+  border: 0;
 }
 
 button {
