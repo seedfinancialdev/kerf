@@ -6,7 +6,7 @@
 // resize checks (shelves 35-1/16" cut at 36", 29-1/16" at 30"; 5 shelves → a line of 7).
 
 import { generateStructures, type PlacedPart, type Project, solve } from "@kerf/core";
-import { loadShopProfile } from "@kerf/fixtures";
+import { loadShopProfile, withParam } from "@kerf/fixtures";
 import { describe, expect, it } from "vitest";
 import {
   acceptJoinery,
@@ -139,6 +139,15 @@ describe("setShelves()", () => {
     if (!r.ok) throw new Error(r.message);
     expect(r.edit.label).toBe("Shelves 4 → 5");
     expect(shelfLine(r.edit.project)?.quantity).toBe(7);
+  });
+
+  it("labels a change from a saved count it cannot read by that count as saved: 'Shelves 65 → 4'", () => {
+    // 65 is past the 64 a form makes (core structures/builder.ts, MAX_COUNT).
+    const p = withParam(start().project, "shelf_count", "65");
+    const opening = structureOf(p).openings[0]?.id ?? "";
+    const r = setShelves(p, structureOf(p).id, opening, "4", "even");
+    if (!r.ok) throw new Error(r.message);
+    expect(r.edit.label).toBe("Shelves 65 → 4");
   });
 
   it("labels shelves added to an empty opening 'Added 3 shelves'", () => {

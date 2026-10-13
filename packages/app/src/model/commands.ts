@@ -181,6 +181,17 @@ function openingIn(project: Project, structure: Id, opening: Id): Opening {
 }
 
 /**
+ * A saved shelf or bay count as the user should see it: its value when it reads as a count, else
+ * the text as saved (a parameter's own text when it names one), so a count the engine refuses
+ * (65 shelves, say) can still be seen and corrected.
+ */
+export function savedCount(project: Project, count: Expr): string {
+  const read = readCount(count, project);
+  if (read.ok) return String(read.value);
+  return paramNamed(project, count)?.expr ?? count;
+}
+
+/**
  * Shelves in an opening: a new division, or a new count for the shelves already there. Text that
  * is not a whole number comes back as `ok: false`. Throws RangeError for a structure or opening
  * the project does not have.
@@ -197,7 +208,6 @@ export function setShelves(
   const param = existing && paramNamed(project, existing.count);
   const read = readCount(countText, project, param?.name);
   if (!read.ok) return { ok: false, message: read.message };
-  const before = existing ? readCount(existing.count, project) : undefined;
   const counted = param ? setParam(project, param, read.expr) : project;
   const count = param ? param.name : read.expr;
   const next = withOpening(counted, structure, opening, (x) => ({
@@ -205,8 +215,8 @@ export function setShelves(
     division: { type: "shelves", count, spacing },
     children: existing ? x.children : [],
   }));
-  const label = before?.ok
-    ? `Shelves ${before.value} → ${read.value}`
+  const label = existing
+    ? `Shelves ${savedCount(project, existing.count)} → ${read.value}`
     : `Added ${read.value} shelves`;
   return { ok: true, edit: { project: next, label } };
 }

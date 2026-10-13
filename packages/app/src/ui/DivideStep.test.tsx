@@ -5,6 +5,7 @@
 // Interaction spec, "3. Divide": add shelves (count, evenly spaced or at set heights), partition,
 // bays. Operation specs, resize checks: "With shelf count set to 5, the merged line becomes 7."
 
+import { withParam } from "@kerf/fixtures";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
@@ -184,5 +185,21 @@ describe("the Divide step", () => {
         "The shelf count can't be worked out; type a count first.",
       );
     });
+  });
+
+  it("shows a saved count it cannot read as saved, so it can be corrected, and labels the change from it", () => {
+    // 65 is past the 64 a form makes (core structures/builder.ts, MAX_COUNT).
+    const store = setup();
+    const p = shownProject(store.getState());
+    if (!p) throw new Error("no project");
+    act(() =>
+      store.getState().apply({ label: "65 shelves", project: withParam(p, "shelf_count", "65") }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add shelves" }));
+    const count = screen.getByLabelText("Count") as HTMLInputElement;
+    expect(count.value).toBe("65");
+    fireEvent.change(count, { target: { value: "4" } });
+    fireEvent.blur(count);
+    expect(store.getState().history?.entries.at(-1)?.label).toBe("Shelves 65 → 4");
   });
 });

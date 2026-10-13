@@ -11,6 +11,7 @@ import {
   addPartition,
   clearDivision,
   type EditResult,
+  savedCount,
   setShelves,
   splitBays,
 } from "../model/commands";
@@ -65,7 +66,10 @@ function OpeningForm({ project, structure, opening }: FormProps) {
   };
   const shelves = opening.division?.type === "shelves" ? opening.division : undefined;
   const count = shelves ? readCount(shelves.count, project) : undefined;
+  // The value to space evenly by, and what the Count box shows: a count the engine refuses is
+  // shown as saved, so it can be corrected (second-pass review M2).
   const countText = count?.ok ? String(count.value) : "";
+  const shownCount = shelves ? savedCount(project, shelves.count) : "";
   const heights = Array.isArray(shelves?.spacing) ? shelves.spacing : [];
   // "At set heights" with no heights typed yet is only shown, never recorded: an empty list of
   // heights is not a division the user asked for (final branch review, Task 18).
@@ -115,7 +119,7 @@ function OpeningForm({ project, structure, opening }: FormProps) {
           <>
             <NumberField
               label="Count"
-              display={countText}
+              display={shownCount}
               onSubmit={(t) =>
                 run(setShelves(project, structure, opening.id, t, shelves?.spacing ?? "even"))
               }
