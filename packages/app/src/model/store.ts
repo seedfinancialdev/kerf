@@ -55,11 +55,19 @@ export interface KerfState {
   theme: "dark" | "light";
   /** Open state by section title; a title not listed has its own default. */
   sections: Record<string, boolean>;
+  /** When the shown project was first started or opened (meta.json "created"). */
+  created: string | null;
+  /** Draws the model as a PNG for the file's thumbnail; set by the viewport, absent without one. */
+  thumbnail: (() => Promise<Uint8Array | undefined>) | null;
 }
 
 export interface KerfActions {
   /** Records `edit` as one named change and solves it; an edit that leaves the project as it was is ignored. A `notice` is shown with Undo; any other Undo notice is cleared, a plain one stays. */
   apply(edit: Edit, notice?: string): void;
+  /** Records a project that starts afresh (New, Open) as one History entry, even if equal to the shown one, noting when it began. */
+  begin(edit: Edit): void;
+  /** Sets how the model is drawn for a file's thumbnail; null when no view can draw it. */
+  setThumbnailSource(source: (() => Promise<Uint8Array | undefined>) | null): void;
   /** Shows `project` and solves it without recording it (while dragging). */
   preview(project: Project): void;
   /** Records the previewed project under `label`. Does nothing when nothing is previewed. */
@@ -123,13 +131,18 @@ function readSections(storage: AppStorage): Record<string, boolean> {
 
 /**
  * Makes the store. `storage` keeps the shop and theme; `clock` returns milliseconds and times the
- * solve (default `performance.now`). Starts on the Start step, with the stored project if there is
+ * solve (default `performance.now`); `clockDate` returns epoch milliseconds for when a project
+ * began (default `Date.now`). Starts on the Start step, with the stored project if there is
  * one and the engine accepts it; otherwise with none. A stored project the engine rejects is set
  * aside under `kerf.project.setAside`, never deleted. Every recorded change is written back to
  * storage; if that fails, the user is told once. Only one start-up notice is shown: a shop problem first, then a project problem, then
  * the warning that this browser keeps nothing.
  */
-export function createKerfStore(deps: { storage: AppStorage; clock?: () => number }): KerfStore {
+export function createKerfStore(deps: {
+  storage: AppStorage;
+  clock?: () => number;
+  clockDate?: () => number;
+}): KerfStore {
   const clock = deps.clock ?? (() => performance.now());
   const loaded = loadShop(deps.storage);
 
@@ -229,6 +242,22 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
       drawerTab: "Cut list",
       theme: deps.storage.read("kerf.theme") === "light" ? "light" : "dark",
       sections: readSections(deps.storage),
+      created: deps.storage.read("kerf.created") ?? null,
+      thumbnail: null,
+
+      begin: (edit) => {
+        const created = new Date(deps.clockDate?.() ?? Date.now()).toISOString();
+        deps.storage.write("kerf.created", created);
+        set({ created });
+        // Unlike `apply`, a project equal to the shown one is still recorded: the user opened a file.
+        const h = get().history;
+        show({
+          history: h ? record(h, edit) : startHistory(edit),
+          previewed: null,
+          notice: keepPlainNotice(),
+        });
+      },
+      setThumbnailSource: (thumbnail) => set({ thumbnail }),
 
       apply: (edit, notice) => {
         const h = get().history;

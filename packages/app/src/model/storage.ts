@@ -11,6 +11,7 @@ export type StorageKey =
   | "kerf.theme"
   | "kerf.sections"
   | "kerf.project"
+  | "kerf.created"
   | "kerf.project.setAside";
 
 export interface AppStorage {

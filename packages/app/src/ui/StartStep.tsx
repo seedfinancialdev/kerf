@@ -8,6 +8,7 @@
 import { useState } from "react";
 import { startProject, type TemplateName } from "../model/commands";
 import { shownProject } from "../model/store";
+import { FileSection } from "./FileSection";
 import { Section } from "./Section";
 import { ShopCard } from "./ShopCard";
 import { SizeFields } from "./SizeFields";
@@ -22,7 +23,7 @@ export function StartStep() {
   const start = (name: TemplateName): void => {
     const s = store.getState();
     const edit = startProject(name, s.unitsForNew());
-    s.apply(edit);
+    s.begin(edit);
     s.select({ kind: "structure", structure: edit.project.structures[0]?.id ?? "" });
     setChoosing(false);
   };
@@ -54,6 +55,9 @@ export function StartStep() {
           <SizeFields structure={structure} />
         </Section>
       )}
+      <Section title="File">
+        <FileSection />
+      </Section>
       <Section title="Your shop">
         <ShopCard />
       </Section>

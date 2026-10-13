@@ -143,3 +143,26 @@ describe("a browser store that cannot be written", () => {
     expect(removed).toEqual([]);
   });
 });
+
+describe("when a project began", () => {
+  it("is noted by begin, and survives a reload", () => {
+    const storage = memory();
+    const s = createKerfStore({ storage, clockDate: () => Date.UTC(2026, 9, 12) });
+    s.getState().begin(startProject("Bookcase", "imperial"));
+    expect(s.getState().created).toBe("2026-10-12T00:00:00.000Z");
+    expect(createKerfStore({ storage }).getState().created).toBe("2026-10-12T00:00:00.000Z");
+  });
+
+  it("records a project even when it is the one already shown, so opening a saved copy is in History", () => {
+    const s = createKerfStore({ storage: memory() });
+    s.getState().begin(startProject("Bookcase", "imperial"));
+    s.getState().begin({
+      label: "Opened Bookcase.kerf",
+      project: startProject("Bookcase", "imperial").project,
+    });
+    expect(s.getState().history?.entries.map((e) => e.label)).toEqual([
+      "New bookcase",
+      "Opened Bookcase.kerf",
+    ]);
+  });
+});
