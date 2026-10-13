@@ -15,6 +15,7 @@ import {
   type Expr,
   formatLength,
   generateStructures,
+  gridSize,
   type Id,
   type Instance,
   type Len,
@@ -24,6 +25,7 @@ import {
   type Project,
   projectFromTemplate,
   type ShopProfile,
+  type Stock,
   type Structure,
   TEMPLATES,
   withoutGenerated,
@@ -31,7 +33,7 @@ import {
 import { newId } from "./ids";
 import { choiceLabel, optionLabel, type SizeKey, sizeLabel } from "./labels";
 import { exactLiteral, lengthOf, readCount, readLength, readPosition } from "./size";
-import { STARTER_STOCK, STOCK_FOR } from "./starter";
+import { starterStock, stockFor } from "./starter";
 
 export interface Edit {
   project: Project;
@@ -44,13 +46,13 @@ export type TemplateName = "Bookcase" | "Keepsake box" | "Blank case" | "Blank b
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
-/** A new project from a template, with the starter stock copied in. */
+/** A new project from a template, with the starter stock for `units` copied in (ADR 015, rule 4). */
 export function startProject(name: TemplateName, units: Project["units"]): Edit {
   const template = TEMPLATES.find((t) => t.name === name);
   if (!template) throw new RangeError(`There is no template named "${name}".`);
   const project = projectFromTemplate(template, {
-    stock: structuredClone([...STARTER_STOCK]),
-    stockFor: STOCK_FOR,
+    stock: structuredClone([...starterStock(units)]),
+    stockFor: stockFor(units),
   });
   return { project: { ...project, units }, label: `New ${name.toLowerCase()}` };
 }
@@ -358,10 +360,46 @@ export function handBack(project: Project, placed: PlacedPart, shop: ShopProfile
   }
 }
 
-/** Inches or millimetres for this project (ADR 015, rule 4). */
-export function setUnits(project: Project, units: Project["units"]): Edit {
+/** The form fields that take a stock, by structure type; a project may carry others unused. */
+const STOCK_FIELDS: Record<Structure["type"], readonly string[]> = {
+  case: ["carcaseStock", "backStock"],
+  box: ["wallStock", "bottomStock"],
+};
+
+/** Every stock a part or a structure's form uses (ADR 015, rule 4: units follow the stock). */
+function stockInUse(project: Project): Stock[] {
+  const ids = new Set<Id>(project.parts.map((p) => p.stock));
+  for (const s of project.structures) {
+    for (const field of STOCK_FIELDS[s.type]) {
+      const chosen = s.options[field];
+      if (typeof chosen === "string") ids.add(chosen);
+    }
+  }
+  return project.stock.filter((s) => ids.has(s.id));
+}
+
+/**
+ * Switches the project between inches and millimetres (ADR 015, rule 4). Only a project whose
+ * stock all sits on the new grid can switch, because a thickness between grid steps would leave
+ * joints that do not seat; otherwise says which stock is in the way, in the project's own units.
+ */
+export function switchUnits(project: Project, units: Project["units"]): EditResult {
+  const grid = gridSize(units);
+  const off = stockInUse(project).find((s) => s.thickness % grid !== 0);
+  if (off) {
+    const now = project.units === "imperial" ? "inches" : "millimetres";
+    const step = units === "metric" ? "0.01 mm" : '1/64"';
+    const thickness = formatLength(off.thickness, project.units);
+    return {
+      ok: false,
+      message: `This project stays in ${now} because its ${off.name} (${thickness}) isn't a whole number of ${step}.`,
+    };
+  }
   return {
-    project: { ...project, units },
-    label: `Units: ${units === "imperial" ? "inches" : "millimetres"}`,
+    ok: true,
+    edit: {
+      project: { ...project, units },
+      label: `Units: ${units === "imperial" ? "inches" : "millimetres"}`,
+    },
   };
 }

@@ -20,10 +20,11 @@ import {
   setShelfRoundover,
   setShelves,
   setSize,
-  setUnits,
   splitBays,
   startProject,
+  switchUnits,
 } from "./commands";
+import { STOCK_IDS } from "./starter";
 
 const shop = loadShopProfile();
 const IN = 203_200;
@@ -44,6 +45,22 @@ describe("startProject()", () => {
     expect(lines).toHaveLength(3);
     // 36 − 2 × 23/32 + 2 × 1/4 = 35-1/16" = 7124700.
     expect(shelfLine(project)?.length).toBe(7_124_700);
+  });
+
+  it("starts a metric bookcase on 18 mm plywood, solved with no errors", () => {
+    const { project } = startProject("Bookcase", "metric");
+    const result = solve(project, shop);
+    expect(result.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+    expect(result.cutList.lines).toHaveLength(3);
+    // 72" = 1828.8 mm = 14630400 units; the sides do not depend on the plywood's thickness.
+    expect(result.cutList.lines.find((l) => l.parts.some((x) => x.name === "Side"))?.length).toBe(
+      14_630_400,
+    );
+    expect(project.stock.map((x) => x.name)).toEqual([
+      "18 mm plywood",
+      "1/4 plywood",
+      "4/4 walnut",
+    ]);
   });
 
   it("copies the starter stock into the project", () => {
@@ -183,11 +200,41 @@ describe("addRoundover()", () => {
   });
 });
 
-describe("setUnits()", () => {
-  it("switches the project to millimetres, labelled", () => {
-    const { project, label } = setUnits(start().project, "metric");
-    expect(project.units).toBe("metric");
-    expect(label).toBe("Units: millimetres");
+describe("switchUnits()", () => {
+  it("switches a project whose stock fits the grid to millimetres, labelled", () => {
+    // Only 1/4 plywood is used: 50800 = 635 × 80, so it is a whole number of 0.01 mm.
+    const p = start().project;
+    const onQuarter = setOption(p, structureOf(p).id, "carcaseStock", STOCK_IDS.plywood14);
+    const r = switchUnits(onQuarter.project, "metric");
+    if (!r.ok) throw new Error(r.message);
+    expect(r.edit.project.units).toBe("metric");
+    expect(r.edit.label).toBe("Units: millimetres");
+  });
+
+  it("labels the switch back to inches", () => {
+    const r = switchUnits(startProject("Keepsake box", "metric").project, "imperial");
+    if (!r.ok) throw new Error(r.message);
+    expect(r.edit.label).toBe("Units: inches");
+  });
+
+  it("refuses millimetres when the 3/4 plywood is off the 0.01 mm grid, naming it", () => {
+    // 23/32" = 146050 units; 146050 mod 80 = 50, so it is not a whole number of 0.01 mm.
+    const r = switchUnits(start().project, "metric");
+    expect(r).toEqual({
+      ok: false,
+      message:
+        "This project stays in inches because its 3/4 plywood (23/32\") isn't a whole number of 0.01 mm.",
+    });
+  });
+
+  it("refuses inches when the 18 mm plywood is off the 1/64 inch grid", () => {
+    // 144000 mod 3175 = 1125, so it is not a whole number of 1/64".
+    const r = switchUnits(startProject("Bookcase", "metric").project, "imperial");
+    expect(r).toEqual({
+      ok: false,
+      message:
+        "This project stays in millimetres because its 18 mm plywood (18.0 mm) isn't a whole number of 1/64\".",
+    });
   });
 });
 

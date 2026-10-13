@@ -561,3 +561,34 @@ button[aria-pressed="true"] {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+.settings {
+  position: relative;
+}
+
+.settings-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-1));
+  z-index: 2;
+  display: grid;
+  gap: var(--space-3);
+  min-width: 200px;
+  padding: var(--space-3);
+  background: var(--color-surface-raised);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+}
+
+.settings-panel fieldset {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.settings-panel legend {
+  margin-bottom: var(--space-1);
+  color: var(--color-text-muted);
+}

@@ -5,13 +5,14 @@
 // Design spec, "Saving": the current project is kept in browser storage after every change, so a
 // reload restores it; ADR 015, rule 11 for what happens when that cannot work.
 
-import { serializeProject } from "@kerf/core";
+import { type Project, serializeProject } from "@kerf/core";
 import { describe, expect, it } from "vitest";
 import { memoryStorage } from "../testing/memory-storage";
-import { setSize, setUnits, startProject } from "./commands";
+import { type Edit, setSize, startProject } from "./commands";
 import { type AppStorage, createStorage } from "./storage";
 import { createKerfStore, shownProject } from "./store";
 
+const renamed = (p: Project): Edit => ({ project: { ...p, name: "Renamed" }, label: "Rename" });
 const memory = (): AppStorage => createStorage(memoryStorage());
 
 describe("the store across a reload", () => {
@@ -40,14 +41,19 @@ describe("the store across a reload", () => {
     );
   });
 
-  it("starts new projects in the units last chosen", () => {
+  it("starts new projects in the units last chosen, even in a later session", () => {
+    const storage = memory();
+    createKerfStore({ storage }).getState().setUnitsForNew("metric");
+    expect(createKerfStore({ storage }).getState().unitsForNew()).toBe("metric");
+  });
+
+  it("keeps the chosen units for new projects when an open project stays in the other ones", () => {
     const storage = memory();
     const s = createKerfStore({ storage });
     s.getState().apply(startProject("Bookcase", "imperial"));
-    const p = shownProject(s.getState());
-    if (!p) throw new Error("no project");
-    s.getState().apply(setUnits(p, "metric"));
-    expect(createKerfStore({ storage }).getState().unitsForNew()).toBe("metric");
+    s.getState().setUnitsForNew("metric");
+    s.getState().apply(startProject("Bookcase", "imperial"));
+    expect(s.getState().unitsForNew()).toBe("metric");
   });
 
   it("writes the project exactly as the engine saves it", () => {
@@ -65,7 +71,7 @@ describe("the store across a reload", () => {
     s.getState().apply(startProject("Bookcase", "imperial"));
     const first = shownProject(s.getState());
     if (!first) throw new Error("no project");
-    s.getState().apply(setUnits(first, "metric"));
+    s.getState().apply(renamed(first));
     s.getState().undo();
     expect(storage.read("kerf.project")).toBe(serializeProject(first));
   });
@@ -77,7 +83,7 @@ describe("the store across a reload", () => {
     const before = storage.read("kerf.project");
     const p = shownProject(s.getState());
     if (!p) throw new Error("no project");
-    s.getState().preview(setUnits(p, "metric").project);
+    s.getState().preview(renamed(p).project);
     expect(storage.read("kerf.project")).toBe(before);
   });
 });

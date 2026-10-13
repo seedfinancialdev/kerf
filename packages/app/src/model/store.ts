@@ -100,6 +100,8 @@ export interface KerfActions {
   dismissNotice(): void;
   /** Units for a new project: the last ones the user chose (ADR 015, rule 4). */
   unitsForNew(): Project["units"];
+  /** Remembers the units new projects start in; an open project is not touched. */
+  setUnitsForNew(units: Project["units"]): void;
 }
 
 export type KerfStore = StoreApi<KerfState & KerfActions>;
@@ -214,16 +216,13 @@ export function createKerfStore(deps: {
     };
 
     /**
-     * Keeps the shown History entry in storage and remembers its units. When the project cannot be
+     * Keeps the shown History entry in storage. When the project cannot be
      * written, says so once with a plain notice, which waits behind any plain notice already shown.
      */
     const keep = (history: History | null): void => {
       if (!history) return;
       const project = currentProject(history);
-      if (deps.storage.write("kerf.project", serializeProject(project))) {
-        deps.storage.write("kerf.units", project.units);
-        return;
-      }
+      if (deps.storage.write("kerf.project", serializeProject(project))) return;
       if (toldNotKept) return;
       toldNotKept = true;
       if (get().notice?.undo === false) return;
@@ -317,6 +316,9 @@ export function createKerfStore(deps: {
       },
       say: (text, undoable = false) => set({ notice: { text, undo: undoable } }),
       dismissNotice: () => set({ notice: null }),
+      setUnitsForNew: (units) => {
+        deps.storage.write("kerf.units", units);
+      },
       unitsForNew: () => (deps.storage.read("kerf.units") === "metric" ? "metric" : "imperial"),
     };
   });
