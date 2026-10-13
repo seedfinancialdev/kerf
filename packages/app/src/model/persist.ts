@@ -8,7 +8,7 @@
 // known limits); the shop has its own module (shop.ts).
 
 import { type Project, ProjectFormatError, parseProject, serializeProject } from "@kerf/core";
-import { DAMAGED_CONTENTS } from "./files";
+import { DAMAGED_CONTENTS, isFromNewerKerf } from "./files";
 import { type History, startHistory } from "./history";
 import type { AppStorage, StorageKey } from "./storage";
 
@@ -66,6 +66,9 @@ export function restoreProject(storage: AppStorage): { history: History | null; 
 
 /** Why the stored project could not be opened, in shop words; a fault in Kerf is logged. */
 function whyNotOpened(error: unknown): string {
+  if (isFromNewerKerf(error)) {
+    return "Your last project was made by a newer version of Kerf; update Kerf to open it.";
+  }
   if (error instanceof ProjectFormatError) {
     return `Your last project could not be opened: ${DAMAGED_CONTENTS}.`;
   }

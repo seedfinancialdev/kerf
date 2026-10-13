@@ -16,6 +16,9 @@ import { fileNameFor, openKerfBytes, saveFailureReason, saveKerfBytes } from "./
 const times = { created: "2026-10-12T10:00:00.000Z", modified: "2026-10-12T11:00:00.000Z" };
 const project = startProject("Bookcase", "imperial").project;
 
+/** A file from a newer Kerf: said once, plainly, with what to do (ADR 015, rule 11). */
+const NEWER_FILE = "This file was made by a newer version of Kerf; update Kerf to open it.";
+
 describe("files", () => {
   it("opens what it saved, byte for byte the same project", () => {
     const opened = openKerfBytes(saveKerfBytes(project, times));
@@ -28,13 +31,18 @@ describe("files", () => {
     if (!r.ok) expect(r.message).toMatch(/^This file could not be opened: /);
   });
 
-  it("refuses a file from a newer Kerf, saying it is newer", () => {
+  it("refuses a file from a newer Kerf, saying what to do", () => {
     const text = serializeProject(project).replace('"schemaVersion": 1', '"schemaVersion": 2');
     const meta = JSON.stringify({ schemaVersion: 2, appVersion: "9.0.0", ...times });
     const bytes = zipSync({ "project.json": strToU8(text), "meta.json": strToU8(meta) });
-    const r = openKerfBytes(bytes);
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.message).toMatch(/newer/i);
+    expect(openKerfBytes(bytes)).toEqual({ ok: false, message: NEWER_FILE });
+  });
+
+  it("says a file is from a newer Kerf when only the project inside it is newer", () => {
+    const text = serializeProject(project).replace('"schemaVersion": 1', '"schemaVersion": 2');
+    const meta = JSON.stringify({ schemaVersion: 1, appVersion: "0.4.0", ...times });
+    const bytes = zipSync({ "project.json": strToU8(text), "meta.json": strToU8(meta) });
+    expect(openKerfBytes(bytes)).toEqual({ ok: false, message: NEWER_FILE });
   });
 
   it("names the file after the project", () => {

@@ -151,6 +151,22 @@ describe("a browser store that cannot be written", () => {
     expect(storage.read("kerf.units")).toBeUndefined();
   });
 
+  it("says a stored project from a newer Kerf is newer, not damaged, and sets it aside", () => {
+    const storage = memory();
+    const text = serializeProject(startProject("Bookcase", "imperial").project).replace(
+      '"schemaVersion": 1',
+      '"schemaVersion": 2',
+    );
+    storage.write("kerf.project", text);
+    const s = createKerfStore({ storage }).getState();
+    expect(s.history).toBeNull();
+    expect(s.notice?.text).toBe(
+      "Your last project was made by a newer version of Kerf; update Kerf to open it. " +
+        "It was set aside in this browser.",
+    );
+    expect(storage.read("kerf.project.setAside")).toBe(text);
+  });
+
   it("leaves a rejected stored project where it is when it cannot be set aside", () => {
     const bad = '{"schemaVersion": 1, "name": 7}';
     const removed: string[] = [];

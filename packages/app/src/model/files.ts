@@ -14,6 +14,17 @@ import { KerfFormatError, readKerf, writeKerf } from "@kerf/io";
  */
 export const DAMAGED_CONTENTS = "its contents are damaged or do not make sense";
 
+/**
+ * True for the engine's refusal of a project from a newer Kerf (its schema version is past this
+ * one's), which only updating Kerf can open: told apart from damage by the field it names.
+ */
+export function isFromNewerKerf(error: unknown): boolean {
+  return error instanceof ProjectFormatError && error.path === "$.schemaVersion";
+}
+
+/** Said for a file from a newer Kerf, with what to do. */
+const NEWER_FILE = "This file was made by a newer version of Kerf; update Kerf to open it.";
+
 /** The app version written into meta.json; bump it with each release. */
 const APP_VERSION = "0.4.0";
 
@@ -41,10 +52,10 @@ export function saveKerfBytes(
 }
 
 /**
- * Reads a .kerf file. A damaged or newer file gives a plain message instead of a project. The
- * engine's messages carry file paths ("$.name: ...") that mean nothing in the shop, so only the
- * newer-version one, which is already plain and tells the user what to do, is passed on. @kerf/io
- * has no typed error for it, so it is recognised by its wording.
+ * Reads a .kerf file. A damaged or newer file gives a plain message instead of a project: the
+ * engine's messages carry file paths ("$.name: ...") that mean nothing in the shop. A newer file,
+ * whether its meta.json or its project says so, is told to update Kerf; @kerf/io has no typed
+ * error for it, so its refusal is recognised by its wording.
  */
 export function openKerfBytes(
   bytes: Uint8Array,
@@ -52,8 +63,11 @@ export function openKerfBytes(
   try {
     return { ok: true, project: readKerf(bytes).project };
   } catch (error) {
-    if (error instanceof KerfFormatError && /newer version of Kerf/.test(error.message)) {
-      return { ok: false, message: `This file could not be opened: ${error.message}` };
+    if (
+      (error instanceof KerfFormatError && /newer version of Kerf/.test(error.message)) ||
+      isFromNewerKerf(error)
+    ) {
+      return { ok: false, message: NEWER_FILE };
     }
     if (error instanceof KerfFormatError) {
       return {
