@@ -11,7 +11,7 @@ import type { ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo } from "react";
 import { Matrix4 } from "three";
 import { matrixOf } from "../scene/frames";
-import { useKerfStore } from "../state/useKerf";
+import { useKerf, useKerfStore } from "../state/useKerf";
 import { badgePosition, geometryOf } from "./board-geometry";
 import type { BoardLook } from "./board-looks";
 import { dispatchPointer } from "./dispatch";
@@ -32,7 +32,9 @@ interface BoardProps {
 export function Board({ look, ready, color, selected, glow, warning }: BoardProps) {
   const store = useKerfStore();
   const { placed } = look;
-  const built = ready && look.geometry === "cut" ? meshFor(look.shape) : undefined;
+  // An engine fault is asked about again once History moves, not on every preview frame.
+  const recorded = useKerf((s) => s.history);
+  const built = ready && look.geometry === "cut" ? meshFor(look.shape, recorded) : undefined;
   const { length, width, thickness } = placed.size;
   // biome-ignore lint/correctness/useExhaustiveDependencies: the size is read through its three numbers, so an equal size from a new solve keeps the geometry.
   const geometry = useMemo(() => geometryOf(built, placed.size), [built, length, width, thickness]);

@@ -48,8 +48,9 @@ function listOf(placed: PlacedPart[]): string {
  */
 function UndrawnNotes({ placed, result }: { placed: PlacedPart[]; result: SolveResult }) {
   const { ready } = useGeometry();
+  const recorded = useKerf((s) => s.history);
   if (!ready) return null;
-  const undrawn = undrawnBoards(result);
+  const undrawn = undrawnBoards(result, recorded);
   return placed.flatMap((p) => {
     const reason = undrawn.get(p.instance);
     return reason === undefined
@@ -65,6 +66,8 @@ function UndrawnNotes({ placed, result }: { placed: PlacedPart[]; result: SolveR
 /** The facts about the picked boards, their problems, and a way to hand a taken-over one back. */
 export function BoardInspector({ instances }: { instances: Id[] }) {
   const store = useKerfStore();
+  // A fault in the notes below is tried again once History moves.
+  const history = useKerf((s) => s.history);
   const project = useKerf((s) => shownProject(s));
   const result = useKerf((s) => s.solved?.result);
   const shop = useKerf((s) => s.shop);
@@ -114,7 +117,7 @@ export function BoardInspector({ instances }: { instances: Id[] }) {
           </button>
         )}
       </Section>
-      <ThreeDGuard told={BOARD_FAULT}>
+      <ThreeDGuard told={BOARD_FAULT} retryOn={history}>
         <UndrawnNotes placed={placed} result={result} />
       </ThreeDGuard>
       <Problems parts={new Set(placed.map((p) => p.part))} />

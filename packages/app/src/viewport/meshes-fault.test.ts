@@ -23,16 +23,21 @@ describe("a geometry engine that fails on a shape", () => {
   });
   afterEach(() => logged.mockRestore());
 
-  it("gives the board a reason in shop words instead of throwing, and logs the engine's error once", () => {
+  it("gives the board a reason in shop words instead of throwing, and asks the engine once per recorded change", () => {
     const [shape] = result.shapes;
     if (!shape) throw new Error("no shape");
-    expect(meshFor(shape)).toEqual({ ok: false, reason: FAULT });
-    expect(meshFor(shape)).toEqual({ ok: false, reason: FAULT });
+    // Two renders of one History entry (a drag's preview frames) ask once; a new entry asks again,
+    // so a passing fault is not remembered for the session (second-pass re-review, minor 3).
+    const entry = {};
+    expect(meshFor(shape, entry)).toEqual({ ok: false, reason: FAULT });
+    expect(meshFor(shape, entry)).toEqual({ ok: false, reason: FAULT });
     expect(logged).toHaveBeenCalledTimes(1);
+    expect(meshFor(shape, {})).toEqual({ ok: false, reason: FAULT });
+    expect(logged).toHaveBeenCalledTimes(2);
   });
 
   it("names every such board for the badge and the inspector", () => {
-    const undrawn = undrawnBoards(result);
+    const undrawn = undrawnBoards(result, {});
     expect(undrawn.size).toBe(result.placements.length);
     const top = result.placements.find((p) => p.name === "Top");
     expect(top && undrawn.get(top.instance)).toBe(FAULT);

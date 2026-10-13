@@ -20,19 +20,31 @@ export type MeshResult = { ok: true; mesh: DisplayMesh } | { ok: false; reason: 
 const CACHE_LIMIT = 500;
 const cache = new Map<string, MeshResult>();
 
-/** The reason given when the geometry engine itself fails on a shape rather than refusing it. */
-const ENGINE_FAULT = "the 3D view's drawing engine failed on this board.";
+/**
+ * The result when the geometry engine itself fails on a shape rather than refusing it; one object,
+ * so a board drawn again with it keeps its geometry.
+ */
+const ENGINE_FAULT: MeshResult = {
+  ok: false,
+  reason: "the 3D view's drawing engine failed on this board.",
+};
+
+/** Shapes the engine failed on, with the recorded change they failed under (see `meshFor`). */
+const faults = new Map<string, unknown>();
 
 /**
  * The shape's display mesh, or why it cannot be made (ADR 015, rule 10). A shape the engine
- * refuses gives its reason; one the engine fails on (it throws) gives a reason in shop words, its
- * error is logged once for a bug report, and the failure is remembered like any result, so the
- * engine is not asked again on every frame (second-pass review M3). Call after initGeometry().
+ * refuses gives its reason, kept like any result. One the engine fails on (it throws) gives a
+ * reason in shop words and its error is logged; that failure is kept only while `attempt` (the
+ * recorded History entry) stays the same, so the preview frames of a drag do not ask again, and
+ * the next recorded change does: a passing fault is not remembered for the session (second-pass
+ * review M3 and its re-review). Call after initGeometry().
  */
-export function meshFor(shape: PartShape): MeshResult {
+export function meshFor(shape: PartShape, attempt: unknown): MeshResult {
   const key = JSON.stringify([shape.length, shape.width, shape.thickness, shape.removals]);
   const found = cache.get(key);
   if (found) return found;
+  if (faults.has(key) && faults.get(key) === attempt) return ENGINE_FAULT;
   let result: MeshResult;
   try {
     result = {
@@ -43,12 +55,15 @@ export function meshFor(shape: PartShape): MeshResult {
       ),
     };
   } catch (error) {
-    if (error instanceof MeshError) result = { ok: false, reason: error.message };
-    else {
+    if (!(error instanceof MeshError)) {
       console.error(error);
-      result = { ok: false, reason: ENGINE_FAULT };
+      if (faults.size >= CACHE_LIMIT) faults.delete(faults.keys().next().value as string);
+      faults.set(key, attempt);
+      return ENGINE_FAULT;
     }
+    result = { ok: false, reason: error.message };
   }
+  faults.delete(key);
   if (cache.size >= CACHE_LIMIT) cache.delete(cache.keys().next().value as string);
   cache.set(key, result);
   return result;
@@ -57,15 +72,15 @@ export function meshFor(shape: PartShape): MeshResult {
 /**
  * Why each board whose cuts cannot be drawn is drawn as its plain blank, by placed instance (ADR
  * 015, rule 10): the view puts a warning badge on it and the inspector says why. A board with no
- * shape (an error withholds them all) is not listed: it is a blank for that reason instead. Call
- * after initGeometry().
+ * shape (an error withholds them all) is not listed: it is a blank for that reason instead.
+ * `attempt` is as for `meshFor`. Call after initGeometry().
  */
-export function undrawnBoards(result: SolveResult): Map<Id, string> {
+export function undrawnBoards(result: SolveResult, attempt: unknown): Map<Id, string> {
   const shapes = new Map(result.shapes.map((s) => [s.definition, s]));
   const undrawn = new Map<Id, string>();
   for (const placed of result.placements) {
     const shape = shapes.get(placed.shape);
-    const built = shape && meshFor(shape);
+    const built = shape && meshFor(shape, attempt);
     if (built && !built.ok) undrawn.set(placed.instance, built.reason);
   }
   return undrawn;

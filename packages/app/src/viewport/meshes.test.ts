@@ -25,14 +25,14 @@ describe("meshFor()", () => {
   beforeAll(initGeometry);
 
   it("builds the same mesh once for two shapes with the same content", () => {
-    const a = meshFor(shelf);
-    const b = meshFor({ ...shelf, definition: "b" });
+    const a = meshFor(shelf, null);
+    const b = meshFor({ ...shelf, definition: "b" }, null);
     expect(a.ok && b.ok && a.mesh === b.mesh).toBe(true);
   });
 
   it("says why a shape cannot be built instead of throwing", () => {
     const bad = { ...shelf, removals: [{ kind: "nonsense" }] } as unknown as PartShape;
-    expect(meshFor(bad)).toMatchObject({ ok: false });
+    expect(meshFor(bad, null)).toMatchObject({ ok: false });
   });
 });
 
@@ -49,13 +49,13 @@ describe("undrawnBoards()", () => {
         s.definition === top.shape ? ({ ...s, removals: [{ kind: "nonsense" }] } as never) : s,
       ),
     };
-    const undrawn = undrawnBoards(broken);
+    const undrawn = undrawnBoards(broken, null);
     expect([...undrawn.keys()]).toEqual([top.instance]);
     expect(undrawn.get(top.instance)).toMatch(/cannot be drawn/);
   });
 
   it("is empty when every board can be drawn with its cuts", () => {
     const result = solve(startProject("Bookcase", "imperial").project, loadShopProfile());
-    expect(undrawnBoards(result).size).toBe(0);
+    expect(undrawnBoards(result, null).size).toBe(0);
   });
 });

@@ -57,7 +57,7 @@ describe("geometryOf()", () => {
   beforeAll(initGeometry);
 
   it("draws a plain board's mesh with the same flat unit-axis normals", () => {
-    const built = meshFor({ definition: "a", name: "Shelf", ...size, removals: [] });
+    const built = meshFor({ definition: "a", name: "Shelf", ...size, removals: [] }, null);
     const g = geometryOf(built, size);
     const nor = g.getAttribute("normal");
     for (let i = 0; i < nor.count; i += 1) {
