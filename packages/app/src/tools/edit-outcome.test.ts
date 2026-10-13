@@ -204,6 +204,28 @@ describe("firstNewError() on a board a take-over renamed (second-pass review M4)
     expect(error).toBe(brought);
   });
 
+  it("names a new joint error on the renamed copy although another shelf of its row already had one (PR review tests-I1)", () => {
+    // A joint error names its guest, then its host (core outputs.ts, Diagnostic.instances), so
+    // Shelf 1's error is not on Shelf 3, although both are copies of one part.
+    const right = now.placements.find((p) => p.name === "Right side");
+    if (!right) throw new Error("no right side");
+    const missed = (part: Id, pair: readonly [Id, Id], message: string) => ({
+      severity: "error" as const,
+      rule: "joint-no-contact" as const,
+      message,
+      part,
+      instances: pair,
+    });
+    const before = missed(shelf(1).part, [shelf(1).instance, right.instance], "Shelf 1 …");
+    const brought = missed(copy.part, [copy.instance, right.instance], "Shelf copy 3 …");
+    const error = firstNewError(
+      { ...was, diagnostics: [before] },
+      { ...now, diagnostics: [before, brought] },
+      renamed,
+    );
+    expect(error).toBe(brought);
+  });
+
   it("does not report the copy's own earlier overlap again under its new name", () => {
     const before = overlap(shelf(3).part, [shelf(3).instance, back.instance], "Shelf 3 and Back …");
     const after = overlap(copy.part, [copy.instance, back.instance], "Shelf copy 3 and Back …");

@@ -12,7 +12,7 @@ import {
 } from "@kerf/core";
 import { deriveJoints } from "@kerf/core/internal";
 import { describe, expect, it } from "vitest";
-import { boards, type InstanceSpec, type PartSpec } from "../../src/builders";
+import { boards, type InstanceSpec, type PartSpec, uid } from "../../src/builders";
 import { loadShopProfile } from "../../src/index";
 
 const shop = loadShopProfile();
@@ -302,5 +302,52 @@ describe("joints", () => {
   });
   it("a radius equal to the width of a narrow strip is allowed", () => {
     expect(rules(topWith(["edge0/face1"], "1/2in", "1/2in"))).toEqual([]);
+  });
+});
+
+// Diagnostic.instances (core outputs.ts): a joint error names the guest, then the host, by
+// instance, so an editor can tell one copy of a board from another. `boards` numbers instances in
+// the order given: Host is uid(200), Guest uid(201); the one joint is uid(300).
+describe("a joint error names its guest and host boards", () => {
+  const HOST = uid(200);
+  const GUEST = uid(201);
+  const joined = (type: "dado" | "throughDovetail", at: [string, string, string]) =>
+    boards(
+      [host, guest],
+      [hostAt, { name: "Guest", part: "Guest", at, orientation: 0 }],
+      [{ type, host: "Host", guest: "Guest" }],
+    );
+  const errorOf = (p: Project, rule: string) =>
+    solve(p, shop).diagnostics.find((d) => d.rule === rule);
+  const named = { joint: uid(300), instances: [GUEST, HOST] };
+
+  it("names them for a dado against the host's end, not its face", () => {
+    // The guest lies flat from x = 12in, the host's far end: they meet on the end, across x.
+    expect(errorOf(joined("dado", ["12in", "0in", "0in"]), "dado-needs-face")).toMatchObject(named);
+  });
+
+  it("names them for a rabbet the guest is not seated against", () => {
+    // A 3/4in-wide end rabbet with the 1/2in guest at the very end leaves a 1/4in gap behind it.
+    const p = rabbetP({ width: "3/4in" }, ["0in", "0in", "3/4in"], guest, 17);
+    expect(errorOf(p, "rabbet-not-seated")).toMatchObject(named);
+  });
+
+  it("names them for a dovetail between boards that do not meet at a corner", () => {
+    // The guest lies on the host's top face: they touch, but face to face, not at a corner.
+    const p = joined("throughDovetail", ["2in", "0in", "3/4in"]);
+    expect(errorOf(p, "dovetail-not-corner")).toMatchObject(named);
+  });
+
+  it("names them for a dado whose guest sinks into its host", () => {
+    // Lying flat at z = 1/2in, the 1/2in guest runs 1/4in into the 3/4in host's top.
+    expect(errorOf(joined("dado", ["2in", "0in", "1/2in"]), "joint-overlap")).toMatchObject(named);
+  });
+
+  it("names only the guest when it meets nothing at all", () => {
+    // 30in along x is past the 12in host's far end: no board touches the guest.
+    expect(errorOf(joined("dado", ["30in", "0in", "0in"]), "joint-no-contact")).toMatchObject({
+      joint: uid(300),
+      instances: [GUEST],
+    });
   });
 });
