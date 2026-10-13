@@ -7,7 +7,7 @@
 
 import { gapBetween, generateStructures, type Id, type Project, solveModel } from "@kerf/core";
 import { describe, expect, it } from "vitest";
-import { handMadeBookcase as handMade } from "../../src/builders";
+import { boards, handMadeBookcase as handMade } from "../../src/builders";
 import { loadProject, loadShopProfile, withParam } from "../../src/index";
 
 const shop = loadShopProfile();
@@ -53,9 +53,59 @@ describe("gapBetween()", () => {
     expect(lengthOf(p, gap.start)).toBe(146_050);
   });
 
-  it("refuses two boards that do not face each other across a gap", () => {
+  it("measures 70-9/16 between the bottom and the top, up the z axis", () => {
+    // Operation specs: 72 − 2 × 23/32 = 70-9/16" = 14630400 − 292100 = 14338300; starts at 23/32".
+    const p = handMade();
+    const gap = gapBetween(p, idOf(p, "Bottom"), idOf(p, "Top"));
+    expect(gap).toMatchObject({ ok: true, axis: "z" });
+    if (!gap.ok) return;
+    expect(lengthOf(p, gap.length)).toBe(14_338_300);
+    expect(lengthOf(p, gap.start)).toBe(146_050);
+  });
+
+  it("follows the height: 58-9/16 at 60 inches", () => {
+    // 60 − 2 × 23/32 = 58-9/16" = 12192000 − 292100 = 11899900.
+    const p = handMade();
+    const gap = gapBetween(p, idOf(p, "Bottom"), idOf(p, "Top"));
+    if (!gap.ok) throw new Error(gap.reason);
+    expect(lengthOf(withParam(p, "height", "60in"), gap.length)).toBe(11_899_900);
+  });
+
+  it("measures along y between two hand-placed boards", () => {
+    // The bookcase has no two boards with clear space between them along y (the back touches
+    // everything it faces), so two plain boards: first ends at 2in, second starts at 5in: 3in.
+    const p = boards(
+      [
+        { name: "Panel", length: "4in", width: "2in", thickness: "3/4in" },
+        { name: "Strip", length: "4in", width: "2in", thickness: "3/4in" },
+      ],
+      [
+        { name: "Near", part: "Panel", at: ["0in", "0in", "0in"] },
+        { name: "Far", part: "Strip", at: ["0in", "5in", "0in"] },
+      ],
+    );
+    const gap = gapBetween(p, idOf(p, "Near"), idOf(p, "Far"));
+    expect(gap).toMatchObject({ ok: true, axis: "y" });
+    if (!gap.ok) return;
+    expect(lengthOf(p, gap.length)).toBe(3 * 203_200);
+    expect(lengthOf(p, gap.start)).toBe(2 * 203_200);
+  });
+
+  it("refuses boards that touch: they enclose no gap", () => {
     const p = handMade();
     expect(gapBetween(p, idOf(p, "Top"), idOf(p, "Right side"))).toMatchObject({ ok: false });
+  });
+
+  it("refuses boards that do not overlap on the other axes", () => {
+    // Same x run, but one sits 10in to the side of the other: nothing spans between them.
+    const p = boards(
+      [{ name: "Panel", length: "4in", width: "2in", thickness: "3/4in" }],
+      [
+        { name: "One", part: "Panel", at: ["0in", "0in", "0in"] },
+        { name: "Two", part: "Panel", at: ["8in", "10in", "0in"] },
+      ],
+    );
+    expect(gapBetween(p, idOf(p, "One"), idOf(p, "Two"))).toMatchObject({ ok: false });
   });
 
   it("refuses a member of a row and says to detach it", () => {
