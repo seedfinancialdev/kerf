@@ -96,6 +96,9 @@ describe("<JoinPanel>", () => {
       expect(store.getState().notice?.text).toBe(
         "Top and Back are now custom; the form won't change them.",
       );
+      expect(store.getState().history?.entries.at(-1)?.label).toBe(
+        "Joined Top to Back with a rabbet",
+      );
       const after = store.getState().solved?.result.placements ?? [];
       expect(after.find((x) => x.name === "Top")?.detached).toBe(true);
       expect(after.find((x) => x.name === "Back")?.detached).toBe(true);
@@ -130,6 +133,34 @@ describe("<JoinPanel>", () => {
       );
     });
 
+    it("says before Accept which boards will become custom", () => {
+      const { store, project, named } = formSetup();
+      act(() =>
+        store
+          .getState()
+          .setProposal(propose(project, loadShopProfile(), named("Shelf 1"), named("Back"))),
+      );
+      expect(screen.getByText("Accepting makes Shelf 1 and Back custom.")).toBeTruthy();
+    });
+
+    it("gives a form shelf and the back a proposal that Accept carries out", () => {
+      const { store, project, named } = formSetup();
+      act(() =>
+        store
+          .getState()
+          .setProposal(propose(project, loadShopProfile(), named("Shelf 1"), named("Back"))),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+      expect(store.getState().history?.entries.at(-1)?.label).toBe(
+        "Joined Shelf copy 1 to Back with a dado",
+      );
+      expect(store.getState().notice?.text).toBe(
+        "Shelf 1 (now Shelf copy 1) and Back are now custom; the form won't change them.",
+      );
+      const after = store.getState().solved?.result.placements ?? [];
+      expect(after.find((x) => x.name === "Shelf copy 1")?.detached).toBe(true);
+    });
+
     it("a refused Accept leaves History and the project as they were", () => {
       const { store, project, named } = formSetup();
       const proposed = propose(project, loadShopProfile(), named("Top"), named("Back"));
@@ -157,6 +188,7 @@ describe("<JoinPanel>", () => {
         .getState()
         .setProposal(propose(project, loadShopProfile(), named("Right side"), named("Board 1"))),
     );
+    expect(screen.queryByText(/Accepting makes/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Accept" }));
     expect(store.getState().notice).toBeNull();
   });

@@ -8,7 +8,7 @@
 
 import { expect, test } from "@playwright/test";
 
-test("two clicks with Join give the engine's reason for a board of a row, and change nothing", async ({
+test("two clicks with Join propose a dado for a shelf of a row, and change nothing until accepted", async ({
   page,
 }) => {
   await page.goto("/");
@@ -24,10 +24,16 @@ test("two clicks with Join give the engine's reason for a board of a row, and ch
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.6);
   // At the default camera the first click lands on the back and the second on the second shelf, a
-  // board of a row, which the engine will not join until it is taken out (ADR 014).
-  await expect(page.getByRole("note")).toHaveText(
-    "Shelf 2 is one of a row; detach it first to join it on its own.",
-  );
-  await expect(page.getByRole("button", { name: "Accept", exact: true })).toBeHidden();
-  await expect(page.getByRole("listbox", { name: "History" }).getByRole("option")).toHaveCount(1);
+  // board of a row; the engine proposes a dado with the shelf taken out of its row first.
+  await expect(
+    page.getByText('Shelf copy 2 in a dado in Back, 23/32" wide and 5/64" deep'),
+  ).toBeVisible();
+  await expect(page.getByText("Accepting makes Shelf 2 and Back custom.")).toBeVisible();
+  const history = page.getByRole("listbox", { name: "History" }).getByRole("option");
+  await expect(history).toHaveCount(1);
+  await page.getByRole("button", { name: "Accept", exact: true }).click();
+  await expect(history).toHaveCount(2);
+  await expect(
+    page.getByRole("option", { name: "Joined Shelf copy 2 to Back with a dado" }),
+  ).toBeVisible();
 });

@@ -8,7 +8,7 @@ import type { Joint } from "@kerf/core";
 import { shownProject } from "../model/store";
 import { Section } from "../ui/Section";
 import { useKerf, useKerfStore } from "../ui/useKerf";
-import { acceptProposal, JOINT_WORD, propose } from "./join";
+import { acceptProposal, isFormBoard, JOINT_WORD, propose } from "./join";
 
 const OTHER: Partial<Record<Joint["type"], Joint["type"]>> = { dado: "rabbet", rabbet: "dado" };
 
@@ -16,6 +16,7 @@ const OTHER: Partial<Record<Joint["type"], Joint["type"]>> = { dado: "rabbet", r
 export function JoinPanel() {
   const store = useKerfStore();
   const proposal = useKerf((s) => s.proposal);
+  const solved = useKerf((s) => s.solved);
   if (!proposal) return <p className="empty">Click two touching boards.</p>;
   if (!proposal.result.ok) {
     return (
@@ -49,15 +50,12 @@ export function JoinPanel() {
       s.say(r.message);
       return;
     }
-    const tookOver = [a, b].filter((p) => p.source && !p.detached).map((p) => p.name);
-    const many = tookOver.length > 1;
-    const notice =
-      tookOver.length === 0
-        ? undefined
-        : `${tookOver.join(" and ")} ${many ? "are" : "is"} now custom; the form won't change ${many ? "them" : "it"}.`;
-    s.apply(r.edit, notice);
+    s.apply(r.edit, r.notice);
     s.setProposal(null);
   };
+  const custom = (solved?.result.placements ?? [])
+    .filter((p) => (p.instance === proposal.a || p.instance === proposal.b) && isFormBoard(p))
+    .map((p) => p.name);
   const other = OTHER[joint.type];
   const tryOther = (): void => {
     const now = current();
@@ -69,6 +67,7 @@ export function JoinPanel() {
       <p className="muted">
         {missing ? "Your shop has no tool for this cut yet." : "Your tools can cut this."}
       </p>
+      {custom.length > 0 && <p className="muted">Accepting makes {custom.join(" and ")} custom.</p>}
       <div className="button-row">
         <button type="button" className="primary" onClick={accept}>
           Accept

@@ -13,7 +13,7 @@ import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { bookcaseWithShelf } from "../testing/bookcase-with-shelf";
 import { memoryStorage } from "../testing/memory-storage";
-import { acceptProposal, joinTool, propose } from "./join";
+import { acceptProposal, joinTool, propose, takeOverNotice } from "./join";
 import type { ModelHit } from "./pointer";
 
 const shop = loadShopProfile();
@@ -70,11 +70,36 @@ describe("taking over form boards", () => {
     const p = form();
     const r = acceptProposal(p, shop, placed(p, "Shelf 1"), placed(p, "Back"), "dado");
     if (!r.ok) throw new Error(r.message);
-    expect(r.edit.label).toBe("Joined Shelf 1 to Back with a dado");
+    expect(r.edit.label).toBe("Joined Shelf copy 1 to Back with a dado");
+    expect(r.notice).toBe(
+      "Shelf 1 (now Shelf copy 1) and Back are now custom; the form won't change them.",
+    );
     const after = solve(r.edit.project, shop).placements;
     expect(after.find((x) => x.name === "Shelf copy 1")?.detached).toBe(true);
     expect(after.find((x) => x.name === "Back")?.detached).toBe(true);
     expect(after.find((x) => x.name === "Shelf 2")?.detached).toBe(false);
+  });
+
+  it("proposes a dado for a form shelf and the back, naming the boards that were clicked", () => {
+    const p = form();
+    const shelf = placed(p, "Shelf 1");
+    const r = propose(p, shop, shelf, placed(p, "Back"));
+    expect(r).toMatchObject({ a: shelf.instance, result: { ok: true, joint: { type: "dado" } } });
+  });
+
+  it("refuses a form shelf and a board it does not touch, with the engine's reason", () => {
+    const p = form();
+    const r = propose(p, shop, placed(p, "Shelf 1"), placed(p, "Top"));
+    expect(r.result).toEqual({
+      ok: false,
+      reason: "Shelf copy 1 and Top do not touch, so there is nothing to join.",
+    });
+  });
+
+  it("gives the engine's reason for a form shelf and the side that already holds it in a dado", () => {
+    const p = form();
+    const r = propose(p, shop, placed(p, "Shelf 1"), placed(p, "Right side"));
+    expect(r.result).toEqual({ ok: false, reason: "Two dados on Right side overlap." });
   });
 
   it("says why, and does not throw, when a board cannot be taken over", () => {
@@ -131,5 +156,32 @@ describe("the Join tool", () => {
       ok: false,
       reason: "Top and Board 1 do not touch, so there is nothing to join.",
     });
+  });
+});
+
+describe("takeOverNotice()", () => {
+  it("is nothing when no board was taken over", () => {
+    expect(takeOverNotice([])).toBeUndefined();
+  });
+
+  it("names one board that kept its name", () => {
+    expect(takeOverNotice([{ from: "Top", to: "Top" }])).toBe(
+      "Top is now custom; the form won't change it.",
+    );
+  });
+
+  it("says when one board's name changes", () => {
+    expect(takeOverNotice([{ from: "Shelf 1", to: "Shelf copy 1" }])).toBe(
+      "Shelf 1 becomes Shelf copy 1, custom; the form won't change it.",
+    );
+  });
+
+  it("names two boards, showing a changed name", () => {
+    expect(
+      takeOverNotice([
+        { from: "Shelf 1", to: "Shelf copy 1" },
+        { from: "Back", to: "Back" },
+      ]),
+    ).toBe("Shelf 1 (now Shelf copy 1) and Back are now custom; the form won't change them.");
   });
 });
