@@ -33,7 +33,16 @@ export function EdgePanel({ placed }: { placed: PlacedPart[] }) {
   // Built here, not in the selector: a selector that returns a new array each call redraws forever.
   const bits = shop.tools.flatMap((t) => (t.type === "router" ? t.roundoverBits : []));
   const units = useKerf((s) => shownProject(s)?.units ?? "imperial");
-  const [radius, setRadius] = useState<number | null>(bits[0] ?? null);
+  // The user's choice: a bit, "none", or not chosen yet. A bit since taken out of the shop is no
+  // choice at all, so the shop's first bit is offered instead (Interaction spec: roundovers use
+  // "bits from the shop profile").
+  const [chosen, setChosen] = useState<number | "none" | null>(null);
+  const radius =
+    chosen === "none"
+      ? null
+      : chosen !== null && bits.includes(chosen)
+        ? chosen
+        : (bits[0] ?? null);
   const [ticked, setTicked] = useState<EdgeRef[]>([]);
   /** Rounds `edges`, telling the user which boards were taken over (Interaction spec, "Tweak"). */
   const round = (edges: EdgeRef[]): void => {
@@ -55,7 +64,7 @@ export function EdgePanel({ placed }: { placed: PlacedPart[] }) {
         <select
           id={radiusId}
           value={radius ?? ""}
-          onChange={(e) => setRadius(e.target.value === "" ? null : Number(e.target.value))}
+          onChange={(e) => setChosen(e.target.value === "" ? "none" : Number(e.target.value))}
         >
           <option value="">None</option>
           {bits.map((b) => (

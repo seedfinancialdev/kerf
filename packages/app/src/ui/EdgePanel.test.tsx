@@ -95,6 +95,56 @@ describe("<EdgePanel>", () => {
     expect(shownProject(store.getState())).toBe(before);
   });
 
+  describe("when the shop's bits change while the panel is open (code review M2)", () => {
+    const IN = 203_200;
+    const withBits = (store: ReturnType<typeof setup>, roundoverBits: number[]) =>
+      act(() =>
+        store.getState().setShop({
+          ...store.getState().shop,
+          tools: store
+            .getState()
+            .shop.tools.map((t) => (t.type === "router" ? { ...t, roundoverBits } : t)),
+        }),
+      );
+
+    it("offers the shop's first bit once the chosen one is taken out of the shop, and rounds with it", () => {
+      const store = setup("Top");
+      withBits(store, [IN / 8, IN / 4]);
+      fireEvent.change(screen.getByLabelText("Radius"), { target: { value: String(IN / 4) } });
+      withBits(store, [IN / 8]);
+      expect((screen.getByLabelText("Radius") as HTMLSelectElement).value).toBe(String(IN / 8));
+      fireEvent.click(screen.getByRole("button", { name: "Both front edges" }));
+      // 1/8" = 25400 units = 3.175 mm, the only bit left in the shop.
+      expect(
+        shownProject(store.getState())?.parts.find((d) => d.name === "Top")?.ops,
+      ).toMatchObject([{ type: "roundover", radius: "3.175mm" }]);
+    });
+
+    it("offers the first bit a shop with none gains, so Both front edges rounds with it", () => {
+      const store = setup("Top");
+      withBits(store, []);
+      cleanup();
+      render(
+        <KerfProvider store={store}>
+          <Inspector />
+        </KerfProvider>,
+      );
+      withBits(store, [IN / 8]);
+      expect((screen.getByLabelText("Radius") as HTMLSelectElement).value).toBe(String(IN / 8));
+      fireEvent.click(screen.getByRole("button", { name: "Both front edges" }));
+      expect(
+        shownProject(store.getState())?.parts.find((d) => d.name === "Top")?.ops,
+      ).toMatchObject([{ type: "roundover", radius: "3.175mm" }]);
+    });
+
+    it("keeps None when the user chose it, whatever bits the shop has", () => {
+      const store = setup("Top");
+      fireEvent.change(screen.getByLabelText("Radius"), { target: { value: "" } });
+      withBits(store, [IN / 8, IN / 4]);
+      expect((screen.getByLabelText("Radius") as HTMLSelectElement).value).toBe("");
+    });
+  });
+
   it("says why a board cannot be taken over, and leaves the project alone", () => {
     // A pick made while the row had four shelves; the form now makes two, so shelf 4 is gone.
     const store = setup();
