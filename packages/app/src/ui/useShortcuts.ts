@@ -16,7 +16,7 @@ export function isTyping(target: EventTarget | null): boolean {
   );
 }
 
-/** Ctrl/⌘+Z undoes; with Shift it redoes. */
+/** Ctrl/⌘+Z undoes (with Shift, redoes); O and H make left-drag orbit and pan, Escape picks again, Shift+Z fits the model. */
 export function useShortcuts(): void {
   const store = useKerfStore();
   useEffect(() => {
@@ -27,7 +27,14 @@ export function useShortcuts(): void {
         e.preventDefault();
         if (e.shiftKey) s.redo();
         else s.undo();
+        return;
       }
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const key = e.key.toLowerCase();
+      if (e.shiftKey && key === "z") s.requestFit();
+      else if (key === "o") s.setNavigation("orbit");
+      else if (key === "h") s.setNavigation("pan");
+      else if (e.key === "Escape") s.setNavigation(null);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

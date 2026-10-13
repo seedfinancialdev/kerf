@@ -7,8 +7,9 @@
 
 import type { Id } from "@kerf/core";
 import { generateStructures } from "@kerf/core";
+import { initGeometry } from "@kerf/geometry";
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { addRoundover, detachForEdit, startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
@@ -151,5 +152,42 @@ describe("<BoardInspector>", () => {
       store.getState().setStep("Shape");
     });
     expect(screen.getByLabelText("Width")).toBeTruthy();
+  });
+
+  // ADR 015, rule 10: a board drawn as a plain blank says why.
+  describe("when the 3D view cannot draw a board's cuts", () => {
+    beforeAll(initGeometry);
+
+    function withCuts(removals: unknown[]) {
+      const store = setup(topOf);
+      const solved = store.getState().solved;
+      const top = placements(store).find((x) => x.name === "Top");
+      if (!solved || !top) throw new Error("no top");
+      act(() => {
+        store.setState({
+          solved: {
+            ...solved,
+            result: {
+              ...solved.result,
+              shapes: solved.result.shapes.map((s) =>
+                s.definition === top.shape ? { ...s, removals } : s,
+              ),
+            },
+          },
+        } as never);
+      });
+    }
+
+    it("shows the reason as a warning on the board", async () => {
+      withCuts([{ kind: "nonsense" }]);
+      expect(
+        await screen.findByText(/^The 3D view shows this board without its cuts: /),
+      ).toBeTruthy();
+    });
+
+    it("shows no warning for a board whose cuts can be drawn", () => {
+      setup(topOf);
+      expect(screen.queryByText(/without its cuts/)).toBeNull();
+    });
   });
 });

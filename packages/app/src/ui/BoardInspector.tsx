@@ -5,9 +5,11 @@
 // The selected boards (Interaction spec, "Inspector": "a part's properties ('Length 34-9/16" · cut
 // 35-1/16"')"), where they came from, and their problems. Shown as a list of facts, not fields.
 
-import { formatLength, type Id, type PlacedPart, type Project } from "@kerf/core";
+import { formatLength, type Id, type PartShape, type PlacedPart, type Project } from "@kerf/core";
 import { handBack } from "../model/commands";
 import { shownProject } from "../model/store";
+import { meshFor } from "../viewport/meshes";
+import { useGeometry } from "../viewport/useGeometry";
 import { Problems } from "./Problems";
 import { Section } from "./Section";
 import { useKerf, useKerfStore } from "./useKerf";
@@ -35,12 +37,19 @@ function listOf(placed: PlacedPart[]): string {
   return [...counts].map(([name, n]) => (n > 1 ? `${name} × ${n}` : name)).join(", ");
 }
 
+/** Why the 3D view draws this board as a plain blank, when it does (ADR 015, rule 10). */
+function undrawnReason(shape: PartShape | undefined): string | null {
+  const built = shape && meshFor(shape);
+  return built && !built.ok ? built.reason : null;
+}
+
 /** The facts about the picked boards, their problems, and a way to hand a taken-over one back. */
 export function BoardInspector({ instances }: { instances: Id[] }) {
   const store = useKerfStore();
   const project = useKerf((s) => shownProject(s));
   const result = useKerf((s) => s.solved?.result);
   const shop = useKerf((s) => s.shop);
+  const { ready } = useGeometry();
   if (!project || !result) return null;
   const placed = result.placements.filter((p) => instances.includes(p.instance));
   const first = placed[0];
@@ -51,6 +60,9 @@ export function BoardInspector({ instances }: { instances: Id[] }) {
     ? `${first.partName}${placed.length > 1 ? ` × ${placed.length}` : ""}`
     : `${placed.length} boards`;
   const stock = project.stock.find((s) => s.id === first.stock);
+  const undrawn = ready
+    ? undrawnReason(result.shapes.find((s) => s.definition === first.shape))
+    : null;
   const handBackToForm = () => {
     const r = handBack(project, first, shop);
     if (r.ok) store.getState().apply(r.edit);
@@ -85,6 +97,9 @@ export function BoardInspector({ instances }: { instances: Id[] }) {
           </button>
         )}
       </Section>
+      {undrawn && (
+        <p className="problem warning">The 3D view shows this board without its cuts: {undrawn}</p>
+      )}
       <Problems parts={new Set(placed.map((p) => p.part))} />
     </div>
   );

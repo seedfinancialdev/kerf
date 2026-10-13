@@ -1,0 +1,46 @@
+// Kerf — free, open-source woodworking design tool
+// Copyright (C) 2026 Kerf contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
+// Turns a pointer event on the model into what a tool needs: the board, the point on the grid and
+// the surface's direction, in project terms. The only place scene floats become project integers.
+
+import { gridSize, type PlacedPart, type Vec3 } from "@kerf/core";
+import type { ThreeEvent } from "@react-three/fiber";
+import { type KerfStore, shownProject } from "../model/store";
+import { fromScene } from "../viewport/frames";
+import { handlerFor, type ModelHit } from "./pointer";
+
+/** A scene direction back to the signed project axis it is closest to. */
+function axisOf(x: number, y: number, z: number): Vec3 {
+  const project = [x, -z, y];
+  const sizes = project.map(Math.abs);
+  const k = sizes.indexOf(Math.max(...sizes));
+  return [0, 1, 2].map((i) => (i === k ? Math.sign(project[i] ?? 0) : 0)) as unknown as Vec3;
+}
+
+/** Sends a pointer event on `placed` (or on empty space, when null) to the active tool. */
+export function dispatchPointer(
+  store: KerfStore,
+  kind: "down" | "move" | "up",
+  e: ThreeEvent<PointerEvent> | MouseEvent,
+  placed: PlacedPart | null,
+): void {
+  const s = store.getState();
+  const project = shownProject(s);
+  // After O or H the left button drags the view; those drags are not picks.
+  if (!project || s.navigation) return;
+  let hit: ModelHit | null = null;
+  if (placed && "point" in e && e.face) {
+    const n = e.face.normal.clone().transformDirection(e.object.matrixWorld);
+    hit = {
+      placed,
+      point: fromScene([e.point.x, e.point.y, e.point.z], gridSize(project.units)),
+      normal: axisOf(n.x, n.y, n.z),
+    };
+  }
+  handlerFor(s.tool).pointer?.(
+    { kind, hit, shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey },
+    store,
+  );
+}

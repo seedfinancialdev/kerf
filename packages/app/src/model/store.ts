@@ -10,6 +10,7 @@
 import {
   type AssemblyStep,
   assemblyOrder,
+  type Id,
   type Project,
   parseProject,
   type ShopProfile,
@@ -61,6 +62,12 @@ export interface KerfState {
   created: string | null;
   /** Draws the model as a PNG for the file's thumbnail; set by the viewport, absent without one. */
   thumbnail: (() => Promise<Uint8Array | undefined>) | null;
+  /** The board under the pointer, for the grain line (Interaction spec: "visible grain direction on hover"). */
+  hovered: Id | null;
+  /** Left-drag navigation after O (orbit) or H (pan), as SketchUp; null means picking. */
+  navigation: "orbit" | "pan" | null;
+  /** Bumped by Shift+Z; the view fits the model whenever it changes. */
+  fitRequest: number;
 }
 
 export interface KerfActions {
@@ -70,6 +77,12 @@ export interface KerfActions {
   begin(edit: Edit): void;
   /** Sets how the model is drawn for a file's thumbnail; null when no view can draw it. */
   setThumbnailSource(source: (() => Promise<Uint8Array | undefined>) | null): void;
+  /** Marks the board under the pointer, or none. */
+  hover(instance: Id | null): void;
+  /** Makes left-drag orbit or pan; null makes it pick again. */
+  setNavigation(mode: "orbit" | "pan" | null): void;
+  /** Asks the view to zoom to fit the whole model. */
+  requestFit(): void;
   /** Shows `project` and solves it without recording it (while dragging). */
   preview(project: Project): void;
   /** Records the previewed project under `label`. Does nothing when nothing is previewed. */
@@ -249,6 +262,9 @@ export function createKerfStore(deps: {
       sections: readSections(deps.storage),
       created: deps.storage.read("kerf.created") ?? null,
       thumbnail: null,
+      hovered: null,
+      navigation: null,
+      fitRequest: 0,
 
       begin: (edit) => {
         const created = new Date(deps.clockDate?.() ?? Date.now()).toISOString();
@@ -263,6 +279,9 @@ export function createKerfStore(deps: {
         });
       },
       setThumbnailSource: (thumbnail) => set({ thumbnail }),
+      hover: (hovered) => set({ hovered }),
+      setNavigation: (navigation) => set({ navigation }),
+      requestFit: () => set({ fitRequest: get().fitRequest + 1 }),
 
       apply: (edit, notice) => {
         const h = get().history;

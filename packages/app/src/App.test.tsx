@@ -115,6 +115,24 @@ describe("<App>", () => {
     expect(store.getState().history?.at).toBe(0);
   });
 
+  it("turns left-drag into orbit with O, pan with H, and back to picking with Escape", () => {
+    const store = renderApp();
+    fireEvent.keyDown(window, { key: "o" });
+    expect(store.getState().navigation).toBe("orbit");
+    fireEvent.keyDown(window, { key: "h" });
+    expect(store.getState().navigation).toBe("pan");
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(store.getState().navigation).toBeNull();
+  });
+
+  it("asks the view to fit the model with Shift+Z, but not Ctrl+Shift+Z", () => {
+    const store = renderApp();
+    fireEvent.keyDown(window, { key: "Z", shiftKey: true });
+    expect(store.getState().fitRequest).toBe(1);
+    fireEvent.keyDown(window, { key: "z", shiftKey: true, ctrlKey: true });
+    expect(store.getState().fitRequest).toBe(1);
+  });
+
   it("puts the theme on the page", () => {
     renderApp();
     expect(document.documentElement.dataset.theme).toBe("dark");
