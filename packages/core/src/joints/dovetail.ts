@@ -204,7 +204,7 @@ export function deriveDovetail(
   const proud = ctx.length(joint, "proud", 0);
   if (pin === undefined || proud === undefined) return undefined;
   if (proud < 0) {
-    ctx.error("invalid-parameter", 'The dovetail "proud" cannot be negative.', {
+    ctx.error("invalid-parameter", "The proud amount of the through dovetail cannot be negative.", {
       ...where,
       field: "joint proud",
     });

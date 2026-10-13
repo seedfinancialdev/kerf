@@ -18,7 +18,10 @@ describe("condense", () => {
     const out = condense(list);
     expect(out).toHaveLength(26);
     expect(out[25]).toMatchObject({ severity: "error", rule: "overlap", count: 6 });
-    expect(out[25]?.message).toContain("6 more");
+    // The number is the count (Problems shows "(6 times)"); the words give an example, no rule id.
+    expect(out[25]?.message).toBe(
+      `More problems like this one are not listed: ${list[25]?.message}`,
+    );
   });
   it("26 entries leave exactly one in the summary", () => {
     const out = condense(Array.from({ length: 26 }, (_, i) => d({ field: `f${i}` })));

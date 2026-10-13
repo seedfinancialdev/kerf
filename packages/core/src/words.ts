@@ -32,6 +32,24 @@ export const JOINT_NAME: Readonly<Record<Joint["type"], string>> = {
   throughDovetail: "through dovetail",
 };
 
+/** The settings a joint's parameters may carry (Domain model, Joint "params"; Operation specs). */
+export type JointParam = "depth" | "fit" | "stop" | "width" | "pin" | "proud" | "tails";
+
+const PARAM_NAMES: Record<JointParam, string> = {
+  depth: "depth",
+  fit: "fit allowance",
+  stop: "stop",
+  width: "width",
+  pin: "pin width",
+  proud: "proud amount",
+  tails: "number of tails",
+};
+
+/** A joint setting, to start a sentence: "The pin width of the through dovetail". */
+export function jointSetting(type: Joint["type"], param: JointParam): string {
+  return `The ${PARAM_NAMES[param]} of the ${JOINT_NAME[type]}`;
+}
+
 /** How each type of joint reads in a sentence: "a dado", "a rabbet", "through dovetails". */
 export const JOINT_WORD: Readonly<Record<Joint["type"], string>> = {
   dado: "a dado",

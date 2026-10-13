@@ -13,6 +13,7 @@ import type { RuleId } from "../rules";
 import type { Frame } from "../solve/assembly";
 import type { SolvedModel } from "../solve/model";
 import type { Id, Joint, Len } from "../types";
+import { type JointParam, jointSetting } from "../words";
 
 /** How much a joint adds to a part's cut size, at the end(s) it touches. */
 export interface CutAdd {
@@ -69,8 +70,8 @@ export interface DeriveContext {
   units: UnitSystem;
   frame(instance: Id): Frame | undefined;
   /** Evaluates a joint parameter; reports on failure and returns undefined. */
-  length(joint: Joint, key: string, fallback?: Len): Len | undefined;
-  expression(joint: Joint, key: string): Quantity | undefined;
+  length(joint: Joint, key: JointParam, fallback?: Len): Len | undefined;
+  expression(joint: Joint, key: JointParam): Quantity | undefined;
   error(
     rule: RuleId,
     message: string,
@@ -122,7 +123,7 @@ export function makeContext(
     }
   };
 
-  const evaluate = (joint: Joint, key: string): Quantity | undefined => {
+  const evaluate = (joint: Joint, key: JointParam): Quantity | undefined => {
     const source = joint.params[key];
     if (source === undefined) return undefined;
     try {
@@ -132,7 +133,7 @@ export function makeContext(
         report({
           severity: "error",
           rule: error.reason === "limit" ? "limit-exceeded" : "expression-syntax",
-          message: `${joint.type} ${key}: ${error.message}.`,
+          message: `${jointSetting(joint.type, key)} can't be worked out: ${error.message}.`,
           joint: joint.id,
           field: `joint ${key}`,
         });
@@ -154,7 +155,7 @@ export function makeContext(
         report({
           severity: "error",
           rule: "type-mismatch",
-          message: `${joint.type} ${key} must be a length.`,
+          message: `${jointSetting(joint.type, key)} must be a length.`,
           joint: joint.id,
           field: `joint ${key}`,
         });
@@ -167,7 +168,7 @@ export function makeContext(
         report({
           severity: "error",
           rule: "out-of-range",
-          message: `${joint.type} ${key} is too large: the limit is 100,000 inches.`,
+          message: `${jointSetting(joint.type, key)} is too large: the limit is 100,000 inches.`,
           joint: joint.id,
           field: `joint ${key}`,
         });

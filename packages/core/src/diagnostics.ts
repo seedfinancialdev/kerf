@@ -41,7 +41,8 @@ export function condense(list: Diagnostic[]): Diagnostic[] {
     out.push({
       severity: sample.severity,
       rule: sample.rule,
-      message: `${total} more "${sample.rule}" problems were found and are not listed.`,
+      // The count goes with it (Problems shows "(N times)"), so the words carry no number.
+      message: `More problems like this one are not listed: ${sample.message}`,
       count: total,
     });
   }
