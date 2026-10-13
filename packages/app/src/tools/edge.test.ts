@@ -95,6 +95,21 @@ describe("roundEdges()", () => {
     expect(rounded).toHaveLength(5);
   });
 
+  it("rounds a shelf taken out of the form on the shelf itself, not on the form's shelf roundover", () => {
+    // A detached shelf no longer follows the form, so its roundover is its own.
+    const [shelf] = named("Shelf");
+    if (!shelf) throw new Error("no shelf");
+    const taken = detachForEdit(bookcase(), shelf, shop).project;
+    const own = solve(taken, shop).placements.find((p) => p.detached);
+    if (!own) throw new Error("the taken shelf is not detached");
+    const before = taken.structures[0]?.options.shelfRoundover;
+    const { project } = roundEdges(taken, [own], BOTH_FRONT_EDGES, IN / 4, shop);
+    expect(project.structures[0]?.options.shelfRoundover).toBe(before);
+    expect(
+      project.parts.find((d) => d.id === own.part)?.ops.filter((o) => o.type === "roundover"),
+    ).toHaveLength(1);
+  });
+
   it("rounds every shelf picked, not only the last of the row", () => {
     // 4 shelves × 2 front edges the form made + 4 shelves × 1 back edge = 12 cuts.
     const { project } = roundEdges(bookcase(), named("Shelf"), ["edge0/face1"], IN / 8, shop);

@@ -1,0 +1,121 @@
+[
+  {
+    "id": "history-keeps-after",
+    "file": "packages/app/src/model/history.ts",
+    "find": "history.entries.slice(0, history.at + 1)",
+    "replace": "history.entries.slice(0, history.at + 2)",
+    "why": "A change after stepping back keeps an entry it should drop."
+  },
+  {
+    "id": "history-limit",
+    "file": "packages/app/src/model/history.ts",
+    "find": "kept.length - HISTORY_LIMIT",
+    "replace": "kept.length - HISTORY_LIMIT - 1",
+    "why": "History keeps one change too few."
+  },
+  {
+    "id": "store-records-no-op",
+    "file": "packages/app/src/model/store.ts",
+    "find": "=== serializeProject(edit.project)) return;",
+    "replace": "!== serializeProject(edit.project)) return;",
+    "why": "Unchanged fields record History entries and real changes are dropped."
+  },
+  {
+    "id": "store-keeps-stale-proposal",
+    "file": "packages/app/src/model/store.ts",
+    "find": "...(moved ? { proposal: null } : {})",
+    "replace": "...{}",
+    "why": "A joint proposed for the project as it was stays on offer after Undo or Redo."
+  },
+  {
+    "id": "store-keeps-stale-join-pending",
+    "file": "packages/app/src/model/store.ts",
+    "find": "moved && next.pending?.tool === \"join\" ? null : next.pending",
+    "replace": "next.pending",
+    "why": "A half-made Join pick survives a change to the boards it names."
+  },
+  {
+    "id": "position-fraction-of-one",
+    "file": "packages/app/src/model/size.ts",
+    "find": "num > 0n && num < den",
+    "replace": "num > 0n && num <= den",
+    "why": "A partition at the opening's right face (1/1) is accepted."
+  },
+  {
+    "id": "exact-literal-scale",
+    "file": "packages/app/src/model/size.ts",
+    "find": "(units % 8000) * 125",
+    "replace": "(units % 8000) * 120",
+    "why": "Millimetre literals lose exactness."
+  },
+  {
+    "id": "scrub-rounding",
+    "file": "packages/app/src/ui/NumberField.tsx",
+    "find": "Math.trunc((e.clientX - d.x) / PIXELS_PER_STEP)",
+    "replace": "Math.round((e.clientX - d.x) / PIXELS_PER_STEP)",
+    "why": "A drag moves a step early."
+  },
+  {
+    "id": "accept-flag",
+    "file": "packages/app/src/model/commands.ts",
+    "find": "options: { ...s.options, joineryReviewed: true }",
+    "replace": "options: { ...s.options, joineryReviewed: false }",
+    "why": "Accept all records nothing."
+  },
+  {
+    "id": "edge-form-shelf",
+    "file": "packages/app/src/tools/edge.ts",
+    "find": "p.source?.role === \"shelf\" && !p.detached",
+    "replace": "p.source?.role === \"shelf\"",
+    "why": "A detached shelf's roundover goes to the form instead of the board."
+  },
+  {
+    "id": "push-pull-low-end",
+    "file": "packages/app/src/tools/push-pull.ts",
+    "find": "< 0 === face.endsWith(\"1\")",
+    "replace": "< 0 === face.endsWith(\"0\")",
+    "why": "Pulling one end moves the other."
+  },
+  {
+    "id": "tape-half-even",
+    "file": "packages/app/src/tools/tape.ts",
+    "find": "(lower % 2n === 0n ? lower : lower + 1n) * grid",
+    "replace": "(lower + 1n) * grid",
+    "why": "Ties round up instead of to even."
+  },
+  {
+    "id": "join-thin-host-equal",
+    "file": "packages/core/src/joints/propose.ts",
+    "find": "host.part.thickness < guest.part.thickness",
+    "replace": "host.part.thickness <= guest.part.thickness",
+    "why": "Boards of equal thickness are refused a joint."
+  },
+  {
+    "id": "join-thin-host-allowed",
+    "file": "packages/core/src/joints/propose.ts",
+    "find": "host.part.thickness < guest.part.thickness",
+    "replace": "host.part.thickness > guest.part.thickness",
+    "why": "A joint is cut into the thinner board."
+  },
+  {
+    "id": "board-between-not-flush",
+    "file": "packages/app/src/tools/board.ts",
+    "find": "position[across] = literalFor(front - width, project.units);",
+    "replace": "position[across] = literalFor(near, project.units);",
+    "why": "A board of a chosen width starts at the back instead of sitting flush with the front."
+  },
+  {
+    "id": "new-problem-any-error",
+    "file": "packages/app/src/tools/new-problem.ts",
+    "find": "errors(after).find((m) => !known.has(m))",
+    "replace": "errors(after).find(() => true)",
+    "why": "An error the project already had refuses a harmless new board."
+  },
+  {
+    "id": "new-problem-known-only",
+    "file": "packages/app/src/tools/new-problem.ts",
+    "find": "errors(after).find((m) => !known.has(m))",
+    "replace": "errors(after).find((m) => known.has(m))",
+    "why": "Only errors the project already had are reported; a new one slips through."
+  }
+]

@@ -27,7 +27,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const MUTANTS = join(ROOT, "scripts/mutation/mutants");
-const SUITES = ["unit", "golden", "prop", "stress"];
+const SUITES = ["unit", "app", "golden", "prop", "stress"];
 
 /**
  * @typedef {object} Mutant

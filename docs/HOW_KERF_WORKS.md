@@ -91,7 +91,8 @@ The standards behind them are in `docs/testing/` and `docs/CODE_QUALITY.md`.
 | `packages/geometry` | Display shapes (the solid of a board minus its cuts). |
 | `packages/io` | Reading and writing the `.kerf` file (a zip with the project, some metadata, a thumbnail). |
 | `packages/fixtures` | The reference projects and every cross-package test. |
-| `packages/app`, `packages/pdf` | The interface and the build plan; later milestones. |
+| `packages/app` | The app: the model (intent, history, store), the screens, the 3D view and the tools. It uses the engine only through `@kerf/core`. |
+| `packages/pdf` | The build plan as a PDF; a later milestone. |
 
 ## Shop words and code words
 

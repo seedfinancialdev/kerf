@@ -90,6 +90,24 @@ describe("<NumberField>", () => {
     expect(onScrub).toHaveBeenLastCalledWith(7_442_200);
   });
 
+  it("moves whole steps only: 7 px is one step of 4, never two", () => {
+    const onScrub = vi.fn();
+    field({
+      scrub: {
+        value: 7_315_200,
+        units: "imperial",
+        onScrub,
+        onScrubEnd: vi.fn(),
+        onScrubCancel: vi.fn(),
+      },
+    });
+    // 7 / 4 = 1.75 steps, dropped to 1 step of 1/16" (12700); -7 px is one step the other way.
+    drag(screen.getByText("Width"), 7);
+    expect(onScrub).toHaveBeenLastCalledWith(7_315_200 + 12_700);
+    drag(screen.getByText("Width"), -7);
+    expect(onScrub).toHaveBeenLastCalledWith(7_315_200 - 12_700);
+  });
+
   it('changes by 1" per step with Shift and by 1/64" with Alt', () => {
     const onScrub = vi.fn();
     field({

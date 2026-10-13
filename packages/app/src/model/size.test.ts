@@ -91,6 +91,13 @@ describe("readPosition()", () => {
     expect(readPosition('12"', bookcase)).toEqual({ ok: true, expr: '12"' });
   });
 
+  it("refuses a fraction of exactly 1: that is the opening's far face, not a place inside it", () => {
+    expect(readPosition("3/3", bookcase)).toEqual({
+      ok: false,
+      message: 'Type a length like 12" or a fraction like 1/3.',
+    });
+  });
+
   it("refuses a fraction of 1 or more", () => {
     expect(readPosition("4/3", bookcase)).toEqual({
       ok: false,

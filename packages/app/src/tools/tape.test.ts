@@ -44,9 +44,17 @@ describe("measureBetween()", () => {
     expect([r.leftRight, r.frontBack, r.upDown, r.straight]).toEqual([IN, 2 * IN, 2 * IN, 3 * IN]);
   });
 
-  it("snaps on the metric grid of 0.5 mm (5000 units)", () => {
-    // A 3-4-5 triangle of 30 mm, 40 mm sides (1 mm = 10000 units) is exactly 50 mm.
+  it("reads a metric 3-4-5 triangle exactly", () => {
+    // Sides of 300,000 and 400,000 units make a 3-4-5 triangle: the straight line is 500,000.
     expect(measureBetween([0, 0, 0], [300_000, 400_000, 0], "metric").straight).toBe(500_000);
+  });
+
+  it("rounds a straight line half way between two metric grid lines to the even one", () => {
+    // The metric grid is 0.01 mm = 80 units. A line along one axis reads its own length, so 40
+    // units is half way between 0 and 80 (steps 0 and 1: even is 0), 120 between 80 and 160
+    // (steps 1 and 2: even is 2 → 160) and 200 between 160 and 240 (steps 2 and 3: even is 2 → 160).
+    const straight = (units: number) => measureBetween([0, 0, 0], [units, 0, 0], "metric").straight;
+    expect([straight(40), straight(120), straight(200)]).toEqual([0, 160, 160]);
   });
 });
 
