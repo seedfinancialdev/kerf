@@ -63,4 +63,62 @@ describe("<ToolRow>", () => {
     fireEvent.keyDown(input, { key: "Enter" });
     expect(screen.getByText("This tool takes no typed size.")).toBeTruthy();
   });
+
+  it("leaves Space to a focused button, and still selects Select from the window", () => {
+    const store = setup();
+    act(() => store.getState().setTool("move"));
+    const button = screen.getByRole("button", { name: "Tape T" });
+    button.focus();
+    fireEvent.keyDown(button, { key: " " });
+    expect(store.getState().tool).toBe("move");
+    fireEvent.keyDown(window, { key: " " });
+    expect(store.getState().tool).toBe("select");
+  });
+});
+
+describe("<Measurements>", () => {
+  const typeIn = (value: string) => {
+    const input = screen.getByLabelText("Measurements");
+    fireEvent.change(input, { target: { value } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    return input;
+  };
+
+  it("shows a refusal as an alert tied to the box", () => {
+    setup();
+    const input = typeIn("3");
+    const alert = screen.getByRole("alert");
+    expect(input.getAttribute("aria-describedby")).toBe(alert.id);
+  });
+
+  it("clears the refusal when the text is edited", () => {
+    setup();
+    const input = typeIn("3");
+    fireEvent.change(input, { target: { value: "30" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("clears the refusal when the tool changes", () => {
+    const store = setup();
+    typeIn("3");
+    act(() => store.getState().setTool("tape"));
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("does nothing on Enter with nothing typed", () => {
+    setup();
+    typeIn("");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("lets go of the keyboard on Escape, so tool keys work again", () => {
+    const store = setup();
+    const input = screen.getByLabelText("Measurements");
+    input.focus();
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(document.activeElement).not.toBe(input);
+    expect(store.getState().tool).toBe("select");
+    fireEvent.keyDown(document.body, { key: "p" });
+    expect(store.getState().tool).toBe("pushPull");
+  });
 });

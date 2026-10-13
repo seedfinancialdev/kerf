@@ -8,6 +8,7 @@ import { useKerf } from "../ui/useKerf";
 import { Measurements } from "./Measurements";
 import { TOOLS } from "./tools";
 
+/** One button per tool, the active one pressed, then the Measurements box. */
 export function ToolRow() {
   const tool = useKerf((s) => s.tool);
   const setTool = useKerf((s) => s.setTool);

@@ -9,6 +9,10 @@ import { useEffect } from "react";
 import { toolForKey } from "../tools/tools";
 import { useKerfStore } from "./useKerf";
 
+/** Controls that Space presses, so Space must reach them and not pick a tool. */
+const SPACE_CONTROLS =
+  '[role="toolbar"], [role="button"], [role="tab"], [role="menuitem"], [role="checkbox"], [role="option"], [role="treeitem"], button, a[href], summary';
+
 /** True when the key press is aimed at a text field, a menu or an editable area, not at the app. */
 export function isTyping(target: EventTarget | null): boolean {
   return (
@@ -23,6 +27,7 @@ export function useShortcuts(): void {
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (isTyping(e.target)) return;
+      if (e.key === " " && e.target instanceof Element && e.target.closest(SPACE_CONTROLS)) return;
       const s = store.getState();
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
         e.preventDefault();
