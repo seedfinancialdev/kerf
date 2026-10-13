@@ -5,7 +5,14 @@
 // Save and Open (design spec, "Saving"). Opening is one History entry, so it can be undone.
 
 import { useRef } from "react";
-import { fileNameFor, openKerfBytes, saveFailureReason, saveKerfBytes } from "../model/files";
+import {
+  fileNameFor,
+  OPEN_FAULT,
+  openKerfBytes,
+  SAVE_FAULT,
+  saveFailureReason,
+  saveKerfBytes,
+} from "../model/files";
 import { shownProject } from "../model/store";
 import { useKerf, useKerfStore } from "../state/useKerf";
 
@@ -42,17 +49,37 @@ export function FileSection({ now = () => new Date() }: { now?: () => Date }) {
         fileNameFor(project),
       );
     } catch (error) {
-      s.say(`The file could not be saved: ${saveFailureReason(error)}`);
+      const reason = saveFailureReason(error);
+      if (reason !== undefined) {
+        s.say(`The file could not be saved: ${reason}`);
+        return;
+      }
+      // A fault in Kerf, not in the project: the stack is what a bug report needs.
+      console.error(error);
+      s.say(SAVE_FAULT);
     }
   };
 
+  /**
+   * Reading the file can fail for reasons outside Kerf (the file was moved, the disk is gone); a
+   * damaged file is refused by `openKerfBytes` in plain words. Anything else is a fault in Kerf,
+   * logged for a bug report and not blamed on the file (silent-failure review I8).
+   */
   const open = async (file: File): Promise<void> => {
+    let bytes: Uint8Array;
     try {
-      const r = openKerfBytes(new Uint8Array(await file.arrayBuffer()));
-      if (r.ok) store.getState().begin({ label: `Opened ${file.name}`, project: r.project });
-      else store.getState().say(r.message);
+      bytes = new Uint8Array(await file.arrayBuffer());
     } catch {
       store.getState().say("This file could not be read.");
+      return;
+    }
+    try {
+      const r = openKerfBytes(bytes);
+      if (r.ok) store.getState().begin({ label: `Opened ${file.name}`, project: r.project });
+      else store.getState().say(r.message);
+    } catch (error) {
+      console.error(error);
+      store.getState().say(OPEN_FAULT);
     }
   };
 

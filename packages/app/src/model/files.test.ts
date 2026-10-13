@@ -6,11 +6,12 @@
 // the current project is kept.
 
 import { serializeProject } from "@kerf/core";
+import { readKerf } from "@kerf/io";
 import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { bannedWordsIn } from "../testing/banned-words";
 import { startProject } from "./commands";
-import { fileNameFor, openKerfBytes, saveKerfBytes } from "./files";
+import { fileNameFor, openKerfBytes, saveFailureReason, saveKerfBytes } from "./files";
 
 const times = { created: "2026-10-12T10:00:00.000Z", modified: "2026-10-12T11:00:00.000Z" };
 const project = startProject("Bookcase", "imperial").project;
@@ -71,5 +72,15 @@ describe("files", () => {
         expect(bannedWordsIn(r.message)).toEqual([]);
       }
     }
+  });
+
+  it("leaves out a picture that is not a PNG instead of failing the save", () => {
+    const saved = readKerf(saveKerfBytes(project, times, new Uint8Array([1, 2, 3])));
+    expect(saved.thumbnail).toBeUndefined();
+    expect(serializeProject(saved.project)).toBe(serializeProject(project));
+  });
+
+  it("gives no reason for a failure that is a fault in Kerf, so it is reported, not blamed on the file", () => {
+    expect(saveFailureReason(new TypeError("x is undefined"))).toBeUndefined();
   });
 });

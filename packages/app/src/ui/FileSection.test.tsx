@@ -71,6 +71,25 @@ describe("the File section", () => {
     expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it("says it is Kerf's fault and logs it when opening fails after the file was read (silent-failure review I8)", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const store = setup();
+    const fault = new TypeError("x is undefined");
+    vi.spyOn(store.getState(), "begin").mockImplementation(() => {
+      throw fault;
+    });
+    const box = startProject("Blank box", "imperial").project;
+    choose(new File([saveKerfBytes(box, times) as BlobPart], "Box.kerf"));
+    await waitFor(() =>
+      expect(store.getState().notice?.text).toBe(
+        "Kerf hit a problem opening this file. Please report it; your project is unchanged.",
+      ),
+    );
+    expect(logged).toHaveBeenCalledWith(fault);
+    expect(store.getState().history?.entries).toHaveLength(1);
+    logged.mockRestore();
+  });
+
   it("says plainly when the file cannot be read, and keeps the project", async () => {
     const store = setup();
     const file = new File(["x"], "Box.kerf");
@@ -142,17 +161,34 @@ describe("Save", () => {
     expect(thumbnail).toBeUndefined();
   });
 
-  it("says plainly when the picture is not a PNG, and downloads nothing", async () => {
+  it("saves without a picture when the picture is not a usable PNG (silent-failure review M4)", async () => {
     stubDownload();
     const store = setup();
     act(() => store.getState().setThumbnailSource(async () => new Uint8Array([1, 2, 3])));
     press();
+    await waitFor(() => expect(saved.blobs).toHaveLength(1));
+    const opened = readKerf(await savedBytes());
+    expect(opened.thumbnail).toBeUndefined();
+    expect(opened.project).toEqual(shownProject(store.getState()));
+    expect(store.getState().notice).toBeNull();
+  });
+
+  it("says it is Kerf's fault, in shop words, and logs it when saving fails for no reason in the file", async () => {
+    stubDownload();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const store = setup();
+    const fault = new TypeError("x is undefined");
+    URL.createObjectURL = () => {
+      throw fault;
+    };
+    press();
     await waitFor(() =>
-      expect(store.getState().notice?.text).toMatch(/^The file could not be saved: /),
+      expect(store.getState().notice?.text).toBe(
+        "Kerf hit a problem saving this project, so nothing was saved. Please report it.",
+      ),
     );
     const text = store.getState().notice?.text ?? "";
-    expect(text).not.toContain("$");
     expect(bannedWordsIn(text)).toEqual([]);
-    expect(saved.blobs).toHaveLength(0);
+    expect(logged).toHaveBeenCalledWith(fault);
   });
 });
