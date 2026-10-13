@@ -8,6 +8,12 @@
 import { CURRENT_SCHEMA_VERSION, type Project, ProjectFormatError } from "@kerf/core";
 import { KerfFormatError, readKerf, writeKerf } from "@kerf/io";
 
+/**
+ * Why a project the engine rejects could not be opened, in shop words. The engine's own message
+ * names a place in the file ("$.instances[0].def: ...") that means nothing in the shop.
+ */
+export const DAMAGED_CONTENTS = "its contents are damaged or do not make sense";
+
 /** The app version written into meta.json; bump it with each release. */
 export const APP_VERSION = "0.4.0";
 
@@ -48,7 +54,7 @@ export function openKerfBytes(
     if (error instanceof ProjectFormatError) {
       return {
         ok: false,
-        message: "This file could not be opened: its contents are damaged or do not make sense.",
+        message: `This file could not be opened: ${DAMAGED_CONTENTS}.`,
       };
     }
     throw error;

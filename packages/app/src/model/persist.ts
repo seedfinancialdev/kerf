@@ -5,9 +5,10 @@
 // What the app keeps in the browser for the open project and the screens (ADR 015, rule 11 and
 // D4), and the plain words used when it cannot. The shop has its own module (shop.ts).
 
-import { type Project, parseProject, serializeProject } from "@kerf/core";
+import { type Project, ProjectFormatError, parseProject, serializeProject } from "@kerf/core";
+import { DAMAGED_CONTENTS } from "./files";
 import { type History, startHistory } from "./history";
-import type { AppStorage } from "./storage";
+import type { AppStorage, StorageKey } from "./storage";
 
 /** Shown once when a change could not be written to browser storage (ADR 015, rule 11). */
 export const NOT_KEPT =
@@ -26,8 +27,10 @@ export function storageNotice(storage: AppStorage): string | undefined {
 
 /**
  * The stored project as the first History entry, or why it could not be opened. A stored project
- * the engine rejects is set aside under `kerf.project.setAside`, never deleted; if even that write
- * fails it is left where it was.
+ * the engine rejects is set aside under the first free key of `kerf.project.setAside`,
+ * `kerf.project.setAside.2`, … so an earlier copy is never overwritten, and it is never deleted;
+ * if even that write fails it is left where it was. Throws anything but the engine's
+ * ProjectFormatError, which would be a fault in Kerf rather than in the stored project.
  */
 export function restoreProject(storage: AppStorage): { history: History | null; problem?: string } {
   const text = storage.read("kerf.project");
@@ -37,20 +40,24 @@ export function restoreProject(storage: AppStorage): { history: History | null; 
       history: startHistory({ label: "Opened your last project", project: parseProject(text) }),
     };
   } catch (error) {
-    const reason = error instanceof Error ? error.message : "it was damaged";
+    if (!(error instanceof ProjectFormatError)) throw error;
+    const told = `Your last project could not be opened: ${DAMAGED_CONTENTS}.`;
     // The stored text may be the only copy, so it is removed only once the set-aside copy exists.
-    if (!storage.write("kerf.project.setAside", text)) {
-      return {
-        history: null,
-        problem: `Your last project could not be opened (${reason}). It was left as it was.`,
-      };
+    if (!storage.write(freeSetAsideKey(storage), text)) {
+      return { history: null, problem: `${told} It was left where it was.` };
     }
     storage.remove("kerf.project");
-    return {
-      history: null,
-      problem: `Your last project could not be opened (${reason}). It was set aside.`,
-    };
+    return { history: null, problem: `${told} It was set aside in this browser.` };
   }
+}
+
+/** The first set-aside key that holds nothing yet. */
+function freeSetAsideKey(storage: AppStorage): StorageKey {
+  const key = (n: number): StorageKey =>
+    n === 1 ? "kerf.project.setAside" : `kerf.project.setAside.${n}`;
+  let n = 1;
+  while (storage.read(key(n)) !== undefined) n += 1;
+  return key(n);
 }
 
 /** Keeps `project` as the one to reopen; false when the browser would not take it. */

@@ -12,7 +12,9 @@ export type StorageKey =
   | "kerf.sections"
   | "kerf.project"
   | "kerf.created"
-  | "kerf.project.setAside";
+  | "kerf.project.setAside"
+  /** A later rejected project, set aside without overwriting the earlier ones (persist.ts). */
+  | `kerf.project.setAside.${number}`;
 
 export interface AppStorage {
   /** False when the browser gives no storage at all. */

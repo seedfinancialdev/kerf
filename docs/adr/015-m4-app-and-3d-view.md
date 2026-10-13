@@ -47,3 +47,7 @@ through `@kerf/core`. Design: `docs/superpowers/specs/2026-10-12-m4-app-3d-view-
   Browser persistence moved out to `model/persist.ts` without changing behaviour, but moving the
   view state to a viewport-owned store changes what every screen and its tests read, so it is not
   a mechanical split and is left for a later milestone (final branch review M5).
+- Known limit: a stored project the engine rejects is kept in browser storage
+  (`kerf.project.setAside`, then `.2`, `.3`, … so none is overwritten), but nothing in the app
+  offers it back yet; recovering it means reading browser storage by hand. A download of the
+  set-aside copy is a later feature (silent-failure review M5).

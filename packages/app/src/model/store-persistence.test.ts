@@ -6,7 +6,9 @@
 // reload restores it; ADR 015, rule 11 for what happens when that cannot work.
 
 import { type Project, serializeProject } from "@kerf/core";
+import { handMadeBookcase } from "@kerf/fixtures/builders";
 import { describe, expect, it } from "vitest";
+import { bannedWordsIn } from "../testing/banned-words";
 import { memoryStorage } from "../testing/memory-storage";
 import { type Edit, setSize, startProject } from "./commands";
 import { type AppStorage, createStorage } from "./storage";
@@ -160,7 +162,8 @@ describe("a browser store that cannot be written", () => {
     const s = createKerfStore({ storage }).getState();
     expect(s.history).toBeNull();
     expect(s.notice?.text).toMatch(
-      /^Your last project could not be opened \(.+\)\. It was left as it was\.$/,
+      "Your last project could not be opened: its contents are damaged or do not make sense. " +
+        "It was left where it was.",
     );
     expect(removed).toEqual([]);
   });
@@ -248,5 +251,36 @@ describe("a shop change the browser cannot keep (silent-failure review I3)", () 
     s.getState().dismissNotice();
     s.getState().setShop({ ...shop, kerf: 12_700 });
     expect(s.getState().notice).toBeNull();
+  });
+});
+
+describe("a stored project the engine rejects (code review I1, silent-failure review M5)", () => {
+  /** The hand-made bookcase as stored, its first board naming a part the project does not have. */
+  const brokenText = (): string => {
+    const stored = JSON.parse(serializeProject(handMadeBookcase()));
+    stored.instances[0].def = "01J9ZZZZZZZZZZZZZZZZZZZZZZ";
+    return JSON.stringify(stored);
+  };
+
+  it("is described in shop words, with no file path or banned word from the engine", () => {
+    const storage = memory();
+    storage.write("kerf.project", brokenText());
+    const text = createKerfStore({ storage }).getState().notice?.text ?? "";
+    expect(text).toBe(
+      "Your last project could not be opened: its contents are damaged or do not make sense. " +
+        "It was set aside in this browser.",
+    );
+    expect(text).not.toMatch(/\$/);
+    expect(bannedWordsIn(text)).toEqual([]);
+  });
+
+  it("does not overwrite a copy set aside earlier", () => {
+    const storage = memory();
+    storage.write("kerf.project", '{"schemaVersion": 1, "name": 7}');
+    createKerfStore({ storage });
+    storage.write("kerf.project", '{"schemaVersion": 1, "name": 8}');
+    createKerfStore({ storage });
+    expect(storage.read("kerf.project.setAside")).toBe('{"schemaVersion": 1, "name": 7}');
+    expect(storage.read("kerf.project.setAside.2")).toBe('{"schemaVersion": 1, "name": 8}');
   });
 });
