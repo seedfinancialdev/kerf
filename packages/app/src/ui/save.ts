@@ -34,9 +34,13 @@ export async function saveShownProject(store: KerfStore, now: Date): Promise<voi
   if (!project) return;
   const stamp = now.toISOString();
   // A view that cannot draw its picture must not stop the save: the file just has no thumbnail.
+  // The failure is still a fault in Kerf, logged so that files saved without pictures are noticed.
   const thumbnail = await Promise.resolve()
     .then(() => s.thumbnail?.())
-    .catch(() => undefined);
+    .catch((error: unknown) => {
+      console.error(error);
+      return undefined;
+    });
   try {
     download(
       saveKerfBytes(project, { created: s.created ?? stamp, modified: stamp }, thumbnail),

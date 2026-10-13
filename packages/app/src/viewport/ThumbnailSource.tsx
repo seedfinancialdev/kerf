@@ -15,16 +15,14 @@ export function ThumbnailSource() {
   useEffect(() => {
     store.getState().setThumbnailSource(
       () =>
-        new Promise((resolve) => {
+        new Promise((resolve, reject) => {
           gl.domElement.toBlob((blob) => {
+            // Save leaves the picture out and logs why (ui/save.ts); nothing here is swallowed.
             if (!blob) {
-              resolve(undefined);
+              reject(new Error("The 3D view gave no picture for the thumbnail."));
               return;
             }
-            blob.arrayBuffer().then(
-              (bytes) => resolve(new Uint8Array(bytes)),
-              () => resolve(undefined),
-            );
+            blob.arrayBuffer().then((bytes) => resolve(new Uint8Array(bytes)), reject);
           }, "image/png");
         }),
     );

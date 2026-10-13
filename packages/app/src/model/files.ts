@@ -19,8 +19,9 @@ const APP_VERSION = "0.4.0";
 
 /**
  * Writes `project` as a .kerf file with `times` in its meta.json and the thumbnail PNG, if any. A
- * picture @kerf/io refuses (not a PNG, or too large) is left out rather than stopping the save: the
- * file is the user's work, the picture only a preview. Throws as `writeKerf` does otherwise.
+ * picture @kerf/io refuses (not a PNG, or too large) is left out, and logged, rather than stopping
+ * the save: the file is the user's work, the picture only a preview. Throws as `writeKerf` does
+ * otherwise.
  */
 export function saveKerfBytes(
   project: Project,
@@ -33,6 +34,8 @@ export function saveKerfBytes(
     return writeKerf(project, meta, thumbnail);
   } catch (error) {
     if (!(error instanceof KerfFormatError)) throw error;
+    // The view made a picture @kerf/io will not take: a fault in Kerf, logged for a bug report.
+    console.error(error);
     return writeKerf(project, meta);
   }
 }

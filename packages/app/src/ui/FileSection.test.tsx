@@ -5,7 +5,7 @@
 // Design spec, "Saving": Open is one History entry and can be undone; a damaged file is refused in
 // plain words and the current project stays.
 
-import { readKerf } from "@kerf/io";
+import { KerfFormatError, readKerf } from "@kerf/io";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { startProject } from "../model/commands";
@@ -151,18 +151,22 @@ describe("Save", () => {
     await waitFor(() => expect(saved.revoked).toEqual(["blob:kerf-test"]));
   });
 
-  it("saves without a picture when the thumbnail source fails", async () => {
+  it("saves without a picture when the thumbnail source fails, and logs why (PR review errors-M1)", async () => {
     stubDownload();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const store = setup();
-    act(() => store.getState().setThumbnailSource(() => Promise.reject(new Error("no canvas"))));
+    const failure = new Error("no canvas");
+    act(() => store.getState().setThumbnailSource(() => Promise.reject(failure)));
     press();
     await waitFor(() => expect(saved.blobs).toHaveLength(1));
     const { thumbnail } = readKerf(await savedBytes());
     expect(thumbnail).toBeUndefined();
+    expect(logged).toHaveBeenCalledWith(failure);
   });
 
-  it("saves without a picture when the picture is not a usable PNG (silent-failure review M4)", async () => {
+  it("saves without a picture when the picture is not a usable PNG, and logs why (silent-failure review M4; PR review errors-M1)", async () => {
     stubDownload();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const store = setup();
     act(() => store.getState().setThumbnailSource(async () => new Uint8Array([1, 2, 3])));
     press();
@@ -171,6 +175,7 @@ describe("Save", () => {
     expect(opened.thumbnail).toBeUndefined();
     expect(opened.project).toEqual(shownProject(store.getState()));
     expect(store.getState().notice).toBeNull();
+    expect(logged).toHaveBeenCalledWith(expect.any(KerfFormatError));
   });
 
   it("says it is Kerf's fault, in shop words, and logs it when saving fails for no reason in the file", async () => {

@@ -69,8 +69,11 @@ export interface KerfState {
   sections: Record<string, boolean>;
   /** When the shown project was first started or opened (meta.json "created"). */
   created: string | null;
-  /** Draws the model as a PNG for the file's thumbnail; set by the viewport, absent without one. */
-  thumbnail: (() => Promise<Uint8Array | undefined>) | null;
+  /**
+   * Draws the model as a PNG for the file's thumbnail, rejecting when it cannot; set by the
+   * viewport, absent without one.
+   */
+  thumbnail: (() => Promise<Uint8Array>) | null;
   /**
    * The board under the pointer, for the grain line (Interaction spec: "visible grain direction on
    * hover").
@@ -96,7 +99,7 @@ export interface KerfActions {
    */
   begin(edit: Edit): void;
   /** Sets how the model is drawn for a file's thumbnail; null when no view can draw it. */
-  setThumbnailSource(source: (() => Promise<Uint8Array | undefined>) | null): void;
+  setThumbnailSource(source: (() => Promise<Uint8Array>) | null): void;
   /** Marks the board under the pointer, or none. */
   hover(instance: Id | null): void;
   /** Makes left-drag orbit or pan; null makes it pick again. */
