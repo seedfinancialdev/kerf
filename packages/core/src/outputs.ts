@@ -246,6 +246,36 @@ export interface PartShape {
   removals: RemovalPrimitive[];
 }
 
+/**
+ * Where one placed copy of a board sits (ADR 015, rule 8). Reported whenever the boards can be
+ * placed, even when an assembly error withholds the shapes, so a viewer can still draw them.
+ */
+export interface PlacedPart {
+  /** The placed copy: an instance id, or `<patternId>:<index>` for a member of a row. */
+  instance: Id;
+  /** The shape it is drawn with: a `PartShape.definition`. */
+  shape: Id;
+  /** The part definition it is a copy of. */
+  part: Id;
+  name: string;
+  /** The finished blank, before any cut. */
+  size: { length: Len; width: Len; thickness: Len };
+  /** Its bounding box in the project frame. */
+  box: { min: Vec3; max: Vec3 };
+  /**
+   * Where the shape's local origin lands and where its length (x), width (y) and thickness (z)
+   * point in the project frame, each a signed unit axis: the point (u, v, w) of the shape sits at
+   * origin + u·x + v·y + w·z. A mirrored copy has its x reversed and its origin at the other end.
+   */
+  frame: { origin: Vec3; x: Vec3; y: Vec3; z: Vec3 };
+  /** The structure and role that made it; absent for a board made by hand. */
+  source?: { structure: Id; role: string };
+  /** True when a board a form made was taken over by hand. */
+  detached: boolean;
+  /** For a member of a row: the row and its index. */
+  pattern?: { id: Id; index: number };
+}
+
 export interface SolveResult {
   diagnostics: Diagnostic[];
   cutList: CutList;
@@ -256,6 +286,8 @@ export interface SolveResult {
    * the parts cannot be built; a layout or shop-profile error does not empty it.
    */
   shapes: PartShape[];
+  /** Every placed copy (ADR 015, rule 8). Empty only when the project itself is invalid. */
+  placements: PlacedPart[];
   /**
    * True when any error exists (Operation specs: "Error blocks the solve"; Interaction spec: the
    * build plan cannot be exported). An error in the assembly also withholds the cut list, layouts

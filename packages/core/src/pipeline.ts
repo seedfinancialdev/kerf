@@ -23,13 +23,16 @@ import type {
   MachiningSetup,
   NestingResult,
   PartShape,
+  PlacedPart,
   RemovalPrimitive,
   SolveResult,
+  Vec3,
 } from "./outputs";
 import { buildCutListFrom, type CutPart, cutParts } from "./outputs/cutlist";
 import { buildSetups } from "./outputs/machining";
 import { validateAssembly } from "./outputs/validate";
 import { shopProblem } from "./shop";
+import { boxOf, toParent } from "./solve/assembly";
 import { invalidProjectModel, type SolvedModel, solveValidatedModel } from "./solve/model";
 import { generateFrom } from "./structures";
 import type { Id, Project, ShopProfile } from "./types";
@@ -144,6 +147,38 @@ function shapesOf(p: Pipeline): PartShape[] {
   return [...shapes.values()];
 }
 
+const minus = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+
+/** Where every placed copy sits; from the solved model, so it exists even when cuts are withheld. */
+function placementsOf(p: Pipeline): PlacedPart[] {
+  const defs = new Map((p.project?.parts ?? []).map((d) => [d.id, d]));
+  return p.parts.map(({ instance, part }) => {
+    const frame = { instance, part };
+    const origin = toParent(frame, [0, 0, 0]);
+    const def = defs.get(part.id);
+    const { min, max } = boxOf(instance);
+    const placed: PlacedPart = {
+      instance: instance.id,
+      shape: p.derived.definitionOf.get(instance.id) ?? part.id,
+      part: part.id,
+      name: instance.name,
+      size: { length: part.length, width: part.width, thickness: part.thickness },
+      box: { min, max },
+      frame: {
+        origin,
+        x: minus(toParent(frame, [1, 0, 0]), origin),
+        y: minus(toParent(frame, [0, 1, 0]), origin),
+        z: minus(toParent(frame, [0, 0, 1]), origin),
+      },
+      detached: def?.detached === true,
+    };
+    if (def?.source) placed.source = { structure: def.source.structure, role: def.source.role };
+    if (instance.pattern)
+      placed.pattern = { id: instance.pattern.id, index: instance.pattern.index };
+    return placed;
+  });
+}
+
 /**
  * Reads the shop profile once, into a plain copy that is then validated and used, so a profile
  * whose answers change between reads (or that throws when read) cannot be valid and then not.
@@ -195,6 +230,7 @@ export function solveProject(project: Project, shop: ShopProfile): SolveResult {
     nesting,
     setups,
     shapes: p.stopped ? [] : shapesOf(p),
+    placements: placementsOf(p),
     blocked,
   };
 }
