@@ -25,7 +25,7 @@ describe("readLength()", () => {
   });
 
   it('snaps to the 1/64" grid, half to even', () => {
-    // 1/128" is half a grid step: rounds to the even step, 0... so 1" + 1/128" → 1".
+    // 1" is 64 steps of 1/64"; 1/128" is half a step. Half-to-even keeps the even step, 64.
     expect(readLength("1in + 1in/128", bookcase)).toMatchObject({ ok: true, value: 203_200 });
   });
 
@@ -44,8 +44,7 @@ describe("readLength()", () => {
   });
 
   it("refuses text that is not a size, with the engine's message", () => {
-    const r = readLength("abc", bookcase);
-    expect(r.ok).toBe(false);
+    expect(readLength("abc", bookcase)).toEqual({ ok: false, message: 'Unknown name "abc"' });
   });
 
   it("asks for a size when the field is empty", () => {

@@ -14,6 +14,7 @@ import {
   formatLength,
   generateStructures,
   type Id,
+  type Instance,
   type Len,
   type Opening,
   type Param,
@@ -28,7 +29,7 @@ import {
 import { newId } from "./ids";
 import { choiceLabel, optionLabel, type SizeKey, sizeLabel } from "./labels";
 import { exactLiteral, lengthOf, readCount, readLength, readPosition } from "./size";
-import { STARTER_SHOP, STARTER_STOCK, STOCK_FOR } from "./starter";
+import { STARTER_STOCK, STOCK_FOR } from "./starter";
 
 export interface Edit {
   project: Project;
@@ -78,7 +79,11 @@ function setParam(project: Project, param: Param, expr: Expr): Project {
   };
 }
 
-/** Changes one overall size, typed by the user (ADR 015, rule 3: a named parameter is edited). */
+/**
+ * Changes one overall size, typed by the user (ADR 015, rule 3: a named parameter is edited).
+ * Typed text that is not a length comes back as `ok: false` with a message to show.
+ * Throws RangeError for a structure the project does not have.
+ */
 export function setSize(project: Project, structure: Id, key: SizeKey, text: string): EditResult {
   const s = structureIn(project, structure);
   const current = s.size[key];
@@ -118,19 +123,20 @@ export function setOption(
   return { project: next, label: `${optionLabel(key)}: ${shown}` };
 }
 
-/** The project with one opening (anywhere in the tree) replaced. */
+/** The project with one opening (anywhere in the tree) replaced; RangeError when it is not there. */
 function withOpening(
   project: Project,
   structure: Id,
   opening: Id,
   change: (o: Opening) => Opening,
 ): Project {
+  openingIn(project, structure, opening);
   const walk = (list: Opening[]): Opening[] =>
     list.map((o) => (o.id === opening ? change(o) : { ...o, children: walk(o.children) }));
   return withStructure(project, structure, (s) => ({ ...s, openings: walk(s.openings) }));
 }
 
-function openingIn(project: Project, structure: Id, opening: Id): Opening | undefined {
+function openingIn(project: Project, structure: Id, opening: Id): Opening {
   const find = (list: Opening[]): Opening | undefined => {
     for (const o of list) {
       if (o.id === opening) return o;
@@ -139,10 +145,16 @@ function openingIn(project: Project, structure: Id, opening: Id): Opening | unde
     }
     return undefined;
   };
-  return find(structureIn(project, structure).openings);
+  const found = find(structureIn(project, structure).openings);
+  if (!found) throw new RangeError(`The structure has no opening "${opening}".`);
+  return found;
 }
 
-/** Shelves in an opening: a new division, or a new count for the shelves already there. */
+/**
+ * Shelves in an opening: a new division, or a new count for the shelves already there. Text that
+ * is not a whole number comes back as `ok: false`. Throws RangeError for a structure or opening
+ * the project does not have.
+ */
 export function setShelves(
   project: Project,
   structure: Id,
@@ -151,7 +163,7 @@ export function setShelves(
   spacing: "even" | Expr[],
 ): EditResult {
   const o = openingIn(project, structure, opening);
-  const existing = o?.division?.type === "shelves" ? o.division : undefined;
+  const existing = o.division?.type === "shelves" ? o.division : undefined;
   const param = existing && paramNamed(project, existing.count);
   const read = readCount(countText, project, param?.name);
   if (!read.ok) return { ok: false, message: read.message };
@@ -169,7 +181,10 @@ export function setShelves(
   return { ok: true, edit: { project: next, label } };
 }
 
-/** A vertical partition at a length or a fraction ("1/3") from the opening's left face (ADR 014, D9). */
+/**
+ * A vertical partition at a length or a fraction ("1/3") from the opening's left face (ADR 014,
+ * D9). Throws RangeError for a structure or opening the project does not have.
+ */
 export function addPartition(
   project: Project,
   structure: Id,
@@ -190,7 +205,7 @@ export function addPartition(
   return { ok: true, edit: { project: next, label: `Added a partition at ${read.expr}` } };
 }
 
-/** N equal bays across the opening. */
+/** N equal bays across the opening. Throws RangeError for a structure or opening not in the project. */
 export function splitBays(
   project: Project,
   structure: Id,
@@ -212,7 +227,7 @@ export function splitBays(
   return { ok: true, edit: { project: next, label: `Split into ${read.value} bays` } };
 }
 
-/** Empties an opening again. */
+/** Empties an opening again. Throws RangeError for a structure or opening not in the project. */
 export function clearDivision(project: Project, structure: Id, opening: Id): Edit {
   const next = withOpening(project, structure, opening, ({ division: _, ...rest }) => ({
     ...rest,
@@ -258,12 +273,14 @@ export function setShelfRoundover(project: Project, structure: Id, radius: Len |
  * "detaches only that board"). A member of a row is taken out of the row on its own.
  * The engine detaches within the generated project (the saved one holds no generated boards), so
  * the form is generated first and what it made is dropped again, keeping the board taken over.
- * `shop` only matters to an "auto" roundover, which takes the largest bit the shop owns.
+ * Callers pass the project's real shop: it only matters to an "auto" roundover, which takes the
+ * largest bit the shop owns.
+ * Throws RangeError when the project cannot be generated or the board cannot be detached.
  */
 export function detachForEdit(
   project: Project,
   placed: PlacedPart,
-  shop: ShopProfile = STARTER_SHOP,
+  shop: ShopProfile,
 ): { project: Project; detached: boolean } {
   if (!placed.source || placed.detached) return { project, detached: false };
   const generated = generateStructures(project, shop);
@@ -273,16 +290,33 @@ export function detachForEdit(
   return { project: withoutGenerated(taken), detached: true };
 }
 
-/** A roundover on a board made by hand or taken over (ADR 015, D3). */
+/**
+ * The saved instance a placed board stands for. A member of a row is not an instance of its own
+ * until it is taken out; then it is the instance recording which row place it came from.
+ */
+export function instanceOf(project: Project, placed: PlacedPart): Instance | undefined {
+  const { pattern } = placed;
+  if (pattern) {
+    return project.instances.find(
+      (i) => i.detachedFrom?.pattern === pattern.id && i.detachedFrom.index === pattern.index,
+    );
+  }
+  return project.instances.find((i) => i.id === placed.instance);
+}
+
+/**
+ * A roundover on a board made by hand or taken over (ADR 015, D3). Pass the project's real shop
+ * (see `detachForEdit`). Throws RangeError as `detachForEdit` does.
+ */
 export function addRoundover(
   project: Project,
   placed: PlacedPart,
   edges: EdgeRef[],
   radius: Len,
-  shop: ShopProfile = STARTER_SHOP,
+  shop: ShopProfile,
 ): Edit {
   const taken = detachForEdit(project, placed, shop);
-  const partId = taken.project.instances.find((i) => i.id === placed.instance)?.def ?? placed.part;
+  const partId = instanceOf(taken.project, placed)?.def ?? placed.part;
   const op = { id: newId(), type: "roundover" as const, edges, radius: exactLiteral(radius) };
   const next = {
     ...taken.project,

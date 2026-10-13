@@ -5,18 +5,22 @@
 // The edits the app makes. Expected numbers: Operation specs, "Golden test: bookcase" and its
 // resize checks (shelves 35-1/16" cut at 36", 29-1/16" at 30"; 5 shelves → a line of 7).
 
-import { type Project, solve } from "@kerf/core";
+import { generateStructures, type PlacedPart, type Project, solve } from "@kerf/core";
 import { loadShopProfile } from "@kerf/fixtures";
 import { describe, expect, it } from "vitest";
 import {
   acceptJoinery,
   addPartition,
   addRoundover,
+  clearDivision,
+  detachForEdit,
+  instanceOf,
   setOption,
   setShelfRoundover,
   setShelves,
   setSize,
   setUnits,
+  splitBays,
   startProject,
 } from "./commands";
 
@@ -160,7 +164,7 @@ describe("addRoundover()", () => {
     const p = start().project;
     const top = solve(p, shop).placements.find((x) => x.name === "Top");
     if (!top) throw new Error("no top");
-    const { project, label } = addRoundover(p, top, ["edge1/face0", "edge1/face1"], IN / 8);
+    const { project, label } = addRoundover(p, top, ["edge1/face0", "edge1/face1"], IN / 8, shop);
     expect(label).toBe('Roundover 1/8" on Top');
     const def = project.parts.find((d) => d.name === "Top");
     expect(def?.detached).toBe(true);
@@ -175,5 +179,125 @@ describe("setUnits()", () => {
     const { project, label } = setUnits(start().project, "metric");
     expect(project.units).toBe("metric");
     expect(label).toBe("Units: millimetres");
+  });
+});
+
+const placementNamed = (p: Project, name: string): PlacedPart => {
+  const found = solve(p, shop).placements.find((x) => x.name === name);
+  if (!found) throw new Error(`no ${name}`);
+  return found;
+};
+const shelfMember = (p: Project, index: number): PlacedPart => {
+  const found = solve(p, shop).placements.find(
+    (x) => x.source?.role === "shelf" && x.pattern?.index === index,
+  );
+  if (!found) throw new Error(`no shelf ${index}`);
+  return found;
+};
+
+describe("detachForEdit()", () => {
+  it("takes over a whole board: only that part is kept, its place stays, the cut list is the same", () => {
+    const p = start().project;
+    const top = placementNamed(p, "Top");
+    const r = detachForEdit(p, top, shop);
+    expect(r.detached).toBe(true);
+    expect(r.project.parts.map((d) => d.name)).toEqual(["Top"]);
+    expect(r.project.instances.some((i) => i.def === top.part)).toBe(true);
+    // Same lines and quantities; only the engine's ordering of the lines may differ.
+    const byLength = (q: Project) =>
+      [...solve(q, shop).cutList.lines].sort(
+        (a, b) => a.length - b.length || a.quantity - b.quantity,
+      );
+    expect(byLength(r.project)).toEqual(byLength(p));
+  });
+
+  it("takes one shelf out of the row: three stay put, the copy is a board of its own", () => {
+    const p = start().project;
+    const before = solve(p, shop).placements.filter((x) => x.source?.role === "shelf");
+    const r = detachForEdit(p, shelfMember(p, 1), shop);
+    expect(r.detached).toBe(true);
+    const after = solve(r.project, shop).placements;
+    const row = after.filter((x) => x.source?.role === "shelf" && x.pattern);
+    expect(row).toHaveLength(3);
+    for (const member of row) {
+      const was = before.find((b) => b.pattern?.index === member.pattern?.index);
+      expect(member.box).toEqual(was?.box);
+    }
+    const copy = after.find((x) => x.name === "Shelf copy 2");
+    expect(copy?.box).toEqual(before[1]?.box);
+    // Boards of one stock and size share a cut-list line (golden: Top, Bottom and Shelf are one
+    // line of 6), so the detached shelf does not split the line: it stays at 6.
+    const line = solve(r.project, shop).cutList.lines.find((l) =>
+      l.parts.some((x) => x.name === "Shelf"),
+    );
+    expect(line?.quantity).toBe(6);
+    // Generating again keeps the skip: the row is still three.
+    const again = generateStructures(r.project, shop);
+    expect(again.patterns.some((x) => x.skip?.includes(1))).toBe(true);
+  });
+
+  it("does nothing to a board that is already detached", () => {
+    const p = start().project;
+    const once = detachForEdit(p, placementNamed(p, "Top"), shop).project;
+    const r = detachForEdit(once, placementNamed(once, "Top"), shop);
+    expect(r).toEqual({ project: once, detached: false });
+  });
+
+  it("does nothing to a board made by hand", () => {
+    const p = startProject("Blank case", "imperial").project;
+    const hand: PlacedPart = { ...placementNamed(p, "Top"), source: undefined };
+    expect(detachForEdit(p, hand, shop)).toEqual({ project: p, detached: false });
+  });
+});
+
+describe("instanceOf()", () => {
+  it("finds the copy taken out of a row by its place in the row", () => {
+    const p = start().project;
+    const member = shelfMember(p, 1);
+    const { project } = detachForEdit(p, member, shop);
+    const found = instanceOf(project, member);
+    expect(found?.detachedFrom).toMatchObject({ pattern: member.pattern?.id, index: 1 });
+  });
+
+  it("finds a whole board by its instance id", () => {
+    const p = start().project;
+    const top = placementNamed(p, "Top");
+    const { project } = detachForEdit(p, top, shop);
+    expect(instanceOf(project, top)?.id).toBe(top.instance);
+  });
+});
+
+describe("addRoundover() on a member of a row", () => {
+  it("puts the roundover on the detached copy, which is the only generated part saved", () => {
+    const p = start().project;
+    const member = shelfMember(p, 1);
+    const { project } = addRoundover(p, member, ["edge1/face0"], IN / 8, shop);
+    const copy = project.instances.find((i) => i.detachedFrom?.index === 1);
+    const def = project.parts.find((d) => d.id === copy?.def);
+    // The form already rounds a shelf's edges; the new roundover is added after that one.
+    expect(def?.ops).toHaveLength(2);
+    expect(def?.ops.at(-1)).toMatchObject({
+      type: "roundover",
+      edges: ["edge1/face0"],
+      radius: "3.175mm",
+    });
+    expect(project.parts.filter((d) => d.source !== undefined)).toEqual([def]);
+    const solved = solve(project, shop).placements;
+    expect(solved.filter((x) => x.source?.role === "shelf" && x.pattern)).toHaveLength(3);
+    expect(solved.find((x) => x.name === "Shelf copy 2")?.box).toEqual(member.box);
+  });
+});
+
+describe("a missing opening", () => {
+  const p = startProject("Blank case", "imperial").project;
+  const id = structureOf(p).id;
+
+  it.each([
+    ["setShelves", () => setShelves(p, id, "nope", "3", "even")],
+    ["addPartition", () => addPartition(p, id, "nope", "1/3")],
+    ["splitBays", () => splitBays(p, id, "nope", "3")],
+    ["clearDivision", () => clearDivision(p, id, "nope")],
+  ])("%s throws a RangeError", (_name, run) => {
+    expect(run).toThrow(RangeError);
   });
 });
