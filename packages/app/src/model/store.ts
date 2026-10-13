@@ -92,12 +92,15 @@ export function shownProject(state: KerfState): Project | null {
   return state.previewed ?? (state.history ? currentProject(state.history) : null);
 }
 
+/** Shown once when a change could not be written to browser storage (ADR 015, rule 11). */
+const NOT_KEPT = "Your latest changes couldn't be kept in this browser. Use Save to keep a copy.";
+
 /**
  * Makes the store. `storage` keeps the shop and theme; `clock` returns milliseconds and times the
  * solve (default `performance.now`). Starts on the Start step, with the stored project if there is
  * one and the engine accepts it; otherwise with none. A stored project the engine rejects is set
  * aside under `kerf.project.setAside`, never deleted. Every recorded change is written back to
- * storage. Only one start-up notice is shown: a shop problem first, then a project problem, then
+ * storage; if that fails, the user is told once. Only one start-up notice is shown: a shop problem first, then a project problem, then
  * the warning that this browser keeps nothing.
  */
 export function createKerfStore(deps: { storage: AppStorage; clock?: () => number }): KerfStore {
@@ -121,9 +124,15 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
         history: startHistory({ label: "Opened your last project", project: parseProject(text) }),
       };
     } catch (error) {
-      deps.storage.write("kerf.project.setAside", text);
-      deps.storage.remove("kerf.project");
       const reason = error instanceof Error ? error.message : "it was damaged";
+      // The stored text may be the only copy, so it is removed only once the set-aside copy exists.
+      if (!deps.storage.write("kerf.project.setAside", text)) {
+        return {
+          history: null,
+          problem: `Your last project could not be opened (${reason}). It was left as it was.`,
+        };
+      }
+      deps.storage.remove("kerf.project");
       return {
         history: null,
         problem: `Your last project could not be opened (${reason}). It was set aside.`,
@@ -138,13 +147,8 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
       ? undefined
       : "This browser won't keep your work between visits. Use Save to keep a copy.");
 
-  /** Keeps the shown History entry in storage and remembers its units. */
-  const keep = (history: History | null): void => {
-    if (!history) return;
-    const project = currentProject(history);
-    deps.storage.write("kerf.project", serializeProject(project));
-    deps.storage.write("kerf.units", project.units);
-  };
+  /** True once the user has been told that work is not being kept (the notice is given once). */
+  let toldNotKept = !deps.storage.available;
 
   return createStore<KerfState & KerfActions>()((set, get) => {
     /** Sets new state and re-solves what is shown. */
@@ -158,6 +162,23 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
     const keepPlainNotice = (): Notice | null => {
       const { notice } = get();
       return notice && !notice.undo ? notice : null;
+    };
+
+    /**
+     * Keeps the shown History entry in storage and remembers its units. When the project cannot be
+     * written, says so once with a plain notice, which waits behind any plain notice already shown.
+     */
+    const keep = (history: History | null): void => {
+      if (!history) return;
+      const project = currentProject(history);
+      if (deps.storage.write("kerf.project", serializeProject(project))) {
+        deps.storage.write("kerf.units", project.units);
+        return;
+      }
+      if (toldNotKept) return;
+      toldNotKept = true;
+      if (get().notice?.undo === false) return;
+      set({ notice: { text: NOT_KEPT, undo: false } });
     };
 
     return {

@@ -58,4 +58,86 @@ describe("the store across a reload", () => {
     if (!p) throw new Error("no project");
     expect(storage.read("kerf.project")).toBe(serializeProject(p));
   });
+
+  it("stores the shown entry after an undo", () => {
+    const storage = memory();
+    const s = createKerfStore({ storage });
+    s.getState().apply(startProject("Bookcase", "imperial"));
+    const first = shownProject(s.getState());
+    if (!first) throw new Error("no project");
+    s.getState().apply(setUnits(first, "metric"));
+    s.getState().undo();
+    expect(storage.read("kerf.project")).toBe(serializeProject(first));
+  });
+
+  it("does not touch storage while a drag is only previewed", () => {
+    const storage = memory();
+    const s = createKerfStore({ storage });
+    s.getState().apply(startProject("Bookcase", "imperial"));
+    const before = storage.read("kerf.project");
+    const p = shownProject(s.getState());
+    if (!p) throw new Error("no project");
+    s.getState().preview(setUnits(p, "metric").project);
+    expect(storage.read("kerf.project")).toBe(before);
+  });
+});
+
+describe("a browser store that cannot be written", () => {
+  const full = (): AppStorage => createStorage(memoryStorage(true));
+
+  it("keeps working and warns once that the latest changes were not kept", () => {
+    const s = createKerfStore({ storage: full() });
+    s.getState().apply(startProject("Bookcase", "imperial"));
+    const warning =
+      "Your latest changes couldn't be kept in this browser. Use Save to keep a copy.";
+    expect(s.getState().notice).toEqual({ text: warning, undo: false });
+    s.getState().dismissNotice();
+    const p = shownProject(s.getState());
+    if (!p) throw new Error("no project");
+    expect(s.getState().solved?.result.cutList.lines).toHaveLength(3);
+    s.getState().apply(setUnits(p, "imperial"));
+    expect(s.getState().notice).toBeNull();
+    expect(s.getState().solved?.result.cutList.lines).toHaveLength(3);
+    expect(s.getState().history?.entries).toHaveLength(2);
+  });
+
+  it("replaces an Undo notice with the warning but leaves a plain notice showing", () => {
+    const s = createKerfStore({ storage: full() });
+    s.getState().apply(startProject("Bookcase", "imperial"), "Started");
+    expect(s.getState().notice?.undo).toBe(false);
+    expect(s.getState().notice?.text).toMatch(/^Your latest changes couldn't be kept/);
+
+    const t = createKerfStore({ storage: full() });
+    t.getState().say("Something else");
+    t.getState().apply(startProject("Bookcase", "imperial"));
+    expect(t.getState().notice?.text).toBe("Something else");
+    t.getState().dismissNotice();
+    t.getState().apply(startProject("Bookcase", "imperial"));
+    expect(t.getState().notice).toBeNull();
+  });
+
+  it("does not remember the units when the project was not kept", () => {
+    const storage = full();
+    createKerfStore({ storage }).getState().apply(startProject("Bookcase", "metric"));
+    expect(storage.read("kerf.units")).toBeUndefined();
+  });
+
+  it("leaves a rejected stored project where it is when it cannot be set aside", () => {
+    const bad = '{"schemaVersion": 1, "name": 7}';
+    const removed: string[] = [];
+    const storage: AppStorage = {
+      available: true,
+      read: (key) => (key === "kerf.project" ? bad : undefined),
+      write: () => false,
+      remove: (key) => {
+        removed.push(key);
+      },
+    };
+    const s = createKerfStore({ storage }).getState();
+    expect(s.history).toBeNull();
+    expect(s.notice?.text).toMatch(
+      /^Your last project could not be opened \(.+\)\. It was left as it was\.$/,
+    );
+    expect(removed).toEqual([]);
+  });
 });
