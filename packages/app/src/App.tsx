@@ -15,10 +15,10 @@ import { HistoryPanel } from "./ui/HistoryPanel";
 import { Inspector } from "./ui/Inspector";
 import { Notice } from "./ui/Notice";
 import { ProjectTree } from "./ui/ProjectTree";
-import { ThreeDGuard } from "./ui/ThreeDGuard";
 import { ToolRow } from "./ui/ToolRow";
 import { TopBar } from "./ui/TopBar";
 import { useShortcuts } from "./ui/useShortcuts";
+import { ThreeDGuard, VIEW_NOT_STARTED } from "./viewport/ThreeDGuard";
 
 export function App({ store, model }: { store: KerfStore; model: ReactNode }) {
   return (
@@ -31,6 +31,8 @@ export function App({ store, model }: { store: KerfStore; model: ReactNode }) {
 function Window({ model }: { model: ReactNode }) {
   useShortcuts();
   const theme = useKerf((s) => s.theme);
+  // After Undo or any change the view is tried again, so a one-off fault does not end it.
+  const history = useKerf((s) => s.history);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
@@ -46,7 +48,13 @@ function Window({ model }: { model: ReactNode }) {
         </aside>
         <main className="center">
           <section aria-label="Model" className="model">
-            <ThreeDGuard showsFailure>{model}</ThreeDGuard>
+            <ThreeDGuard
+              told={VIEW_NOT_STARTED}
+              fallback={<p className="model-empty">{VIEW_NOT_STARTED}</p>}
+              retryOn={history}
+            >
+              {model}
+            </ThreeDGuard>
           </section>
           <ToolRow />
           <Drawer />

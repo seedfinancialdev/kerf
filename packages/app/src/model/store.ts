@@ -157,6 +157,8 @@ export interface KerfActions {
   say(text: string, undo?: boolean): void;
   /** Adds a warning the user must not miss: shown in turn, never replaced, kept until dismissed. */
   warn(text: string): void;
+  /** As `warn`, but only the first time this session: a fault that recurs is not said again. */
+  warnOnce(text: string): void;
   /** Clears the notice and shows the next waiting warning. */
   dismissNotice(): void;
   /** Remembers the units new projects start in; an open project is not touched. When the browser cannot keep the choice, says so once. */
@@ -208,6 +210,7 @@ export function createKerfStore(deps: {
   let toldNotKept = !deps.storage.available;
   let toldShopNotKept = !deps.storage.available;
   let toldUnitsNotKept = false;
+  const warnedOnce = new Set<string>();
 
   return createStore<KerfState & KerfActions>()((set, get) => {
     /** Boards the solve does not have are no longer selected; none left means nothing is selected. */
@@ -374,6 +377,11 @@ export function createKerfStore(deps: {
       say: (text, undoable = false) =>
         set(tell(line(), { text, kind: undoable ? "undo" : "said" })),
       warn: (text) => set(warn(line(), text)),
+      warnOnce: (text) => {
+        if (warnedOnce.has(text)) return;
+        warnedOnce.add(text);
+        set(warn(line(), text));
+      },
       dismissNotice: () => set(dismiss(line())),
       setUnitsForNew: (unitsForNew) => {
         set({ unitsForNew });

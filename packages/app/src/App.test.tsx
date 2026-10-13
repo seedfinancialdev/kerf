@@ -213,10 +213,27 @@ describe("<App>", () => {
       expect(screen.getByRole("complementary", { name: "Inspector" })).toBeTruthy();
       expect(screen.getByRole("region", { name: "Drawer" }).textContent).toMatch(/Cut list/);
       const told =
-        "The 3D view could not start (Error creating WebGL context.). The cut list, plans and " +
-        "Save still work; to see the model, turn on hardware acceleration or try another browser.";
+        "The 3D view could not start in this browser. The cut list, plans and Save still work; " +
+        "to see the model, turn on hardware acceleration or try another browser.";
       expect(screen.getByRole("region", { name: "Model" }).textContent).toBe(told);
       expect(screen.getByRole("status").textContent).toContain(told);
+    });
+
+    it("tries the view again after Undo, so a one-off fault does not end it (re-review N5)", () => {
+      const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      let broken = true;
+      function Flaky() {
+        if (broken) throw new Error("Error creating WebGL context.");
+        return <p>the model</p>;
+      }
+      const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+      store.getState().apply(startProject("Bookcase", "imperial"));
+      store.getState().apply(startProject("Blank case", "imperial"));
+      render(<App store={store} model={<Flaky />} />);
+      broken = false;
+      change(() => store.getState().undo());
+      quiet.mockRestore();
+      expect(screen.getByRole("region", { name: "Model" }).textContent).toBe("the model");
     });
   });
 });

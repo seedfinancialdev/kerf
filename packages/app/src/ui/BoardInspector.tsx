@@ -10,11 +10,11 @@ import { handBack } from "../model/commands";
 import { shownProject } from "../model/store";
 import { useKerf, useKerfStore } from "../state/useKerf";
 import { undrawnBoards } from "../viewport/meshes";
+import { BOARD_NOT_DRAWN, ThreeDGuard } from "../viewport/ThreeDGuard";
 import { useGeometry } from "../viewport/useGeometry";
 import { EdgePanel } from "./EdgePanel";
 import { Problems } from "./Problems";
 import { Section } from "./Section";
-import { ThreeDGuard } from "./ThreeDGuard";
 
 /** `34-9/16" · cut 35-1/16"` when the cut differs from the visible size (Domain model, decision 3). */
 function sized(visible: number, cut: number, units: Project["units"]): string {
@@ -112,7 +112,7 @@ export function BoardInspector({ instances }: { instances: Id[] }) {
           </button>
         )}
       </Section>
-      <ThreeDGuard>
+      <ThreeDGuard told={BOARD_NOT_DRAWN}>
         <UndrawnNotes placed={placed} result={result} />
       </ThreeDGuard>
       <Problems parts={new Set(placed.map((p) => p.part))} />

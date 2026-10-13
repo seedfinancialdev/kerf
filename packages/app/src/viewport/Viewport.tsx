@@ -27,8 +27,9 @@ import { type BoardLook, boardLooks } from "./board-looks";
 import { cameraPosition, FOV_DEGREES, fitView, isFramed, type View } from "./camera";
 import { dispatchPointer } from "./dispatch";
 import { followDrag, followsDrag } from "./follow-drag";
-import { meshFor, undrawnBoards } from "./meshes";
+import { meshFor } from "./meshes";
 import { usePalette } from "./palette";
+import { BOARD_NOT_DRAWN, ENGINE_NOT_LOADED, ThreeDGuard } from "./ThreeDGuard";
 import { useGeometry } from "./useGeometry";
 import { listenForViewDrags } from "./view-drag";
 
@@ -40,9 +41,11 @@ interface BoardProps {
   color: string;
   selected: boolean;
   glow: string;
+  /** The badge's colour when the board's cuts cannot be drawn (ADR 015, rule 10). */
+  warning: string;
 }
 
-function Board({ look, ready, color, selected, glow }: BoardProps) {
+function Board({ look, ready, color, selected, glow, warning }: BoardProps) {
   const store = useKerfStore();
   const { placed } = look;
   const built = ready && look.geometry === "cut" ? meshFor(look.shape) : undefined;
@@ -61,16 +64,23 @@ function Board({ look, ready, color, selected, glow }: BoardProps) {
     }
   };
   return (
-    <mesh
-      geometry={geometry}
-      matrix={matrix}
-      matrixAutoUpdate={false}
-      onPointerDown={down}
-      onPointerOver={() => store.getState().hover(placed.instance)}
-      onPointerOut={() => store.getState().hover(null)}
-    >
-      <meshStandardMaterial color={color} emissive={glow} emissiveIntensity={selected ? 0.35 : 0} />
-    </mesh>
+    <>
+      <mesh
+        geometry={geometry}
+        matrix={matrix}
+        matrixAutoUpdate={false}
+        onPointerDown={down}
+        onPointerOver={() => store.getState().hover(placed.instance)}
+        onPointerOut={() => store.getState().hover(null)}
+      >
+        <meshStandardMaterial
+          color={color}
+          emissive={glow}
+          emissiveIntensity={selected ? 0.35 : 0}
+        />
+      </mesh>
+      {built?.ok === false && <WarningBadge placed={placed} color={warning} />}
+    </>
   );
 }
 
@@ -262,22 +272,15 @@ export function Viewport() {
   const fitRequest = useKerf((s) => s.fitRequest);
   const created = useKerf((s) => s.created);
   const palette = usePalette();
-  const { ready, failure } = useGeometry();
+  const { ready, failed } = useGeometry();
   const [view, setView] = useState<View | null>(null);
   const placements = useMemo(() => result?.placements ?? [], [result]);
-  const undrawn = useMemo(
-    () => (ready && result ? undrawnBoards(result) : new Map<string, string>()),
-    [ready, result],
-  );
   const hasBoards = placements.length > 0;
   const change = useMemo(() => (update: (v: View) => View) => setView((v) => v && update(v)), []);
 
   useEffect(() => {
-    if (failure)
-      store
-        .getState()
-        .warn(`The 3D view could not start (${failure}), so boards are shown as plain blanks.`);
-  }, [failure, store]);
+    if (failed) store.getState().warnOnce(ENGINE_NOT_LOADED);
+  }, [failed, store]);
 
   // Fit when boards first appear, when another project is started or opened, and whenever Shift+Z asks. Later edits keep the user's view, so
   // the placements are read from the store here but deliberately not watched.
@@ -303,21 +306,29 @@ export function Viewport() {
       <directionalLight position={[60, 120, -80]} intensity={1.4} />
       <ThumbnailSource />
       {view && <Navigation view={view} change={change} />}
-      {looks.map((look) => (
-        <Board
-          key={look.placed.instance}
-          look={look}
-          ready={ready}
-          color={palette[look.tone]}
-          selected={selected.has(look.placed.instance)}
-          glow={palette.accent}
-        />
-      ))}
-      {placements
-        .filter((p) => undrawn.has(p.instance))
-        .map((p) => (
-          <WarningBadge key={p.instance} placed={p} color={palette.warning} />
-        ))}
+      {looks.map((look) => {
+        const board = (drawCuts: boolean) => (
+          <Board
+            look={look}
+            ready={drawCuts}
+            color={palette[look.tone]}
+            selected={selected.has(look.placed.instance)}
+            glow={palette.accent}
+            warning={palette.warning}
+          />
+        );
+        // The geometry engine failing on one board leaves that board plain, the rest drawn.
+        return (
+          <ThreeDGuard
+            key={look.placed.instance}
+            told={BOARD_NOT_DRAWN}
+            fallback={board(false)}
+            retryOn={result}
+          >
+            {board(ready)}
+          </ThreeDGuard>
+        );
+      })}
       <Guides color={palette.guide} />
       {hoveredBoard && <GrainLine placed={hoveredBoard} color={palette.grain} />}
     </ModelCanvas>

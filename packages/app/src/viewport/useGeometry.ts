@@ -21,24 +21,22 @@ export function shareLoad(load: () => Promise<void>): () => Promise<void> {
   };
 }
 
-const loadGeometry = shareLoad(initGeometry);
+/** The one load; its error is logged once, for a bug report, and the screens say it in shop words. */
+const loadGeometry = shareLoad(() =>
+  initGeometry().catch((error: unknown) => {
+    console.error(error);
+    throw error;
+  }),
+);
 
-/** Whether `meshFor` may be called yet, and why not if the engine could not start. */
-export function useGeometry(): { ready: boolean; failure: string | null } {
-  const [state, setState] = useState<{ ready: boolean; failure: string | null }>({
-    ready: false,
-    failure: null,
-  });
+/** Whether `meshFor` may be called yet, and whether the engine failed to load. */
+export function useGeometry(): { ready: boolean; failed: boolean } {
+  const [state, setState] = useState({ ready: false, failed: false });
   useEffect(() => {
     let current = true;
     loadGeometry().then(
-      () => current && setState({ ready: true, failure: null }),
-      (error: unknown) =>
-        current &&
-        setState({
-          ready: false,
-          failure: error instanceof Error ? error.message : "unknown reason",
-        }),
+      () => current && setState({ ready: true, failed: false }),
+      () => current && setState({ ready: false, failed: true }),
     );
     return () => {
       current = false;
