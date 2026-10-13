@@ -242,8 +242,11 @@ export function createKerfStore(deps: {
       const solved = solveFor(shownProject(next), next.shop);
       const selection =
         patch.history !== undefined ? stillThere(next.selection, solved) : next.selection;
-      set({ ...patch, solved, selection });
-      if (patch.history !== undefined) keep(get().history);
+      // A joint proposed for the project as it was is stale once History moves (ruling R37).
+      const moved = patch.history !== undefined;
+      const pending = moved && next.pending?.tool === "join" ? null : next.pending;
+      set({ ...patch, solved, selection, pending, ...(moved ? { proposal: null } : {}) });
+      if (moved) keep(get().history);
     };
 
     /** A notice that offers Undo describes one change, so it goes when History moves (ruling R13). */

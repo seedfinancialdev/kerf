@@ -3,12 +3,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Interaction spec, "Join": click two parts; a joint is proposed, or the reason it cannot be, and
-// nothing changes until it is accepted. Which boards the pointer hits depends on the view, so the
-// numbers live in the unit tests; this checks the flow end to end.
+// nothing changes until it is accepted. Which boards the pointer hits depends on the camera, so the
+// unit tests hold the numbers; this checks the flow end to end at the default view.
 
 import { expect, test } from "@playwright/test";
 
-test("two clicks with Join give a proposal or a reason, and change nothing until accepted", async ({
+test("two clicks with Join give the engine's reason for a board of a row, and change nothing", async ({
   page,
 }) => {
   await page.goto("/");
@@ -23,8 +23,11 @@ test("two clicks with Join give a proposal or a reason, and change nothing until
   if (!box) throw new Error("no model");
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.6);
-  await expect(
-    page.getByRole("button", { name: "Accept", exact: true }).or(page.getByRole("note")),
-  ).toBeVisible();
+  // At the default camera the first click lands on the back and the second on the second shelf, a
+  // board of a row, which the engine will not join until it is taken out (ADR 014).
+  await expect(page.getByRole("note")).toHaveText(
+    "Shelf 2 is one of a row; detach it first to join it on its own.",
+  );
+  await expect(page.getByRole("button", { name: "Accept", exact: true })).toBeHidden();
   await expect(page.getByRole("listbox", { name: "History" }).getByRole("option")).toHaveCount(1);
 });

@@ -20,8 +20,6 @@ import { shownProject } from "../model/store";
 import type { ToolHandler } from "./handler";
 import { newProblem } from "./new-problem";
 
-export type { Proposal };
-
 /** How each joint reads in a sentence. */
 export const JOINT_WORD: Record<Joint["type"], string> = {
   dado: "a dado",
@@ -50,8 +48,7 @@ export function propose(
 /**
  * Joins `a` and `b` with a joint of `type`, taking over any board the form made first. Comes back
  * `ok: false`, saying why, when the engine finds no such joint (the boards do not touch, say),
- * a board is gone, or the full solve finds an error the project did not have.
- * Throws RangeError when a board cannot be taken over (see `detachForEdit`).
+ * a board cannot be taken over (the engine's reason), a board is gone, or the full solve finds an error the project did not have.
  */
 export function acceptProposal(
   project: Project,
@@ -60,8 +57,13 @@ export function acceptProposal(
   b: PlacedPart,
   type: Joint["type"],
 ): EditResult {
-  let next = detachForEdit(project, a, shop).project;
-  next = detachForEdit(next, b, shop).project;
+  let next: Project;
+  try {
+    next = detachForEdit(detachForEdit(project, a, shop).project, b, shop).project;
+  } catch (error) {
+    if (error instanceof RangeError) return { ok: false, message: error.message };
+    throw error;
+  }
   const ia = instanceOf(next, a);
   const ib = instanceOf(next, b);
   if (!ia || !ib) return { ok: false, message: "One of the boards is no longer in the project." };

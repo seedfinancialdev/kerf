@@ -25,18 +25,25 @@ export function JoinPanel() {
     );
   }
   const { joint, missing, description } = proposal.result;
-  const boards = () => {
-    const placed = store.getState().solved?.result.placements ?? [];
-    return [
-      placed.find((p) => p.instance === proposal.a),
-      placed.find((p) => p.instance === proposal.b),
-    ] as const;
-  };
-  const accept = (): void => {
+  /**
+   * The shown project and the two boards in its solve, so both come from one state (`solved` is
+   * the solve of `shownProject`). When a board is gone, says so and drops the stale proposal.
+   */
+  const current = () => {
     const s = store.getState();
     const project = shownProject(s);
-    const [a, b] = boards();
-    if (!project || !a || !b) return;
+    const placed = s.solved?.result.placements ?? [];
+    const a = placed.find((p) => p.instance === proposal.a);
+    const b = placed.find((p) => p.instance === proposal.b);
+    if (project && a && b) return { s, project, a, b };
+    s.say("Those boards have changed; click them again.");
+    s.setProposal(null);
+    return null;
+  };
+  const accept = (): void => {
+    const now = current();
+    if (!now) return;
+    const { s, project, a, b } = now;
     const r = acceptProposal(project, s.shop, a, b, joint.type);
     if (!r.ok) {
       s.say(r.message);
@@ -53,10 +60,8 @@ export function JoinPanel() {
   };
   const other = OTHER[joint.type];
   const tryOther = (): void => {
-    const s = store.getState();
-    const project = shownProject(s);
-    const [a, b] = boards();
-    if (project && a && b && other) s.setProposal(propose(project, s.shop, a, b, other));
+    const now = current();
+    if (now && other) now.s.setProposal(propose(now.project, now.s.shop, now.a, now.b, other));
   };
   return (
     <Section title="Proposed joint">

@@ -8,6 +8,7 @@
 import { type Project, solve } from "@kerf/core";
 import { loadShopProfile } from "@kerf/fixtures";
 import { describe, expect, it } from "vitest";
+import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { bookcaseWithShelf } from "../testing/bookcase-with-shelf";
@@ -59,6 +60,28 @@ describe("Join", () => {
       "dado",
     );
     expect(r).toEqual({ ok: false, message: "Two dados on Right side overlap." });
+  });
+});
+
+describe("taking over form boards", () => {
+  const form = () => startProject("Bookcase", "imperial").project;
+
+  it("detaches both boards of a row copy and a single board, then joins them", () => {
+    const p = form();
+    const r = acceptProposal(p, shop, placed(p, "Shelf 1"), placed(p, "Back"), "dado");
+    if (!r.ok) throw new Error(r.message);
+    expect(r.edit.label).toBe("Joined Shelf 1 to Back with a dado");
+    const after = solve(r.edit.project, shop).placements;
+    expect(after.find((x) => x.name === "Shelf copy 1")?.detached).toBe(true);
+    expect(after.find((x) => x.name === "Back")?.detached).toBe(true);
+    expect(after.find((x) => x.name === "Shelf 2")?.detached).toBe(false);
+  });
+
+  it("says why, and does not throw, when a board cannot be taken over", () => {
+    const p = form();
+    const gone = { ...placed(p, "Right side"), part: "no-such-part" };
+    const r = acceptProposal(p, shop, gone, placed(p, "Shelf 1"), "dado");
+    expect(r).toEqual({ ok: false, message: 'The project has no part "no-such-part".' });
   });
 });
 

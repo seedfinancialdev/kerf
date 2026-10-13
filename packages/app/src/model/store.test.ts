@@ -339,4 +339,80 @@ describe("pending tool state", () => {
     s.getState().setTool("move");
     expect(s.getState().pending).toBeNull();
   });
+
+  describe("the Join tool's half-finished work (ruling R37)", () => {
+    const withProposal = () => {
+      const s = fresh();
+      s.getState().apply(startProject("Bookcase", "imperial"));
+      const a = s.getState().solved?.result.placements[0]?.instance ?? "";
+      const sizeEdit = () => {
+        const p = shownProject(s.getState());
+        if (!p) throw new Error("no project");
+        const r = setSize(p, p.structures[0]?.id ?? "", "w", '30"');
+        if (!r.ok) throw new Error(r.message);
+        return r.edit;
+      };
+      const start = () => {
+        s.getState().setTool("join");
+        s.getState().setPending({ tool: "join", first: a });
+        s.getState().setProposal({ a, b: a, result: { ok: false, reason: "No." } });
+      };
+      start();
+      return { s, start, sizeEdit };
+    };
+
+    it("are gone after an undo", () => {
+      const { s, sizeEdit } = withProposal();
+      s.getState().apply(sizeEdit());
+      s.getState().setPending({ tool: "join", first: "x" });
+      s.getState().setProposal({ a: "x", b: "y", result: { ok: false, reason: "No." } });
+      s.getState().undo();
+      expect(s.getState().proposal).toBeNull();
+      expect(s.getState().pending).toBeNull();
+    });
+
+    it("are gone after a resize", () => {
+      const { s, sizeEdit } = withProposal();
+      s.getState().apply(sizeEdit());
+      expect(s.getState().proposal).toBeNull();
+      expect(s.getState().pending).toBeNull();
+    });
+
+    it("are gone after a redo and after jumping in History", () => {
+      const { s, start, sizeEdit } = withProposal();
+      s.getState().apply(sizeEdit());
+      s.getState().undo();
+      start();
+      s.getState().redo();
+      expect(s.getState().proposal).toBeNull();
+      start();
+      s.getState().jumpTo(0);
+      expect(s.getState().proposal).toBeNull();
+      expect(s.getState().pending).toBeNull();
+    });
+
+    it("are gone when a drag is committed, but a preview leaves them", () => {
+      const { s } = withProposal();
+      const p = shownProject(s.getState());
+      if (!p) throw new Error("no project");
+      s.getState().preview(p);
+      expect(s.getState().proposal).not.toBeNull();
+      s.getState().commit("Moved");
+      expect(s.getState().proposal).toBeNull();
+    });
+
+    it("do not clear another tool's pending", () => {
+      const { s, sizeEdit } = withProposal();
+      s.getState().setTool("tape");
+      s.getState().setPending({ tool: "tape", from: [0, 0, 0] });
+      s.getState().apply(sizeEdit());
+      expect(s.getState().pending).toEqual({ tool: "tape", from: [0, 0, 0] });
+    });
+
+    it("are gone when the tool changes", () => {
+      const { s } = withProposal();
+      s.getState().setTool("move");
+      expect(s.getState().proposal).toBeNull();
+    });
+  });
 });
