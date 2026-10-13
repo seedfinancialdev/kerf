@@ -14,7 +14,7 @@ import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
 import { memoryStorage } from "../testing/memory-storage";
-import { BOARD_NOT_DRAWN, ThreeDGuard, VIEW_NOT_STARTED } from "./ThreeDGuard";
+import { BOARD_FAULT, ThreeDGuard, VIEW_NOT_STARTED } from "./ThreeDGuard";
 
 const fault = new WebAssembly.RuntimeError("unreachable");
 function Broken(): never {
@@ -36,17 +36,17 @@ describe("<ThreeDGuard>", () => {
     render(
       <KerfProvider store={store}>
         <p>Length 34-9/16"</p>
-        <ThreeDGuard told={BOARD_NOT_DRAWN} fallback={<p>plain board</p>}>
+        <ThreeDGuard told={BOARD_FAULT} fallback={<p>plain board</p>}>
           <Broken />
         </ThreeDGuard>
-        <ThreeDGuard told={BOARD_NOT_DRAWN}>
+        <ThreeDGuard told={BOARD_FAULT}>
           <Broken />
         </ThreeDGuard>
       </KerfProvider>,
     );
     expect(screen.getByText('Length 34-9/16"')).toBeTruthy();
     expect(screen.getByText("plain board")).toBeTruthy();
-    expect(store.getState().notice).toEqual({ text: BOARD_NOT_DRAWN, kind: "warning" });
+    expect(store.getState().notice).toEqual({ text: BOARD_FAULT, kind: "warning" });
     expect(store.getState().waiting).toEqual([]);
     expect(store.getState().notice?.text).not.toContain("unreachable");
     expect(console_).toHaveBeenCalledWith(fault);
@@ -57,8 +57,8 @@ describe("<ThreeDGuard>", () => {
       "The 3D view could not start in this browser. The cut list, plans and Save still work; " +
         "to see the model, turn on hardware acceleration or try another browser.",
     );
-    expect(BOARD_NOT_DRAWN).toBe(
-      "A board could not be drawn with its cuts, so it is shown plain. Everything else still works.",
+    expect(BOARD_FAULT).toBe(
+      "A board could not be drawn, so it is shown plain. Everything else still works.",
     );
   });
 
@@ -66,7 +66,7 @@ describe("<ThreeDGuard>", () => {
     const store = fresh();
     const first = render(
       <KerfProvider store={store}>
-        <ThreeDGuard told={BOARD_NOT_DRAWN}>
+        <ThreeDGuard told={BOARD_FAULT}>
           <Broken />
         </ThreeDGuard>
       </KerfProvider>,
@@ -76,7 +76,7 @@ describe("<ThreeDGuard>", () => {
     // The inspector mounts a new guard each time boards are picked again.
     render(
       <KerfProvider store={store}>
-        <ThreeDGuard told={BOARD_NOT_DRAWN}>
+        <ThreeDGuard told={BOARD_FAULT}>
           <Broken />
         </ThreeDGuard>
       </KerfProvider>,

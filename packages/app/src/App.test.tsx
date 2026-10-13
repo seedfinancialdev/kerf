@@ -219,6 +219,20 @@ describe("<App>", () => {
       expect(screen.getByRole("status").textContent).toContain(told);
     });
 
+    it("does not give WebGL advice for a fault that is not WebGL's (second-pass review M3)", () => {
+      const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      function Faulty(): never {
+        throw new TypeError("x is undefined");
+      }
+      const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+      render(<App store={store} model={<Faulty />} />);
+      quiet.mockRestore();
+      expect(screen.getByRole("region", { name: "Model" }).textContent).toBe(
+        "The 3D view hit a problem and stopped. The cut list, plans and Save still work; " +
+          "reload the page to see the model again.",
+      );
+    });
+
     it("tries the view again after Undo, so a one-off fault does not end it (re-review N5)", () => {
       const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
       let broken = true;

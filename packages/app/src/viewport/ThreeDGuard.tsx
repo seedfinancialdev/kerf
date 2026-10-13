@@ -17,9 +17,22 @@ export const VIEW_NOT_STARTED =
   "The 3D view could not start in this browser. The cut list, plans and Save still work; " +
   "to see the model, turn on hardware acceleration or try another browser.";
 
-/** Said when the geometry engine fails while drawing one board: that board is drawn plain. */
-export const BOARD_NOT_DRAWN =
-  "A board could not be drawn with its cuts, so it is shown plain. Everything else still works.";
+/** Said when the view stops for a reason that is not WebGL's: a fault in Kerf. */
+export const VIEW_FAULT =
+  "The 3D view hit a problem and stopped. The cut list, plans and Save still work; " +
+  "reload the page to see the model again.";
+
+/** Said when drawing one board fails: that board is drawn plain, the rest as usual. */
+export const BOARD_FAULT =
+  "A board could not be drawn, so it is shown plain. Everything else still works.";
+
+/**
+ * What to say when the whole view fails: WebGL refusing to start has its own advice; anything else
+ * is a fault in Kerf, where hardware acceleration would be the wrong thing to suggest.
+ */
+export function viewFailure(error: unknown): string {
+  return error instanceof Error && /webgl/i.test(error.message) ? VIEW_NOT_STARTED : VIEW_FAULT;
+}
 
 /** Said when the geometry engine cannot be loaded at all: every board is drawn plain. */
 export const ENGINE_NOT_LOADED =
@@ -27,17 +40,18 @@ export const ENGINE_NOT_LOADED =
   "Reload the page, or use an up-to-date browser.";
 
 interface BoundaryProps {
-  fallback: ReactNode;
+  /** What takes the children's place once they failed; given the error, for the words. */
+  fallback(error: unknown): ReactNode;
   retryOn: unknown;
   onFailure(error: unknown): void;
   children: ReactNode;
 }
 
-class Boundary extends Component<BoundaryProps, { failed: boolean }> {
-  override state = { failed: false };
+class Boundary extends Component<BoundaryProps, { failed: { error: unknown } | null }> {
+  override state: { failed: { error: unknown } | null } = { failed: null };
 
-  static getDerivedStateFromError(): { failed: boolean } {
-    return { failed: true };
+  static getDerivedStateFromError(error: unknown): { failed: { error: unknown } } {
+    return { failed: { error } };
   }
 
   override componentDidCatch(error: unknown): void {
@@ -46,38 +60,45 @@ class Boundary extends Component<BoundaryProps, { failed: boolean }> {
 
   override componentDidUpdate(previous: BoundaryProps): void {
     if (this.state.failed && previous.retryOn !== this.props.retryOn) {
-      this.setState({ failed: false });
+      this.setState({ failed: null });
     }
   }
 
   override render(): ReactNode {
-    return this.state.failed ? this.props.fallback : this.props.children;
+    const { failed } = this.state;
+    return failed ? this.props.fallback(failed.error) : this.props.children;
   }
 }
 
 /**
  * Draws `children`, which use WebGL or the geometry engine. If they fail, the raw error is logged,
- * the user is warned once a session with `told`, and `fallback` (default nothing) takes their
- * place until `retryOn` changes, when they are tried again (a one-off fault does not end the view).
+ * the user is warned once a session with `told` (a sentence, or one chosen from the error), and
+ * `fallback` takes their place (default nothing; with `showsTold`, the sentence itself) until
+ * `retryOn` changes, when they are tried again: a one-off fault does not end the view.
  */
 export function ThreeDGuard({
   told,
   fallback = null,
+  showsTold = false,
   retryOn,
   children,
 }: {
-  told: string;
+  told: string | ((error: unknown) => string);
   fallback?: ReactNode;
+  showsTold?: boolean;
   retryOn?: unknown;
   children: ReactNode;
 }) {
   const store = useKerfStore();
+  const words = (error: unknown): string => (typeof told === "string" ? told : told(error));
   const failed = (error: unknown): void => {
     console.error(error);
-    store.getState().warnOnce(told);
+    store.getState().warnOnce(words(error));
   };
+  const instead = (error: unknown): ReactNode =>
+    showsTold ? <p className="model-empty">{words(error)}</p> : fallback;
   return (
-    <Boundary fallback={fallback} retryOn={retryOn} onFailure={failed}>
+    <Boundary fallback={instead} retryOn={retryOn} onFailure={failed}>
       {children}
     </Boundary>
   );

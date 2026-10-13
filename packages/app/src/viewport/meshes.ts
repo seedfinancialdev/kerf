@@ -20,8 +20,14 @@ export type MeshResult = { ok: true; mesh: DisplayMesh } | { ok: false; reason: 
 const CACHE_LIMIT = 500;
 const cache = new Map<string, MeshResult>();
 
+/** The reason given when the geometry engine itself fails on a shape rather than refusing it. */
+const ENGINE_FAULT = "the 3D view's drawing engine failed on this board.";
+
 /**
- * The shape's display mesh, or why it cannot be made (ADR 015, rule 10). Call after initGeometry().
+ * The shape's display mesh, or why it cannot be made (ADR 015, rule 10). A shape the engine
+ * refuses gives its reason; one the engine fails on (it throws) gives a reason in shop words, its
+ * error is logged once for a bug report, and the failure is remembered like any result, so the
+ * engine is not asked again on every frame (second-pass review M3). Call after initGeometry().
  */
 export function meshFor(shape: PartShape): MeshResult {
   const key = JSON.stringify([shape.length, shape.width, shape.thickness, shape.removals]);
@@ -37,8 +43,11 @@ export function meshFor(shape: PartShape): MeshResult {
       ),
     };
   } catch (error) {
-    if (!(error instanceof MeshError)) throw error;
-    result = { ok: false, reason: error.message };
+    if (error instanceof MeshError) result = { ok: false, reason: error.message };
+    else {
+      console.error(error);
+      result = { ok: false, reason: ENGINE_FAULT };
+    }
   }
   if (cache.size >= CACHE_LIMIT) cache.delete(cache.keys().next().value as string);
   cache.set(key, result);

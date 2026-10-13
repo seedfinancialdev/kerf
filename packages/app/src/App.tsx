@@ -18,7 +18,7 @@ import { ProjectTree } from "./ui/ProjectTree";
 import { ToolRow } from "./ui/ToolRow";
 import { TopBar } from "./ui/TopBar";
 import { useShortcuts } from "./ui/useShortcuts";
-import { ThreeDGuard, VIEW_NOT_STARTED } from "./viewport/ThreeDGuard";
+import { ThreeDGuard, viewFailure } from "./viewport/ThreeDGuard";
 
 /**
  * The Kerf window: the top bar, the project tree, the model, the inspector and the build-plan
@@ -52,11 +52,7 @@ function Window({ model }: { model: ReactNode }) {
         </aside>
         <main className="center">
           <section aria-label="Model" className="model">
-            <ThreeDGuard
-              told={VIEW_NOT_STARTED}
-              fallback={<p className="model-empty">{VIEW_NOT_STARTED}</p>}
-              retryOn={history}
-            >
+            <ThreeDGuard told={viewFailure} showsTold retryOn={history}>
               {model}
             </ThreeDGuard>
           </section>

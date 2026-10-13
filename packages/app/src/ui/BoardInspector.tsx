@@ -10,7 +10,7 @@ import { handBack } from "../model/commands";
 import { shownProject } from "../model/store";
 import { useKerf, useKerfStore } from "../state/useKerf";
 import { undrawnBoards } from "../viewport/meshes";
-import { BOARD_NOT_DRAWN, ThreeDGuard } from "../viewport/ThreeDGuard";
+import { BOARD_FAULT, ThreeDGuard } from "../viewport/ThreeDGuard";
 import { useGeometry } from "../viewport/useGeometry";
 import { EdgePanel } from "./EdgePanel";
 import { Problems } from "./Problems";
@@ -114,7 +114,7 @@ export function BoardInspector({ instances }: { instances: Id[] }) {
           </button>
         )}
       </Section>
-      <ThreeDGuard told={BOARD_NOT_DRAWN}>
+      <ThreeDGuard told={BOARD_FAULT}>
         <UndrawnNotes placed={placed} result={result} />
       </ThreeDGuard>
       <Problems parts={new Set(placed.map((p) => p.part))} />

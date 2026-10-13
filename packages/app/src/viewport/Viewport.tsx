@@ -29,7 +29,7 @@ import { dispatchPointer } from "./dispatch";
 import { Navigation } from "./Navigation";
 import { GrainLine, Guides } from "./Overlays";
 import { usePalette } from "./palette";
-import { BOARD_NOT_DRAWN, ENGINE_NOT_LOADED, ThreeDGuard } from "./ThreeDGuard";
+import { BOARD_FAULT, ENGINE_NOT_LOADED, ThreeDGuard } from "./ThreeDGuard";
 import { ThumbnailSource } from "./ThumbnailSource";
 import { useGeometry } from "./useGeometry";
 
@@ -122,6 +122,7 @@ export function Viewport() {
   const store = useKerfStore();
   const project = useKerf((s) => shownProject(s));
   const result = useKerf((s) => s.solved?.result);
+  const history = useKerf((s) => s.history);
   const selection = useKerf((s) => s.selection);
   const hovered = useKerf((s) => s.hovered);
   const fitRequest = useKerf((s) => s.fitRequest);
@@ -173,13 +174,15 @@ export function Viewport() {
             warning={palette.warning}
           />
         );
-        // The geometry engine failing on one board leaves that board plain, the rest drawn.
+        // A fault drawing one board leaves that board plain, the rest drawn. It is tried again
+        // when History changes, not on every preview of a drag (second-pass review M3); a failure
+        // of the geometry engine itself is a result of meshFor, with the badge, not a throw.
         return (
           <ThreeDGuard
             key={look.placed.instance}
-            told={BOARD_NOT_DRAWN}
+            told={BOARD_FAULT}
             fallback={board(false)}
-            retryOn={result}
+            retryOn={history}
           >
             {board(ready)}
           </ThreeDGuard>
