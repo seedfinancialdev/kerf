@@ -51,22 +51,33 @@ export interface KerfState {
 }
 
 export interface KerfActions {
-  /** Records a change; `notice` is shown with Undo (for example after a board is taken over). */
+  /** Records `edit` as one named change and solves it. A `notice` is shown with Undo; any other Undo notice is cleared, a plain one stays. */
   apply(edit: Edit, notice?: string): void;
-  /** Shows a project without recording it (while dragging). */
+  /** Shows `project` and solves it without recording it (while dragging). */
   preview(project: Project): void;
-  /** Records the previewed project as one change. */
+  /** Records the previewed project under `label`. Does nothing when nothing is previewed. */
   commit(label: string): void;
+  /** Drops the preview and shows the recorded project again. */
   cancelPreview(): void;
+  /** Steps back one change; drops any preview. Does nothing at the first entry. */
   undo(): void;
+  /** Steps forward one change; drops any preview. Does nothing at the last entry. */
   redo(): void;
+  /** Shows History entry `index`. Throws RangeError for an index outside the list. */
   jumpTo(index: number): void;
+  /** Moves to a workflow step. */
   setStep(step: Step): void;
+  /** Sets what is picked. */
   select(selection: Selection): void;
+  /** Uses and saves the shop, then solves again with it. */
   setShop(shop: ShopProfile): void;
+  /** Picks the active tool. */
   setTool(tool: ToolId): void;
+  /** Uses and saves the colour theme. */
   setTheme(theme: "dark" | "light"): void;
+  /** Shows a notice; `undo` says whether it offers Undo (default no, so it stays until dismissed). */
   say(text: string, undo?: boolean): void;
+  /** Clears the notice. */
   dismissNotice(): void;
 }
 
@@ -77,6 +88,10 @@ export function shownProject(state: KerfState): Project | null {
   return state.previewed ?? (state.history ? currentProject(state.history) : null);
 }
 
+/**
+ * Makes the store. `storage` keeps the shop and theme; `clock` returns milliseconds and times the
+ * solve (default `performance.now`). Starts with no project, on the Start step.
+ */
 export function createKerfStore(deps: { storage: AppStorage; clock?: () => number }): KerfStore {
   const clock = deps.clock ?? (() => performance.now());
   const loaded = loadShop(deps.storage);
@@ -96,6 +111,12 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
       set({ ...patch, solved: solveFor(shownProject(next), next.shop) });
     };
 
+    /** A notice that offers Undo describes one change, so it goes when History moves (ruling R13). */
+    const keepPlainNotice = (): Notice | null => {
+      const { notice } = get();
+      return notice && !notice.undo ? notice : null;
+    };
+
     return {
       history: null,
       previewed: null,
@@ -112,7 +133,7 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
         show({
           history: h ? record(h, edit) : startHistory(edit),
           previewed: null,
-          notice: notice ? { text: notice, undo: true } : get().notice,
+          notice: notice ? { text: notice, undo: true } : keepPlainNotice(),
         });
       },
       preview: (project) => show({ previewed: project }),
@@ -120,20 +141,24 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
         const { previewed, history } = get();
         if (!previewed) return;
         const edit = { label, project: previewed };
-        show({ history: history ? record(history, edit) : startHistory(edit), previewed: null });
+        show({
+          history: history ? record(history, edit) : startHistory(edit),
+          previewed: null,
+          notice: keepPlainNotice(),
+        });
       },
       cancelPreview: () => show({ previewed: null }),
       undo: () => {
         const h = get().history;
-        if (h) show({ history: undo(h), previewed: null, notice: null });
+        if (h) show({ history: undo(h), previewed: null, notice: keepPlainNotice() });
       },
       redo: () => {
         const h = get().history;
-        if (h) show({ history: redo(h), previewed: null });
+        if (h) show({ history: redo(h), previewed: null, notice: keepPlainNotice() });
       },
       jumpTo: (index) => {
         const h = get().history;
-        if (h) show({ history: jumpTo(h, index), previewed: null });
+        if (h) show({ history: jumpTo(h, index), previewed: null, notice: keepPlainNotice() });
       },
       setStep: (step) => set({ step }),
       select: (selection) => set({ selection }),
