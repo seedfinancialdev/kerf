@@ -17,6 +17,7 @@ import {
   type SolveResult,
   serializeProject,
   solve,
+  type Vec3,
 } from "@kerf/core";
 import { createStore, type StoreApi } from "zustand/vanilla";
 import type { Edit } from "./commands";
@@ -57,6 +58,10 @@ export interface KerfState {
   pending: Pending | null;
   /** The Join tool's suggestion for the two boards clicked; cleared when the tool changes. */
   proposal: Proposal | null;
+  /** The last two points the Tape measured; session only, cleared when a project begins. */
+  tape: { from: Vec3; to: Vec3 } | null;
+  /** Guide lines kept from the Tape; session only, never saved (ADR 015, D6). */
+  guides: ReadonlyArray<readonly [Vec3, Vec3]>;
   drawerTab: DrawerTab;
   /** The stock the Board tool draws in; null means the project's first sheet stock. */
   boardStock: Id | null;
@@ -114,6 +119,12 @@ export interface KerfActions {
   setPending(pending: Pending | null): void;
   /** Sets or clears the Join tool's suggestion. */
   setProposal(proposal: Proposal | null): void;
+  /** Shows what the Tape measured, or clears the reading. */
+  setTape(tape: { from: Vec3; to: Vec3 } | null): void;
+  /** Keeps a line between two points as a guide. */
+  addGuide(from: Vec3, to: Vec3): void;
+  /** Removes every guide line. */
+  clearGuides(): void;
   /** Chooses the stock the Board tool draws in. */
   setBoardStock(stock: Id | null): void;
   /** Shows a tab of the build-plan drawer. */
@@ -280,6 +291,8 @@ export function createKerfStore(deps: {
       tool: "select",
       pending: null,
       proposal: null,
+      tape: null,
+      guides: [],
       drawerTab: "Cut list",
       boardStock: null,
       theme: deps.storage.read("kerf.theme") === "light" ? "light" : "dark",
@@ -301,6 +314,10 @@ export function createKerfStore(deps: {
           history: h ? record(h, edit) : startHistory(edit),
           previewed: null,
           notice: keepPlainNotice(),
+          // A measurement belongs to the project it was taken on (ruling R42).
+          tape: null,
+          guides: [],
+          pending: get().pending?.tool === "tape" ? null : get().pending,
         });
       },
       setThumbnailSource: (thumbnail) => set({ thumbnail }),
@@ -355,6 +372,9 @@ export function createKerfStore(deps: {
       },
       setTool: (tool) => set({ tool, pending: null, proposal: null }),
       setProposal: (proposal) => set({ proposal }),
+      setTape: (tape) => set({ tape }),
+      addGuide: (from, to) => set({ guides: [...get().guides, [from, to]] }),
+      clearGuides: () => set({ guides: [] }),
       setPending: (pending) => set({ pending }),
       setBoardStock: (boardStock) => set({ boardStock }),
       setDrawerTab: (drawerTab) => set({ drawerTab }),

@@ -12,6 +12,7 @@ import type { ModelPointer, ToolHandler } from "./handler";
 import { joinTool } from "./join";
 import { moveTool } from "./move";
 import { pushPullTool } from "./push-pull";
+import { tapeTool } from "./tape";
 
 export type { ModelHit, ModelPointer, ToolHandler };
 
@@ -29,8 +30,7 @@ const select: ToolHandler = {
 };
 
 /**
- * Every tool's handler, written out so the wiring is visible. A tool whose task has not landed yet
- * selects; Task 31 replaces its entry and imports its handler here. The Edge tool works from
+ * Every tool's handler, written out so the wiring is visible. The Edge tool works from
  * the inspector (Task 26), so clicking boards while it is active picks them.
  */
 const HANDLERS: Record<ToolId, ToolHandler> = {
@@ -40,7 +40,7 @@ const HANDLERS: Record<ToolId, ToolHandler> = {
   move: moveTool,
   join: joinTool,
   edge: select,
-  tape: select,
+  tape: tapeTool,
 };
 
 /** The handler for the active tool. */

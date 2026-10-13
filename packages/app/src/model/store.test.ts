@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 import { memoryStorage } from "../testing/memory-storage";
 import { setShelves, setSize, startProject } from "./commands";
+import { saveKerfBytes } from "./files";
 import { STARTER_SHOP } from "./starter";
 import { createStorage } from "./storage";
 import { createKerfStore, shownProject } from "./store";
@@ -414,5 +415,53 @@ describe("pending tool state", () => {
       s.getState().setTool("move");
       expect(s.getState().proposal).toBeNull();
     });
+  });
+});
+
+describe("the tape and guide lines", () => {
+  const measured = () => {
+    const s = fresh();
+    s.getState().begin(startProject("Bookcase", "imperial"));
+    s.getState().setTape({ from: [0, 0, 0], to: [203_200, 0, 0] });
+    s.getState().addGuide([0, 0, 0], [203_200, 0, 0]);
+    return s;
+  };
+
+  it("keeps guides as they are added, and clears them all", () => {
+    const s = measured();
+    s.getState().addGuide([0, 0, 0], [0, 203_200, 0]);
+    expect(s.getState().guides).toHaveLength(2);
+    s.getState().clearGuides();
+    expect(s.getState().guides).toEqual([]);
+  });
+
+  it("are gone when another project is started or opened", () => {
+    const s = measured();
+    s.getState().setPending({ tool: "tape", from: [0, 0, 0] });
+    s.getState().begin(startProject("Blank case", "imperial"));
+    expect(s.getState().guides).toEqual([]);
+    expect(s.getState().tape).toBeNull();
+    expect(s.getState().pending).toBeNull();
+  });
+
+  it("are not written to the file (ADR 015, D6)", () => {
+    const times = { created: "2026-10-12T10:00:00.000Z", modified: "2026-10-12T11:00:00.000Z" };
+    const withGuides = measured();
+    const without = fresh();
+    without.getState().begin(startProject("Bookcase", "imperial"));
+    const save = (s: typeof fresh extends () => infer S ? S : never) => {
+      const project = shownProject(s.getState());
+      if (!project) throw new Error("no project");
+      return saveKerfBytes(project, times);
+    };
+    expect(save(withGuides)).toEqual(save(without));
+  });
+
+  it("are not written to browser storage", () => {
+    const storage = createStorage(memoryStorage());
+    const s = createKerfStore({ storage });
+    s.getState().begin(startProject("Bookcase", "imperial"));
+    s.getState().addGuide([0, 0, 0], [203_200, 0, 0]);
+    expect(createKerfStore({ storage }).getState().guides).toEqual([]);
   });
 });

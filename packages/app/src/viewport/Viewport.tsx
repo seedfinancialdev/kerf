@@ -106,6 +106,24 @@ function GrainLine({ placed, color }: { placed: PlacedPart; color: string }) {
   );
 }
 
+/** The Tape's guide lines, dashed, kept for the session (ADR 015, D6). */
+function Guides({ color }: { color: string }) {
+  const guides = useKerf((s) => s.guides);
+  const geometry = useMemo(() => {
+    const g = new BufferGeometry();
+    const points = guides.flatMap(([a, b]) => [...toScene(a), ...toScene(b)].map(INCHES));
+    g.setAttribute("position", new BufferAttribute(new Float32Array(points), 3));
+    return g;
+  }, [guides]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  if (guides.length === 0) return null;
+  return (
+    <lineSegments geometry={geometry} onUpdate={(line) => line.computeLineDistances()}>
+      <lineDashedMaterial color={color} dashSize={1} gapSize={0.5} />
+    </lineSegments>
+  );
+}
+
 /** Lets the view's picture be the saved file's thumbnail (design spec, "Saving"). */
 function ThumbnailSource() {
   const { gl } = useThree();
@@ -323,6 +341,7 @@ export function Viewport() {
           glow={palette.accent}
         />
       ))}
+      <Guides color={palette.guide} />
       {hoveredBoard && <GrainLine placed={hoveredBoard} color={palette.grain} />}
     </ModelCanvas>
   );

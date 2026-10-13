@@ -70,6 +70,15 @@ export function pointOnPlane(ray: Ray, from: Vec3, normal: Axis, grid: Len): Vec
   return fromScene(at, grid).map(capped) as unknown as Vec3;
 }
 
+/**
+ * Where the line of sight meets the floor (the plane through the project's origin), snapped to the
+ * grid. Null when it does not come down onto the floor from above, e.g. a click on the sky.
+ */
+export function floorPoint(ray: Ray | null, grid: Len): Vec3 | null {
+  if (!ray || ray.origin[1] <= 0 || ray.dir[1] >= 0) return null;
+  return pointOnPlane(ray, [0, 0, 0], 2, grid);
+}
+
 /** The project axis the line of sight runs most nearly along: the plane facing the viewer. */
 export function viewAxis(ray: Ray): Axis {
   const v = [ray.dir[0], -ray.dir[2], ray.dir[1]].map(Math.abs);

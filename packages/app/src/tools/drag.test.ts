@@ -7,7 +7,7 @@
 
 import { INCH, MAX_LENGTH } from "@kerf/core";
 import { describe, expect, it } from "vitest";
-import { pointOnAxis, pointOnPlane, travelOnAxis, viewAxis } from "./drag";
+import { floorPoint, pointOnAxis, pointOnPlane, travelOnAxis, viewAxis } from "./drag";
 
 const grid = 3175; // 1/64"
 
@@ -91,5 +91,21 @@ describe("travelOnAxis()", () => {
   it("is zero when the sight line has not moved", () => {
     const ray = { origin: [3, 3, 20], dir: [0, 0, -1] } as const;
     expect(travelOnAxis(ray, ray, [0, 0, 3 * INCH], 2, grid)).toBe(0);
+  });
+});
+
+describe("floorPoint()", () => {
+  it("meets the floor under a sight line coming down: scene (3, 0, 4) is project (3, -4, 0) inches", () => {
+    const ray = { origin: [3, 10, 4], dir: [0, -1, 0] } as const;
+    expect(floorPoint(ray, grid)).toEqual([3 * INCH, -4 * INCH, 0]);
+  });
+
+  it("finds no floor for a sight line that rises, like a click on the sky", () => {
+    expect(floorPoint({ origin: [0, 10, 0], dir: [0, 1, 0] }, grid)).toBeNull();
+  });
+
+  it("finds no floor from below it, or without a sight line", () => {
+    expect(floorPoint({ origin: [0, -1, 0], dir: [0, -1, 0] }, grid)).toBeNull();
+    expect(floorPoint(null, grid)).toBeNull();
   });
 });

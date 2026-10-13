@@ -6,6 +6,7 @@
 
 import { BoardStockPanel } from "../tools/BoardStockPanel";
 import { JoinPanel } from "../tools/JoinPanel";
+import { TapePanel } from "../tools/TapePanel";
 import { BoardInspector } from "./BoardInspector";
 import { DivideStep } from "./DivideStep";
 import { JoineryStep } from "./JoineryStep";
@@ -14,13 +15,14 @@ import { ShapeStep } from "./ShapeStep";
 import { StartStep } from "./StartStep";
 import { useKerf } from "./useKerf";
 
-/** The right panel; the Board tool's stock, or the Join tool's proposal, comes first. */
+/** The right panel; the Board tool's stock, the Join tool's proposal or the Tape's reading comes first. */
 export function Inspector() {
   const tool = useKerf((s) => s.tool);
   return (
     <>
       {tool === "board" && <BoardStockPanel />}
       {tool === "join" && <JoinPanel />}
+      {tool === "tape" && <TapePanel />}
       <StepPanel />
     </>
   );

@@ -20,10 +20,9 @@ import {
 } from "@kerf/core";
 import type { Edit } from "../model/commands";
 import { newId } from "../model/ids";
-import type { Ray } from "../model/pending";
 import { literalFor, readLength } from "../model/size";
 import type { KerfStore } from "../model/store";
-import { pointOnPlane } from "./drag";
+import { floorPoint } from "./drag";
 import { type ModelPointer, recordedProject, type ToolHandler } from "./handler";
 import { newProblem } from "./new-problem";
 
@@ -194,15 +193,6 @@ export function boardStockFor(project: Project, chosen: Id | null): Id | undefin
     project.stock.find((s) => s.id === chosen)?.id ??
     project.stock.find((s) => s.kind === "sheet")?.id
   );
-}
-
-/**
- * Where the line of sight meets the floor (the plane through the project's origin), snapped to the
- * grid. Null when it does not come down onto the floor from above, e.g. a click on the sky.
- */
-function floorPoint(ray: Ray | null, grid: Len): Vec3 | null {
-  if (!ray || ray.origin[1] <= 0 || ray.dir[1] >= 0) return null;
-  return pointOnPlane(ray, [0, 0, 0], 2, grid);
 }
 
 /** Picks the new board, so its details are at hand (ruling R19). */
