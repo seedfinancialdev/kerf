@@ -41,14 +41,14 @@ export function tell(line: NoticeLine, notice: Notice): NoticeLine {
 }
 
 /**
- * Adds a warning: shown now when the line is empty or offers only an Undo (which is also in
- * History), otherwise queued. A warning already shown or waiting is not added twice.
+ * Adds a warning: shown now when the line is empty, otherwise queued behind what is shown. An
+ * Undo offer is not replaced either: it may be the only words naming a problem the change brought
+ * (ruling R45; re-review N3). A warning already shown or waiting is not added twice.
  */
 export function warn(line: NoticeLine, text: string): NoticeLine {
   if (line.notice?.text === text || line.waiting.includes(text)) return line;
   const waiting = [...line.waiting, text];
-  if (line.notice === null || line.notice.kind === "undo") return warningsFirst(waiting);
-  return { notice: line.notice, waiting };
+  return line.notice === null ? warningsFirst(waiting) : { notice: line.notice, waiting };
 }
 
 /** Takes the notice away and shows the next waiting warning. */

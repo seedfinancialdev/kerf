@@ -203,12 +203,12 @@ describe("the Push/Pull tool", () => {
     pushPullTool.pointer?.(event("down", endOf(top())), s);
     expect(pushPullTool.measure?.('1"', s)).toBeNull();
     expect(lengthOfTop(s)).toBe(7_023_100 + IN);
-    // A top 1" longer runs into the Left side (core joints/seat.ts wording); the change is
-    // recorded and the problem named with Undo (ruling R45).
+    // A top 1" longer runs into the Left side; the change is recorded and what it caused is
+    // named, as ruling R45 words it ("Shelf 2 now overlaps Back; Undo puts it back.").
     expect(s.getState().notice).toEqual({
       text:
-        "Top is now custom; the form won't change it. Top overlaps Left side; it should sit " +
-        "against its face. Undo puts it back.",
+        "Top is now custom; the form won't change it. Top now overlaps Left side; " +
+        "Undo puts it back.",
       kind: "undo",
     });
     expect(s.getState().pending).toBeNull();

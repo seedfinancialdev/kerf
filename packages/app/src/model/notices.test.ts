@@ -30,9 +30,11 @@ describe("the notice line", () => {
     expect(line.waiting).toEqual(["second"]);
   });
 
-  it("shows a warning over an Undo offer, which History still covers", () => {
-    const line = warn(tell(empty, { text: "Top is now custom", kind: "undo" }), "not kept");
-    expect(line.notice).toEqual({ text: "not kept", kind: "warning" });
+  it("queues a warning behind an Undo offer, which may be the only words naming a new problem (re-review N3)", () => {
+    const offer = { text: "Shelf 2 now overlaps Back; Undo puts it back.", kind: "undo" } as const;
+    const line = warn(tell(empty, offer), "not kept");
+    expect(line.notice).toEqual(offer);
+    expect(line.waiting).toEqual(["not kept"]);
   });
 
   it("queues a warning behind an answer the user has not dismissed", () => {

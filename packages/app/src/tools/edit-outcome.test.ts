@@ -5,12 +5,14 @@
 // ADR 015, rule 6 (ruling R36): a tool's change is refused only for an error the project did not
 // already have. The hand-made bookcase's right side holds the floor point (0, 0, 0).
 
-import type { Id, Project } from "@kerf/core";
+import { type Id, type Project, solve } from "@kerf/core";
 import { loadShopProfile } from "@kerf/fixtures";
 import { handMadeBookcase } from "@kerf/fixtures/builders";
 import { describe, expect, it } from "vitest";
+import { setOption, startProject } from "../model/commands";
 import { drawBoard } from "./board";
-import { newProblem } from "./edit-outcome";
+import { editNotice, newProblem } from "./edit-outcome";
+import { moveBoards } from "./move";
 
 const shop = loadShopProfile();
 const IN = 203_200;
@@ -61,6 +63,21 @@ describe("newProblem()", () => {
     const twice = { ...once, instances: [...once.instances, copy] };
     expect(newProblem(once, twice, shop)).toBe(
       "This part can't be built: Right side and Board 1 occupy the same space and are not joined.",
+    );
+  });
+
+  it("does not count an error a board already had as new when a take-over renames it (re-review N4)", () => {
+    // A 1" shelf roundover is too large for a 23/32" shelf, so every shelf already has an error.
+    // Moving Shelf 2 up 1" takes it out of the row as "Shelf copy 2" and brings nothing new.
+    const form = startProject("Bookcase", "imperial").project;
+    const rounded = setOption(form, form.structures[0]?.id ?? "", "shelfRoundover", "1in").project;
+    const shelf2 = solve(rounded, shop).placements.find((p) => p.name === "Shelf 2");
+    if (!shelf2) throw new Error("no Shelf 2");
+    const moved = moveBoards(rounded, [shelf2], [0, 0, IN], "move", shop);
+    if (!moved.ok) throw new Error(moved.message);
+    expect(newProblem(rounded, moved.edit.project, shop)).toBeNull();
+    expect(editNotice(rounded, moved.edit.project, shop)).toBe(
+      "Shelf 2 becomes Shelf copy 2, custom; the form won't change it.",
     );
   });
 });

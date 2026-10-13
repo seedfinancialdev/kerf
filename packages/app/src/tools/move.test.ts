@@ -229,11 +229,11 @@ describe("the Move tool", () => {
     expect(entries(s)).toBe((before ?? 0) + 1);
     expect(topOf(s).box.min[2]).toBe(top.box.min[2] + IN);
     expect(s.getState().history?.entries.at(-1)?.label).toBe('Moved Top 1"');
-    // Raised 1" the Top leaves its rabbet in the Right side (core joints/derive.ts wording): the
-    // move is recorded and the problem named with Undo (ruling R45).
+    // Raised 1" the Top leaves its rabbet in the Right side: the move is recorded and what it
+    // caused is named, in ruling R45's words.
     expect(s.getState().notice?.text).toBe(
-      "Top is now custom; the form won't change it. Top does not meet Right side for a rabbet, " +
-        "so there is nothing to join. Undo puts it back.",
+      "Top is now custom; the form won't change it. Top now misses its rabbet in Right side; " +
+        "Undo puts it back.",
     );
     expect(s.getState().pending).toBeNull();
   });
@@ -255,14 +255,14 @@ describe("the Move tool", () => {
     const shelf2 = s.getState().solved?.result.placements.find((p) => p.name === "Shelf 2");
     if (!shelf2) throw new Error("no Shelf 2");
     pick(s, shelf2);
-    // Moved 1" to the right it leaves its dado in the Right side (core joints/derive.ts wording)
-    // and runs into the Left side (core joints/seat.ts wording); the first new error is named.
+    // Moved 1" to the right it leaves its dado in the Right side and runs into the Left side; the
+    // first thing it caused is named, in ruling R45's words.
     expect(moveTool.measure?.('1"', s)).toBeNull();
     expect(s.getState().history?.entries.at(-1)?.label).toBe('Moved Shelf 2 1"');
     expect(s.getState().notice).toEqual({
       text:
-        "Shelf 2 becomes Shelf copy 2, custom; the form won't change it. Shelf copy 2 does not " +
-        "meet Right side for a dado, so there is nothing to join. Undo puts it back.",
+        "Shelf 2 becomes Shelf copy 2, custom; the form won't change it. Shelf copy 2 now " +
+        "misses its dado in Right side; Undo puts it back.",
       kind: "undo",
     });
   });

@@ -135,10 +135,12 @@ describe("a browser store that cannot be written", () => {
     expect(s.getState().history?.entries).toHaveLength(2);
   });
 
-  it("replaces an Undo notice with the warning, since the change is still in History", () => {
+  it("keeps an Undo offer and shows the warning after it (re-review N3)", () => {
     const s = createKerfStore({ storage: full() });
-    s.getState().apply(startProject("Bookcase", "imperial"), "Started");
-    expect(s.getState().notice?.kind).toBe("warning");
+    const offer = "Shelf 2 now overlaps Back; Undo puts it back.";
+    s.getState().apply(startProject("Bookcase", "imperial"), offer);
+    expect(s.getState().notice).toEqual({ text: offer, kind: "undo" });
+    s.getState().dismissNotice();
     expect(s.getState().notice?.text).toMatch(/^Your latest changes couldn't be kept/);
   });
 
