@@ -5,7 +5,7 @@
 // What a tool has started and not finished. Kept apart from the store and the tool handlers so
 // that both can name these types without importing each other.
 
-import type { Id, PlacedPart, Vec3 } from "@kerf/core";
+import type { Id, JointProposal, PlacedPart, Vec3 } from "@kerf/core";
 
 /** Where the pointer is on the model: the board, the point (project units, on the grid) and the surface's direction. */
 export interface ModelHit {
@@ -13,6 +13,13 @@ export interface ModelHit {
   point: Vec3;
   /** The surface's outward direction: a signed project axis. */
   normal: Vec3;
+}
+
+/** What the Join tool suggests for two boards, shown until it is accepted or the tool changes. */
+export interface Proposal {
+  a: Id;
+  b: Id;
+  result: JointProposal;
 }
 
 /** The line of sight under the pointer, in scene inches (display only): where it starts and which way it goes. */

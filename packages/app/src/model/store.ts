@@ -21,7 +21,7 @@ import {
 import { createStore, type StoreApi } from "zustand/vanilla";
 import type { Edit } from "./commands";
 import { currentProject, type History, jumpTo, record, redo, startHistory, undo } from "./history";
-import type { Pending } from "./pending";
+import type { Pending, Proposal } from "./pending";
 import { NOTHING, type Selection } from "./selection";
 import { loadShop, saveShop } from "./shop";
 import type { Step } from "./steps";
@@ -55,6 +55,8 @@ export interface KerfState {
   tool: ToolId;
   /** What the active tool has started and not finished; cleared when the tool changes. */
   pending: Pending | null;
+  /** The Join tool's suggestion for the two boards clicked; cleared when the tool changes. */
+  proposal: Proposal | null;
   drawerTab: DrawerTab;
   /** The stock the Board tool draws in; null means the project's first sheet stock. */
   boardStock: Id | null;
@@ -110,6 +112,8 @@ export interface KerfActions {
   setTool(tool: ToolId): void;
   /** Sets or clears the active tool's half-finished action. */
   setPending(pending: Pending | null): void;
+  /** Sets or clears the Join tool's suggestion. */
+  setProposal(proposal: Proposal | null): void;
   /** Chooses the stock the Board tool draws in. */
   setBoardStock(stock: Id | null): void;
   /** Shows a tab of the build-plan drawer. */
@@ -272,6 +276,7 @@ export function createKerfStore(deps: {
       notice: firstNotice ? { text: firstNotice, undo: false } : null,
       tool: "select",
       pending: null,
+      proposal: null,
       drawerTab: "Cut list",
       boardStock: null,
       theme: deps.storage.read("kerf.theme") === "light" ? "light" : "dark",
@@ -345,7 +350,8 @@ export function createKerfStore(deps: {
         saveShop(deps.storage, shop);
         show({ shop });
       },
-      setTool: (tool) => set({ tool, pending: null }),
+      setTool: (tool) => set({ tool, pending: null, proposal: null }),
+      setProposal: (proposal) => set({ proposal }),
       setPending: (pending) => set({ pending }),
       setBoardStock: (boardStock) => set({ boardStock }),
       setDrawerTab: (drawerTab) => set({ drawerTab }),

@@ -1,0 +1,79 @@
+// Kerf — free, open-source woodworking design tool
+// Copyright (C) 2026 Kerf contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
+// The Join proposal: what the engine suggests, whether the shop can cut it, Accept, or another type.
+
+import type { Joint } from "@kerf/core";
+import { shownProject } from "../model/store";
+import { Section } from "../ui/Section";
+import { useKerf, useKerfStore } from "../ui/useKerf";
+import { acceptProposal, JOINT_WORD, propose } from "./join";
+
+const OTHER: Partial<Record<Joint["type"], Joint["type"]>> = { dado: "rabbet", rabbet: "dado" };
+
+/** The Join tool's panel: a reason, or the proposed joint with Accept and the other type. */
+export function JoinPanel() {
+  const store = useKerfStore();
+  const proposal = useKerf((s) => s.proposal);
+  if (!proposal) return <p className="empty">Click two touching boards.</p>;
+  if (!proposal.result.ok) {
+    return (
+      <p role="note" className="empty">
+        {proposal.result.reason}
+      </p>
+    );
+  }
+  const { joint, missing, description } = proposal.result;
+  const boards = () => {
+    const placed = store.getState().solved?.result.placements ?? [];
+    return [
+      placed.find((p) => p.instance === proposal.a),
+      placed.find((p) => p.instance === proposal.b),
+    ] as const;
+  };
+  const accept = (): void => {
+    const s = store.getState();
+    const project = shownProject(s);
+    const [a, b] = boards();
+    if (!project || !a || !b) return;
+    const r = acceptProposal(project, s.shop, a, b, joint.type);
+    if (!r.ok) {
+      s.say(r.message);
+      return;
+    }
+    const tookOver = [a, b].filter((p) => p.source && !p.detached).map((p) => p.name);
+    const many = tookOver.length > 1;
+    const notice =
+      tookOver.length === 0
+        ? undefined
+        : `${tookOver.join(" and ")} ${many ? "are" : "is"} now custom; the form won't change ${many ? "them" : "it"}.`;
+    s.apply(r.edit, notice);
+    s.setProposal(null);
+  };
+  const other = OTHER[joint.type];
+  const tryOther = (): void => {
+    const s = store.getState();
+    const project = shownProject(s);
+    const [a, b] = boards();
+    if (project && a && b && other) s.setProposal(propose(project, s.shop, a, b, other));
+  };
+  return (
+    <Section title="Proposed joint">
+      <p>{description}</p>
+      <p className="muted">
+        {missing ? "Your shop has no tool for this cut yet." : "Your tools can cut this."}
+      </p>
+      <div className="button-row">
+        <button type="button" className="primary" onClick={accept}>
+          Accept
+        </button>
+        {other && (
+          <button type="button" onClick={tryOther}>
+            Use {JOINT_WORD[other]} instead
+          </button>
+        )}
+      </div>
+    </Section>
+  );
+}

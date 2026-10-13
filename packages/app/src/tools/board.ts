@@ -15,7 +15,6 @@ import {
   orientationFor,
   type Project,
   type ShopProfile,
-  solve,
   solveModel,
   type Vec3,
 } from "@kerf/core";
@@ -26,6 +25,7 @@ import { literalFor, readLength } from "../model/size";
 import type { KerfStore } from "../model/store";
 import { pointOnPlane } from "./drag";
 import { type ModelPointer, recordedProject, type ToolHandler } from "./handler";
+import { newProblem } from "./new-problem";
 
 type Axis = 0 | 1 | 2;
 const AXES = ["x", "y", "z"] as const;
@@ -66,19 +66,6 @@ function addBoard(
     name,
     instance: instance.id,
   };
-}
-
-/**
- * The first error the new board brings that `before` did not have, from a full solve (assembly
- * checks such as two boards in the same space only run there), or null.
- */
-function newProblem(before: Project, after: Project, shop: ShopProfile): string | null {
-  const errors = (p: Project): string[] =>
-    solve(p, shop)
-      .diagnostics.filter((d) => d.severity === "error")
-      .map((d) => d.message);
-  const known = new Set(errors(before));
-  return errors(after).find((m) => !known.has(m)) ?? null;
 }
 
 /**
