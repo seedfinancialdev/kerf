@@ -104,6 +104,31 @@ describe("taking over form boards", () => {
     expect(after.find((x) => x.name === "Board 1")?.detached).toBe(false);
   });
 
+  it("joins a hand-drawn divider to a row shelf: the copy is taken out, detached and joined", () => {
+    // Shelf 2 spans x 146050..7169150, y 50800..2438400 and its top face is z = 5940425. A divider
+    // of the same 3/4" plywood, 2387600 deep (y) and 2032000 (10") tall (z), stands on that face with
+    // its low corner at x = 3505200 (17-1/4"): z 5940425..7972425 clears Shelf 3 (from 8689975).
+    const base = form();
+    const ply = base.stock.find((st) => st.name === "3/4 plywood")?.id ?? "";
+    const p = drawBoard(
+      base,
+      ply,
+      [3_505_200, 50_800, 5_940_425],
+      { axis: 1, size: 2_387_600 },
+      { axis: 2, size: 2_032_000 },
+    ).project;
+    const r = acceptProposal(p, shop, placed(p, "Shelf 2"), placed(p, "Board 1"), "dado");
+    if (!r.ok) throw new Error(r.message);
+    expect(r.edit.label).toBe("Joined Board 1 to Shelf copy 2 with a dado");
+    expect(r.notice).toBe("Shelf 2 becomes Shelf copy 2, custom; the form won't change it.");
+    const after = solve(r.edit.project, shop).placements;
+    const copy = after.find((x) => x.name === "Shelf copy 2");
+    expect(copy?.detached).toBe(true);
+    expect(r.edit.project.joints).toContainEqual(
+      expect.objectContaining({ type: "dado", host: copy?.instance }),
+    );
+  });
+
   it("refuses a form shelf and the back: the back is the thinner board", () => {
     // The Back is 1/4" plywood (50800 units), the shelf 3/4" (146050): no joint is cut into the Back.
     const p = form();
@@ -114,7 +139,7 @@ describe("taking over form boards", () => {
       result: {
         ok: false,
         reason:
-          "Back is thinner than Shelf copy 1, so Kerf won't cut a joint into it; glue or nail it in place.",
+          "Back is thinner than Shelf 1, so Kerf won't cut a joint into it; glue or nail it in place.",
       },
     });
   });
@@ -133,7 +158,7 @@ describe("taking over form boards", () => {
     const r = propose(p, shop, placed(p, "Shelf 1"), placed(p, "Top"));
     expect(r.result).toEqual({
       ok: false,
-      reason: "Shelf copy 1 and Top do not touch, so there is nothing to join.",
+      reason: "Shelf 1 and Top do not touch, so there is nothing to join.",
     });
   });
 
@@ -142,7 +167,7 @@ describe("taking over form boards", () => {
     const r = propose(p, shop, placed(p, "Shelf 1"), placed(p, "Right side"));
     expect(r.result).toEqual({
       ok: false,
-      reason: "Shelf copy 1 and Right side are already joined.",
+      reason: "Shelf 1 and Right side are already joined.",
     });
   });
 

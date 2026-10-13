@@ -149,7 +149,7 @@ describe("<JoinPanel>", () => {
           .setProposal(propose(project, loadShopProfile(), named("Shelf 1"), named("Back"))),
       );
       expect(screen.getByRole("note").textContent).toBe(
-        "Back is thinner than Shelf copy 1, so Kerf won't cut a joint into it; glue or nail it in place.",
+        "Back is thinner than Shelf 1, so Kerf won't cut a joint into it; glue or nail it in place.",
       );
     });
 

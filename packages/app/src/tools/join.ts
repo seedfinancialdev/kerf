@@ -13,6 +13,7 @@ import {
   type JointProposal,
   type PlacedPart,
   type Project,
+  ProjectFormatError,
   proposeJoint,
   type ShopProfile,
 } from "@kerf/core";
@@ -55,11 +56,14 @@ export function takeOverNotice(taken: readonly TakenOver[]): string | undefined 
 }
 
 const GONE = "That board is no longer in the project; click it again.";
+const UNPLACEABLE = "The project has a problem that stops Kerf placing its boards; fix it first.";
 
 type TakeOver =
   | {
       ok: true;
       project: Project;
+      /** `project` with the two boards named as clicked, for the engine's reasons (ruling R41); never applied. */
+      scratch: Project;
       a: Instance;
       b: Instance;
       names: [string, string];
@@ -71,32 +75,46 @@ type TakeOver =
  * `project` with boards `a` and `b` taken over, as an edit would leave them, and their instances
  * there. Shared by `propose` and `acceptProposal` so the engine is asked about the boards Accept
  * will cut. Says why when a board cannot be taken over, is no longer in the project, or is already
- * joined to the other (by a joint of the form too).
+ * joined to the other (by a joint of the form too), naming the boards as clicked (ruling R41).
  */
 function takeOver(project: Project, shop: ShopProfile, a: PlacedPart, b: PlacedPart): TakeOver {
   let next: Project;
+  let formJoints: readonly Joint[];
   try {
     next = detachForEdit(detachForEdit(project, a, shop).project, b, shop).project;
+    formJoints = generateStructures(next, shop).joints;
   } catch (error) {
     if (error instanceof RangeError) return { ok: false, message: GONE };
+    if (error instanceof ProjectFormatError) return { ok: false, message: UNPLACEABLE };
     throw error;
   }
   const ia = instanceOf(next, a);
   const ib = instanceOf(next, b);
   if (!ia || !ib) return { ok: false, message: GONE };
-  const nameA = ia.name ?? a.name;
-  const nameB = ib.name ?? b.name;
-  const joined = generateStructures(next, shop).joints.some(
+  const joined = formJoints.some(
     (j) => (j.host === ia.id && j.guest === ib.id) || (j.host === ib.id && j.guest === ia.id),
   );
-  if (joined) return { ok: false, message: `${nameA} and ${nameB} are already joined.` };
+  if (joined) return { ok: false, message: `${a.name} and ${b.name} are already joined.` };
+  const nameA = ia.name ?? a.name;
+  const nameB = ib.name ?? b.name;
   const taken = [
     { placed: a, to: nameA },
     { placed: b, to: nameB },
   ]
     .filter((x) => isFormBoard(x.placed))
     .map((x) => ({ from: x.placed.name, to: x.to }));
-  return { ok: true, project: next, a: ia, b: ib, names: [nameA, nameB], taken };
+  const clicked = new Map([
+    [ia.id, a.name],
+    [ib.id, b.name],
+  ]);
+  const scratch = {
+    ...next,
+    instances: next.instances.map((i) => {
+      const name = clicked.get(i.id);
+      return name === undefined ? i : { ...i, name };
+    }),
+  };
+  return { ok: true, project: next, scratch, a: ia, b: ib, names: [nameA, nameB], taken };
 }
 
 /**
@@ -113,7 +131,7 @@ export function propose(
 ): Proposal {
   const taken = takeOver(project, shop, a, b);
   const result: JointProposal = taken.ok
-    ? proposeJoint(taken.project, shop, taken.a.id, taken.b.id, newId(), prefer)
+    ? proposeJoint(taken.scratch, shop, taken.a.id, taken.b.id, newId(), prefer)
     : { ok: false, reason: taken.message };
   return { a: a.instance, b: b.instance, result, taken: taken.ok ? taken.taken : [] };
 }
@@ -123,7 +141,7 @@ export type Accepted = { ok: true; edit: Edit; notice?: string } | { ok: false; 
 
 /**
  * Joins `a` and `b` with a joint of `type`, taking over any board the form made first. The label
- * and notice use the boards' names after the take-over. Comes back `ok: false`, saying why, when a
+ * and notice use the boards' names after the take-over; reasons use the names as clicked. Comes back `ok: false`, saying why, when a
  * board cannot be taken over (the engine's reason) or is gone, the engine finds no such joint (the
  * boards do not touch, say), or the full solve finds an error the project did not have.
  */
@@ -136,7 +154,7 @@ export function acceptProposal(
 ): Accepted {
   const taken = takeOver(project, shop, a, b);
   if (!taken.ok) return taken;
-  const r = proposeJoint(taken.project, shop, taken.a.id, taken.b.id, newId(), type);
+  const r = proposeJoint(taken.scratch, shop, taken.a.id, taken.b.id, newId(), type);
   if (!r.ok) return { ok: false, message: r.reason };
   const [hostName, guestName] =
     r.joint.host === taken.a.id ? taken.names : [taken.names[1], taken.names[0]];

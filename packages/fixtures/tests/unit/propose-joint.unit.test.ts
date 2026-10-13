@@ -98,6 +98,40 @@ describe("proposeJoint()", () => {
     }
   });
 
+  it("names an unnamed board by its part in the reason, never as undefined", () => {
+    const p = looseBoards();
+    const back = p.instances.find((i) => i.name === "Back");
+    if (!back) throw new Error("fixture changed");
+    delete back.name;
+    expect(proposeJoint(p, shop, idOf(p, "Top"), back.id, JOINT)).toEqual({
+      ok: false,
+      reason:
+        "Back is thinner than Top, so Kerf won't cut a joint into it; glue or nail it in place.",
+    });
+  });
+
+  it("still proposes a dado when a thin board meets the middle of a thick board's face", () => {
+    // A 1/4" board (50800 units) 36" up the 23/32" Right side: the thin guest sits in the thick
+    // host, so the thickness rule allows it. The dado is as wide as the guest, 50800 units.
+    const p = looseBoards();
+    const top = p.parts.find((part) => part.name === "Top");
+    const quarter = p.stock.find((st) => st.name === "1/4 plywood");
+    const loose = p.instances.find((i) => i.id === SHELF);
+    if (!top || !quarter || !loose) throw new Error("fixture changed");
+    const thin = {
+      ...top,
+      id: "01K7M3Q8ZD00000000T9000005",
+      name: "Thin shelf",
+      stock: quarter.id,
+    };
+    p.parts.push(thin);
+    loose.def = thin.id;
+    expect(proposeJoint(p, shop, idOf(p, "Right side"), SHELF, JOINT)).toMatchObject({
+      ok: true,
+      joint: { type: "dado", host: idOf(p, "Right side"), guest: SHELF },
+    });
+  });
+
   it("refuses a dado in the Back too, when asked for the other type", () => {
     const p = looseBoards();
     expect(proposeJoint(p, shop, idOf(p, "Top"), idOf(p, "Back"), JOINT, "dado")).toMatchObject({

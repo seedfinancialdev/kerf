@@ -125,7 +125,9 @@ export function detachPart(project: Project, part: Id): PartDef {
 
 /**
  * The Join tool's proposal for two placed boards (ADR 015, rule 6): the joint and the tool, or the
- * reason there is none. Pure; `jointId` is supplied by the caller. Never throws.
+ * reason there is none. Pure; `jointId` is supplied by the caller. Never throws. A board thinner
+ * than the one that would sit in it (resolved thickness, a part's own override included) is never
+ * cut into; the reason says to glue or nail it.
  */
 export { type JointProposal, proposeJoint } from "./joints/propose";
 /**

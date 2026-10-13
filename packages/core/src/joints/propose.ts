@@ -17,6 +17,9 @@ export type JointProposal =
   | { ok: true; joint: Joint; tool: MachiningSetup["tool"]; missing: boolean; description: string }
   | { ok: false; reason: string };
 
+/** What the user calls a board in a reason: its name, or its part's name when it has none, as the solve names it. */
+const nameOf = (f: Frame): string => f.instance.name ?? f.part.name;
+
 const refuse = (reason: string): JointProposal => ({ ok: false, reason });
 
 /**
@@ -40,7 +43,7 @@ const errorKey = (d: Diagnostic): string => [d.rule, d.part, d.joint, d.message]
 function hostAndGuest(a: Frame, b: Frame, axis: 0 | 1 | 2, at: number): [Frame, Frame] | string {
   const fa = faceAt(a, axis, at);
   const fb = faceAt(b, axis, at);
-  const names = `${a.instance.name} and ${b.instance.name}`;
+  const names = `${nameOf(a)} and ${nameOf(b)}`;
   if (!fa || !fb) return `${names} do not sit flat against each other.`;
   const aBroad = fa.axis === 2;
   const bBroad = fb.axis === 2;
@@ -52,6 +55,10 @@ function hostAndGuest(a: Frame, b: Frame, axis: 0 | 1 | 2, at: number): [Frame, 
 /**
  * Proposes a joint between two placed boards (ids from `solve(...).placements`), with the tool the
  * shop would use or the one it lacks. Never throws; `jointId` names the joint if it is accepted.
+ * A joint is never cut into a board thinner than the one that would sit in it (ADR 015, rule 6):
+ * the board touched on its broad face hosts, and if its resolved thickness (stock, or the part's
+ * own thickness override) is less than the other's, the reason says so and no joint is offered,
+ * whichever type is preferred. Through dovetails, where the boards overlap, are not subject to it.
  */
 export function proposeJoint(
   project: Project,
@@ -75,7 +82,7 @@ export function proposeJoint(
   if (!a || !b) return refuse("Pick two boards to join.");
   for (const f of [a, b]) {
     if (f.instance.pattern)
-      return refuse(`${f.instance.name} is one of a row; detach it first to join it on its own.`);
+      return refuse(`${nameOf(f)} is one of a row; detach it first to join it on its own.`);
   }
 
   const contact = contactOf(boxOf(a.instance), boxOf(b.instance));
@@ -88,7 +95,7 @@ export function proposeJoint(
     [host, guest] = pair;
     if (host.part.thickness < guest.part.thickness)
       return refuse(
-        `${host.instance.name} is thinner than ${guest.instance.name}, so Kerf won't cut a joint into it; glue or nail it in place.`,
+        `${nameOf(host)} is thinner than ${nameOf(guest)}, so Kerf won't cut a joint into it; glue or nail it in place.`,
       );
     const patch = boxToLocal(host, contact.patch);
     type = sitsInStep(host, guest, patch) ? "rabbet" : "dado";
@@ -96,9 +103,7 @@ export function proposeJoint(
     [host, guest] = [a, b];
     type = "throughDovetail";
   } else {
-    return refuse(
-      `${a.instance.name} and ${b.instance.name} do not touch, so there is nothing to join.`,
-    );
+    return refuse(`${nameOf(a)} and ${nameOf(b)} do not touch, so there is nothing to join.`);
   }
 
   if (prefer) type = prefer;
@@ -114,7 +119,7 @@ export function proposeJoint(
   const problem = trial.diagnostics.find((d) => isError(d) && !known.has(errorKey(d)));
   if (problem) return refuse(problem.message);
   const cut = trial.derived.pairs.find((pair) => pair.joint === jointId)?.machined[0];
-  if (!cut) return refuse(`Kerf could not work out the cuts for ${guest.instance.name}.`);
+  if (!cut) return refuse(`Kerf could not work out the cuts for ${nameOf(guest)}.`);
   const { tool, missing } = toolFor(cut, shop);
   const what = type === "dado" ? "a dado" : type === "rabbet" ? "a rabbet" : "through dovetails";
   const size = `${formatLength(cut.width, project.units)} wide and ${formatLength(cut.depth, project.units)} deep`;
@@ -123,6 +128,6 @@ export function proposeJoint(
     joint,
     tool,
     missing,
-    description: `${guest.instance.name} in ${what} in ${host.instance.name}, ${size}`,
+    description: `${nameOf(guest)} in ${what} in ${nameOf(host)}, ${size}`,
   };
 }

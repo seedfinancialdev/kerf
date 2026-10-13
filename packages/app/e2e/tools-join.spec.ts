@@ -27,7 +27,7 @@ test("two clicks with Join refuse a shelf of a row against the thinner back, and
   // board of a row. The back is the thinner board, so Join says so (nothing is changed).
   await expect(
     page.getByText(
-      "Back is thinner than Shelf copy 2, so Kerf won't cut a joint into it; glue or nail it in place.",
+      "Back is thinner than Shelf 2, so Kerf won't cut a joint into it; glue or nail it in place.",
     ),
   ).toBeVisible();
   await expect(page.getByRole("listbox", { name: "History" }).getByRole("option")).toHaveCount(1);

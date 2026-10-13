@@ -171,7 +171,9 @@ option if a benchmark shows the need.
    saved like any form option; the joint-type choice reuses existing options (`cornerJoint`).
 3. **Joint proposal:** `proposeJoint(project, shop, a, b)` for two instances: the joint type and
    parameters that fit their contact, and whether the shop can cut it (the tool, or the tool it
-   would need), or the reason no joint fits.
+   would need), or the reason no joint fits. A board is never cut into when it is thinner than the
+   board that would sit in it (resolved thickness, including a part's own override): the reason
+   says to glue or nail it.
 4. **Gap binding:** `gapBetween(project, a, b)` writes the clear distance between two boards as an
    ordinary expression built from their own position and size expressions, so a board drawn
    between them follows them with no change to the expression language. ADR 015 records the rules.
