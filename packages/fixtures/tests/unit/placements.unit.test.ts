@@ -83,6 +83,19 @@ describe("solve().placements", () => {
     expect(shelf?.pattern?.index).toBeTypeOf("number");
   });
 
+  it("says a shelf is the Shelf part, 34-9/16 visible and cut at 35-1/16", () => {
+    // Operation specs, "Golden test: bookcase": shelves 34-9/16" between the sides, cut 35-1/16".
+    const shelf = solve(form, shop).placements.find((p) => p.source?.role === "shelf");
+    expect(shelf?.partName).toBe("Shelf");
+    expect(shelf?.size.length).toBe(7_023_100);
+    expect(shelf?.cut.length).toBe(7_124_700);
+  });
+
+  it("names the 3/4 plywood as the right side's stock", () => {
+    const right = solve(form, shop).placements.find((p) => p.name === "Right side");
+    expect(right?.stock).toBe("01K7M3Q8ZD00000000B1000001");
+  });
+
   it("still places every board when an assembly error withholds the shapes", () => {
     // A dado as deep as the side is thick is an error (Operation specs, "Dado": error if ≥ host thickness).
     const broken: Project = structuredClone(form);

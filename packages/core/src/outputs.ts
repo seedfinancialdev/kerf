@@ -257,9 +257,16 @@ export interface PlacedPart {
   shape: Id;
   /** The part definition it is a copy of. */
   part: Id;
+  /** This copy's name ("Shelf 2"). */
   name: string;
-  /** The finished blank, before any cut. */
+  /** The part definition's name ("Shelf"). */
+  partName: string;
+  /** The stock the board is cut from. */
+  stock: Id;
+  /** The finished (visible) size, before any cut. */
   size: { length: Len; width: Len; thickness: Len };
+  /** The size to cut: the finished size plus what joints add (Domain model, decision 3). */
+  cut: { length: Len; width: Len; thickness: Len };
   /** Its bounding box in the project frame. */
   box: { min: Vec3; max: Vec3 };
   /**

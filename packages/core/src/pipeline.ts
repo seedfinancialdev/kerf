@@ -154,7 +154,7 @@ const minus = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]
 /** Where every placed copy sits; from the solved model, so it exists even when cuts are withheld. */
 function placementsOf(p: Pipeline): PlacedPart[] {
   const defs = new Map((p.project?.parts ?? []).map((d) => [d.id, d]));
-  return p.parts.map(({ instance, part }) => {
+  return p.parts.map(({ instance, part, length, width, thickness }) => {
     const frame = { instance, part };
     const origin = toParent(frame, [0, 0, 0]);
     const def = defs.get(part.id);
@@ -164,7 +164,10 @@ function placementsOf(p: Pipeline): PlacedPart[] {
       shape: p.derived.definitionOf.get(instance.id) ?? part.id,
       part: part.id,
       name: instance.name,
+      partName: part.name,
+      stock: part.stock,
       size: { length: part.length, width: part.width, thickness: part.thickness },
+      cut: { length, width, thickness },
       box: { min, max },
       frame: {
         origin,

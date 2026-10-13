@@ -312,24 +312,54 @@ describe("a missing opening", () => {
 });
 
 describe("handBack()", () => {
+  const handed = (project: Project, placed: PlacedPart) => {
+    const r = handBack(project, placed, shop);
+    if (!r.ok) throw new Error(r.message);
+    return r.edit;
+  };
+
   it("returns a taken-over board to the form", () => {
     const p = start().project;
     const taken = addRoundover(p, placementNamed(p, "Top"), ["edge1/face1"], IN / 8, shop).project;
-    const { project, label } = handBack(taken, placementNamed(taken, "Top"), shop);
+    const { project, label } = handed(taken, placementNamed(taken, "Top"));
     expect(label).toBe("Top follows the form again");
     expect(project.parts).toEqual([]);
   });
 
   it("puts a shelf taken out of its row back in the row", () => {
     const p = start().project;
-    const member = shelfMember(p, 1);
-    const taken = detachForEdit(p, member, shop).project;
+    const taken = detachForEdit(p, shelfMember(p, 1), shop).project;
     const own = solve(taken, shop).placements.find((x) => x.source?.role === "shelf" && x.detached);
     if (!own) throw new Error("no detached shelf");
-    const { project } = handBack(taken, own, shop);
+    const { project } = handed(taken, own);
     expect(project.instances).toEqual([]);
     expect(solve(project, shop).placements.filter((x) => x.source?.role === "shelf")).toHaveLength(
       4,
     );
+  });
+
+  it("says what to remove first when a joint you added names the board", () => {
+    const p = start().project;
+    const sample = generateStructures(p, shop).joints[0];
+    if (!sample) throw new Error("no joint");
+    const both = addRoundover(
+      detachForEdit(p, shelfMember(p, 1), shop).project,
+      placementNamed(p, "Top"),
+      ["edge1/face1"],
+      IN / 8,
+      shop,
+    ).project;
+    const own = solve(both, shop).placements.find((x) => x.source?.role === "shelf" && x.detached);
+    const top = solve(both, shop).placements.find((x) => x.name === "Top");
+    if (!own || !top) throw new Error("no detached boards");
+    const { generatedBy: _, ...byHand } = {
+      ...sample,
+      id: "01K7M3Q8ZD00000000H0000001",
+      host: top.instance,
+      guest: own.instance,
+    };
+    const r = handBack({ ...both, joints: [...both.joints, byHand] }, own, shop);
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.message).toMatch(/remove that first/);
   });
 });

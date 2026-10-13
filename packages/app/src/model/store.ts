@@ -172,10 +172,19 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
   let toldNotKept = !deps.storage.available;
 
   return createStore<KerfState & KerfActions>()((set, get) => {
-    /** Sets new state and re-solves what is shown. */
+    /** Boards the solve does not have are no longer selected; none left means nothing is selected. */
+    const stillThere = (selection: Selection, solved: Solved | null): Selection => {
+      if (selection.kind !== "boards") return selection;
+      const present = new Set(solved?.result.placements.map((p) => p.instance));
+      const instances = selection.instances.filter((id) => present.has(id));
+      return instances.length > 0 ? { kind: "boards", instances } : NOTHING;
+    };
+
+    /** Sets new state and re-solves what is shown, dropping selected boards that are gone. */
     const show = (patch: Partial<KerfState>): void => {
       const next = { ...get(), ...patch };
-      set({ ...patch, solved: solveFor(shownProject(next), next.shop) });
+      const solved = solveFor(shownProject(next), next.shop);
+      set({ ...patch, solved, selection: stillThere(next.selection, solved) });
       if (patch.history !== undefined) keep(get().history);
     };
 
@@ -183,17 +192,6 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
     const keepPlainNotice = (): Notice | null => {
       const { notice } = get();
       return notice && !notice.undo ? notice : null;
-    };
-
-    /** Shows another History entry; boards that entry does not have are no longer selected. */
-    const moveTo = (history: History): void => {
-      show({ history, previewed: null, notice: keepPlainNotice() });
-      const { selection, solved } = get();
-      if (selection.kind !== "boards") return;
-      const present = new Set(solved?.result.placements.map((p) => p.instance));
-      const instances = selection.instances.filter((id) => present.has(id));
-      if (instances.length === selection.instances.length) return;
-      set({ selection: instances.length > 0 ? { kind: "boards", instances } : NOTHING });
     };
 
     /**
@@ -250,15 +248,15 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
       cancelPreview: () => show({ previewed: null }),
       undo: () => {
         const h = get().history;
-        if (h) moveTo(undo(h));
+        if (h) show({ history: undo(h), previewed: null, notice: keepPlainNotice() });
       },
       redo: () => {
         const h = get().history;
-        if (h) moveTo(redo(h));
+        if (h) show({ history: redo(h), previewed: null, notice: keepPlainNotice() });
       },
       jumpTo: (index) => {
         const h = get().history;
-        if (h) moveTo(jumpTo(h, index));
+        if (h) show({ history: jumpTo(h, index), previewed: null, notice: keepPlainNotice() });
       },
       setStep: (step) => {
         // Each step shows its own panel, so a board picked on one step does not cover the next.

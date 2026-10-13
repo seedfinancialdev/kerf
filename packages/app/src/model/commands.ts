@@ -335,16 +335,27 @@ export function addRoundover(
  * Hands a taken-over board back to its form (Domain model: "Undo re-attaches"). A copy taken out
  * of a row goes back into the row. Like `detachForEdit`, the engine re-attaches within the
  * generated project, so the form is generated first and what it made is dropped again.
- * Throws RangeError when the board was not taken over or something added by hand refers to it
- * (the message says what to remove first).
+ * A board that something you added refers to (a joint, a grain match) is refused with `ok: false`
+ * and a message saying what to remove first.
  */
-export function handBack(project: Project, placed: PlacedPart, shop: ShopProfile): Edit {
-  const generated = generateStructures(project, shop);
-  const own = instanceOf(generated, placed);
-  const attached = own?.detachedFrom
-    ? attachCopyIn(generated, own.id)
-    : attachPartIn(generated, own?.def ?? placed.part);
-  return { project: withoutGenerated(attached), label: `${placed.name} follows the form again` };
+export function handBack(project: Project, placed: PlacedPart, shop: ShopProfile): EditResult {
+  try {
+    const generated = generateStructures(project, shop);
+    const own = instanceOf(generated, placed);
+    const attached = own?.detachedFrom
+      ? attachCopyIn(generated, own.id)
+      : attachPartIn(generated, own?.def ?? placed.part);
+    return {
+      ok: true,
+      edit: {
+        project: withoutGenerated(attached),
+        label: `${placed.name} follows the form again`,
+      },
+    };
+  } catch (error) {
+    if (error instanceof RangeError) return { ok: false, message: error.message };
+    throw error;
+  }
 }
 
 /** Inches or millimetres for this project (ADR 015, rule 4). */
