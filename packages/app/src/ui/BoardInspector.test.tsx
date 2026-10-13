@@ -139,6 +139,21 @@ describe("<BoardInspector>", () => {
     expect(document.querySelector(".problem.error")?.textContent).toMatch(/roundover/i);
   });
 
+  it("names a problem's kind in words, not by colour alone, in a labelled list (branch deferred row 20)", () => {
+    const store = setup(topOf);
+    const p = shownProject(store.getState());
+    const top = placements(store).find((x) => x.name === "Top");
+    if (!p || !top) throw new Error("no top");
+    act(() => {
+      store
+        .getState()
+        .apply(addRoundover(p, top, ["edge1/face1"], 3 * 203_200, store.getState().shop));
+      store.getState().select({ kind: "boards", instances: topOf(store) });
+    });
+    const list = screen.getByRole("list", { name: "Problems" });
+    expect(list.querySelector(".problem.error")?.textContent).toMatch(/^Error: /);
+  });
+
   it("shows no problems for a board that has none", () => {
     setup(topOf);
     expect(document.querySelector(".problems")).toBeNull();
