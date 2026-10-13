@@ -95,7 +95,7 @@ describe("<SizeFields>", () => {
     expect((screen.getByLabelText("Width") as HTMLInputElement).value).toBe('36"');
   });
 
-  it("keeps the last good preview when a drag step would make the size zero, and records that", () => {
+  it("keeps the last good preview while a drag step is refused, and records that if the drag comes back", () => {
     const store = setup();
     const label = screen.getByText("Width");
     fireEvent.pointerDown(label, { clientX: 0, pointerId: 1, button: 0 });
@@ -103,11 +103,29 @@ describe("<SizeFields>", () => {
     fireEvent.pointerMove(label, { clientX: -2300, pointerId: 1 });
     // -2400 px = 600 steps = 37-1/2" narrower: below zero, refused; the 1/16" preview stays.
     fireEvent.pointerMove(label, { clientX: -2400, pointerId: 1 });
-    fireEvent.pointerUp(label, { clientX: -2400, pointerId: 1 });
+    expect(store.getState().previewed).not.toBeNull();
+    fireEvent.pointerMove(label, { clientX: -2300, pointerId: 1 });
+    fireEvent.pointerUp(label, { clientX: -2300, pointerId: 1 });
     expect(store.getState().history?.entries.map((e) => e.label)).toEqual([
       "New bookcase",
       'Width 36" → 1/16"',
     ]);
+  });
+
+  it("records nothing when let go at a refused size, and keeps saying why, as Push/Pull and Move do (PR review errors-M6)", () => {
+    const store = setup();
+    const label = screen.getByText("Width");
+    fireEvent.pointerDown(label, { clientX: 0, pointerId: 1, button: 0 });
+    fireEvent.pointerMove(label, { clientX: -2300, pointerId: 1 });
+    // Shift steps are 1" (ADR 015, rule 2): 36 steps left reach 36" − 36" = 0, which is refused.
+    fireEvent.pointerMove(label, { clientX: -4 * 36, pointerId: 1, shiftKey: true });
+    fireEvent.pointerUp(label, { clientX: -4 * 36, pointerId: 1 });
+    expect(store.getState().history?.entries.map((e) => e.label)).toEqual(["New bookcase"]);
+    expect(store.getState().previewed).toBeNull();
+    expect((screen.getByLabelText("Width") as HTMLInputElement).value).toBe('36"');
+    expect(document.querySelector(".field-problem")?.textContent).toBe(
+      "Width must be more than zero.",
+    );
   });
 
   it("ends a drag when History moves under it, so the release keeps the redo entry", () => {

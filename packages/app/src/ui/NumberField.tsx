@@ -4,7 +4,8 @@
 
 // A scrubby number field (Interaction spec, "Scrubby fields"): drag the label to change the value,
 // click the box to type. Steps: ADR 015, rule 2. A refused value stays in the box with the reason
-// under it (CODE_QUALITY rule 9), and Escape puts the shown value back.
+// under it (CODE_QUALITY rule 9), and Escape puts the shown value back. A drag let go on a refused
+// value records nothing and keeps the reason, as the 3D tools do.
 
 import { INCH, type Len, MM, type Project } from "@kerf/core";
 import { type PointerEvent, useEffect, useId, useRef, useState } from "react";
@@ -27,11 +28,15 @@ export interface Scrub {
    * was refused, shown under the field while the drag lasts, or null.
    */
   onScrub(value: Len): string | null;
-  /** Called once when the pointer is released after a drag that changed the value. */
+  /**
+   * Called once when the pointer is released after a drag that changed the value and ended on a
+   * value that was not refused.
+   */
   onScrubEnd(): void;
   /**
-   * Called when the browser takes the pointer away, or the field goes away, mid-drag; the drag's
-   * changes are dropped.
+   * Called when the drag is let go on a refused value, or the browser takes the pointer away, or
+   * the field goes away, mid-drag; the drag's changes are dropped. Let go on a refused value, the
+   * reason stays under the field: nothing is recorded, as with Push/Pull and Move.
    */
   onScrubCancel(): void;
 }
@@ -55,7 +60,11 @@ export function NumberField({ label, display, onSubmit, scrub }: Props) {
   const [typed, setTyped] = useState<string | null>(null);
   const text = typed ?? display;
   const [problem, setProblem] = useState<string | null>(null);
-  const drag = useRef<{ x: number; start: Len; moved: boolean } | null>(null);
+  const drag = useRef<{ x: number; start: Len; moved: boolean; refused: string | null } | null>(
+    null,
+  );
+  // A reason kept after a drag let go on a refused value, through the value going back.
+  const keepReason = useRef(false);
   // The latest scrub, for the clean-up below, which runs only when the field goes away.
   const latestScrub = useRef(scrub);
   useEffect(() => {
@@ -75,7 +84,8 @@ export function NumberField({ label, display, onSubmit, scrub }: Props) {
   if (shownFor !== display) {
     setShownFor(display);
     setTyped(null);
-    setProblem(null);
+    if (keepReason.current) keepReason.current = false;
+    else setProblem(null);
   }
 
   const submit = (): void => {
@@ -88,7 +98,7 @@ export function NumberField({ label, display, onSubmit, scrub }: Props) {
   const onPointerDown = (e: PointerEvent<HTMLLabelElement>): void => {
     if (!scrub || e.button !== 0) return;
     e.currentTarget.setPointerCapture?.(e.pointerId);
-    drag.current = { x: e.clientX, start: scrub.value, moved: false };
+    drag.current = { x: e.clientX, start: scrub.value, moved: false, refused: null };
   };
   const onPointerMove = (e: PointerEvent<HTMLLabelElement>): void => {
     const d = drag.current;
@@ -98,14 +108,20 @@ export function NumberField({ label, display, onSubmit, scrub }: Props) {
     d.moved = true;
     const size = SCRUB_STEPS[scrub.units];
     const unit = e.altKey ? size.alt : e.shiftKey ? size.shift : size.step;
-    setProblem(scrub.onScrub(d.start + steps * unit));
+    d.refused = scrub.onScrub(d.start + steps * unit);
+    setProblem(d.refused);
   };
   const onPointerUp = (): void => {
     const d = drag.current;
     drag.current = null;
     if (!scrub || !d?.moved) return;
-    setProblem(null);
-    scrub.onScrubEnd();
+    if (d.refused === null) {
+      setProblem(null);
+      scrub.onScrubEnd();
+      return;
+    }
+    keepReason.current = true;
+    scrub.onScrubCancel();
   };
   const onPointerCancel = (): void => {
     const d = drag.current;

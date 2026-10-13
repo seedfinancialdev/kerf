@@ -131,7 +131,7 @@ describe("<NumberField>", () => {
       scrub: {
         value: 7_315_200,
         units: "imperial",
-        onScrub: vi.fn(),
+        onScrub: vi.fn(() => null),
         onScrubEnd,
         onScrubCancel: vi.fn(),
       },
@@ -144,7 +144,7 @@ describe("<NumberField>", () => {
     const scrub = {
       value: 7_315_200,
       units: "imperial" as const,
-      onScrub: vi.fn(),
+      onScrub: vi.fn(() => null),
       onScrubEnd: vi.fn(),
       onScrubCancel: vi.fn(),
     };
