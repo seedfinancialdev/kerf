@@ -7,15 +7,7 @@
 
 import { expect, type Page, test } from "@playwright/test";
 import { bannedWordsIn } from "../src/testing/banned-words";
-
-const TOOL_NAMES: Record<string, string> = {
-  b: "Board",
-  p: "Push/Pull",
-  m: "Move",
-  j: "Join",
-  f: "Edge profile",
-  t: "Tape",
-};
+import { TOOLS } from "../src/tools/tools";
 
 /** The text on screen; empty text means the screen was not read, so it fails rather than passes. */
 async function shown(page: Page): Promise<string> {
@@ -43,10 +35,10 @@ test("no screen of the core flow shows a banned word", async ({ page }) => {
   }
   await page.getByTestId("part-group-shelves").click();
   seen.push(await shown(page));
-  for (const key of ["b", "p", "m", "j", "f", "t"]) {
-    await page.keyboard.press(key);
+  for (const tool of TOOLS.filter((t) => t.id !== "select")) {
+    await page.keyboard.press(tool.key.toLowerCase());
     await expect(
-      page.getByRole("button", { name: new RegExp(`^${TOOL_NAMES[key]}\\b`), pressed: true }),
+      page.getByRole("button", { name: new RegExp(`^${tool.label}\\b`), pressed: true }),
     ).toBeVisible();
     seen.push(await shown(page));
   }

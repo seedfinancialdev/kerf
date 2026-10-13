@@ -24,6 +24,11 @@ describe("bannedWordsIn()", () => {
     ]);
   });
 
+  it("finds the irregular plural vertices and the forms of extrude", () => {
+    expect(bannedWordsIn("Two vertices")).toEqual(["vertex"]);
+    expect(bannedWordsIn("It was extruded, extruding, an extrusion")).toEqual(["extrude"]);
+  });
+
   it("allows the shop phrases show face, inside face, outside face, face to face and face frame", () => {
     expect(
       bannedWordsIn(
