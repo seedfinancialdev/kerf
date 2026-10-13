@@ -4,8 +4,9 @@
 
 // Move / copy (Interaction spec, "3D tools": Ctrl copies, Shift makes a mirrored copy; axis locks
 // and typed distances). A board the form made is taken over first, with a notice (Interaction
-// spec, "Tweak"). Domain model: "Mirroring never changes a part's cut list line", so a mirrored
-// copy shares its part with the board it came from.
+// spec, "Tweak"); a move that brings an error is recorded and the error named with Undo (ruling
+// R45). Domain model: "Mirroring never changes a part's cut list line", so a mirrored copy shares
+// its part with the board it came from.
 
 import {
   formatLength,
@@ -17,12 +18,14 @@ import {
   type ShopProfile,
   type Vec3,
 } from "@kerf/core";
-import { detachForEdit, type Edit, instanceOf } from "../model/commands";
+import { detachForEdit, type Edit, instanceOf, TakeOverError } from "../model/commands";
 import { newId } from "../model/ids";
 import type { Pending } from "../model/pending";
 import { literalFor, readLength } from "../model/size";
 import type { KerfState, KerfStore } from "../model/store";
+import { followsForm } from "../model/take-over";
 import { pointOnAxis, pointOnPlane, viewAxis } from "./drag";
+import { editNotice } from "./edit-outcome";
 import { type ModelPointer, recordedProject, type ToolHandler } from "./handler";
 
 export type MoveMode = "move" | "copy" | "mirror";
@@ -108,8 +111,7 @@ export function moveBoards(
   const moved: Instance[] = [];
   try {
     for (const p of placed) {
-      if (p.source && !p.detached && !isTakenOver(next, p))
-        next = detachForEdit(next, p, shop).project;
+      if (followsForm(p) && !isTakenOver(next, p)) next = detachForEdit(next, p, shop).project;
       const inst = instanceOf(next, p);
       if (!inst)
         return {
@@ -119,7 +121,7 @@ export function moveBoards(
       moved.push(inst);
     }
   } catch (error) {
-    if (error instanceof RangeError) return { ok: false, message: error.message };
+    if (error instanceof TakeOverError) return { ok: false, message: error.message };
     throw error;
   }
 
@@ -196,24 +198,13 @@ const modeOf = (e: { ctrl: boolean; shift: boolean }): MoveMode =>
 /** What a preview was made for, so the same move is not drawn twice; also tells a drag from a click. */
 const previewKey = (delta: Vec3, mode: MoveMode): string => `${mode}:${delta.join(",")}`;
 
-/** The notice for boards the form made that this move took over, or undefined when there are none. */
-function takeOverNotice(placed: PlacedPart[]): string | undefined {
-  const custom = placed.filter((p) => p.source !== undefined && !p.detached);
-  const [only] = custom;
-  if (!only) return undefined;
-  return custom.length === 1
-    ? `${only.partName} is now custom; the form won't change it.`
-    : `${custom.length} boards are now custom; the form won't change them.`;
-}
-
-/** Records a move and leaves the moved boards (or the new copies) picked. */
-function finish(
-  store: KerfStore,
-  placed: PlacedPart[],
-  r: Extract<MoveResult, { ok: true }>,
-): void {
+/**
+ * Records a move of `project` (the recorded one), with a notice naming the boards it took over and
+ * any error it brought, and leaves the moved boards (or the new copies) picked.
+ */
+function finish(store: KerfStore, project: Project, r: Extract<MoveResult, { ok: true }>): void {
   const s = store.getState();
-  s.apply(r.edit, takeOverNotice(placed));
+  s.apply(r.edit, editNotice(project, r.edit.project, s.shop));
   s.select({ kind: "boards", instances: r.picked });
   s.setPending(null);
 }
@@ -265,7 +256,7 @@ export const moveTool: ToolHandler = {
       return;
     }
     // Only a drag that showed a preview is recorded; a click never is.
-    if (r.ok && pending.last !== null) return finish(store, pending.placed, r);
+    if (r.ok && pending.last !== null) return finish(store, project, r);
     // Nothing is recorded. A click that has not moved keeps its pick and its arrow lock so a
     // distance can be typed (final branch review M2); a drag that ended with nothing to record,
     // or was refused, is over.
@@ -292,7 +283,7 @@ export const moveTool: ToolHandler = {
     const delta = [0, 1, 2].map((i) => (i === axis ? read.value : 0)) as unknown as Vec3;
     const r = moveBoards(project, boards, delta, "move", s.shop);
     if (!r.ok) return r.message;
-    finish(store, boards, r);
+    finish(store, project, r);
     return null;
   },
 };

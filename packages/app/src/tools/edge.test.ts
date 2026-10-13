@@ -8,7 +8,7 @@
 import { type EdgeRef, type PlacedPart, type Project, solve } from "@kerf/core";
 import { loadShopProfile } from "@kerf/fixtures";
 import { describe, expect, it } from "vitest";
-import { addRoundover, detachForEdit, startProject } from "../model/commands";
+import { addRoundover, detachForEdit, setShelves, startProject } from "../model/commands";
 import { newId } from "../model/ids";
 import { BOTH_FRONT_EDGES, edgeName, roundEdges as tryRoundEdges } from "./edge";
 
@@ -56,6 +56,20 @@ describe("roundEdges()", () => {
     const { project } = roundEdges(bookcase(), named("Shelf"), BOTH_FRONT_EDGES, IN / 8, shop);
     const profile = solve(project, shop).setups.find((s) => s.bit?.type === "roundover");
     expect(profile?.cuts).toBe(8);
+  });
+
+  it("says why, without throwing, when a picked copy is no longer in its row (silent-failure review M3)", () => {
+    // Shelf 4 is picked, then the row drops to two shelves: there is no copy 4 to take over.
+    const shelf4 = named("Shelf")[3];
+    const p = bookcase();
+    const structure = p.structures[0];
+    if (!shelf4 || !structure) throw new Error("no fourth shelf");
+    const fewer = setShelves(p, structure.id, structure.openings[0]?.id ?? "", "2", "even");
+    if (!fewer.ok) throw new Error(fewer.message);
+    expect(tryRoundEdges(fewer.edit.project, [shelf4], ["edge0/face1"], IN / 8, shop)).toEqual({
+      ok: false,
+      message: 'There is no copy 4 of "Shelf" to detach.',
+    });
   });
 
   it("takes over a board the form made that is not a shelf, and rounds it", () => {

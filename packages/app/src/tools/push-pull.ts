@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Push/Pull (Interaction spec, "3D tools"): change a board's length or width from one end or edge;
-// thickness belongs to the stock. A board the form made is taken over first, with a notice.
+// thickness belongs to the stock. A board the form made is taken over first, with a notice; a
+// change that brings an error is recorded and the error named with Undo (ruling R45).
 
 import {
   formatLength,
@@ -15,11 +16,18 @@ import {
   solveModel,
   type Vec3,
 } from "@kerf/core";
-import { detachForEdit, type Edit, type EditResult, instanceOf } from "../model/commands";
+import {
+  detachForEdit,
+  type Edit,
+  type EditResult,
+  instanceOf,
+  TakeOverError,
+} from "../model/commands";
 import type { Pending } from "../model/pending";
 import { literalFor, readLength } from "../model/size";
 import type { KerfStore } from "../model/store";
 import { travelOnAxis } from "./drag";
+import { editNotice } from "./edit-outcome";
 import { type ModelPointer, recordedProject, type ToolHandler } from "./handler";
 
 export type BoardFace = "end0" | "end1" | "edge0" | "edge1";
@@ -59,7 +67,7 @@ export function pushPull(
   try {
     taken = detachForEdit(project, placed, shop);
   } catch (error) {
-    if (error instanceof RangeError) return { ok: false, message: error.message };
+    if (error instanceof TakeOverError) return { ok: false, message: error.message };
     throw error;
   }
   const inst = instanceOf(taken.project, placed);
@@ -128,17 +136,14 @@ function dragTravel(e: ModelPointer, pending: PushPullPending, project: Project)
 }
 
 /**
- * Applies one Push/Pull, with the take-over notice when the form made the board. A board taken out
- * of a row gets a new instance, so a pick of it follows (the store prunes picks only when History
- * moves).
+ * Applies one Push/Pull to `project` (the recorded one), with a notice naming the boards it took
+ * over and any error it brought. A board taken out of a row gets a new instance, so a pick of it
+ * follows (the store prunes picks only when History moves).
  */
-function finish(store: KerfStore, placed: PlacedPart, edit: Edit): void {
-  const taken = placed.source !== undefined && !placed.detached;
+function finish(store: KerfStore, project: Project, placed: PlacedPart, edit: Edit): void {
   // Read before applying: the store drops a pick of an instance the edit removed.
-  const { selection } = store.getState();
-  store
-    .getState()
-    .apply(edit, taken ? `${placed.partName} is now custom; the form won't change it.` : undefined);
+  const { selection, shop } = store.getState();
+  store.getState().apply(edit, editNotice(project, edit.project, shop));
   const s = store.getState();
   const now = instanceOf(edit.project, placed);
   if (now && selection.kind === "boards" && selection.instances.includes(placed.instance)) {
@@ -185,7 +190,7 @@ export const pushPullTool: ToolHandler = {
       }
       return;
     }
-    if (r?.ok && pending.dragged !== null) return finish(store, placed, r.edit);
+    if (r?.ok && pending.dragged !== null) return finish(store, project, placed, r.edit);
     // Nothing is recorded. A click that has not moved keeps its pick so a distance can be typed;
     // a drag that ended with nothing to record is over.
     s.cancelPreview();
@@ -205,7 +210,7 @@ export const pushPullTool: ToolHandler = {
     const face = faceOf(placed, normal) as BoardFace;
     const r = pushPull(project, placed, face, read.value, s.shop);
     if (!r.ok) return r.message;
-    finish(store, placed, r.edit);
+    finish(store, project, placed, r.edit);
     return null;
   },
 };

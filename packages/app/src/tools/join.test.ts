@@ -14,7 +14,7 @@ import { createKerfStore } from "../model/store";
 import { bookcaseWithShelf } from "../testing/bookcase-with-shelf";
 import { memoryStorage } from "../testing/memory-storage";
 import { drawBoard } from "./board";
-import { acceptProposal, joinTool, propose, takeOverNotice } from "./join";
+import { acceptProposal, joinTool, propose } from "./join";
 import type { ModelHit } from "./pointer";
 
 const shop = loadShopProfile();
@@ -98,9 +98,11 @@ describe("taking over form boards", () => {
     const r = acceptProposal(p, shop, placed(p, "Right side"), placed(p, "Board 1"), "dado");
     if (!r.ok) throw new Error(r.message);
     expect(r.edit.label).toBe("Joined Board 1 to Right side with a dado");
-    expect(r.notice).toBe("Right side is now custom; the form won't change it.");
+    // The two sides are one board in two places, so taking the right one takes both (code review I4).
+    expect(r.notice).toBe("Right side and Left side are now custom; the form won't change them.");
     const after = solve(r.edit.project, shop).placements;
     expect(after.find((x) => x.name === "Right side")?.detached).toBe(true);
+    expect(after.find((x) => x.name === "Left side")?.detached).toBe(true);
     expect(after.find((x) => x.name === "Board 1")?.detached).toBe(false);
   });
 
@@ -177,7 +179,7 @@ describe("taking over form boards", () => {
     const r = acceptProposal(p, shop, gone, placed(p, "Shelf 1"), "dado");
     expect(r).toEqual({
       ok: false,
-      message: "That board is no longer in the project; click it again.",
+      message: "Right side is no longer in the project; click it again.",
     });
   });
 });
@@ -228,32 +230,5 @@ describe("the Join tool", () => {
       ok: false,
       reason: "Top and Board 1 do not touch, so there is nothing to join.",
     });
-  });
-});
-
-describe("takeOverNotice()", () => {
-  it("is nothing when no board was taken over", () => {
-    expect(takeOverNotice([])).toBeUndefined();
-  });
-
-  it("names one board that kept its name", () => {
-    expect(takeOverNotice([{ from: "Top", to: "Top" }])).toBe(
-      "Top is now custom; the form won't change it.",
-    );
-  });
-
-  it("says when one board's name changes", () => {
-    expect(takeOverNotice([{ from: "Shelf 1", to: "Shelf copy 1" }])).toBe(
-      "Shelf 1 becomes Shelf copy 1, custom; the form won't change it.",
-    );
-  });
-
-  it("names two boards, showing a changed name", () => {
-    expect(
-      takeOverNotice([
-        { from: "Shelf 1", to: "Shelf copy 1" },
-        { from: "Back", to: "Back" },
-      ]),
-    ).toBe("Shelf 1 (now Shelf copy 1) and Back are now custom; the form won't change them.");
   });
 });

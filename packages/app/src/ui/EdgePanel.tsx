@@ -10,6 +10,7 @@ import { useId, useState } from "react";
 import { shownProject } from "../model/store";
 import { useKerf, useKerfStore } from "../state/useKerf";
 import { BOTH_FRONT_EDGES, edgeName, roundEdges } from "../tools/edge";
+import { editNotice } from "../tools/edit-outcome";
 import { Section } from "./Section";
 
 const ALL_EDGES: EdgeRef[] = [
@@ -33,17 +34,14 @@ export function EdgePanel({ placed }: { placed: PlacedPart[] }) {
   const units = useKerf((s) => shownProject(s)?.units ?? "imperial");
   const [radius, setRadius] = useState<number | null>(bits[0] ?? null);
   const [ticked, setTicked] = useState<EdgeRef[]>([]);
+  /** Rounds `edges`, telling the user which boards were taken over (Interaction spec, "Tweak"). */
   const round = (edges: EdgeRef[]): void => {
-    const project = shownProject(store.getState());
+    const s = store.getState();
+    const project = shownProject(s);
     if (!project) return;
-    try {
-      const r = roundEdges(project, placed, edges, radius, store.getState().shop);
-      if (r.ok) store.getState().apply(r.edit);
-      else store.getState().say(r.message);
-    } catch (error) {
-      if (!(error instanceof RangeError)) throw error;
-      store.getState().say(error.message);
-    }
+    const r = roundEdges(project, placed, edges, radius, s.shop);
+    if (r.ok) s.apply(r.edit, editNotice(project, r.edit.project, s.shop));
+    else s.say(r.message);
   };
   return (
     <Section title="Roundover">

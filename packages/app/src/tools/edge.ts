@@ -4,6 +4,7 @@
 
 // Edge profile (Interaction spec, "3D tools": "Add a roundover to edges, using bits from the shop
 // profile"). Shelves the form makes keep following it: their roundover is the form's (ADR 015, D3).
+// Any other board the form made is taken over first.
 
 import {
   type EdgeRef,
@@ -19,6 +20,7 @@ import {
   type Edit,
   type EditResult,
   setShelfRoundover,
+  TakeOverError,
   withoutRoundoverOn,
 } from "../model/commands";
 
@@ -74,8 +76,7 @@ function boardsIn(placed: PlacedPart[], first: PlacedPart): string {
  * edges), as one History entry. Picking only the form's shelves and both front edges changes the
  * form's own shelf roundover so they keep resizing; any other board is taken over first, and an
  * edge that already has a roundover gets the new one instead. Refuses, saying why, when there is
- * no roundover on the chosen edges to take off.
- * Throws RangeError when a board cannot be taken over (see `addRoundover`).
+ * no roundover on the chosen edges to take off or a board cannot be taken over.
  */
 export function roundEdges(
   project: Project,
@@ -101,8 +102,13 @@ export function roundEdges(
     return ok({ project: next, label: `No roundover on ${boards}` });
   }
   let next = project;
-  for (const p of boardsToTakeOver(placed))
-    next = addRoundover(next, p, edges, radius, shop).project;
+  try {
+    for (const p of boardsToTakeOver(placed))
+      next = addRoundover(next, p, edges, radius, shop).project;
+  } catch (error) {
+    if (error instanceof TakeOverError) return { ok: false, message: error.message };
+    throw error;
+  }
   return ok({
     project: next,
     label: `Roundover ${formatLength(radius, project.units)} on ${boards}`,

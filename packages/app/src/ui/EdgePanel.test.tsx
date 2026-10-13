@@ -47,6 +47,15 @@ describe("<EdgePanel>", () => {
     expect(shownProject(store.getState())?.structures[0]?.options.shelfRoundover).toBe("3.175mm");
   });
 
+  it("tells the user, with Undo, that the Top it rounded is now custom (final branch review I2)", () => {
+    const store = setup("Top");
+    fireEvent.click(screen.getByRole("button", { name: "Both front edges" }));
+    expect(store.getState().notice).toEqual({
+      text: "Top is now custom; the form won't change it.",
+      kind: "undo",
+    });
+  });
+
   it("rounds the ticked edges", () => {
     const store = setup("Top");
     fireEvent.click(screen.getByLabelText("Back edge, show face"));

@@ -16,13 +16,21 @@ import {
   ProjectFormatError,
   proposeJoint,
   type ShopProfile,
+  solve,
 } from "@kerf/core";
-import { detachForEdit, type Edit, instanceOf } from "../model/commands";
+import {
+  detachForEdit,
+  type Edit,
+  instanceOf,
+  TakeOverError,
+  UNPLACEABLE,
+} from "../model/commands";
 import { newId } from "../model/ids";
 import type { Proposal, TakenOver } from "../model/pending";
 import { shownProject } from "../model/store";
+import { takenOver, takeOverNotice } from "../model/take-over";
+import { newProblem } from "./edit-outcome";
 import type { ToolHandler } from "./handler";
-import { newProblem } from "./new-problem";
 
 /** How each joint reads in a sentence. */
 export const JOINT_WORD: Record<Joint["type"], string> = {
@@ -31,32 +39,7 @@ export const JOINT_WORD: Record<Joint["type"], string> = {
   throughDovetail: "through dovetails",
 };
 
-/** True for a board the form still makes, which Join takes over before cutting a joint in it. */
-export const isFormBoard = (p: PlacedPart): boolean => p.source !== undefined && !p.detached;
-
-/** The boards by name, a changed name shown beside the old one: "Shelf 1 (now Shelf copy 1) and Back". */
-export function namesTaken(taken: readonly TakenOver[]): string {
-  return taken.map((t) => (t.from === t.to ? t.from : `${t.from} (now ${t.to})`)).join(" and ");
-}
-
-/**
- * The sentence that tells the user which boards were taken over and that the form will leave them
- * alone; a board whose name changed (a copy taken out of a row) shows both names. Undefined when
- * no board was taken over.
- */
-export function takeOverNotice(taken: readonly TakenOver[]): string | undefined {
-  const [first, second] = taken;
-  if (!first) return undefined;
-  if (!second) {
-    return first.from === first.to
-      ? `${first.from} is now custom; the form won't change it.`
-      : `${first.from} becomes ${first.to}, custom; the form won't change it.`;
-  }
-  return `${namesTaken(taken)} are now custom; the form won't change them.`;
-}
-
 const GONE = "That board is no longer in the project; click it again.";
-const UNPLACEABLE = "The project has a problem that stops Kerf placing its boards; fix it first.";
 
 type TakeOver =
   | {
@@ -67,6 +50,7 @@ type TakeOver =
       a: Instance;
       b: Instance;
       names: [string, string];
+      /** Every board the form made that the take-over takes, the other side of a pair too. */
       taken: TakenOver[];
     }
   | { ok: false; message: string };
@@ -84,7 +68,7 @@ function takeOver(project: Project, shop: ShopProfile, a: PlacedPart, b: PlacedP
     next = detachForEdit(detachForEdit(project, a, shop).project, b, shop).project;
     formJoints = generateStructures(next, shop).joints;
   } catch (error) {
-    if (error instanceof RangeError) return { ok: false, message: GONE };
+    if (error instanceof TakeOverError) return { ok: false, message: error.message };
     if (error instanceof ProjectFormatError) return { ok: false, message: UNPLACEABLE };
     throw error;
   }
@@ -97,12 +81,7 @@ function takeOver(project: Project, shop: ShopProfile, a: PlacedPart, b: PlacedP
   if (joined) return { ok: false, message: `${a.name} and ${b.name} are already joined.` };
   const nameA = ia.name ?? a.name;
   const nameB = ib.name ?? b.name;
-  const taken = [
-    { placed: a, to: nameA },
-    { placed: b, to: nameB },
-  ]
-    .filter((x) => isFormBoard(x.placed))
-    .map((x) => ({ from: x.placed.name, to: x.to }));
+  const taken = takenOver(solve(project, shop).placements, next);
   const clicked = new Map([
     [ia.id, a.name],
     [ib.id, b.name],

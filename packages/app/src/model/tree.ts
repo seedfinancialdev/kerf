@@ -7,6 +7,7 @@
 
 import type { Id, Opening, PlacedPart, Project, SolveResult, Structure } from "@kerf/core";
 import { readCount } from "./size";
+import { followsForm } from "./take-over";
 
 export type TreeRow =
   | { kind: "structure"; key: string; depth: 0; label: string; structure: Id; problems: number }
@@ -63,12 +64,12 @@ function structureLabel(project: Project, s: Structure, index: number): string {
   return `${s.type === "case" ? "Case" : "Box"} ${index + 1}`;
 }
 
-/** Boards still following their form are grouped by role; a detached board stands alone. */
-const followsForm = (p: PlacedPart): boolean => p.source !== undefined && !p.detached;
-
-/** The name a group of boards shows: "Side" for Right side and Left side. */
+/**
+ * The name a group of boards shows: the role for boards still following their form ("Side" for
+ * Right side and Left side), which are grouped by role; a detached board stands alone.
+ */
 function groupLabel(p: PlacedPart): string {
-  if (p.source && !p.detached)
+  if (p.source && followsForm(p))
     return p.source.role.charAt(0).toUpperCase() + p.source.role.slice(1);
   return p.name;
 }

@@ -229,8 +229,42 @@ describe("the Move tool", () => {
     expect(entries(s)).toBe((before ?? 0) + 1);
     expect(topOf(s).box.min[2]).toBe(top.box.min[2] + IN);
     expect(s.getState().history?.entries.at(-1)?.label).toBe('Moved Top 1"');
-    expect(s.getState().notice?.text).toBe("Top is now custom; the form won't change it.");
+    // Raised 1" the Top leaves its rabbet in the Right side (core joints/derive.ts wording): the
+    // move is recorded and the problem named with Undo (ruling R45).
+    expect(s.getState().notice?.text).toBe(
+      "Top is now custom; the form won't change it. Top does not meet Right side the way a " +
+        "rabbet needs, so there is nothing to join. Undo puts it back.",
+    );
     expect(s.getState().pending).toBeNull();
+  });
+
+  it("names every board the move took over: both sides share one board, so both become custom (code review I4)", () => {
+    const s = started();
+    const left = s.getState().solved?.result.placements.find((p) => p.name === "Left side");
+    if (!left) throw new Error("no left side");
+    pick(s, left);
+    const release = drag(s, left, [0, 0, IN]);
+    release();
+    expect(s.getState().notice?.text).toMatch(
+      /^Right side and Left side are now custom; the form won't change them\. /,
+    );
+  });
+
+  it("records a move that brings a problem, and names it with Undo (ruling R45)", () => {
+    const s = started();
+    const shelf2 = s.getState().solved?.result.placements.find((p) => p.name === "Shelf 2");
+    if (!shelf2) throw new Error("no Shelf 2");
+    pick(s, shelf2);
+    // Moved 1" to the right it leaves its dado in the Right side (core joints/derive.ts wording)
+    // and runs into the Left side (core joints/seat.ts wording); the first new error is named.
+    expect(moveTool.measure?.('1"', s)).toBeNull();
+    expect(s.getState().history?.entries.at(-1)?.label).toBe('Moved Shelf 2 1"');
+    expect(s.getState().notice).toEqual({
+      text:
+        "Shelf 2 becomes Shelf copy 2, custom; the form won't change it. Shelf copy 2 does not " +
+        "meet Right side the way a dado needs, so there is nothing to join. Undo puts it back.",
+      kind: "undo",
+    });
   });
 
   it("drags the picked boards together when the board under the pointer is one of them", () => {

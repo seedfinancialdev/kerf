@@ -106,16 +106,16 @@
   },
   {
     "id": "new-problem-any-error",
-    "file": "packages/app/src/tools/new-problem.ts",
-    "find": "errors(after).find((m) => !known.has(m))",
-    "replace": "errors(after).find(() => true)",
+    "file": "packages/app/src/tools/edit-outcome.ts",
+    "find": "(d.count ?? 1) > (known.get(key(d)) ?? 0)",
+    "replace": "true",
     "why": "An error the project already had refuses a harmless new board."
   },
   {
     "id": "new-problem-known-only",
-    "file": "packages/app/src/tools/new-problem.ts",
-    "find": "errors(after).find((m) => !known.has(m))",
-    "replace": "errors(after).find((m) => known.has(m))",
+    "file": "packages/app/src/tools/edit-outcome.ts",
+    "find": "(d.count ?? 1) > (known.get(key(d)) ?? 0)",
+    "replace": "(d.count ?? 1) <= (known.get(key(d)) ?? 0)",
     "why": "Only errors the project already had are reported; a new one slips through."
   }
 ]

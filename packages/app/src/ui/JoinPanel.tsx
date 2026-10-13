@@ -6,8 +6,9 @@
 
 import type { Joint } from "@kerf/core";
 import { shownProject } from "../model/store";
+import { namesTaken } from "../model/take-over";
 import { useKerf, useKerfStore } from "../state/useKerf";
-import { acceptProposal, JOINT_WORD, namesTaken, propose } from "../tools/join";
+import { acceptProposal, JOINT_WORD, propose } from "../tools/join";
 import { Section } from "./Section";
 
 const OTHER: Partial<Record<Joint["type"], Joint["type"]>> = { dado: "rabbet", rabbet: "dado" };

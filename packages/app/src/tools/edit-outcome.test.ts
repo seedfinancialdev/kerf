@@ -10,7 +10,7 @@ import { loadShopProfile } from "@kerf/fixtures";
 import { handMadeBookcase } from "@kerf/fixtures/builders";
 import { describe, expect, it } from "vitest";
 import { drawBoard } from "./board";
-import { newProblem } from "./new-problem";
+import { newProblem } from "./edit-outcome";
 
 const shop = loadShopProfile();
 const IN = 203_200;
@@ -45,5 +45,22 @@ describe("newProblem()", () => {
     const already = withBoard(clean, insideRightSide);
     const worse = withBoard(already, alsoInsideRightSide);
     expect(newProblem(already, worse, shop)).toMatch(/Board 2/);
+  });
+
+  it("names an error that comes again with the same words (silent-failure review M12)", () => {
+    // A second copy of Board 1, 6" further back, still runs into the Right side (which is 12"
+    // deep): the engine reports the same overlap twice, condensed into one line counted 2.
+    const once = withBoard(clean, insideRightSide);
+    const board = once.instances.at(-1);
+    if (!board) throw new Error("no board");
+    const copy = {
+      ...board,
+      id: "01K7M3Q8ZD000000000000ZZZZ",
+      position: { ...board.position, y: "6in" },
+    };
+    const twice = { ...once, instances: [...once.instances, copy] };
+    expect(newProblem(once, twice, shop)).toBe(
+      "This part can't be built: Right side and Board 1 occupy the same space and are not joined.",
+    );
   });
 });

@@ -23,6 +23,7 @@ import {
   type Param,
   type PlacedPart,
   type Project,
+  ProjectFormatError,
   projectFromTemplate,
   type ShopProfile,
   STOCK_FIELDS,
@@ -288,13 +289,34 @@ export function withoutRoundoverOn(ops: UserOp[], edges: EdgeRef[]): UserOp[] {
 }
 
 /**
+ * Why a board could not be taken over from its form, in shop words, for the user. Tools catch this
+ * and nothing wider, so a fault in Kerf is never shown as a reason (silent-failure review M3).
+ */
+export class TakeOverError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "TakeOverError";
+  }
+}
+
+/** Said when the project has a problem that stops the engine placing its boards at all. */
+export const UNPLACEABLE =
+  "The project has a problem that stops Kerf placing its boards; fix it first.";
+
+/** Said when a picked board is gone from the project (the pick is older than the last change). */
+const gone = (placed: PlacedPart): TakeOverError =>
+  new TakeOverError(`${placed.name} is no longer in the project; click it again.`);
+
+/**
  * Takes over a board the form made so it can be edited by hand (Interaction spec, "Tweak":
- * "detaches only that board"). A member of a row is taken out of the row on its own.
+ * "detaches only that board"). A member of a row is taken out of the row on its own; a board that
+ * shares its part with others (the two sides) takes them over with it.
  * The engine detaches within the generated project (the saved one holds no generated boards), so
  * the form is generated first and what it made is dropped again, keeping the board taken over.
  * Callers pass the project's real shop: it only matters to an "auto" roundover, which takes the
  * largest bit the shop owns.
- * Throws RangeError when the project cannot be generated or the board cannot be detached.
+ * Throws TakeOverError, saying why, when the project's boards cannot be placed or the board is
+ * gone or cannot be detached.
  */
 export function detachForEdit(
   project: Project,
@@ -302,11 +324,27 @@ export function detachForEdit(
   shop: ShopProfile,
 ): { project: Project; detached: boolean } {
   if (!placed.source || placed.detached) return { project, detached: false };
-  const generated = generateStructures(project, shop);
-  const taken = placed.pattern
-    ? detachCopyIn(generated, placed.pattern.id, placed.pattern.index)
-    : detachPartIn(generated, placed.part);
-  return { project: withoutGenerated(taken), detached: true };
+  let generated: Project;
+  try {
+    generated = generateStructures(project, shop);
+  } catch (error) {
+    if (!(error instanceof ProjectFormatError)) throw error;
+    throw new TakeOverError(UNPLACEABLE, { cause: error });
+  }
+  // The engine names a missing part or row by its id; the user picked it by name.
+  const { pattern } = placed;
+  if (!generated.parts.some((d) => d.id === placed.part)) throw gone(placed);
+  if (pattern && !generated.patterns.some((p) => p.id === pattern.id)) throw gone(placed);
+  try {
+    const taken = pattern
+      ? detachCopyIn(generated, pattern.id, pattern.index)
+      : detachPartIn(generated, placed.part);
+    return { project: withoutGenerated(taken), detached: true };
+  } catch (error) {
+    // The engine's other reasons are already in shop words ("There is no copy 4 of …").
+    if (!(error instanceof RangeError)) throw error;
+    throw new TakeOverError(error.message, { cause: error });
+  }
 }
 
 /**
@@ -325,7 +363,8 @@ export function instanceOf(project: Project, placed: PlacedPart): Instance | und
 
 /**
  * A roundover on a board made by hand or taken over (ADR 015, D3). Pass the project's real shop
- * (see `detachForEdit`). Throws RangeError as `detachForEdit` does.
+ * (see `detachForEdit`). Throws TakeOverError as `detachForEdit` does, and when the board is no
+ * longer in the project (rounding another board's part instead would be a silent wrong edit).
  */
 export function addRoundover(
   project: Project,
@@ -335,7 +374,8 @@ export function addRoundover(
   shop: ShopProfile,
 ): Edit {
   const taken = detachForEdit(project, placed, shop);
-  const partId = instanceOf(taken.project, placed)?.def ?? placed.part;
+  const partId = instanceOf(taken.project, placed)?.def;
+  if (partId === undefined) throw gone(placed);
   const op = { id: newId(), type: "roundover" as const, edges, radius: exactLiteral(radius) };
   const next = {
     ...taken.project,

@@ -88,7 +88,7 @@ describe("<JoinPanel>", () => {
       return { store, project, named };
     };
 
-    it("tells the user only the form board is now custom when the other was drawn by hand", () => {
+    it("tells the user only the form's boards are now custom when the other was drawn by hand", () => {
       const { store, project } = formSetup();
       const ply = project.stock.find((s) => s.name === "3/4 plywood")?.id ?? "";
       const IN = 203_200;
@@ -112,8 +112,9 @@ describe("<JoinPanel>", () => {
           .setProposal(propose(now, loadShopProfile(), named("Right side"), named("Board 1"))),
       );
       fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+      // The two sides are one board in two places: taking the right one takes both (code review I4).
       expect(store.getState().notice?.text).toBe(
-        "Right side is now custom; the form won't change it.",
+        "Right side and Left side are now custom; the form won't change them.",
       );
     });
 

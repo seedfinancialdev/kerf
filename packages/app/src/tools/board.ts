@@ -23,8 +23,8 @@ import { newId } from "../model/ids";
 import { literalFor, readLength } from "../model/size";
 import type { KerfStore } from "../model/store";
 import { floorPoint } from "./drag";
+import { newProblem } from "./edit-outcome";
 import { type ModelPointer, recordedProject, type ToolHandler } from "./handler";
-import { newProblem } from "./new-problem";
 
 type Axis = 0 | 1 | 2;
 const AXES = ["x", "y", "z"] as const;
