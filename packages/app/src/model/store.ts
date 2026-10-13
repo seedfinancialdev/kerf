@@ -11,8 +11,10 @@ import {
   type AssemblyStep,
   assemblyOrder,
   type Project,
+  parseProject,
   type ShopProfile,
   type SolveResult,
+  serializeProject,
   solve,
 } from "@kerf/core";
 import { createStore, type StoreApi } from "zustand/vanilla";
@@ -79,6 +81,8 @@ export interface KerfActions {
   say(text: string, undo?: boolean): void;
   /** Clears the notice. */
   dismissNotice(): void;
+  /** Units for a new project: the last ones the user chose (ADR 015, rule 4). */
+  unitsForNew(): Project["units"];
 }
 
 export type KerfStore = StoreApi<KerfState & KerfActions>;
@@ -90,7 +94,11 @@ export function shownProject(state: KerfState): Project | null {
 
 /**
  * Makes the store. `storage` keeps the shop and theme; `clock` returns milliseconds and times the
- * solve (default `performance.now`). Starts with no project, on the Start step.
+ * solve (default `performance.now`). Starts on the Start step, with the stored project if there is
+ * one and the engine accepts it; otherwise with none. A stored project the engine rejects is set
+ * aside under `kerf.project.setAside`, never deleted. Every recorded change is written back to
+ * storage. Only one start-up notice is shown: a shop problem first, then a project problem, then
+ * the warning that this browser keeps nothing.
  */
 export function createKerfStore(deps: { storage: AppStorage; clock?: () => number }): KerfStore {
   const clock = deps.clock ?? (() => performance.now());
@@ -104,11 +112,46 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
     return { result, assembly, ms: clock() - started };
   };
 
+  /** The stored project, or why it could not be opened (it is then set aside, never lost). */
+  const restore = (): { history: History | null; problem?: string } => {
+    const text = deps.storage.read("kerf.project");
+    if (text === undefined) return { history: null };
+    try {
+      return {
+        history: startHistory({ label: "Opened your last project", project: parseProject(text) }),
+      };
+    } catch (error) {
+      deps.storage.write("kerf.project.setAside", text);
+      deps.storage.remove("kerf.project");
+      const reason = error instanceof Error ? error.message : "it was damaged";
+      return {
+        history: null,
+        problem: `Your last project could not be opened (${reason}). It was set aside.`,
+      };
+    }
+  };
+  const restored = restore();
+  const firstNotice =
+    loaded.problem ??
+    restored.problem ??
+    (deps.storage.available
+      ? undefined
+      : "This browser won't keep your work between visits. Use Save to keep a copy.");
+
+  /** Keeps the shown History entry in storage and remembers its units. */
+  const keep = (history: History | null): void => {
+    if (!history) return;
+    const project = currentProject(history);
+    deps.storage.write("kerf.project", serializeProject(project));
+    deps.storage.write("kerf.units", project.units);
+  };
+
   return createStore<KerfState & KerfActions>()((set, get) => {
     /** Sets new state and re-solves what is shown. */
     const show = (patch: Partial<KerfState>): void => {
       const next = { ...get(), ...patch };
       set({ ...patch, solved: solveFor(shownProject(next), next.shop) });
+      if (patch.history !== undefined) keep(get().history);
     };
 
     /** A notice that offers Undo describes one change, so it goes when History moves (ruling R13). */
@@ -118,13 +161,13 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
     };
 
     return {
-      history: null,
+      history: restored.history,
       previewed: null,
-      solved: null,
+      solved: solveFor(restored.history ? currentProject(restored.history) : null, loaded.shop),
       step: "Start",
       selection: NOTHING,
       shop: loaded.shop,
-      notice: loaded.problem ? { text: loaded.problem, undo: false } : null,
+      notice: firstNotice ? { text: firstNotice, undo: false } : null,
       tool: "select",
       theme: deps.storage.read("kerf.theme") === "light" ? "light" : "dark",
 
@@ -173,6 +216,7 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
       },
       say: (text, undoable = false) => set({ notice: { text, undo: undoable } }),
       dismissNotice: () => set({ notice: null }),
+      unitsForNew: () => (deps.storage.read("kerf.units") === "metric" ? "metric" : "imperial"),
     };
   });
 }
