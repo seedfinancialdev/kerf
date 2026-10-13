@@ -92,7 +92,7 @@ describe("pushPull()", () => {
     expect(r).toEqual({ ok: false, message: TOP_TO_NOTHING });
   });
 
-  it("shortens the top to one 1/64\" step, one step short of its length", () => {
+  it('shortens the top to one 1/64" step, one step short of its length', () => {
     // 7023100 - 3175 = 7019925 (34-35/64") off leaves 3175 units, one 1/64" step.
     const r = pushPull(project(), top(), "end1", -7_019_925, shop);
     if (!r.ok) throw new Error(r.message);

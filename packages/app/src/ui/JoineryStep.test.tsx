@@ -26,7 +26,7 @@ function setup(template: TemplateName = "Bookcase") {
 }
 
 describe("the Joinery step", () => {
-  it("lists the shelves' dados once for each side, 23/32\" wide and 1/4\" deep", () => {
+  it('lists the shelves\' dados once for each side, 23/32" wide and 1/4" deep', () => {
     // Operation specs, bookcase: the shelves sit in 23/32" x 1/4" dados in each side. The form
     // joins its row of shelves to each side with one joint (structures/openings.ts), so there is
     // one line per side.

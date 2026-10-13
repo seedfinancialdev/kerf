@@ -54,9 +54,7 @@ describe("newProblem()", () => {
       ],
     };
     const diagnostics = solve(warned, shop).diagnostics;
-    expect(diagnostics.map((d) => [d.severity, d.rule])).toEqual([
-      ["warning", "division-ignored"],
-    ]);
+    expect(diagnostics.map((d) => [d.severity, d.rule])).toEqual([["warning", "division-ignored"]]);
     expect(newProblem(p, warned, shop)).toBeNull();
   });
 
