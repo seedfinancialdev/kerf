@@ -3,10 +3,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Design spec, "Shop and stock": the starter stock and shop are the reference fixtures' exactly.
-//
-// Node environment: the fixtures package reads files through URLs, which jsdom's URL cannot resolve.
-
-// @vitest-environment node
 
 import { loadProject, loadShopProfile } from "@kerf/fixtures";
 import { describe, expect, it } from "vitest";

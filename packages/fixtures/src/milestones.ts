@@ -3,11 +3,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+// Node's own URL: under jsdom the global URL is jsdom's, which fileURLToPath rejects.
+import { fileURLToPath, URL as NodeURL } from "node:url";
 
 export type MilestoneId = "M1" | "M2" | "M3" | "M4" | "M5";
 
-const MILESTONES_PATH = fileURLToPath(new URL("../../../milestones.json", import.meta.url));
+const MILESTONES_PATH = fileURLToPath(new NodeURL("../../../milestones.json", import.meta.url));
 
 /** Reads milestones.json at the repo root. Flip an entry to true to activate a milestone. */
 export function isMilestoneActive(id: MilestoneId): boolean {
