@@ -8,6 +8,7 @@
 import { formatLength, type Id, type Len, type Project } from "@kerf/core";
 import { useRef } from "react";
 import { type Edit, setSize } from "../model/commands";
+import type { History } from "../model/history";
 import { type SizeKey, sizeLabel, sizeOrder } from "../model/labels";
 import { lengthOf, literalFor } from "../model/size";
 import { shownProject } from "../model/store";
@@ -31,7 +32,8 @@ export function SizeFields({ structure }: { structure: Id }) {
 function SizeField({ structure, sizeKey }: { structure: Id; sizeKey: SizeKey }) {
   const store = useKerfStore();
   const project = useKerf((s) => (s.history ? shownProject(s) : null));
-  const lastDrag = useRef<Edit | null>(null);
+  // The History a drag began on and its last step; null between drags.
+  const drag = useRef<{ from: History | null; last: Edit | null } | null>(null);
   const s = project?.structures.find((x) => x.id === structure);
   if (!project || !s) return null;
   const expr = s.size[sizeKey];
@@ -64,14 +66,22 @@ function SizeField({ structure, sizeKey }: { structure: Id; sizeKey: SizeKey }) 
               value,
               units: project.units,
               onScrub: (next: Len) => {
+                const { history } = store.getState();
+                drag.current ??= { from: history, last: null };
+                // Undo or a jump in History mid-drag ends the drag: its later steps would be
+                // measured from another entry and replace the redo (final branch review M7).
+                if (drag.current.from !== history) {
+                  drag.current.last = null;
+                  return;
+                }
                 const r = setSize(recorded(), structure, sizeKey, literalFor(next, project.units));
                 if (!r.ok) return;
-                lastDrag.current = r.edit;
+                drag.current.last = r.edit;
                 store.getState().preview(r.edit.project);
               },
               onScrubEnd: () => {
-                const last = lastDrag.current;
-                lastDrag.current = null;
+                const last = drag.current?.last;
+                drag.current = null;
                 if (last && sizeIn(last.project) !== sizeIn(recorded())) {
                   store.getState().commit(last.label);
                 } else {
@@ -79,7 +89,7 @@ function SizeField({ structure, sizeKey }: { structure: Id; sizeKey: SizeKey }) 
                 }
               },
               onScrubCancel: () => {
-                lastDrag.current = null;
+                drag.current = null;
                 store.getState().cancelPreview();
               },
             }

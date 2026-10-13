@@ -4,7 +4,7 @@
 
 // Review Focus 5 and Operation specs, resize checks (30" → shelves 29-1/16" cut).
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
@@ -107,5 +107,25 @@ describe("<SizeFields>", () => {
       "New bookcase",
       'Width 36" → 1/16"',
     ]);
+  });
+
+  it("ends a drag when History moves under it, so the release keeps the redo entry", () => {
+    const store = setup();
+    const width = screen.getByLabelText("Width");
+    fireEvent.change(width, { target: { value: '30"' } });
+    fireEvent.blur(width);
+    const label = screen.getByText("Width");
+    fireEvent.pointerDown(label, { clientX: 0, pointerId: 1, button: 0 });
+    fireEvent.pointerMove(label, { clientX: -40, pointerId: 1 });
+    act(() => store.getState().undo());
+    fireEvent.pointerMove(label, { clientX: -80, pointerId: 1 });
+    fireEvent.pointerUp(label, { clientX: -80, pointerId: 1 });
+    // Undo showed New bookcase (36"); the drag after it records nothing, so Redo still has 30".
+    expect(store.getState().history?.entries.map((e) => e.label)).toEqual([
+      "New bookcase",
+      'Width 36" → 30"',
+    ]);
+    expect(store.getState().history?.at).toBe(0);
+    expect(store.getState().previewed).toBeNull();
   });
 });
