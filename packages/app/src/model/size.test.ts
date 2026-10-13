@@ -9,6 +9,7 @@ import { startProject } from "./commands";
 import { exactLiteral, literalFor, readCount, readLength, readPosition } from "./size";
 
 const bookcase = startProject("Bookcase", "imperial").project;
+const metric = startProject("Bookcase", "metric").project;
 
 describe("readLength()", () => {
   it('reads 30" as 30 inches and keeps the text as typed', () => {
@@ -52,6 +53,17 @@ describe("readLength()", () => {
       ok: false,
       message: "Length is too large: the limit is 100,000 inches",
     });
+  });
+
+  it("reads 762mm in a metric project as 762 x 8000 = 6096000 units", () => {
+    expect(readLength("762mm", metric)).toEqual({ ok: true, expr: "762mm", value: 6_096_000 });
+  });
+
+  it("snaps to the 0.01 mm grid half to even in a metric project", () => {
+    // One 0.01 mm step is 80 units. 0.005mm = 40 units is half a step: the even step is 0.
+    expect(readLength("0.005mm", metric)).toMatchObject({ ok: true, value: 0 });
+    // 0.015mm = 120 units is a step and a half: the even step is 2, so 160 units.
+    expect(readLength("0.015mm", metric)).toMatchObject({ ok: true, value: 160 });
   });
 
   it("asks for a size when the field is empty", () => {
@@ -136,6 +148,11 @@ describe("exactLiteral()", () => {
 
   it('writes one 1/64" step as exactly 0.396875mm', () => {
     expect(exactLiteral(3_175)).toBe("0.396875mm");
+  });
+
+  it('writes -1/8" as exactly -3.175mm, keeping the sign', () => {
+    // -25400 units ÷ 8000 per mm = -3.175 exactly.
+    expect(exactLiteral(-25_400)).toBe("-3.175mm");
   });
 
   it("writes a whole number of millimetres without a decimal point", () => {

@@ -144,7 +144,17 @@ describe("moveBoards()", () => {
 
   it("refuses a copy that would sit exactly on its board", () => {
     const r = moveBoards(project(), [first(project(), "Top")], [0, 0, 0], "copy", shop);
-    expect(r.ok).toBe(false);
+    expect(r).toEqual({ ok: false, message: "A distance of zero changes nothing." });
+  });
+
+  it("moves a metric top down 50 mm: its box drops by exactly 400000 units, written in mm", () => {
+    // 1 mm = 8000 units, so 50 mm = 400000. The position is written as an exact millimetre sum.
+    const p = startProject("Bookcase", "metric").project;
+    const top = first(p, "Top");
+    const r = moved([top], [0, 0, -400_000], "move", p);
+    expect(first(r.edit.project, "Top").box.min[2]).toBe(top.box.min[2] - 400_000);
+    const z = r.edit.project.instances.find((i) => i.name === "Top")?.position.z;
+    expect(z).toMatch(/\) - 50mm$/);
   });
 
   it("refuses with nothing picked", () => {
@@ -467,6 +477,17 @@ describe("the Move tool", () => {
       expect(topOf(s).box.min[2]).toBe(top.box.min[2] - 2 * IN);
     });
 
+    it("moves a metric top down by a typed -50mm: exactly 400000 units", () => {
+      // 50 mm x 8000 units per mm = 400000 (Domain model, "Units & precision").
+      const s = createKerfStore({ storage: createStorage(memoryStorage()) });
+      s.getState().apply(startProject("Bookcase", "metric"));
+      const top = topOf(s);
+      pick(s, top);
+      lock(s, 2);
+      expect(moveTool.measure?.("-50mm", s)).toBeNull();
+      expect(topOf(s).box.min[2]).toBe(top.box.min[2] - 400_000);
+    });
+
     it("asks for boards first when nothing is picked", () => {
       expect(moveTool.measure?.('2"', started())).toBe("Select the boards to move first.");
     });
@@ -475,7 +496,7 @@ describe("the Move tool", () => {
       const s = started();
       pick(s, topOf(s));
       lock(s, 2);
-      expect(moveTool.measure?.("abc", s)).not.toBeNull();
+      expect(moveTool.measure?.("abc", s)).toBe('Unknown name "abc"');
       expect(s.getState().pending).toMatchObject({ tool: "move", axis: 2 });
     });
 
