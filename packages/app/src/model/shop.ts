@@ -1,0 +1,37 @@
+// Kerf — free, open-source woodworking design tool
+// Copyright (C) 2026 Kerf contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
+// The user's shop (Domain model, ShopProfile: "per user, not per project"), kept in the browser
+// (ADR 015, D4) and checked by the engine's own rule before use.
+
+import { type ShopProfile, shopProblem } from "@kerf/core";
+import { STARTER_SHOP } from "./starter";
+import type { AppStorage } from "./storage";
+
+/** The saved shop, or the starter shop with the reason the saved one could not be used. */
+export function loadShop(storage: AppStorage): { shop: ShopProfile; problem?: string } {
+  const text = storage.read("kerf.shop");
+  if (text === undefined) return { shop: STARTER_SHOP };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return {
+      shop: STARTER_SHOP,
+      problem: "Your saved shop could not be used (it was damaged), so the starter shop is in use.",
+    };
+  }
+  const problem = shopProblem(parsed);
+  if (problem)
+    return {
+      shop: STARTER_SHOP,
+      problem: `Your saved shop could not be used (${problem.message}), so the starter shop is in use.`,
+    };
+  return { shop: parsed as ShopProfile };
+}
+
+/** Keeps the shop in the browser; a failed write is the caller's to notice through `storage.available`. */
+export function saveShop(storage: AppStorage, shop: ShopProfile): void {
+  storage.write("kerf.shop", JSON.stringify(shop));
+}
