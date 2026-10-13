@@ -137,7 +137,8 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
     if (!project) return null;
     const started = clock();
     const result = solve(project, shop);
-    const assembly = assemblyOrder(project, shop);
+    // An error withholds the whole plan, the assembly order too (ADR 013, "Error blocks the solve").
+    const assembly = result.blocked ? [] : assemblyOrder(project, shop);
     return { result, assembly, ms: clock() - started };
   };
 

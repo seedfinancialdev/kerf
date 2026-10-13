@@ -7,12 +7,14 @@
 
 import { cutLineText } from "../model/plan-text";
 import { shownProject } from "../model/store";
+import { NothingToShow } from "./NothingToShow";
 import { useKerf } from "./useKerf";
 
 export function CutListTab() {
   const project = useKerf((s) => shownProject(s));
   const lines = useKerf((s) => s.solved?.result.cutList.lines);
   if (!project || !lines) return null;
+  if (lines.length === 0) return <NothingToShow />;
   return (
     <table className="plan-table">
       <thead>

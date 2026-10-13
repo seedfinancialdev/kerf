@@ -5,6 +5,7 @@
 // Sheet layouts (Cut list & nesting, "Outputs"): each sheet drawn to scale with its parts named.
 
 import { shownProject } from "../model/store";
+import { NothingToShow } from "./NothingToShow";
 import { useKerf } from "./useKerf";
 
 const WIDTH_PX = 240;
@@ -13,6 +14,7 @@ export function SheetsTab() {
   const project = useKerf((s) => shownProject(s));
   const sheets = useKerf((s) => s.solved?.result.nesting.sheets);
   if (!project || !sheets) return null;
+  if (sheets.length === 0) return <NothingToShow />;
   return (
     <ol className="sheets">
       {sheets.map((sheet, i) => {

@@ -7,12 +7,14 @@
 
 import { totalsText } from "../model/plan-text";
 import { shownProject } from "../model/store";
+import { NothingToShow } from "./NothingToShow";
 import { useKerf } from "./useKerf";
 
 export function ShoppingTab() {
   const project = useKerf((s) => shownProject(s));
   const totals = useKerf((s) => s.solved?.result.nesting.totals);
   if (!project || !totals) return null;
+  if (totals.length === 0) return <NothingToShow />;
   return (
     <ul className="plan-list">
       {totals.map((t) => (

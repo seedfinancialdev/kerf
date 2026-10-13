@@ -5,6 +5,7 @@
 // The build-plan drawer (Interaction spec, "Build plan drawer (bottom)"): live on every edit, and a
 // banner instead of a false plan while any error exists ("The build plan never lies").
 
+import type { KeyboardEvent } from "react";
 import type { DrawerTab } from "../model/store";
 import { AssemblyTab } from "./AssemblyTab";
 import { CutListTab } from "./CutListTab";
@@ -22,9 +23,23 @@ export function Drawer() {
   const firstError = useKerf((s) =>
     s.solved?.result.diagnostics.find((d) => d.severity === "error"),
   );
+  /** Arrow keys, Home and End pick the neighbouring tab and move focus to it (WAI-ARIA tabs). */
+  const moveTab = (e: KeyboardEvent<HTMLButtonElement>, from: DrawerTab): void => {
+    const at = TABS.indexOf(from);
+    const target = {
+      ArrowRight: TABS[(at + 1) % TABS.length],
+      ArrowLeft: TABS[(at + TABS.length - 1) % TABS.length],
+      Home: TABS[0],
+      End: TABS[TABS.length - 1],
+    }[e.key];
+    if (!target) return;
+    e.preventDefault();
+    setTab(target);
+    document.getElementById(`tab-${target}`)?.focus();
+  };
   return (
     <section aria-label="Drawer" className={tall ? "drawer tall" : "drawer"}>
-      <div role="tablist" className="tabs">
+      <div role="tablist" aria-label="Plan sections" className="tabs">
         {TABS.map((t) => (
           <button
             key={t}
@@ -33,6 +48,8 @@ export function Drawer() {
             id={`tab-${t}`}
             aria-selected={t === tab}
             aria-controls="drawer-panel"
+            tabIndex={t === tab ? 0 : -1}
+            onKeyDown={(e) => moveTab(e, t)}
             onClick={() => setTab(t)}
           >
             {t}
@@ -44,7 +61,14 @@ export function Drawer() {
           Not ready to build: {firstError.message}
         </p>
       )}
-      <div role="tabpanel" id="drawer-panel" aria-labelledby={`tab-${tab}`} className="tab-panel">
+      <div
+        role="tabpanel"
+        id="drawer-panel"
+        aria-labelledby={`tab-${tab}`}
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: WAI-ARIA tabs make the panel a tab stop so keyboard users can scroll it.
+        tabIndex={0}
+        className="tab-panel"
+      >
         {tab === "Shopping" && <ShoppingTab />}
         {tab === "Cut list" && <CutListTab />}
         {tab === "Sheets" && <SheetsTab />}

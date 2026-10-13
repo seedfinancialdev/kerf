@@ -50,7 +50,7 @@ export function cutLineText(
   };
 }
 
-/** A rational shown to one decimal place, rounded half up, using whole-number arithmetic only. */
+/** A non-negative rational shown to one decimal place, a half tenth rounding up (1/20 is 0.1), using whole-number arithmetic only. */
 function tenths(value: { num: bigint; den: bigint }): string {
   const t = (value.num * 10n + value.den / 2n) / value.den;
   return `${t / 10n}.${t % 10n}`;
@@ -62,7 +62,7 @@ export function totalsText(totals: StockTotals, project: Project): string {
   if (totals.sheets !== undefined) return `${name}: ${totals.sheets} sheet${s(totals.sheets)}`;
   const parts = [
     totals.boards !== undefined ? `${totals.boards} board${s(totals.boards)}` : "",
-    totals.boardFeet ? `${tenths(totals.boardFeet)} board feet` : "",
+    totals.boardFeet && totals.boardFeet.num !== 0n ? `${tenths(totals.boardFeet)} board feet` : "",
     totals.linearFeet ? `${tenths(totals.linearFeet)} linear feet` : "",
   ].filter((p) => p !== "");
   return `${name}: ${parts.join(", ")}`;

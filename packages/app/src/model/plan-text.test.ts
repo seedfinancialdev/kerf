@@ -10,6 +10,7 @@ import { loadShopProfile } from "@kerf/fixtures";
 import { describe, expect, it } from "vitest";
 import { startProject } from "./commands";
 import { cutLineText, setupText, totalsText } from "./plan-text";
+import { STOCK_IDS } from "./starter";
 
 const project = startProject("Bookcase", "imperial").project;
 const result = solve(project, loadShopProfile());
@@ -43,5 +44,41 @@ describe("totalsText()", () => {
     const first = result.nesting.totals[0];
     if (!first) throw new Error("no totals");
     expect(totalsText(first, project)).toMatch(/^3\/4 plywood: \d+ sheets?$/);
+  });
+});
+
+describe("totalsText() for solid stock", () => {
+  const walnut = STOCK_IDS.walnut44;
+
+  it("lists boards, board feet and linear feet", () => {
+    // 25/2 = 12.5 exactly; 8/1 = 8.0.
+    const totals = {
+      stock: walnut,
+      boards: 1,
+      boardFeet: { num: 25n, den: 2n },
+      linearFeet: { num: 8n, den: 1n },
+    };
+    expect(totalsText(totals, project)).toBe(
+      "4/4 walnut: 1 board, 12.5 board feet, 8.0 linear feet",
+    );
+  });
+
+  it("leaves out a zero board-feet amount", () => {
+    const totals = { stock: walnut, boards: 2, boardFeet: { num: 0n, den: 1n } };
+    expect(totalsText(totals, project)).toBe("4/4 walnut: 2 boards");
+  });
+
+  it("rounds a half tenth up", () => {
+    // 1/20 = 0.05, exactly halfway between 0.0 and 0.1: rounds half up to 0.1.
+    expect(totalsText({ stock: walnut, boardFeet: { num: 1n, den: 20n } }, project)).toBe(
+      "4/4 walnut: 0.1 board feet",
+    );
+  });
+
+  it("rounds just under a half tenth down", () => {
+    // 1/21 = 0.0476, under halfway: 0.0.
+    expect(totalsText({ stock: walnut, boardFeet: { num: 1n, den: 21n } }, project)).toBe(
+      "4/4 walnut: 0.0 board feet",
+    );
   });
 });

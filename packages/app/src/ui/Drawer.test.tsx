@@ -53,13 +53,52 @@ describe("<Drawer>", () => {
     expect(screen.getAllByTestId("assembly-step")).toHaveLength(4);
   });
 
-  it("shows a banner, not a plan, while the project has an error", () => {
-    const store = setup();
+  function blockTheBookcase(store: ReturnType<typeof setup>) {
     const p = shownProject(store.getState());
     if (!p) throw new Error("no project");
     act(() => {
       store.getState().apply(setOption(p, p.structures[0]?.id ?? "", "dadoDepth", "23/32in"));
     });
+  }
+
+  it("shows a banner while the project has an error", () => {
+    blockTheBookcase(setup());
     expect(screen.getByRole("alert").textContent).toMatch(/^Not ready to build: /);
+  });
+
+  it("withholds the plan in every tab while the project has an error", () => {
+    blockTheBookcase(setup());
+    for (const name of ["Shopping", "Cut list", "Sheets", "Setups", "Assembly"]) {
+      fireEvent.click(screen.getByRole("tab", { name }));
+      for (const row of ["cutlist-line", "sheet", "setup", "assembly-step"]) {
+        expect(screen.queryAllByTestId(row), `${name}/${row}`).toHaveLength(0);
+      }
+      expect(screen.getByRole("tabpanel").textContent).toBe(
+        "Nothing to show until the problem above is fixed.",
+      );
+    }
+  });
+
+  it("makes only the chosen tab a tab stop", () => {
+    setup();
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.map((t) => t.getAttribute("tabindex"))).toEqual(["-1", "0", "-1", "-1", "-1"]);
+    expect(screen.getByRole("tablist", { name: "Plan sections" })).toBeTruthy();
+    expect(screen.getByRole("tabpanel").getAttribute("tabindex")).toBe("0");
+  });
+
+  it("moves between tabs with the arrow, Home and End keys", () => {
+    setup();
+    const selected = () => screen.getByRole("tab", { selected: true }).textContent;
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Cut list" }), { key: "ArrowRight" });
+    expect(selected()).toBe("Sheets");
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Sheets" }), { key: "End" });
+    expect(selected()).toBe("Assembly");
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Assembly" }), { key: "ArrowRight" });
+    expect(selected()).toBe("Shopping");
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Shopping" }), { key: "ArrowLeft" });
+    expect(selected()).toBe("Assembly");
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Assembly" }), { key: "Home" });
+    expect(selected()).toBe("Shopping");
   });
 });
