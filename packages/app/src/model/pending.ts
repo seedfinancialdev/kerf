@@ -7,7 +7,10 @@
 
 import type { Id, JointProposal, PlacedPart, Vec3 } from "@kerf/core";
 
-/** Where the pointer is on the model: the board, the point (project units, on the grid) and the surface's direction. */
+/**
+ * Where the pointer is on the model: the board, the point (project units, on the grid) and the
+ * surface's direction.
+ */
 export interface ModelHit {
   placed: PlacedPart;
   point: Vec3;
@@ -26,11 +29,16 @@ export interface Proposal {
   a: Id;
   b: Id;
   result: JointProposal;
-  /** The boards Accept will take over from the form, so the panel can say so before it is pressed. */
+  /**
+   * The boards Accept will take over from the form, so the panel can say so before it is pressed.
+   */
   taken: readonly TakenOver[];
 }
 
-/** The line of sight under the pointer, in scene inches (display only): where it starts and which way it goes. */
+/**
+ * The line of sight under the pointer, in scene inches (display only): where it starts and which
+ * way it goes.
+ */
 export interface Ray {
   origin: readonly [number, number, number];
   dir: readonly [number, number, number];

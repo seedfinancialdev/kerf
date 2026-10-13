@@ -20,7 +20,8 @@ export default defineConfig({
         },
       },
       {
-        // The app's model and screens (jsdom stands in for the browser; WebGL is tested end to end).
+        // The app's model and screens (jsdom stands in for the browser; WebGL is tested end to
+        // end).
         plugins: [react()],
         test: {
           name: "app",

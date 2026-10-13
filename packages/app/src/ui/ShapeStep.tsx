@@ -140,7 +140,10 @@ function BoxForm({ project, structure }: FormProps) {
 const CASE_DEPTHS = ["dadoDepth", "rabbetDepth", "backRabbetDepth"] as const;
 const BOX_DEPTHS = ["rabbetDepth", "grooveDepth", "grooveOffset"] as const;
 
-/** Joint depths; blank means the spec's default rule (ADR 014, D1), which the engine reads as absent. */
+/**
+ * Joint depths; blank means the spec's default rule (ADR 014, D1), which the engine reads as
+ * absent.
+ */
 function Depths({ project, structure }: FormProps) {
   const set = useOption(structure.id);
   const keys = structure.type === "case" ? CASE_DEPTHS : BOX_DEPTHS;

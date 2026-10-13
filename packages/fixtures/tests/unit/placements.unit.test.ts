@@ -97,7 +97,8 @@ describe("solve().placements", () => {
   });
 
   it("still places every board when an assembly error withholds the shapes", () => {
-    // A dado as deep as the side is thick is an error (Operation specs, "Dado": error if ≥ host thickness).
+    // A dado as deep as the side is thick is an error (Operation specs, "Dado": error if ≥ host
+    // thickness).
     const broken: Project = structuredClone(form);
     const structure = broken.structures[0];
     if (!structure) throw new Error("form has no structure");

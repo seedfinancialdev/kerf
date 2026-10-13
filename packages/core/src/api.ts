@@ -121,31 +121,8 @@ export function detachPart(project: Project, part: Id): PartDef {
   return detachedPart(project, part);
 }
 
-// Build plan (M4)
-
-/**
- * The Join tool's proposal for two placed boards (ADR 015, rule 6): the joint and the tool, or the
- * reason there is none. Pure; `jointId` is supplied by the caller. Never throws. A board thinner
- * than the one that would sit in it (resolved thickness, a part's own override included) is never
- * cut into; the reason says to glue or nail it.
- */
+// Build plan (M4). Each is documented where it is defined.
 export { type JointProposal, proposeJoint } from "./joints/propose";
-/**
- * The order to put each structure together, written from its form: dry-fit, glue, square, and
- * for a case the back last. Each step names the placed boards it touches. Empty for a project
- * with no structure or one that cannot be solved. Never throws; the project and the shop profile
- * are not changed.
- */
 export { assemblyOrder } from "./outputs/assembly-order";
-
-/**
- * The clear gap between two placed boards as expressions (ADR 015, rule 7): where it starts and how
- * long it is, along the one axis on which they face each other. Never throws.
- */
 export { type Gap, gapBetween } from "./solve/gap";
-
-/**
- * The orientation index (0-23, ADR 003) whose length axis and width axis are the two given signed
- * unit axes of the parent frame. Throws RangeError when they are not two different axes at right angles.
- */
 export { orientationFor } from "./solve/orientation";

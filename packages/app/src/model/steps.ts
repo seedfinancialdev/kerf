@@ -7,7 +7,9 @@
 
 import type { Structure } from "@kerf/core";
 
+/** The five steps of the flow, in order (Interaction spec, "The flow"). */
 export const STEPS = ["Start", "Shape", "Divide", "Joinery", "Build plan"] as const;
+/** One of the five steps. */
 export type Step = (typeof STEPS)[number];
 
 /** What the step is for, in one sentence. */

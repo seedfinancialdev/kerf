@@ -12,7 +12,8 @@ describe("fitView()", () => {
   it("frames the 36 × 72 × 12 bookcase from its centre", () => {
     const v = fitView([0, 0, -12], [36, 72, 0]);
     expect(v.target).toEqual([18, 36, -6]);
-    // Half the diagonal: √(36² + 72² + 12²) / 2 = √6624 / 2 = 40.694; ÷ sin(17.5°) = 0.30071 → 135.33.
+    // Half the diagonal: √(36² + 72² + 12²) / 2 = √6624 / 2 = 40.694; ÷ sin(17.5°) = 0.30071 →
+    // 135.33.
     expect(v.distance).toBeCloseTo(135.33, 1);
   });
 

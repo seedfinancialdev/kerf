@@ -94,7 +94,8 @@ describe("joints", () => {
   });
 
   it("a guest hanging off the edge of the host is not seated in the rabbet", () => {
-    // 5" along y from y = -4" to 1": only the last 1" is over the host, but the guest is not in the step.
+    // 5" along y from y = -4" to 1": only the last 1" is over the host, but the guest is not in the
+    // step.
     const p = rabbetP({ width: "1in" }, ["2in", "-4in", "3/4in"], guest, 17);
     expect(rules(p)).toContain("error:rabbet-not-seated");
   });

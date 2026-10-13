@@ -10,6 +10,7 @@ import { shownProject } from "../model/store";
 import { useKerf } from "../state/useKerf";
 import { NothingToShow } from "./NothingToShow";
 
+/** What to buy, per stock. */
 export function ShoppingTab() {
   const project = useKerf((s) => shownProject(s));
   const totals = useKerf((s) => s.solved?.result.nesting.totals);

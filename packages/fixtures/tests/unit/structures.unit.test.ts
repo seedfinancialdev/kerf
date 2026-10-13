@@ -174,8 +174,8 @@ describe("divisions of an opening", () => {
 
   it("sizes the partition and the shelves beside it from the interior, by hand", () => {
     // Interior 36 - 2 x 23/32 = 34-9/16. Partition: 72 - 2 x 23/32 = 70-9/16 visible, +2 x 1/4 in
-    // the top and bottom dados = 71-1/16 cut. Left shelves: 12 visible (the partition's left face is
-    // 12 in from the side), 12-1/2 cut. Right shelves: 34-9/16 - 12 - 23/32 = 21-27/32 visible,
+    // the top and bottom dados = 71-1/16 cut. Left shelves: 12 visible (the partition's left face
+    // is 12 in from the side), 12-1/2 cut. Right shelves: 34-9/16 - 12 - 23/32 = 21-27/32 visible,
     // 22-11/32 cut.
     const lines = buildCutList(partitioned()).lines;
     const lengths = lines.flatMap((l) => l.parts.map((p) => [p.name, l.length] as const));

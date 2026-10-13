@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Join (Interaction spec, "3D tools"): two clicks, a proposal from the engine (proposeJoint, ADR 015
-// rule 6), then Accept or another type. Boards the form made are taken over first, because a
+// Join (Interaction spec, "3D tools"): two clicks, a proposal from the engine (proposeJoint, ADR
+// 015 rule 6), then Accept or another type. Boards the form made are taken over first, because a
 // hand-made joint may not name a generated board (ADR 014, "After review").
 
 import {
@@ -39,7 +39,10 @@ type TakeOver =
   | {
       ok: true;
       project: Project;
-      /** `project` with the two boards named as clicked, for the engine's reasons (ruling R41); never applied. */
+      /**
+       * `project` with the two boards named as clicked, for the engine's reasons (ruling R41);
+       * never applied.
+       */
       scratch: Project;
       a: Instance;
       b: Instance;
@@ -93,7 +96,8 @@ function takeOver(project: Project, shop: ShopProfile, a: PlacedPart, b: PlacedP
 /**
  * What the engine suggests for boards `a` and `b` from where they touch and what the shop can cut,
  * or why it cannot, asked of the boards as they will be once taken over (ruling R38). The proposal
- * names the boards as clicked. `prefer` asks for one type of joint instead of the engine's first choice.
+ * names the boards as clicked. `prefer` asks for one type of joint instead of the engine's first
+ * choice.
  */
 export function propose(
   project: Project,
@@ -114,9 +118,10 @@ export type Accepted = { ok: true; edit: Edit; notice?: string } | { ok: false; 
 
 /**
  * Joins `a` and `b` with a joint of `type`, taking over any board the form made first. The label
- * and notice use the boards' names after the take-over; reasons use the names as clicked. Comes back `ok: false`, saying why, when a
- * board cannot be taken over (the engine's reason) or is gone, the engine finds no such joint (the
- * boards do not touch, say), or the full solve finds an error the project did not have.
+ * and notice use the boards' names after the take-over; reasons use the names as clicked. Comes
+ * back `ok: false`, saying why, when a board cannot be taken over (the engine's reason) or is gone,
+ * the engine finds no such joint (the boards do not touch, say), or the full solve finds an error
+ * the project did not have.
  */
 export function acceptProposal(
   project: Project,

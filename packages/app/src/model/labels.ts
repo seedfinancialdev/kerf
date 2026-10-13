@@ -3,13 +3,19 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // The words the screens use for the forms' fields and choices (Interaction spec, "Shape" table and
-// "Shop language"). The engine's option keys never reach the screen.
+// "Shop language"). Every option key a form defines is worded here (labels.test.ts checks it).
 
 import type { Structure } from "@kerf/core";
 
+/**
+ * Which overall size a field sets: width, height or depth of a case, or the box's length, height or
+ * width.
+ */
 export type SizeKey = "w" | "h" | "d";
 
-/** A case is Width × Height × Depth; a box is Length × Width × Height (Interaction spec, "Start"). */
+/**
+ * A case is Width × Height × Depth; a box is Length × Width × Height (Interaction spec, "Start").
+ */
 export function sizeLabel(type: Structure["type"], key: SizeKey): string {
   if (type === "case") return { w: "Width", h: "Height", d: "Depth" }[key];
   return { w: "Length", h: "Height", d: "Width" }[key];
@@ -20,6 +26,7 @@ export function sizeOrder(type: Structure["type"]): SizeKey[] {
   return type === "case" ? ["w", "h", "d"] : ["w", "d", "h"];
 }
 
+/** The choices each form field offers, as the engine's value and the shop words for it. */
 export const CHOICES = {
   topBottom: [
     { value: "between-sides", label: "Between the sides" },

@@ -7,10 +7,12 @@
 
 import type { Id } from "@kerf/core";
 
+/** What is picked: nothing, a whole form, one opening of it, or boards. */
 export type Selection =
   | { kind: "none" }
   | { kind: "structure"; structure: Id }
   | { kind: "opening"; structure: Id; opening: Id }
   | { kind: "boards"; instances: Id[] };
 
+/** The empty pick. */
 export const NOTHING: Selection = { kind: "none" };

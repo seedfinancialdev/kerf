@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Interaction spec, "Tape: Measure, add guide lines". Lengths stay integers: the straight distance
-// is the exact square root snapped once to the grid, half to even (Domain model, "Units & precision").
+// is the exact square root snapped once to the grid, half to even (Domain model, "Units &
+// precision").
 
 import type { PlacedPart } from "@kerf/core";
 import { describe, expect, it } from "vitest";
@@ -51,8 +52,8 @@ describe("measureBetween()", () => {
 
   it("rounds a straight line half way between two metric grid lines to the even one", () => {
     // The metric grid is 0.01 mm = 80 units. A line along one axis reads its own length, so 40
-    // units is half way between 0 and 80 (steps 0 and 1: even is 0), 120 between 80 and 160
-    // (steps 1 and 2: even is 2 → 160) and 200 between 160 and 240 (steps 2 and 3: even is 2 → 160).
+    // units is half way between 0 and 80 (steps 0 and 1: even is 0), 120 between 80 and 160 (steps
+    // 1 and 2: even is 2 → 160) and 200 between 160 and 240 (steps 2 and 3: even is 2 → 160).
     const straight = (units: number) => measureBetween([0, 0, 0], [units, 0, 0], "metric").straight;
     expect([straight(40), straight(120), straight(200)]).toEqual([0, 160, 160]);
   });
@@ -65,10 +66,16 @@ describe("tapeTool", () => {
     store.getState().setTool("tape");
     return store;
   };
+  // The Tape reads the clicked point only; the board it was on is any of the bookcase's.
+  const aBoard = ((): PlacedPart => {
+    const placed = started().getState().solved?.result.placements[0];
+    if (!placed) throw new Error("the bookcase has no boards");
+    return placed;
+  })();
   const click = (point: [number, number, number] | null): ModelPointer => ({
     kind: "down",
     hit: point && {
-      placed: {} as PlacedPart,
+      placed: aBoard,
       point,
       normal: [0, 0, 1],
     },

@@ -32,7 +32,10 @@ export interface InstanceCuts {
 
 export interface Derived {
   pairs: PairCut[];
-  /** Host/guest pairs a joint tried to join and reported on (or suppressed reports on) when it failed. */
+  /**
+   * Host/guest pairs a joint tried to join and reported on (or suppressed reports on) when it
+   * failed.
+   */
   attempted: Array<[Id, Id]>;
   instances: Map<Id, InstanceCuts>;
   /** The definition each instance belongs to; differs from its def when cuts forced a split. */

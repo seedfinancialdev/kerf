@@ -10,6 +10,7 @@ import { shownProject } from "../model/store";
 import { type TreeRow, treeRows } from "../model/tree";
 import { useKerf, useKerfStore } from "../state/useKerf";
 
+/** The project tree: forms, openings and boards. */
 export function ProjectTree() {
   const store = useKerfStore();
   const project = useKerf((s) => shownProject(s));

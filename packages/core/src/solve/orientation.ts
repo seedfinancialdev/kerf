@@ -78,8 +78,9 @@ export function orientationOf(index: number): Orientation {
 }
 
 /**
- * The orientation index (ADR 003) whose length axis is `length` and whose width axis is `width`:
- * both signed unit axes of the parent frame, at right angles. Throws RangeError for anything else.
+ * The orientation index (0-23, ADR 003) whose length axis is `length` and whose width axis is
+ * `width`: both signed unit axes of the parent frame, two different axes at right angles. Throws
+ * RangeError for anything else.
  */
 export function orientationFor(length: Axis, width: Axis): number {
   const found = TABLE.findIndex(

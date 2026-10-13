@@ -2,9 +2,10 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Every change the user can make, as a pure function from a project to a new project and the
-// History label for it (design spec, "History"; Interaction spec: "Undo covers every action").
-// Nothing here mutates its input; the store records what these return.
+// The changes made from the panels (start, size, form choices, divisions, joinery, files), as pure
+// functions from a project to a new project and the History label for it (design spec, "History";
+// Interaction spec: "Undo covers every action"). The 3D tools' edits live beside their handlers in
+// tools/. Nothing here mutates its input; the store records what these return.
 
 import {
   attachCopyIn,
@@ -38,18 +39,25 @@ import { choiceLabel, optionLabel, type SizeKey, sizeLabel } from "./labels";
 import { exactLiteral, lengthOf, readCount, readLength, readPosition } from "./size";
 import { starterStockFor, stockForUnits } from "./starter";
 
+/** A change to the project and the History label for it, in shop words. */
 export interface Edit {
   project: Project;
   /** What History shows for this change, in shop words. */
   label: string;
 }
+/** An edit that worked, or why it could not be made, in shop words. */
 export type EditResult = { ok: true; edit: Edit } | { ok: false; message: string };
 
-export type TemplateName = "Bookcase" | "Keepsake box" | "Blank case" | "Blank box";
+/** The templates a new project can start from, in the order the Start step lists them. */
+export const TEMPLATE_NAMES = ["Bookcase", "Keepsake box", "Blank case", "Blank box"] as const;
+/** A template the Start step offers. */
+export type TemplateName = (typeof TEMPLATE_NAMES)[number];
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
-/** A new project from a template, with the starter stock for `units` copied in (ADR 015, rule 4). */
+/**
+ * A new project from a template, with the starter stock for `units` copied in (ADR 015, rule 4).
+ */
 export function startProject(name: TemplateName, units: Project["units"]): Edit {
   const template = TEMPLATES.find((t) => t.name === name);
   if (!template) throw new RangeError(`There is no template named "${name}".`);
@@ -143,7 +151,9 @@ export function resetOption(project: Project, structure: Id, key: string): Edit 
   return { project: next, label: `${optionLabel(key)}: Default` };
 }
 
-/** The project with one opening (anywhere in the tree) replaced; RangeError when it is not there. */
+/**
+ * The project with one opening (anywhere in the tree) replaced; RangeError when it is not there.
+ */
 function withOpening(
   project: Project,
   structure: Id,
@@ -225,7 +235,9 @@ export function addPartition(
   return { ok: true, edit: { project: next, label: `Added a partition at ${read.expr}` } };
 }
 
-/** N equal bays across the opening. Throws RangeError for a structure or opening not in the project. */
+/**
+ * N equal bays across the opening. Throws RangeError for a structure or opening not in the project.
+ */
 export function splitBays(
   project: Project,
   structure: Id,

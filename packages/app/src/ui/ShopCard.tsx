@@ -9,19 +9,16 @@
 import {
   ExpressionError,
   formatLength,
-  INCH,
   type Len,
   parseLength,
   type ShopProfile,
   shopProblem,
 } from "@kerf/core";
+import { STARTER_DADO_WIDTH } from "../model/starter";
 import { useKerf, useKerfStore } from "../state/useKerf";
 import { NumberField } from "./NumberField";
 
 type Tool = ShopProfile["tools"][number];
-
-/** The widest dado a newly ticked dado stack cuts: 3/4", as in the starter shop (starter.ts). */
-const NEW_DADO_STACK_WIDTH = (3 * INCH) / 4;
 
 /**
  * A length typed into the card, in inches (ADR 015, rule 11: the shop card shows inches), or why
@@ -104,9 +101,7 @@ export function ShopCard() {
             tick(
               withTool(
                 "dadoStack",
-                e.target.checked
-                  ? { type: "dadoStack", maxWidth: NEW_DADO_STACK_WIDTH }
-                  : undefined,
+                e.target.checked ? { type: "dadoStack", maxWidth: STARTER_DADO_WIDTH } : undefined,
               ),
             )
           }

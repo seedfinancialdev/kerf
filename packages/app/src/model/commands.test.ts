@@ -23,6 +23,7 @@ import {
   splitBays,
   startProject,
   switchUnits,
+  UNPLACEABLE,
 } from "./commands";
 import { STOCK_IDS } from "./starter";
 
@@ -318,6 +319,17 @@ describe("detachForEdit()", () => {
     const once = detachForEdit(p, placementNamed(p, "Top"), shop).project;
     const r = detachForEdit(once, placementNamed(once, "Top"), shop);
     expect(r).toEqual({ project: once, detached: false });
+  });
+
+  it("says the boards cannot be placed when the engine rejects the project, and why that matters", () => {
+    const p = start().project;
+    const top = placementNamed(p, "Top");
+    // A stock thinner than nothing is not a project the engine accepts (Domain model, "Stock").
+    const [first, ...others] = p.stock;
+    const broken = { ...p, stock: [{ ...first, thickness: -1 }, ...others] } as Project;
+    expect(() => detachForEdit(broken, top, shop)).toThrow(
+      expect.objectContaining({ name: "TakeOverError", message: UNPLACEABLE }),
+    );
   });
 
   it("does nothing to a board made by hand", () => {

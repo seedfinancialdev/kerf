@@ -14,6 +14,7 @@ import { useKerf, useKerfStore } from "../state/useKerf";
 
 const UNITS_NAME = { imperial: "inches", metric: "millimetres" } as const;
 
+/** Theme and units. */
 export function SettingsMenu() {
   const store = useKerfStore();
   const [open, setOpen] = useState(false);

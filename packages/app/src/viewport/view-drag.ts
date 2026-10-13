@@ -7,6 +7,7 @@
 
 import { orbit, pan, type View, zoom } from "./camera";
 
+/** What a drag on the view does and how to change the view. */
 export interface ViewDragOptions {
   /** What left-drag does: orbit after O, pan after H, nothing (picking) when null. */
   mode: "orbit" | "pan" | null;

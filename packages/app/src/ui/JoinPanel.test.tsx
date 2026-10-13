@@ -112,7 +112,8 @@ describe("<JoinPanel>", () => {
           .setProposal(propose(now, loadShopProfile(), named("Right side"), named("Board 1"))),
       );
       fireEvent.click(screen.getByRole("button", { name: "Accept" }));
-      // The two sides are one board in two places: taking the right one takes both (code review I4).
+      // The two sides are one board in two places: taking the right one takes both (code review
+      // I4).
       expect(store.getState().notice?.text).toBe(
         "Right side and Left side are now custom; the form won't change them.",
       );

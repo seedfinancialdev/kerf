@@ -21,7 +21,9 @@ export function shareLoad(load: () => Promise<void>): () => Promise<void> {
   };
 }
 
-/** The one load; its error is logged once, for a bug report, and the screens say it in shop words. */
+/**
+ * The one load; its error is logged once, for a bug report, and the screens say it in shop words.
+ */
 const loadGeometry = shareLoad(() =>
   initGeometry().catch((error: unknown) => {
     console.error(error);

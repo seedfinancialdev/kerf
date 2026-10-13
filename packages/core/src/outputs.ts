@@ -60,7 +60,9 @@ export interface CutListLine {
   thickness: Len;
   /** Visible size between joints, shown beside the cut size. */
   visible: { length: Len; width: Len };
-  /** Set when parts merged into this line have different visible sizes; `visible` is the first's. */
+  /**
+   * Set when parts merged into this line have different visible sizes; `visible` is the first's.
+   */
   visibleVaries?: boolean;
   quantity: number;
   parts: CutListPart[];
@@ -135,7 +137,9 @@ export interface SheetLayout {
   efficiency: Rational;
 }
 
-/** What every board bought has: its stock, the standard length it is cut from, and what it holds. */
+/**
+ * What every board bought has: its stock, the standard length it is cut from, and what it holds.
+ */
 interface BoardLayoutBase {
   stock: Id;
   /** The standard length of the board the parts are cut from. */
@@ -204,7 +208,10 @@ interface SetupBase {
   cuts: number;
   /** The parts this setup cuts, and how many cuts each takes. */
   parts: Array<{ name: string; cuts: number }>;
-  /** True when the shop profile has no tool that can make these cuts (the tool named is the one needed). */
+  /**
+   * True when the shop profile has no tool that can make these cuts (the tool named is the one
+   * needed).
+   */
   missing?: boolean;
 }
 
@@ -283,7 +290,9 @@ export interface PlacedPart {
   pattern?: { id: Id; index: number };
 }
 
-/** One kind of cut a joint needs, how many, and the tool that makes it (or the one the shop lacks). */
+/**
+ * One kind of cut a joint needs, how many, and the tool that makes it (or the one the shop lacks).
+ */
 export interface JointCut {
   kind: "dado" | "groove" | "rabbet" | "dovetail";
   width: Len;

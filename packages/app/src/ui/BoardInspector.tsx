@@ -16,7 +16,9 @@ import { EdgePanel } from "./EdgePanel";
 import { Problems } from "./Problems";
 import { Section } from "./Section";
 
-/** `34-9/16" · cut 35-1/16"` when the cut differs from the visible size (Domain model, decision 3). */
+/**
+ * `34-9/16" · cut 35-1/16"` when the cut differs from the visible size (Domain model, decision 3).
+ */
 function sized(visible: number, cut: number, units: Project["units"]): string {
   const v = formatLength(visible, units);
   return cut === visible ? v : `${v} · cut ${formatLength(cut, units)}`;

@@ -5,6 +5,7 @@
 // An in-memory browser Storage for tests (a real one needs a browser). `failWrites` behaves like a
 // full store, which throws QuotaExceededError on write.
 
+/** A `Storage` kept in memory; with `failWrites`, every write throws as a full store does. */
 export function memoryStorage(failWrites = false): Storage {
   const map = new Map<string, string>();
   return {

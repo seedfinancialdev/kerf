@@ -58,13 +58,13 @@ describe("<NumberField>", () => {
 
   it("keeps refused text, marks the field, and shows the reason under it", () => {
     const { input } = field({
-      onSubmit: vi.fn(() => '"30" is not a length; add a unit (in, " or mm)'),
+      onSubmit: vi.fn(() => '"30" is not a length; add a unit (in, " or mm).'),
     });
     fireEvent.change(input, { target: { value: "30" } });
     fireEvent.keyDown(input, { key: "Enter" });
     expect(input.value).toBe("30");
     expect(input.getAttribute("aria-invalid")).toBe("true");
-    expect(screen.getByText('"30" is not a length; add a unit (in, " or mm)')).toBeTruthy();
+    expect(screen.getByText('"30" is not a length; add a unit (in, " or mm).')).toBeTruthy();
   });
 
   it("puts the shown value back on Escape", () => {

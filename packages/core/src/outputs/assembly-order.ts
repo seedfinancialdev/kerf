@@ -68,8 +68,10 @@ function boxSteps(boards: Board[]): AssemblyStep[] {
 }
 
 /**
- * The order to put each structure together, from its form. Empty for a project with no structure
- * or one that cannot be solved. Never throws.
+ * The order to put each structure together, from its form: dry-fit, glue, square, and for a case
+ * the back last. Each step names the placed boards it touches. Empty for a project with no
+ * structure or one that cannot be solved. Never throws; the project and the shop profile are not
+ * changed.
  */
 export function assemblyOrder(project: Project, shop: ShopProfile): AssemblyStep[] {
   const p = runPipeline(project, shop);

@@ -6,16 +6,16 @@
 // click the box to type. Steps: ADR 015, rule 2. A refused value stays in the box with the reason
 // under it (CODE_QUALITY rule 9), and Escape puts the shown value back.
 
-import type { Len, Project } from "@kerf/core";
+import { INCH, type Len, MM, type Project } from "@kerf/core";
 import { type PointerEvent, useEffect, useId, useRef, useState } from "react";
 
 /** Pixels of drag per step. */
 const PIXELS_PER_STEP = 4;
 
 /** Units per drag step: plain, with Shift, with Alt (the grid). */
-export const SCRUB_STEPS: Record<Project["units"], { step: Len; shift: Len; alt: Len }> = {
-  imperial: { step: 12_700, shift: 203_200, alt: 3_175 },
-  metric: { step: 8_000, shift: 80_000, alt: 80 },
+const SCRUB_STEPS: Record<Project["units"], { step: Len; shift: Len; alt: Len }> = {
+  imperial: { step: INCH / 16, shift: INCH, alt: INCH / 64 },
+  metric: { step: MM, shift: 10 * MM, alt: MM / 100 },
 };
 
 /** What dragging the label does: the value the drag starts from, and where each step goes. */

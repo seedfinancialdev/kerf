@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Interaction spec, "Board: Draw a board from stock; drawn between two parts, its length binds to
-// the gap". Gap values: Operation specs (34-9/16" at 36", 28-9/16" at 30"). A click on the floor
-// is placed with the sight-line arithmetic of drag.test.ts (scene (40, 10, 4), clear of the case, looking straight
-// down, meets the floor at project (40", -4", 0)).
+// the gap". Gap values: Operation specs (34-9/16" at 36", 28-9/16" at 30"). A click on the floor is
+// placed with the sight-line arithmetic of drag.test.ts (scene (40, 10, 4), clear of the case,
+// looking straight down, meets the floor at project (40", -4", 0)).
 
 import { type Id, type PlacedPart, type Project, solve } from "@kerf/core";
 import { loadShopProfile, withParam } from "@kerf/fixtures";
@@ -137,7 +137,8 @@ describe("boardBetween()", () => {
     const r = between(base());
     if (!r.ok) throw new Error(r.message);
     expect(r.edit.label).toBe("Added Board 1 between Right side and Left side");
-    // Flush with the sides' fronts (R35): the sides are 12" deep (2438400), so 11" wide starts 1" in.
+    // Flush with the sides' fronts (R35): the sides are 12" deep (2438400), so 11" wide starts 1"
+    // in.
     expect(placed(r.edit.project, "Board 1").box.min[1]).toBe(203_200);
   });
 

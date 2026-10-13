@@ -2,13 +2,15 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The top bar (design spec, "Layout"): the five steps as one switcher, then Settings, Undo and Redo.
+// The top bar (design spec, "Layout"): the five steps as one switcher, then Settings, Undo and
+// Redo.
 
 import { canRedo, canUndo, currentProject } from "../model/history";
 import { STEPS } from "../model/steps";
 import { useKerf } from "../state/useKerf";
 import { SettingsMenu } from "./SettingsMenu";
 
+/** The five steps, Settings, Undo and Redo. */
 export function TopBar() {
   const step = useKerf((s) => s.step);
   const setStep = useKerf((s) => s.setStep);

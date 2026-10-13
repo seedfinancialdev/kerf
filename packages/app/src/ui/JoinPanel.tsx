@@ -2,7 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The Join proposal: what the engine suggests, whether the shop can cut it, Accept, or another type.
+// The Join proposal: what the engine suggests, whether the shop can cut it, Accept, or another
+// type.
 
 import { JOINT_WORD, type Joint } from "@kerf/core";
 import { shownProject } from "../model/store";

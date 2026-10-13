@@ -82,7 +82,9 @@ export interface DeriveContext {
     message: string,
     extra?: Partial<Omit<Diagnostic, "severity" | "rule" | "message">>,
   ): void;
-  /** Adds one "and N more" entry for each rule that hit the per-joint limit. Call once, at the end. */
+  /**
+   * Adds one "and N more" entry for each rule that hit the per-joint limit. Call once, at the end.
+   */
   flush(): void;
   /** How many problems have been raised so far, counting those too many to show. */
   reported(): number;

@@ -3,13 +3,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Turns a pointer event on the model into what a tool needs: the board, the point on the grid and
-// the surface's direction, in project terms. Together with tools/drag.ts, the only place scene floats become project integers.
+// the surface's direction, in project terms. Together with tools/drag.ts, the only place scene
+// floats become project integers.
 
 import { gridSize, type PlacedPart, type Vec3 } from "@kerf/core";
 import type { ThreeEvent } from "@react-three/fiber";
 import type { Camera } from "three";
 import type { Ray } from "../model/pending";
-import { type KerfStore, shownProject } from "../model/store";
+import { shownProject } from "../model/store";
+import type { KerfStore } from "../model/store-types";
 import { fromScene } from "../scene/frames";
 import { handlerFor, type ModelHit } from "../tools/pointer";
 import { sightLine } from "./sight-line";

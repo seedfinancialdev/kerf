@@ -15,7 +15,10 @@ import { ShapeStep } from "./ShapeStep";
 import { StartStep } from "./StartStep";
 import { TapePanel } from "./TapePanel";
 
-/** The right panel; the Board tool's stock, the Join tool's proposal or the Tape's reading comes first. */
+/**
+ * The right panel; the Board tool's stock, the Join tool's proposal or the Tape's reading comes
+ * first.
+ */
 export function Inspector() {
   const tool = useKerf((s) => s.tool);
   return (

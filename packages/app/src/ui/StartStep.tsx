@@ -6,7 +6,7 @@
 // overall size comes first. The shop card sits beside it and never blocks (ADR 015, D4).
 
 import { useState } from "react";
-import { startProject, type TemplateName } from "../model/commands";
+import { startProject, TEMPLATE_NAMES, type TemplateName } from "../model/commands";
 import { NOTHING } from "../model/selection";
 import { shownProject } from "../model/store";
 import { useKerf, useKerfStore } from "../state/useKerf";
@@ -15,8 +15,7 @@ import { Section } from "./Section";
 import { ShopCard } from "./ShopCard";
 import { SizeFields } from "./SizeFields";
 
-const TEMPLATE_NAMES: TemplateName[] = ["Bookcase", "Keepsake box", "Blank case", "Blank box"];
-
+/** The Start step: New with its template cards, the overall size and the shop card. */
 export function StartStep() {
   const store = useKerfStore();
   const [choosing, setChoosing] = useState(false);

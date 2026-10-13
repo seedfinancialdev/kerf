@@ -8,6 +8,7 @@
 import type { ReactNode } from "react";
 import { useKerf } from "../state/useKerf";
 
+/** An inspector section that remembers whether it was open. */
 export function Section({
   title,
   defaultOpen = true,

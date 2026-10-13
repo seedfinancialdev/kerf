@@ -10,6 +10,7 @@ import { shownProject } from "../model/store";
 import { useKerf } from "../state/useKerf";
 import { NothingToShow } from "./NothingToShow";
 
+/** The cut list as a table. */
 export function CutListTab() {
   const project = useKerf((s) => shownProject(s));
   const lines = useKerf((s) => s.solved?.result.cutList.lines);

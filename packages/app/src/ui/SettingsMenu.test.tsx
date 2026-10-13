@@ -18,7 +18,9 @@ import { SettingsMenu } from "./SettingsMenu";
 
 type Fixture = "none" | "bookcase" | "quarter-inch-bookcase";
 
-/** A bookcase on the starter 3/4 plywood, or one whose only stock is 1/4 plywood (50800 = 635 × 80). */
+/**
+ * A bookcase on the starter 3/4 plywood, or one whose only stock is 1/4 plywood (50800 = 635 × 80).
+ */
 function setup(fixture: Fixture = "quarter-inch-bookcase") {
   const store = createKerfStore({ storage: createStorage(memoryStorage()) });
   if (fixture !== "none") {

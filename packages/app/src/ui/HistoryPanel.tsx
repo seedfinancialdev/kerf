@@ -8,6 +8,7 @@
 
 import { useKerf } from "../state/useKerf";
 
+/** Every change, newest last, with the shown one marked. */
 export function HistoryPanel() {
   const history = useKerf((s) => s.history);
   const jumpTo = useKerf((s) => s.jumpTo);

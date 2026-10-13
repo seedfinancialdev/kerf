@@ -6,6 +6,7 @@
 // zoom to fit. A view is a target, a distance and two angles; positions follow from them. All
 // numbers are scene inches and radians: display floats, never project lengths.
 
+/** Where the camera looks from: a target, a distance and two angles. */
 export interface View {
   target: [number, number, number];
   distance: number;
@@ -15,6 +16,7 @@ export interface View {
   pitch: number;
 }
 
+/** The camera's vertical field of view, in degrees. */
 export const FOV_DEGREES = 35;
 const DEFAULT_YAW = -0.6; // from the front-right
 const DEFAULT_PITCH = 0.35; // a little above
@@ -25,7 +27,10 @@ const FARTHEST = 5000;
 
 const halfFov = (): number => ((FOV_DEGREES / 2) * Math.PI) / 180;
 
-/** The default look at a box (scene inches): from the front-right and a little above, filling the view. */
+/**
+ * The default look at a box (scene inches): from the front-right and a little above, filling the
+ * view.
+ */
 export function fitView(min: [number, number, number], max: [number, number, number]): View {
   const target: [number, number, number] = [
     (min[0] + max[0]) / 2,

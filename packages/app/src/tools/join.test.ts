@@ -98,7 +98,8 @@ describe("taking over form boards", () => {
     const r = acceptProposal(p, shop, placed(p, "Right side"), placed(p, "Board 1"), "dado");
     if (!r.ok) throw new Error(r.message);
     expect(r.edit.label).toBe("Joined Board 1 to Right side with a dado");
-    // The two sides are one board in two places, so taking the right one takes both (code review I4).
+    // The two sides are one board in two places, so taking the right one takes both (code review
+    // I4).
     expect(r.notice).toBe("Right side and Left side are now custom; the form won't change them.");
     const after = solve(r.edit.project, shop).placements;
     expect(after.find((x) => x.name === "Right side")?.detached).toBe(true);
@@ -108,8 +109,9 @@ describe("taking over form boards", () => {
 
   it("joins a hand-drawn divider to a row shelf: the copy is taken out, detached and joined", () => {
     // Shelf 2 spans x 146050..7169150, y 50800..2438400 and its top face is z = 5940425. A divider
-    // of the same 3/4" plywood, 2387600 deep (y) and 2032000 (10") tall (z), stands on that face with
-    // its low corner at x = 3505200 (17-1/4"): z 5940425..7972425 clears Shelf 3 (from 8689975).
+    // of the same 3/4" plywood, 2387600 deep (y) and 2032000 (10") tall (z), stands on that face
+    // with its low corner at x = 3505200 (17-1/4"): z 5940425..7972425 clears Shelf 3 (from
+    // 8689975).
     const base = form();
     const ply = base.stock.find((st) => st.name === "3/4 plywood")?.id ?? "";
     const p = drawBoard(
@@ -132,7 +134,8 @@ describe("taking over form boards", () => {
   });
 
   it("refuses a form shelf and the back: the back is the thinner board", () => {
-    // The Back is 1/4" plywood (50800 units), the shelf 3/4" (146050): no joint is cut into the Back.
+    // The Back is 1/4" plywood (50800 units), the shelf 3/4" (146050): no joint is cut into the
+    // Back.
     const p = form();
     const shelf = placed(p, "Shelf 1");
     const r = propose(p, shop, shelf, placed(p, "Back"));

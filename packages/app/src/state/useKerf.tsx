@@ -6,7 +6,7 @@
 
 import { createContext, type ReactNode, useContext } from "react";
 import { useStore } from "zustand";
-import type { KerfActions, KerfState, KerfStore } from "../model/store";
+import type { KerfActions, KerfState, KerfStore } from "../model/store-types";
 
 const StoreContext = createContext<KerfStore | null>(null);
 
@@ -15,7 +15,9 @@ export function KerfProvider({ store, children }: { store: KerfStore; children: 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }
 
-/** The store itself, for event handlers that read the latest state. Throws outside <KerfProvider>. */
+/**
+ * The store itself, for event handlers that read the latest state. Throws outside <KerfProvider>.
+ */
 export function useKerfStore(): KerfStore {
   const store = useContext(StoreContext);
   if (!store) throw new Error("A Kerf screen was drawn outside <KerfProvider>.");

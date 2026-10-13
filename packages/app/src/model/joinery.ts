@@ -2,11 +2,15 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The Joinery step's list (Interaction spec, "4. Joinery from your shop"): each joint in shop words,
-// its cut sizes, and whether the user's tools can make it, or what they would need.
+// The Joinery step's list (Interaction spec, "4. Joinery from your shop"): each joint in shop
+// words, its cut sizes, and whether the user's tools can make it, or what they would need.
 
 import { formatLength, type Id, type JointCut, type JointSummary, type Project } from "@kerf/core";
 
+/**
+ * One line of the Joinery step: a joint, in shop words, with its cut sizes and whether the shop can
+ * cut it.
+ */
 export interface JoineryRow {
   joint: Id;
   /** Unique among the rows: the joint plus the kind and size of this cut. */

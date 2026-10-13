@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Board (Interaction spec, "3D tools": "Draw a board from stock; drawn between two parts, its length
-// binds to the gap"). Thickness is always the stock's. A board between two boards takes the engine's
-// gap expression (ADR 015, rule 7) as its length, so it follows every resize.
+// Board (Interaction spec, "3D tools": "Draw a board from stock; drawn between two parts, its
+// length binds to the gap"). Thickness is always the stock's. A board between two boards takes the
+// engine's gap expression (ADR 015, rule 7) as its length, so it follows every resize.
 
 import {
   formatLength,
@@ -16,13 +16,14 @@ import {
   orientationFor,
   type Project,
   type ShopProfile,
+  type SolvedInstance,
   solveModel,
   type Vec3,
 } from "@kerf/core";
 import type { Edit } from "../model/commands";
 import { newId } from "../model/ids";
 import { literalFor, readLength } from "../model/size";
-import type { KerfStore } from "../model/store";
+import type { KerfStore } from "../model/store-types";
 import { floorPoint, OFF_THE_FLOOR } from "./drag";
 import { newProblem } from "./edit-outcome";
 import { type ModelPointer, recordedProject, type ToolHandler } from "./handler";
@@ -38,6 +39,7 @@ const FORM_MADE =
 
 /** A new board: the change, and the instance to leave picked. */
 export type DrawnBoard = Edit & { picked: Id };
+/** A board fitted between two others: the change and the board to leave picked, or why not. */
 export type BetweenResult = { ok: true; edit: Edit; picked: Id } | { ok: false; message: string };
 
 const unit = (axis: Axis): Vec3 => [axis === 0 ? 1 : 0, axis === 1 ? 1 : 0, axis === 2 ? 1 : 0];
@@ -104,6 +106,45 @@ export function drawBoard(
 }
 
 /**
+ * Where a board can sit across the gap between boards `a` and `b` (`along` is the gap's axis,
+ * `across` the one the board's width runs on): the front edge it lines up with, and the room back
+ * from there. The front is the far end of the span the two share (ruling R35). The room stops at
+ * the nearest other board that crosses the gap at the new board's height behind that front (the
+ * back panel), or at the boards' own near edge.
+ */
+function freeRoomAcross(
+  solved: SolvedInstance[],
+  [a, b]: [Id, Id],
+  axes: { along: "x" | "y" | "z"; across: "x" | "y" | "z" },
+  board: { height: Len; thickness: Len },
+): { front: Len; room: Len } {
+  const { along, across } = axes;
+  // gapBetween found both boards, so the model has them.
+  const [low, high] = solved
+    .filter((i) => i.id === a || i.id === b)
+    .sort((x, y) => x.position[along] - y.position[along]);
+  if (!low || !high) throw new Error("gapBetween accepted boards the model does not have.");
+  const spanned = [low, high];
+  const near = Math.max(...spanned.map((i) => i.position[across]));
+  const front = Math.min(...spanned.map((i) => i.position[across] + i.extent[across]));
+  const gapStart = low.position[along] + low.extent[along];
+  const gapEnd = high.position[along];
+  const crossesGap = (i: SolvedInstance): boolean =>
+    i.id !== a &&
+    i.id !== b &&
+    i.position[along] < gapEnd &&
+    i.position[along] + i.extent[along] > gapStart &&
+    i.position.z < board.height + board.thickness &&
+    i.position.z + i.extent.z > board.height &&
+    i.position[across] + i.extent[across] <= front;
+  const limit = Math.max(
+    near,
+    ...solved.filter(crossesGap).map((i) => i.position[across] + i.extent[across]),
+  );
+  return { front, room: front - limit };
+}
+
+/**
  * A board spanning the gap between boards `a` and `b`, lying flat with its low face `height` up
  * (the height of the first click, so a board is fitted where the user pointed; ADR 015, rule 7,
  * and ruling R35). It sits flush with the front edges of the two boards (the far end of the span
@@ -138,36 +179,12 @@ export function boardBetween(
   }
   if (widthSize !== null && widthSize <= 0) return { ok: false, message: NO_SIZE };
   const widthAxis: Axis = lengthAxis === 0 ? 1 : 0;
-  const across = AXES[widthAxis];
-  const along = gap.axis;
-  const solved = solveModel(project).instances;
-  // gapBetween found both boards, so the model has them.
-  const [low, high] = solved
-    .filter((i) => i.id === a || i.id === b)
-    .sort((x, y) => x.position[along] - y.position[along]);
-  if (!low || !high) throw new Error("gapBetween accepted boards the model does not have.");
-  const spanned = [low, high];
-  const near = Math.max(...spanned.map((i) => i.position[across]));
-  const front = Math.min(...spanned.map((i) => i.position[across] + i.extent[across]));
-  const gapStart = low.position[along] + low.extent[along];
-  const gapEnd = high.position[along];
-  // Other boards crossing the gap at the new board's height, behind its front: the nearest bounds it.
-  const limit = Math.max(
-    near,
-    ...solved
-      .filter(
-        (i) =>
-          i.id !== a &&
-          i.id !== b &&
-          i.position[along] < gapEnd &&
-          i.position[along] + i.extent[along] > gapStart &&
-          i.position.z < height + thickness &&
-          i.position.z + i.extent.z > height &&
-          i.position[across] + i.extent[across] <= front,
-      )
-      .map((i) => i.position[across] + i.extent[across]),
+  const { front, room } = freeRoomAcross(
+    solveModel(project).instances,
+    [a, b],
+    { along: gap.axis, across: AXES[widthAxis] },
+    { height, thickness },
   );
-  const room = front - limit;
   if (room <= 0) return { ok: false, message: "There is no free room between those boards there." };
   if (widthSize !== null && widthSize > room) {
     return {
@@ -177,8 +194,8 @@ export function boardBetween(
   }
   const width = widthSize ?? room;
   const position = { x: "0in", y: "0in", z: literalFor(height, project.units) };
-  position[across] = literalFor(front - width, project.units);
-  position[along] = gap.start;
+  position[AXES[widthAxis]] = literalFor(front - width, project.units);
+  position[gap.axis] = gap.start;
   const made = addBoard(
     project,
     stock,
@@ -199,7 +216,9 @@ export function boardBetween(
   };
 }
 
-/** True when any of `ids` is a board the form makes: in the generated project, not the saved one. */
+/**
+ * True when any of `ids` is a board the form makes: in the generated project, not the saved one.
+ */
 function anyFormMade(project: Project, shop: ShopProfile, ids: Id[]): boolean {
   const unsaved = ids.filter((id) => !project.instances.some((i) => i.id === id));
   if (unsaved.length === 0) return false;
@@ -238,7 +257,10 @@ function fitBetween(
   store.getState().setPending(null);
 }
 
-/** Click a board or the floor, then type its length and width, or click a second board to fit one between. */
+/**
+ * Click a board or the floor, then type its length and width, or click a second board to fit one
+ * between.
+ */
 export const boardTool: ToolHandler = {
   pointer(e: ModelPointer, store) {
     if (e.kind !== "down") return;

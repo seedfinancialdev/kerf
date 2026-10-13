@@ -11,13 +11,18 @@
 import type { Id, PartShape, SolveResult } from "@kerf/core";
 import { buildDisplayMesh, type DisplayMesh, MeshError } from "@kerf/geometry";
 
+/** A board's display mesh, or why it cannot be made. */
 export type MeshResult = { ok: true; mesh: DisplayMesh } | { ok: false; reason: string };
 
-/** Most meshes kept; beyond this the oldest is dropped, so a long session cannot grow without end. */
+/**
+ * Most meshes kept; beyond this the oldest is dropped, so a long session cannot grow without end.
+ */
 const CACHE_LIMIT = 500;
 const cache = new Map<string, MeshResult>();
 
-/** The shape's display mesh, or why it cannot be made (ADR 015, rule 10). Call after initGeometry(). */
+/**
+ * The shape's display mesh, or why it cannot be made (ADR 015, rule 10). Call after initGeometry().
+ */
 export function meshFor(shape: PartShape): MeshResult {
   const key = JSON.stringify([shape.length, shape.width, shape.thickness, shape.removals]);
   const found = cache.get(key);

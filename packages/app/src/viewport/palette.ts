@@ -7,13 +7,19 @@
 
 import { useEffect, useState } from "react";
 
+/** The colours the view draws with, read from the theme's tokens. */
 export interface Palette {
+  /** A board cut from sheet stock. */
   sheet: string;
+  /** A board cut from solid wood. */
   solid: string;
+  /** A board the engine reports an error on. */
   error: string;
   /** The badge on a board drawn without its cuts (ADR 015, rule 10). */
   warning: string;
+  /** The glow of a selected board. */
   accent: string;
+  /** The grain line on the hovered board. */
   grain: string;
   /** The Tape's guide lines. */
   guide: string;

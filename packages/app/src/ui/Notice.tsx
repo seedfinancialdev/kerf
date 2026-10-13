@@ -7,6 +7,10 @@
 
 import { useKerf } from "../state/useKerf";
 
+/**
+ * The notice line: what just happened or could not be done, with Undo when it can be taken back,
+ * and Dismiss.
+ */
 export function Notice() {
   const notice = useKerf((s) => s.notice);
   const undo = useKerf((s) => s.undo);

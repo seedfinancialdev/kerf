@@ -11,6 +11,7 @@ import type { PartShape, PlacedPart, Project, SolveResult } from "@kerf/core";
 /** The colour a board takes: its stock's wood, or the error colour. */
 export type Tone = "sheet" | "solid" | "error";
 
+/** How one board is drawn: its tone, and its cuts or just its blank. */
 export type BoardLook = { placed: PlacedPart; tone: Tone } & (
   | { geometry: "cut"; shape: PartShape }
   | { geometry: "blank" }

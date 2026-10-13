@@ -62,7 +62,9 @@ export interface Pipeline {
   stopped: boolean;
 }
 
-/** What a fault in Kerf itself looks like to the user: said plainly, with a request to report it. */
+/**
+ * What a fault in Kerf itself looks like to the user: said plainly, with a request to report it.
+ */
 function internalError(error: unknown): Diagnostic {
   const reason = error instanceof Error ? `${error.name}: ${error.message}` : "an unexpected value";
   return {
@@ -151,7 +153,9 @@ function shapesOf(p: Pipeline): PartShape[] {
 
 const minus = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 
-/** Where every placed copy sits; from the solved model, so it exists even when cuts are withheld. */
+/**
+ * Where every placed copy sits; from the solved model, so it exists even when cuts are withheld.
+ */
 function placementsOf(p: Pipeline): PlacedPart[] {
   const defs = new Map((p.project?.parts ?? []).map((d) => [d.id, d]));
   return p.parts.map(({ instance, part, length, width, thickness }) => {
@@ -184,6 +188,11 @@ function placementsOf(p: Pipeline): PlacedPart[] {
   });
 }
 
+/**
+ * The shop profile when none is given: it owns no tool, so every cut is reported as needing the
+ * tool that makes it (`toolFor`'s `missing`), which is what the Joinery step shows before a shop
+ * is known.
+ */
 const NO_TOOLS: ShopProfile = { kerf: 0, tools: [] };
 
 /** A board's name when the project gives it none at all (validation makes this unreachable). */

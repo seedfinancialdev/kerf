@@ -15,7 +15,7 @@ import { KerfFormatError, readKerf, writeKerf } from "@kerf/io";
 export const DAMAGED_CONTENTS = "its contents are damaged or do not make sense";
 
 /** The app version written into meta.json; bump it with each release. */
-export const APP_VERSION = "0.4.0";
+const APP_VERSION = "0.4.0";
 
 /**
  * Writes `project` as a .kerf file with `times` in its meta.json and the thumbnail PNG, if any. A

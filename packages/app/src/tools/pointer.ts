@@ -6,7 +6,7 @@
 // which way the surface faces (a project axis). Each tool turns this into named changes.
 
 import type { ModelHit } from "../model/pending";
-import type { ToolId } from "../model/store";
+import type { ToolId } from "../model/store-types";
 import { boardTool } from "./board";
 import type { ModelPointer, ToolHandler } from "./handler";
 import { joinTool } from "./join";

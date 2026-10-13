@@ -1,0 +1,175 @@
+// Kerf — free, open-source woodworking design tool
+// Copyright (C) 2026 Kerf contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
+// What the app's store holds and what can be done to it (design spec, "How it is built", layer 2).
+// The store itself is in store.ts; these types are apart so the modules that build the store and
+// the screens that read it share them without depending on each other.
+
+import type { AssemblyStep, Id, Project, ShopProfile, SolveResult, Vec3 } from "@kerf/core";
+import type { StoreApi } from "zustand/vanilla";
+import type { Edit } from "./commands";
+import type { History } from "./history";
+import type { Notice } from "./notices";
+import type { Pending, Proposal } from "./pending";
+import type { Selection } from "./selection";
+import type { Step } from "./steps";
+
+/** The full solve of the shown project, with the assembly order. */
+export interface Solved {
+  result: SolveResult;
+  assembly: AssemblyStep[];
+  /** How long the solve took, for the speed budget (Charter question 3). */
+  ms: number;
+}
+
+/** A tool of the tool row. */
+export type ToolId = "select" | "board" | "pushPull" | "move" | "join" | "edge" | "tape";
+
+/** A tab of the build-plan drawer. */
+export type DrawerTab = "Shopping" | "Cut list" | "Sheets" | "Setups" | "Assembly";
+
+/**
+ * Everything the screens read: History, the shown solve, the pick, the tool and what it has
+ * started, and the view.
+ */
+export interface KerfState {
+  history: History | null;
+  previewed: Project | null;
+  solved: Solved | null;
+  step: Step;
+  selection: Selection;
+  shop: ShopProfile;
+  /** The notice line (notices.ts). */
+  notice: Notice | null;
+  /** Warnings waiting behind the notice on screen, oldest first (notices.ts). */
+  waiting: readonly string[];
+  tool: ToolId;
+  /**
+   * What the active tool has started and not finished; cleared when the tool changes or History is
+   * stepped through.
+   */
+  pending: Pending | null;
+  /** The Join tool's suggestion for the two boards clicked; cleared when the tool changes. */
+  proposal: Proposal | null;
+  /** The last two points the Tape measured; session only, cleared when a project begins. */
+  tape: { from: Vec3; to: Vec3 } | null;
+  /** Guide lines kept from the Tape; session only, never saved (ADR 015, D6). */
+  guides: ReadonlyArray<readonly [Vec3, Vec3]>;
+  drawerTab: DrawerTab;
+  /** The stock the Board tool draws in; null means the project's first sheet stock. */
+  boardStock: Id | null;
+  theme: "dark" | "light";
+  /**
+   * Units a new project starts in: the user's choice in Settings, never the open project's (ADR
+   * 015, rule 4).
+   */
+  unitsForNew: Project["units"];
+  /** Open state by section title; a title not listed has its own default. */
+  sections: Record<string, boolean>;
+  /** When the shown project was first started or opened (meta.json "created"). */
+  created: string | null;
+  /** Draws the model as a PNG for the file's thumbnail; set by the viewport, absent without one. */
+  thumbnail: (() => Promise<Uint8Array | undefined>) | null;
+  /**
+   * The board under the pointer, for the grain line (Interaction spec: "visible grain direction on
+   * hover").
+   */
+  hovered: Id | null;
+  /** Left-drag navigation after O (orbit) or H (pan), as SketchUp; null means picking. */
+  navigation: "orbit" | "pan" | null;
+  /** Bumped by Shift+Z; the view fits the model whenever it changes. */
+  fitRequest: number;
+}
+
+/** Every way the screens and tools change the state; each is one undoable step or a view change. */
+export interface KerfActions {
+  /**
+   * Records `edit` as one named change and solves it; an edit that leaves the project as it was is
+   * ignored. A `notice` is shown with Undo; without one an Undo notice is cleared and any other
+   * notice stays.
+   */
+  apply(edit: Edit, notice?: string): void;
+  /**
+   * Records a project that starts afresh (New, Open) as one History entry, even if equal to the
+   * shown one, noting when it began; drops the active tool's action.
+   */
+  begin(edit: Edit): void;
+  /** Sets how the model is drawn for a file's thumbnail; null when no view can draw it. */
+  setThumbnailSource(source: (() => Promise<Uint8Array | undefined>) | null): void;
+  /** Marks the board under the pointer, or none. */
+  hover(instance: Id | null): void;
+  /** Makes left-drag orbit or pan; null makes it pick again. */
+  setNavigation(mode: "orbit" | "pan" | null): void;
+  /** Asks the view to zoom to fit the whole model. */
+  requestFit(): void;
+  /** Shows `project` and solves it without recording it (while dragging). */
+  preview(project: Project): void;
+  /** Records the previewed project under `label`. Does nothing when nothing is previewed. */
+  commit(label: string): void;
+  /** Drops the preview and shows the recorded project again. */
+  cancelPreview(): void;
+  /**
+   * Steps back one change; drops any preview and the active tool's action, even at the first entry,
+   * where History stays put.
+   */
+  undo(): void;
+  /**
+   * Steps forward one change; drops any preview and the active tool's action, even at the last
+   * entry, where History stays put.
+   */
+  redo(): void;
+  /**
+   * Shows History entry `index`, dropping any preview and the active tool's action. Throws
+   * RangeError for an index outside the list.
+   */
+  jumpTo(index: number): void;
+  /** Moves to a workflow step. */
+  setStep(step: Step): void;
+  /** Sets what is picked. */
+  select(selection: Selection): void;
+  /** Uses and saves the shop, then solves again; says once when the browser cannot keep it. */
+  setShop(shop: ShopProfile): void;
+  /** Picks the active tool, dropping the last one's action and any preview it drew. */
+  setTool(tool: ToolId): void;
+  /** Sets or clears the active tool's half-finished action. */
+  setPending(pending: Pending | null): void;
+  /** Sets or clears the Join tool's suggestion. */
+  setProposal(proposal: Proposal | null): void;
+  /** Shows what the Tape measured, or clears the reading. */
+  setTape(tape: { from: Vec3; to: Vec3 } | null): void;
+  /** Keeps a line between two points as a guide. */
+  addGuide(from: Vec3, to: Vec3): void;
+  /** Removes every guide line. */
+  clearGuides(): void;
+  /** Chooses the stock the Board tool draws in. */
+  setBoardStock(stock: Id | null): void;
+  /** Shows a tab of the build-plan drawer. */
+  setDrawerTab(tab: DrawerTab): void;
+  /** Uses and saves the colour theme. */
+  setTheme(theme: "dark" | "light"): void;
+  /**
+   * Opens or closes the section `title` (open when never stored unless `defaultOpen` is false) and
+   * remembers it.
+   */
+  toggleSection(title: string, defaultOpen?: boolean): void;
+  /**
+   * Shows an answer to the user's last action at once, over any warning (which shows again after).
+   * `undo` says whether it offers Undo; without it the notice stays until dismissed.
+   */
+  say(text: string, undo?: boolean): void;
+  /** Adds a warning the user must not miss: shown in turn, never replaced, kept until dismissed. */
+  warn(text: string): void;
+  /** As `warn`, but only the first time this session: a fault that recurs is not said again. */
+  warnOnce(text: string): void;
+  /** Clears the notice and shows the next waiting warning. */
+  dismissNotice(): void;
+  /**
+   * Remembers the units new projects start in; an open project is not touched. When the browser
+   * cannot keep the choice, says so once.
+   */
+  setUnitsForNew(units: Project["units"]): void;
+}
+
+/** The app's store: its state with its actions. */
+export type KerfStore = StoreApi<KerfState & KerfActions>;

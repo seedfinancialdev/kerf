@@ -25,11 +25,12 @@ import {
 } from "../model/commands";
 import type { Pending } from "../model/pending";
 import { literalFor, readLength } from "../model/size";
-import type { KerfStore } from "../model/store";
+import type { KerfStore } from "../model/store-types";
 import { travelOnAxis } from "./drag";
 import { editNotice } from "./edit-outcome";
 import { type ModelPointer, recordedProject, type ToolHandler } from "./handler";
 
+/** A narrow face of a board: the two ends, or the two edges. */
 export type BoardFace = "end0" | "end1" | "edge0" | "edge1";
 
 const same = (a: Vec3, b: Vec3): boolean => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];

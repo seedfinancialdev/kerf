@@ -2,13 +2,12 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// What a new user starts with (design spec, "Shop and stock"): the reference projects' stock and
-// the reference shop profile, so the first bookcase matches the golden cut list exactly.
+// What a new user starts with (design spec, "Shop and stock"): the imperial and metric starter
+// stock and the reference shop profile, so the first bookcase matches the golden cut list exactly.
 
-import type { Id, ShopProfile, STOCK_OPTIONS, Stock } from "@kerf/core";
+import { type Id, INCH, MM, type ShopProfile, type STOCK_OPTIONS, type Stock } from "@kerf/core";
 
-const IN = 203_200;
-
+/** The ids of the starter stock, so the forms can name each stock and tests can find them. */
 export const STOCK_IDS = {
   plywood34: "01K7M4AP000000000000000001",
   plywood14: "01K7M4AP000000000000000002",
@@ -16,13 +15,13 @@ export const STOCK_IDS = {
   plywood18mm: "01K7M4AP000000000000000004",
 } as const satisfies Record<string, Id>;
 
-const SHEET_4X8 = { length: 96 * IN, width: 48 * IN, grain: "along-length" } as const;
+const SHEET_4X8 = { length: 96 * INCH, width: 48 * INCH, grain: "along-length" } as const;
 
 const PLYWOOD_3_4: Stock = {
   id: STOCK_IDS.plywood34,
   name: "3/4 plywood",
   kind: "sheet",
-  thickness: (23 * IN) / 32,
+  thickness: (23 * INCH) / 32,
   sheet: { ...SHEET_4X8 },
   allowance: { length: 0, width: 0 },
 };
@@ -31,7 +30,7 @@ const PLYWOOD_1_4: Stock = {
   id: STOCK_IDS.plywood14,
   name: "1/4 plywood",
   kind: "sheet",
-  thickness: IN / 4,
+  thickness: INCH / 4,
   sheet: { ...SHEET_4X8 },
   allowance: { length: 0, width: 0 },
 };
@@ -40,12 +39,10 @@ const WALNUT_4_4: Stock = {
   id: STOCK_IDS.walnut44,
   name: "4/4 walnut",
   kind: "solid",
-  thickness: IN / 2,
-  solid: { standardLengths: [96 * IN], maxWidth: 8 * IN },
-  allowance: { length: 0, width: IN / 4 },
+  thickness: INCH / 2,
+  solid: { standardLengths: [96 * INCH], maxWidth: 8 * INCH },
+  allowance: { length: 0, width: INCH / 4 },
 };
-
-const MM = 8_000;
 
 /**
  * The metric project's plywood (ADR 015, rule 4): the 3/4 plywood's 23/32" is not a whole number
@@ -65,7 +62,7 @@ const PLYWOOD_18_MM: Stock = {
 export const STARTER_STOCK: readonly Stock[] = [PLYWOOD_3_4, PLYWOOD_1_4, WALNUT_4_4];
 
 /** The stock a new metric project carries. */
-export const METRIC_STARTER_STOCK: readonly Stock[] = [PLYWOOD_18_MM, PLYWOOD_1_4, WALNUT_4_4];
+const METRIC_STARTER_STOCK: readonly Stock[] = [PLYWOOD_18_MM, PLYWOOD_1_4, WALNUT_4_4];
 
 /** The starter stock a new project in `units` carries. */
 export function starterStockFor(units: "imperial" | "metric"): readonly Stock[] {
@@ -80,17 +77,23 @@ export const STOCK_FOR: Partial<Record<(typeof STOCK_OPTIONS)[number], Id>> = {
   bottomStock: STOCK_IDS.plywood14,
 };
 
-/** The `STOCK_FOR` mapping for a project in `units`: the case's carcase is the 18 mm plywood in metric. */
+/**
+ * The `STOCK_FOR` mapping for a project in `units`: the case's carcase is the 18 mm plywood in
+ * metric.
+ */
 export function stockForUnits(units: "imperial" | "metric"): typeof STOCK_FOR {
   return units === "metric" ? { ...STOCK_FOR, carcaseStock: STOCK_IDS.plywood18mm } : STOCK_FOR;
 }
 
+/** The widest dado the starter shop's dado stack cuts, and what a newly ticked stack starts at. */
+export const STARTER_DADO_WIDTH = (3 * INCH) / 4;
+
 /** 1/8" kerf, a dado stack up to 3/4", a router with a 1/8" roundover bit, dovetail hand tools. */
 export const STARTER_SHOP: ShopProfile = {
-  kerf: IN / 8,
+  kerf: INCH / 8,
   tools: [
-    { type: "dadoStack", maxWidth: (3 * IN) / 4 },
-    { type: "router", straightBits: [], roundoverBits: [IN / 8] },
+    { type: "dadoStack", maxWidth: STARTER_DADO_WIDTH },
+    { type: "router", straightBits: [], roundoverBits: [INCH / 8] },
     { type: "handTools", dovetails: true },
   ],
 };

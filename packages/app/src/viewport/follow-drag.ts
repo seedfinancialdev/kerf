@@ -6,7 +6,7 @@
 // every move and the release even when the pointer leaves the boards or the canvas.
 
 import type { Camera } from "three";
-import type { KerfState, KerfStore } from "../model/store";
+import type { KerfState, KerfStore } from "../model/store-types";
 import { dispatchDrag } from "./dispatch";
 import { sightLine } from "./sight-line";
 
@@ -23,7 +23,10 @@ export function followsDrag(state: KerfState): boolean {
   return state.navigation === null && (tool === "pushPull" || tool === "move");
 }
 
-/** True when the store has ended the drag's action: another tool, History moved, or navigation began. */
+/**
+ * True when the store has ended the drag's action: another tool, History moved, or navigation
+ * began.
+ */
 function abandoned(now: KerfState, before: KerfState): boolean {
   return now.tool !== before.tool || now.pending === null || now.navigation !== null;
 }

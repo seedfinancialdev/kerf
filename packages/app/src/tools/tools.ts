@@ -4,8 +4,9 @@
 
 // The escape-hatch tools (Interaction spec, "3D tools" table) and their SketchUp keys.
 
-import type { ToolId } from "../model/store";
+import type { ToolId } from "../model/store-types";
 
+/** The tool row, in order, with the key that picks each. */
 export const TOOLS: ReadonlyArray<{ id: ToolId; label: string; key: string }> = [
   { id: "select", label: "Select", key: "Space" },
   { id: "board", label: "Board", key: "B" },

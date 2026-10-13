@@ -5,7 +5,8 @@
 // Where a drag is, measured against something fixed. A drag cannot be measured against the board
 // under the pointer, because that board is the thing being moved. Instead the pointer's line of
 // sight is projected onto a line or plane chosen when the drag began, so the same line of sight
-// always gives the same point. Scene floats come in (inches, y up) and snapped project lengths go out.
+// always gives the same point. Scene floats come in (inches, y up) and snapped project lengths go
+// out.
 
 import { INCH, type Len, MAX_LENGTH, type Vec3 } from "@kerf/core";
 import type { Ray } from "../model/pending";
@@ -17,7 +18,9 @@ type Axis = 0 | 1 | 2;
 /** Below this, 1 − cos² of the angle between sight line and axis, they are treated as parallel. */
 const PARALLEL = 1e-6;
 
-/** Keeps a projected length inside what the project allows, so a grazing sight line cannot run off. */
+/**
+ * Keeps a projected length inside what the project allows, so a grazing sight line cannot run off.
+ */
 const capped = (len: Len): Len => Math.max(-MAX_LENGTH, Math.min(MAX_LENGTH, len));
 
 const dot = (a: Triple, b: Triple): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -35,8 +38,8 @@ const sceneAxis = (axis: Axis): Triple =>
   toScene([0, 1, 2].map((i) => (i === axis ? 1 : 0)) as unknown as Vec3);
 
 /**
- * The point on the line through `from` along a project axis that lies closest to the line of
- * sight, snapped to the grid. A line of sight parallel to the axis gives no answer, so `from` stays.
+ * The point on the line through `from` along a project axis that lies closest to the line of sight,
+ * snapped to the grid. A line of sight parallel to the axis gives no answer, so `from` stays.
  * Example: from the origin along z (up), a line of sight through scene (3, 7, 20) heading straight
  * down the scene's −z passes the line at height 7", so the point is 7" up.
  */
@@ -90,7 +93,8 @@ export function viewAxis(ray: Ray): Axis {
 
 /**
  * How far a drag has travelled along a project axis, signed (negative means toward lower values):
- * the line of sight now, against the one where it began, both projected onto the line through `from`.
+ * the line of sight now, against the one where it began, both projected onto the line through
+ * `from`.
  */
 export function travelOnAxis(now: Ray, began: Ray, from: Vec3, axis: Axis, grid: Len): Len {
   return pointOnAxis(now, from, axis, grid)[axis] - pointOnAxis(began, from, axis, grid)[axis];

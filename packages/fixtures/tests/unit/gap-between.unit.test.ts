@@ -97,7 +97,8 @@ describe("gapBetween()", () => {
   });
 
   it("refuses boards that do not overlap on the other axes", () => {
-    // Same x run, but one sits 10in to the side of the other: nothing spans between them.
+    // 4in apart along x (0..4in and 8..12in), and 10in apart along y (0..2in and 10..12in): the
+    // boards share no y run, so nothing spans between them.
     const p = boards(
       [{ name: "Panel", length: "4in", width: "2in", thickness: "3/4in" }],
       [
@@ -106,6 +107,14 @@ describe("gapBetween()", () => {
       ],
     );
     expect(gapBetween(p, idOf(p, "One"), idOf(p, "Two"))).toMatchObject({ ok: false });
+  });
+
+  it("offers no gap past a board whose stock is not in the project", () => {
+    // The sides' thickness is their stock's; with no stock there is nothing to bind the gap to.
+    const p = { ...handMade(), stock: [] };
+    expect(gapBetween(p, idOf(p, "Right side"), idOf(p, "Left side"))).toMatchObject({
+      ok: false,
+    });
   });
 
   it("refuses a member of a row and says to detach it", () => {

@@ -9,11 +9,16 @@
 import type { Project } from "@kerf/core";
 import type { Edit } from "./commands";
 
+/** One recorded change: the project as it stood after it, and its label. */
 export interface HistoryEntry {
-  label: string;
-  project: Project;
+  readonly label: string;
+  readonly project: Project;
 }
 
+/**
+ * Every recorded change, oldest first, and which one is shown. Immutable; the functions here return
+ * a new one.
+ */
 export interface History {
   readonly entries: readonly HistoryEntry[];
   /** The entry being shown. */

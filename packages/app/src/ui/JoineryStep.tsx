@@ -13,6 +13,7 @@ import { useKerf, useKerfStore } from "../state/useKerf";
 import { Choice } from "./Choice";
 import { Section } from "./Section";
 
+/** The Joinery step's panel. */
 export function JoineryStep() {
   const store = useKerfStore();
   const project = useKerf((s) => shownProject(s));

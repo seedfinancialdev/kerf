@@ -13,11 +13,18 @@ import { runPipeline } from "../pipeline";
 import { type Box, boxOf, boxToLocal, contactOf, type Frame, faceAt } from "../solve/assembly";
 import type { Id, Joint, Project, ShopProfile } from "../types";
 
+/**
+ * The Join tool's answer for two boards (ADR 015, rule 6): the joint to cut, the tool that cuts it
+ * and whether the shop lacks that tool, or the reason there is no joint to offer.
+ */
 export type JointProposal =
   | { ok: true; joint: Joint; tool: MachiningSetup["tool"]; missing: boolean; description: string }
   | { ok: false; reason: string };
 
-/** What the user calls a board in a reason: its name, or its part's name when it has none, as the solve names it. */
+/**
+ * What the user calls a board in a reason: its name, or its part's name when it has none, as the
+ * solve names it.
+ */
 const nameOf = (f: Frame): string => f.instance.name ?? f.part.name;
 
 const refuse = (reason: string): JointProposal => ({ ok: false, reason });
@@ -36,7 +43,9 @@ function sitsInStep(host: Frame, guest: Frame, patch: Box): boolean {
 
 const isError = (d: Diagnostic): boolean => d.severity === "error";
 
-/** Identifies a problem across two solves, so errors the new joint causes can be told from old ones. */
+/**
+ * Identifies a problem across two solves, so errors the new joint causes can be told from old ones.
+ */
 const errorKey = (d: Diagnostic): string => [d.rule, d.part, d.joint, d.message].join("|");
 
 /** Host is the board touched on its broad face; null when neither or both are. */

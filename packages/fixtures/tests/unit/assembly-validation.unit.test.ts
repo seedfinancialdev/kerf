@@ -34,11 +34,12 @@ describe("validate", () => {
       .diagnostics.filter((d) => d.rule === "groove-outside-bottom-half-pin")
       .map((d) => (d.field ?? "").replace(" groove", ""))
       .sort();
-  // Hand calculation (Operation specs, keepsake box): W = 4-1/64", 3 tails of 1/4" pins -> the bottom
-  // half-pin is 16/64 + 1/64 = 17/64". The groove is 1/4" wide, 1/4" deep in 1/2" stock and the
-  // tails' slope offset is 1/16" (1:8 over 1/2"). Allowed far edge of the groove from the bottom
-  // edge: 17/64 + (1/16 x shallowest depth 1/4") / (1/2") = 17/64 + 2/64 = 19/64". The groove's far
-  // edge is z + 1/4" = z + 16/64, so a groove with its bottom at z <= 3/64 is inside, 4/64 is not.
+  // Hand calculation (Operation specs, keepsake box): W = 4-1/64", 3 tails of 1/4" pins -> the
+  // bottom half-pin is 16/64 + 1/64 = 17/64". The groove is 1/4" wide, 1/4" deep in 1/2" stock and
+  // the tails' slope offset is 1/16" (1:8 over 1/2"). Allowed far edge of the groove from the
+  // bottom edge: 17/64 + (1/16 x shallowest depth 1/4") / (1/2") = 17/64 + 2/64 = 19/64". The
+  // groove's far edge is z + 1/4" = z + 16/64, so a groove with its bottom at z <= 3/64 is inside,
+  // 4/64 is not.
   it("a groove exactly on the limit (z = 3/64) does not warn for Front and Back", () => {
     expect(warned("3/64in")).toEqual(["Side A", "Side B"]);
   });

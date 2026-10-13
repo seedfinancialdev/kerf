@@ -68,9 +68,9 @@ export function writeProject(storage: AppStorage, project: Project): boolean {
 }
 
 /**
- * Which sections the user closed or opened (Interaction spec: "Sections remember their open state").
- * A damaged value only loses which sections were open, so it reads as "none stored" without a
- * notice: nothing the user made is lost.
+ * Which sections the user closed or opened (Interaction spec: "Sections remember their open
+ * state"). A damaged value only loses which sections were open, so it reads as "none stored"
+ * without a notice: nothing the user made is lost.
  */
 export function readSections(storage: AppStorage): Record<string, boolean> {
   try {

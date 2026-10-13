@@ -2,7 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The labels the end-to-end test uses: Radius (options from the shop's bits) and "Both front edges".
+// The labels the end-to-end test uses: Radius (options from the shop's bits) and "Both front
+// edges".
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";

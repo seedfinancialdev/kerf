@@ -139,7 +139,9 @@ describe("<Measurements>", () => {
 });
 
 describe("a size typed anywhere (Interaction spec, Measurements; final branch review I5)", () => {
-  /** The bookcase, Push/Pull picked, and the Top's right end clicked: the tool waits for a distance. */
+  /**
+   * The bookcase, Push/Pull picked, and the Top's right end clicked: the tool waits for a distance.
+   */
   function waiting() {
     const store = setup();
     act(() => {

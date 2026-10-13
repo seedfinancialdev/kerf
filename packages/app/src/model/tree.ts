@@ -9,6 +9,10 @@ import type { Id, Opening, PlacedPart, Project, SolveResult, Structure } from "@
 import { readCount } from "./size";
 import { followsForm } from "./take-over";
 
+/**
+ * One row of the project tree: a form, an opening of it, or a group of boards, with how many
+ * problems the engine reported on it.
+ */
 export type TreeRow =
   | { kind: "structure"; key: string; depth: 0; label: string; structure: Id; problems: number }
   | {

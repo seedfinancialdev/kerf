@@ -7,6 +7,7 @@
 import { useKerf } from "../state/useKerf";
 import { NothingToShow } from "./NothingToShow";
 
+/** The assembly order, step by step. */
 export function AssemblyTab() {
   const steps = useKerf((s) => s.solved?.assembly);
   if (!steps) return null;

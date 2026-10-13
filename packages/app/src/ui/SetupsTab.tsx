@@ -9,6 +9,7 @@ import { shownProject } from "../model/store";
 import { useKerf } from "../state/useKerf";
 import { NothingToShow } from "./NothingToShow";
 
+/** The machining setups, grouped by tool setting. */
 export function SetupsTab() {
   const units = useKerf((s) => shownProject(s)?.units ?? "imperial");
   const setups = useKerf((s) => s.solved?.result.setups);

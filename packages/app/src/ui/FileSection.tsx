@@ -16,7 +16,9 @@ import {
 import { shownProject } from "../model/store";
 import { useKerf, useKerfStore } from "../state/useKerf";
 
-/** Hands the browser `bytes` as a download; the link is attached while clicked, as Firefox needs. */
+/**
+ * Hands the browser `bytes` as a download; the link is attached while clicked, as Firefox needs.
+ */
 function download(bytes: Uint8Array, name: string): void {
   const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/zip" }));
   const a = document.createElement("a");

@@ -10,7 +10,10 @@ import { gridSize, type Len, type Project, type Vec3 } from "@kerf/core";
 import { floorPoint, OFF_THE_FLOOR } from "./drag";
 import { recordedProject, type ToolHandler } from "./handler";
 
-/** What the Tape reads between two points: each direction, and the straight line. All are distances (never negative). */
+/**
+ * What the Tape reads between two points: each direction, and the straight line. All are distances
+ * (never negative).
+ */
 export interface TapeReading {
   leftRight: Len;
   frontBack: Len;
@@ -42,7 +45,8 @@ function snappedRoot(n: bigint, grid: bigint): bigint {
 
 /**
  * The distances between two points (project units): along x, y and z exactly, and the straight
- * line snapped once to the project's grid, half to even. `units` picks the grid (1/64" or 0.5 mm).
+ * line snapped once to the project's grid, half to even. `units` picks the grid (1/64" or 0.01 mm).
+ * Both points must hold whole numbers of units; a fractional coordinate is the caller's fault.
  * Example: (0, 0, 0) to (3", 4", 0) reads 5" straight.
  */
 export function measureBetween(a: Vec3, b: Vec3, units: Project["units"]): TapeReading {

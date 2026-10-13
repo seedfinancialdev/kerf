@@ -19,7 +19,9 @@ import {
   solveModel,
 } from "@kerf/core";
 
+/** A typed length, read: its expression and value, or why it was refused. */
 export type Reading = { ok: true; expr: Expr; value: Len } | { ok: false; message: string };
+/** A typed count, read: its expression and value, or why it was refused. */
 export type CountReading = { ok: true; expr: Expr; value: number } | { ok: false; message: string };
 
 const capitalised = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
@@ -57,7 +59,7 @@ export function readLength(text: string, project: Project, self?: string, label?
   const r = evaluate(text, project, self, label);
   if ("message" in r) return { ok: false, message: r.message };
   if (r.q.kind !== "length")
-    return { ok: false, message: `"${text.trim()}" is not a length; add a unit (in, " or mm)` };
+    return { ok: false, message: `"${text.trim()}" is not a length; add a unit (in, " or mm).` };
   try {
     return { ok: true, expr: text.trim(), value: snapToGrid(r.q.value, project.units) };
   } catch (error) {
@@ -76,7 +78,9 @@ export function readCount(text: string, project: Project, self?: string): CountR
   return { ok: true, expr: text.trim(), value: Number(value.num) };
 }
 
-/** A partition's place (ADR 014, D9): a length from the opening's left face, or a fraction of it. */
+/**
+ * A partition's place (ADR 014, D9): a length from the opening's left face, or a fraction of it.
+ */
 export function readPosition(
   text: string,
   project: Project,

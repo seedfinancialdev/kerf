@@ -7,8 +7,9 @@
 
 import type { Project } from "@kerf/core";
 import type { ModelHit, Ray } from "../model/pending";
-import type { KerfState, KerfStore } from "../model/store";
+import type { KerfState, KerfStore } from "../model/store-types";
 
+/** A pointer event on the model, in project terms. */
 export interface ModelPointer {
   kind: "down" | "move" | "up";
   hit: ModelHit | null;
@@ -21,6 +22,7 @@ export interface ModelPointer {
   ctrl: boolean;
 }
 
+/** What a tool does with pointer events on the model. */
 export interface ToolHandler {
   pointer?(e: ModelPointer, store: KerfStore): void;
   /** Takes text typed in the Measurements box; returns why it was refused, or null. */

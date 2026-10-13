@@ -52,7 +52,8 @@ describe("<SizeFields>", () => {
     for (let i = 1; i <= 200; i += 1)
       fireEvent.pointerMove(label, { clientX: -4 * i, pointerId: 1, altKey: true });
     fireEvent.pointerUp(label, { clientX: -800, pointerId: 1 });
-    // 200 Alt steps of 1/64" = 3-1/8" narrower: 32-7/8". Shelf cut = 32-7/8 − 2 × 23/32 + 1/2 = 31-15/16" = 6489700.
+    // 200 Alt steps of 1/64" = 3-1/8" narrower: 32-7/8". Shelf cut = 32-7/8 − 2 × 23/32 + 1/2 =
+    // 31-15/16" = 6489700.
     expect(store.getState().history?.entries.map((e) => e.label)).toEqual([
       "New bookcase",
       'Width 36" → 32-7/8"',

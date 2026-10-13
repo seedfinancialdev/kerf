@@ -21,7 +21,8 @@ export function SheetsTab() {
   return (
     <ol className="sheets">
       {sheets.map((sheet, i) => {
-        // Drawing sizes are display-only floats computed from the engine's integers; never fed back.
+        // Drawing sizes are display-only floats computed from the engine's integers; never fed
+        // back.
         const scale = DIAGRAM_WIDTH / sheet.sheet.length;
         const height = sheet.sheet.width * scale;
         return (

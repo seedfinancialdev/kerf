@@ -8,6 +8,7 @@ import { hintFor } from "../model/steps";
 import { shownProject } from "../model/store";
 import { useKerf } from "../state/useKerf";
 
+/** One sentence saying what the current step is for. */
 export function HintLine() {
   const step = useKerf((s) => s.step);
   const type = useKerf((s) => shownProject(s)?.structures[0]?.type);

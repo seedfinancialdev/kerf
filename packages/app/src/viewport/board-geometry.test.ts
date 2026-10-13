@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // A board is drawn with flat faces: every face of a plain board looks straight out along one axis,
-// and the corners are not shaded as if rounded (ADR 015, rule 8: the blank stands in for the board).
+// and the corners are not shaded as if rounded (ADR 015, rule 8: the blank stands in for the
+// board).
 
 import { INCH } from "@kerf/core";
 import { initGeometry } from "@kerf/geometry";

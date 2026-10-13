@@ -22,15 +22,19 @@ import { detachForEdit, type Edit, instanceOf, TakeOverError } from "../model/co
 import { newId } from "../model/ids";
 import type { Pending } from "../model/pending";
 import { literalFor, readLength } from "../model/size";
-import type { KerfState, KerfStore } from "../model/store";
+import type { KerfState, KerfStore } from "../model/store-types";
 import { followsForm } from "../model/take-over";
 import { pointOnAxis, pointOnPlane, viewAxis } from "./drag";
 import { editNotice } from "./edit-outcome";
 import { type ModelPointer, recordedProject, type ToolHandler } from "./handler";
 
+/** Move the boards, copy them, or copy them mirrored (Ctrl and Shift). */
 export type MoveMode = "move" | "copy" | "mirror";
 
-/** A move that worked: the edit, and the instances to leave picked (the moved boards or the new copies). */
+/**
+ * A move that worked: the edit, and the instances to leave picked (the moved boards or the new
+ * copies).
+ */
 export type MoveResult = { ok: true; edit: Edit; picked: Id[] } | { ok: false; message: string };
 
 type Axis = 0 | 1 | 2;
@@ -67,7 +71,9 @@ function isTakenOver(project: Project, placed: PlacedPart): boolean {
   return project.parts.find((d) => d.id === placed.part)?.detached === true;
 }
 
-/** "Right side copy", or "Right side copy 2" when that name is taken, so copies can be told apart. */
+/**
+ * "Right side copy", or "Right side copy 2" when that name is taken, so copies can be told apart.
+ */
 function copyName(base: string, taken: Set<string | undefined>): string {
   let name = `${base} copy`;
   for (let n = 2; taken.has(name); n += 1) name = `${base} copy ${n}`;
@@ -195,7 +201,9 @@ function selectedBoards(state: KerfState): PlacedPart[] {
 const modeOf = (e: { ctrl: boolean; shift: boolean }): MoveMode =>
   e.ctrl ? "copy" : e.shift ? "mirror" : "move";
 
-/** What a preview was made for, so the same move is not drawn twice; also tells a drag from a click. */
+/**
+ * What a preview was made for, so the same move is not drawn twice; also tells a drag from a click.
+ */
 const previewKey = (delta: Vec3, mode: MoveMode): string => `${mode}:${delta.join(",")}`;
 
 /**
@@ -209,7 +217,9 @@ function finish(store: KerfStore, project: Project, r: Extract<MoveResult, { ok:
   s.setPending(null);
 }
 
-/** Drag the picked boards one direction at a time, or type a distance along the locked direction. */
+/**
+ * Drag the picked boards one direction at a time, or type a distance along the locked direction.
+ */
 export const moveTool: ToolHandler = {
   pointer(e, store) {
     const s = store.getState();

@@ -7,7 +7,7 @@
 // inside it (ThreeDGuard).
 
 import { type ReactNode, useEffect } from "react";
-import type { KerfStore } from "./model/store";
+import type { KerfStore } from "./model/store-types";
 import { KerfProvider, useKerf } from "./state/useKerf";
 import { Drawer } from "./ui/Drawer";
 import { HintLine } from "./ui/HintLine";
@@ -20,6 +20,10 @@ import { TopBar } from "./ui/TopBar";
 import { useShortcuts } from "./ui/useShortcuts";
 import { ThreeDGuard, VIEW_NOT_STARTED } from "./viewport/ThreeDGuard";
 
+/**
+ * The Kerf window: the top bar, the project tree, the model, the inspector and the build-plan
+ * drawer, all reading `store`. `model` is the 3D view, passed in so tests can leave WebGL out.
+ */
 export function App({ store, model }: { store: KerfStore; model: ReactNode }) {
   return (
     <KerfProvider store={store}>

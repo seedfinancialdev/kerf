@@ -28,7 +28,10 @@ function s(count: number): string {
   return count === 1 ? "" : "s";
 }
 
-/** One machining setup as a line, e.g. `Dado stack, 23/32" wide, 1/4" deep: 12 cuts`; `units` sets how lengths read. */
+/**
+ * One machining setup as a line, e.g. `Dado stack, 23/32" wide, 1/4" deep: 12 cuts`; `units` sets
+ * how lengths read.
+ */
 export function setupText(setup: MachiningSetup, units: Project["units"]): string {
   const lacking = setup.missing ? " (you don't have this tool)" : "";
   if (setup.tool === "handTools") {
@@ -42,7 +45,9 @@ export function setupText(setup: MachiningSetup, units: Project["units"]): strin
   return `${TOOL[setup.tool]}, ${size}: ${setup.cuts} cut${s(setup.cuts)}${lacking}`;
 }
 
-/** A cut list line as four cells: the parts it makes, its stock, the cut size and the visible size. */
+/**
+ * A cut list line as four cells: the parts it makes, its stock, the cut size and the visible size.
+ */
 export function cutLineText(
   line: CutListLine,
   project: Project,
@@ -58,7 +63,10 @@ export function cutLineText(
   };
 }
 
-/** A non-negative rational shown to one decimal place, a half tenth rounding up (1/20 is 0.1), using whole-number arithmetic only. */
+/**
+ * A non-negative rational shown to one decimal place, a half tenth rounding up (1/20 is 0.1), using
+ * whole-number arithmetic only.
+ */
 function tenths(value: { num: bigint; den: bigint }): string {
   const t = (value.num * 10n + value.den / 2n) / value.den;
   return `${t / 10n}.${t % 10n}`;

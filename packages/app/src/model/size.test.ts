@@ -32,7 +32,7 @@ describe("readLength()", () => {
   it("refuses a bare number and says to add a unit", () => {
     expect(readLength("30", bookcase)).toEqual({
       ok: false,
-      message: '"30" is not a length; add a unit (in, " or mm)',
+      message: '"30" is not a length; add a unit (in, " or mm).',
     });
   });
 
@@ -123,7 +123,8 @@ describe("exactLiteral()", () => {
 
 describe("literalFor()", () => {
   it("writes an inch value as the fraction a woodworker reads", () => {
-    // 35-1/16" = 7124700 units; formatLength's own form is a valid literal (Domain model, "Literals").
+    // 35-1/16" = 7124700 units; formatLength's own form is a valid literal (Domain model,
+    // "Literals").
     expect(literalFor(7_124_700, "imperial")).toBe('35-1/16"');
   });
 

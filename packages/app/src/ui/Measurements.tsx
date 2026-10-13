@@ -6,12 +6,15 @@
 // SketchUp): typed sizes go to the active tool.
 
 import { useEffect, useId, useRef, useState } from "react";
-import type { ToolId } from "../model/store";
+import type { ToolId } from "../model/store-types";
 import { useKerf, useKerfStore } from "../state/useKerf";
 import { handlerFor } from "../tools/pointer";
 import { keptByField } from "./useShortcuts";
 
-/** The keys a typed size starts with: a digit, a minus sign, a point, a fraction bar, feet or inches. */
+/**
+ * The keys a typed size starts with: a digit, a minus sign, a point, a fraction bar, feet or
+ * inches.
+ */
 const SIZE_START = /^[0-9\-./'"]$/;
 
 /**

@@ -10,6 +10,7 @@ import { useKerf, useKerfStore } from "../state/useKerf";
 import { measureBetween } from "../tools/tape";
 import { Section } from "./Section";
 
+/** The Tape's reading, and the guide lines it has left. */
 export function TapePanel() {
   const store = useKerfStore();
   const tape = useKerf((s) => s.tape);

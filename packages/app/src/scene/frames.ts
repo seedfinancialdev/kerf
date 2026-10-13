@@ -4,18 +4,24 @@
 
 // From the engine's placements to the 3D scene. The project frame is x left-right, y back to front,
 // z up; the scene is y up. (x, y, z) → (x, z, −y) is a rotation (determinant +1), so only mirrored
-// boards get a flipped matrix, which three.js draws correctly. Scene units are inches (display only).
+// boards get a flipped matrix, which three.js draws correctly. Scene units are inches (display
+// only).
 
 import { INCH, type Len, type PlacedPart, type Vec3 } from "@kerf/core";
+
+/** A length in project units as scene inches (display only). */
+export const inches = (n: number): number => n / INCH;
 
 /** A point or direction from the project frame to the scene; both in the unit given. */
 export function toScene(v: readonly [number, number, number]): [number, number, number] {
   return [v[0], v[2], -v[1]];
 }
 
-/** A scene point (inches) back in project units, snapped to the grid; the only float → integer step. */
+/**
+ * A scene point (inches) back in project units, snapped to the grid; the only float → integer step.
+ */
 export function fromScene(v: readonly [number, number, number], grid: Len): Vec3 {
-  const snap = (inches: number): Len => Math.round((inches * INCH) / grid) * grid;
+  const snap = (sceneInches: number): Len => Math.round((sceneInches * INCH) / grid) * grid;
   return [snap(v[0]), snap(-v[2]), snap(v[1])];
 }
 

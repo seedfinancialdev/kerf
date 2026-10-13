@@ -6,7 +6,7 @@
 // banner instead of a false plan while any error exists ("The build plan never lies").
 
 import type { KeyboardEvent } from "react";
-import type { DrawerTab } from "../model/store";
+import type { DrawerTab } from "../model/store-types";
 import { useKerf } from "../state/useKerf";
 import { AssemblyTab } from "./AssemblyTab";
 import { CutListTab } from "./CutListTab";
@@ -16,6 +16,7 @@ import { ShoppingTab } from "./ShoppingTab";
 
 const TABS: DrawerTab[] = ["Shopping", "Cut list", "Sheets", "Setups", "Assembly"];
 
+/** The build-plan drawer: its tabs, or the banner when an error withholds the plan. */
 export function Drawer() {
   const tab = useKerf((s) => s.drawerTab);
   const setTab = useKerf((s) => s.setDrawerTab);

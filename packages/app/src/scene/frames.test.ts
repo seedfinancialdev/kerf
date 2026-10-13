@@ -35,7 +35,8 @@ describe("matrixOf()", () => {
         ),
       ),
     );
-    // Scene: x = project x, y = project z (up), z = −project y. Box x 0..0.71875, y 0..72, z −12..0.
+    // Scene: x = project x, y = project z (up), z = −project y. Box x 0..0.71875, y 0..72, z
+    // −12..0.
     expect(new Set(corners)).toEqual(
       new Set(
         [0, 0.71875].flatMap((x) => [0, 72].flatMap((y) => [-12, 0].map((z) => key([x, y, z])))),
