@@ -320,6 +320,30 @@ describe("switchUnits()", () => {
     expect(r.edit.label).toBe("Units: millimetres");
   });
 
+  it("keeps every size when switching to inches and back (ADR 015, rule 4)", () => {
+    // Rule 4: "A project is never rounded to fit." The solve before the switch is the oracle: the
+    // same cut list and the same board boxes after it, and after switching back. The metric box
+    // uses only 1/4 plywood (50800 units) and 4/4 walnut (101600), which sit on both grids.
+    const box = startProject("Keepsake box", "metric").project;
+    const toInches = switchUnits(box, "imperial");
+    if (!toInches.ok) throw new Error(toInches.message);
+    const back = switchUnits(toInches.edit.project, "metric");
+    if (!back.ok) throw new Error(back.message);
+    const sizes = (p: Project) => {
+      const r = solve(p, shop);
+      return { cutList: r.cutList, boxes: r.placements.map((x) => [x.name, x.box]) };
+    };
+    const before = sizes(box);
+    // Not vacuous: Operation specs, "Golden test: keepsake box", bottom check: 9 + 2 x 1/4 =
+    // 9-1/2" and 5 + 2 x 1/4 = 5-1/2" (1930400 x 1117600).
+    expect(before.cutList.lines.map((l) => [l.length, l.width])).toContainEqual([
+      1_930_400, 1_117_600,
+    ]);
+    expect(before.boxes.length).toBeGreaterThan(0);
+    expect(sizes(toInches.edit.project)).toEqual(before);
+    expect(sizes(back.edit.project)).toEqual(before);
+  });
+
   it("labels the switch back to inches", () => {
     const r = switchUnits(startProject("Keepsake box", "metric").project, "imperial");
     if (!r.ok) throw new Error(r.message);
