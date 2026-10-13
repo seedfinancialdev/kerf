@@ -286,3 +286,22 @@ describe("a stored project the engine rejects (code review I1, silent-failure re
     expect(storage.read("kerf.project.setAside.2")).toBe('{"schemaVersion": 1, "name": 8}');
   });
 });
+
+describe("section open state that storage holds damaged (PR review tests-M3)", () => {
+  // persist.ts, readSections: a damaged value only loses which sections were open, so the app
+  // starts with none remembered, and keeps any entry that is still a yes or no.
+  it.each([
+    ["text that is not JSON", "{", {}],
+    ["null", "null", {}],
+    ["a number", "7", {}],
+    [
+      "an entry that is not a yes or no",
+      '{"Your shop": false, "Files": "yes"}',
+      { "Your shop": false },
+    ],
+  ])("starts with %s read as what it can keep", (_, stored, sections) => {
+    const storage = memory();
+    storage.write("kerf.sections", stored);
+    expect(createKerfStore({ storage }).getState().sections).toEqual(sections);
+  });
+});
