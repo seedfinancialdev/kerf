@@ -47,6 +47,13 @@ describe("readLength()", () => {
     expect(readLength("abc", bookcase)).toEqual({ ok: false, message: 'Unknown name "abc"' });
   });
 
+  it("refuses a length beyond the 100,000 inch limit instead of throwing", () => {
+    expect(readLength('100001"', bookcase)).toEqual({
+      ok: false,
+      message: "Length is too large: the limit is 100,000 inches",
+    });
+  });
+
   it("asks for a size when the field is empty", () => {
     expect(readLength("  ", bookcase)).toEqual({
       ok: false,

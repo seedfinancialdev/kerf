@@ -141,3 +141,9 @@ export { assemblyOrder } from "./outputs/assembly-order";
  * long it is, along the one axis on which they face each other. Never throws.
  */
 export { type Gap, gapBetween } from "./solve/gap";
+
+/**
+ * The orientation index (0-23, ADR 003) whose length axis and width axis are the two given signed
+ * unit axes of the parent frame. Throws RangeError when they are not two different axes at right angles.
+ */
+export { orientationFor } from "./solve/orientation";

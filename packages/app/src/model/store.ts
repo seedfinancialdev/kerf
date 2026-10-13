@@ -56,6 +56,8 @@ export interface KerfState {
   /** What the active tool has started and not finished; cleared when the tool changes. */
   pending: Pending | null;
   drawerTab: DrawerTab;
+  /** The stock the Board tool draws in; null means the project's first sheet stock. */
+  boardStock: Id | null;
   theme: "dark" | "light";
   /** Units a new project starts in: the user's choice in Settings, never the open project's (ADR 015, rule 4). */
   unitsForNew: Project["units"];
@@ -108,6 +110,8 @@ export interface KerfActions {
   setTool(tool: ToolId): void;
   /** Sets or clears the active tool's half-finished action. */
   setPending(pending: Pending | null): void;
+  /** Chooses the stock the Board tool draws in. */
+  setBoardStock(stock: Id | null): void;
   /** Shows a tab of the build-plan drawer. */
   setDrawerTab(tab: DrawerTab): void;
   /** Uses and saves the colour theme. */
@@ -269,6 +273,7 @@ export function createKerfStore(deps: {
       tool: "select",
       pending: null,
       drawerTab: "Cut list",
+      boardStock: null,
       theme: deps.storage.read("kerf.theme") === "light" ? "light" : "dark",
       unitsForNew: deps.storage.read("kerf.units") === "metric" ? "metric" : "imperial",
       sections: readSections(deps.storage),
@@ -342,6 +347,7 @@ export function createKerfStore(deps: {
       },
       setTool: (tool) => set({ tool, pending: null }),
       setPending: (pending) => set({ pending }),
+      setBoardStock: (boardStock) => set({ boardStock }),
       setDrawerTab: (drawerTab) => set({ drawerTab }),
       setTheme: (theme) => {
         deps.storage.write("kerf.theme", theme);

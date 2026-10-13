@@ -25,7 +25,7 @@ export interface Ray {
 export type Pending =
   | { tool: "join"; first: Id }
   | { tool: "tape"; from: Vec3 }
-  | { tool: "board"; from: ModelHit }
+  | { tool: "board"; from: { placed: PlacedPart | null; point: Vec3 } }
   | { tool: "pushPull"; hit: ModelHit; dragged: string | null; ray: Ray | null }
   | {
       tool: "move";

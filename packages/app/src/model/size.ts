@@ -12,6 +12,7 @@ import {
   evaluateQuantity,
   formatLength,
   type Len,
+  LengthRangeError,
   type Project,
   type Quantity,
   snapToGrid,
@@ -42,14 +43,19 @@ function evaluate(
   }
 }
 
-/** A length typed by the user, as the expression to store and its snapped value. */
+/** A length typed by the user, as the expression to store and its snapped value. Refuses one beyond what a project allows. */
 export function readLength(text: string, project: Project, self?: string): Reading {
   if (text.trim() === "") return { ok: false, message: 'Type a length, like 30" or 762mm.' };
   const r = evaluate(text, project, self);
   if ("message" in r) return { ok: false, message: r.message };
   if (r.q.kind !== "length")
     return { ok: false, message: `"${text.trim()}" is not a length; add a unit (in, " or mm)` };
-  return { ok: true, expr: text.trim(), value: snapToGrid(r.q.value, project.units) };
+  try {
+    return { ok: true, expr: text.trim(), value: snapToGrid(r.q.value, project.units) };
+  } catch (error) {
+    if (error instanceof LengthRangeError) return { ok: false, message: error.message };
+    throw error;
+  }
 }
 
 /** A whole number typed by the user (a count of shelves or bays). */

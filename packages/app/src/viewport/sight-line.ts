@@ -9,7 +9,11 @@ import { type Camera, Raycaster, Vector2 } from "three";
 import type { Ray } from "../model/pending";
 
 /** The line of sight under a pointer event, in scene inches. */
-export function sightLine(e: PointerEvent, canvas: HTMLElement, camera: Camera): Ray {
+export function sightLine(
+  e: Pick<MouseEvent, "clientX" | "clientY">,
+  canvas: HTMLElement,
+  camera: Camera,
+): Ray {
   const box = canvas.getBoundingClientRect();
   const at = new Vector2(
     ((e.clientX - box.left) / box.width) * 2 - 1,

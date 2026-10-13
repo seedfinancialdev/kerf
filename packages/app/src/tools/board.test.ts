@@ -1,0 +1,371 @@
+// Kerf — free, open-source woodworking design tool
+// Copyright (C) 2026 Kerf contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
+// Interaction spec, "Board: Draw a board from stock; drawn between two parts, its length binds to
+// the gap". Gap values: Operation specs (34-9/16" at 36", 28-9/16" at 30"). A click on the floor
+// is placed with the sight-line arithmetic of drag.test.ts (scene (3, 10, 4) looking straight
+// down meets the floor at project (3", -4", 0)).
+
+import { type Id, type PlacedPart, type Project, solve } from "@kerf/core";
+import { loadShopProfile, withParam } from "@kerf/fixtures";
+import { handMadeBookcase } from "@kerf/fixtures/builders";
+import { describe, expect, it } from "vitest";
+import { createStorage } from "../model/storage";
+import { createKerfStore } from "../model/store";
+import { memoryStorage } from "../testing/memory-storage";
+import { boardBetween, boardTool, drawBoard } from "./board";
+import type { ModelHit, ModelPointer } from "./pointer";
+
+const shop = loadShopProfile();
+const IN = 203_200;
+const base = (): Project => handMadeBookcase();
+const plywood = (p: Project): Id => p.stock.find((s) => s.name === "3/4 plywood")?.id ?? "";
+const placed = (p: Project, name: string): PlacedPart => {
+  const found = solve(p, shop).placements.find((x) => x.name === name);
+  if (!found) throw new Error(`no ${name}`);
+  return found;
+};
+const instanceId = (p: Project, name: string): Id =>
+  p.instances.find((i) => i.name === name)?.id ?? "";
+
+describe("drawBoard()", () => {
+  it("draws a 24 × 6 board of 3/4 plywood lying on the floor", () => {
+    const p = base();
+    const edit = drawBoard(
+      p,
+      plywood(p),
+      [0, 0, 0],
+      { axis: 0, size: 24 * IN },
+      { axis: 1, size: 6 * IN },
+    );
+    expect(edit.label).toBe("Added Board 1");
+    expect(placed(edit.project, "Board 1").box).toEqual({
+      min: [0, 0, 0],
+      max: [24 * IN, 6 * IN, 146_050],
+    });
+  });
+
+  it("starts the board at the corner it is given", () => {
+    const p = base();
+    const edit = drawBoard(
+      p,
+      plywood(p),
+      [3 * IN, -4 * IN, 0],
+      { axis: 0, size: 24 * IN },
+      { axis: 1, size: 6 * IN },
+    );
+    expect(placed(edit.project, "Board 1").box.min).toEqual([3 * IN, -4 * IN, 0]);
+  });
+
+  it("lays length along y and width along x when asked", () => {
+    const p = base();
+    const edit = drawBoard(
+      p,
+      plywood(p),
+      [0, 0, 0],
+      { axis: 1, size: 24 * IN },
+      { axis: 0, size: 6 * IN },
+    );
+    const box = placed(edit.project, "Board 1").box;
+    expect(box.max[1] - box.min[1]).toBe(24 * IN);
+    expect(box.max[0] - box.min[0]).toBe(6 * IN);
+  });
+
+  it("names the next board Board 2 when Board 1 is taken, and says which board to pick", () => {
+    const p = base();
+    const one = drawBoard(
+      p,
+      plywood(p),
+      [0, 0, 0],
+      { axis: 0, size: 24 * IN },
+      { axis: 1, size: 6 * IN },
+    );
+    const two = drawBoard(
+      one.project,
+      plywood(p),
+      [0, 0, 0],
+      { axis: 0, size: 12 * IN },
+      { axis: 1, size: 6 * IN },
+    );
+    expect(two.label).toBe("Added Board 2");
+    expect(two.project.instances.find((i) => i.id === two.picked)?.name).toBe("Board 2");
+  });
+
+  it.each([0, -IN])("refuses a size of %i", (size) => {
+    const p = base();
+    expect(() =>
+      drawBoard(p, plywood(p), [0, 0, 0], { axis: 0, size }, { axis: 1, size: IN }),
+    ).toThrow(RangeError);
+  });
+
+  it("refuses two sizes along the same axis", () => {
+    const p = base();
+    expect(() =>
+      drawBoard(p, plywood(p), [0, 0, 0], { axis: 0, size: IN }, { axis: 0, size: IN }),
+    ).toThrow(RangeError);
+  });
+});
+
+describe("boardBetween()", () => {
+  const between = (p: Project, width: number | null = 11 * IN) =>
+    boardBetween(
+      p,
+      plywood(p),
+      instanceId(p, "Right side"),
+      instanceId(p, "Left side"),
+      36 * IN,
+      width,
+    );
+
+  it("fits the gap between the sides: 34-9/16 at 36 wide", () => {
+    const r = between(base());
+    if (!r.ok) throw new Error(r.message);
+    expect(placed(r.edit.project, "Board 1").size.length).toBe(7_023_100);
+  });
+
+  it("follows the width: 28-9/16 at 30 wide", () => {
+    const r = between(base());
+    if (!r.ok) throw new Error(r.message);
+    const resized = withParam(r.edit.project, "width", "30in");
+    expect(placed(resized, "Board 1").size.length).toBe(5_803_900);
+  });
+
+  it("lines the board up with the sides front to back and names both in its label", () => {
+    const r = between(base());
+    if (!r.ok) throw new Error(r.message);
+    expect(r.edit.label).toBe("Added Board 1 between Right side and Left side");
+    // Both sides start at the back (y = 0), so the board does too.
+    expect(placed(r.edit.project, "Board 1").box.min[1]).toBe(0);
+  });
+
+  it("sits at the height given and goes from one side's inner face to the other's", () => {
+    const r = between(base());
+    if (!r.ok) throw new Error(r.message);
+    const box = placed(r.edit.project, "Board 1").box;
+    expect(box.min).toEqual([146_050, 0, 36 * IN]);
+    expect(box.max[0]).toBe(7_169_150);
+  });
+
+  it("is as deep as the boards it spans when no width is given (the sides are 12 deep)", () => {
+    const r = between(base(), null);
+    if (!r.ok) throw new Error(r.message);
+    expect(placed(r.edit.project, "Board 1").size.width).toBe(12 * IN);
+  });
+
+  it("picks the new board", () => {
+    const r = between(base());
+    if (!r.ok) throw new Error(r.message);
+    expect(r.edit.project.instances.find((i) => i.id === r.picked)?.name).toBe("Board 1");
+  });
+
+  it.each([0, -IN])("refuses a width of %i", (width) => {
+    const r = between(base(), width);
+    expect(r.ok).toBe(false);
+  });
+
+  it("says why when the boards are one above the other", () => {
+    const p = base();
+    const r = boardBetween(
+      p,
+      plywood(p),
+      instanceId(p, "Bottom"),
+      instanceId(p, "Top"),
+      0,
+      11 * IN,
+    );
+    expect(r).toEqual({
+      ok: false,
+      message:
+        "A board between two boards one above the other is not supported yet; draw it on the lower board.",
+    });
+  });
+
+  it("passes on the engine's reason when the boards do not face each other", () => {
+    const p = base();
+    const r = boardBetween(p, plywood(p), instanceId(p, "Right side"), "nope", 0, 11 * IN);
+    expect(r).toEqual({ ok: false, message: "Pick two boards to measure between." });
+  });
+});
+
+describe("the Board tool", () => {
+  const started = (project: Project = base()) => {
+    const s = createKerfStore({ storage: createStorage(memoryStorage()) });
+    s.getState().begin({ label: "Start", project });
+    s.getState().setTool("board");
+    return s;
+  };
+  type Store = ReturnType<typeof started>;
+  const event = (
+    kind: ModelPointer["kind"],
+    hit: ModelHit | null,
+    ray: ModelPointer["ray"] = null,
+  ): ModelPointer => ({
+    kind,
+    hit,
+    ray,
+    shift: false,
+    ctrl: false,
+  });
+  const onSide = (s: Store, name: string, z = 36 * IN): ModelHit => {
+    const project = s.getState().history?.entries[0]?.project as Project;
+    return { placed: placed(project, name), point: [0, 0, z], normal: [1, 0, 0] };
+  };
+  const down = (s: Store, hit: ModelHit | null, ray: ModelPointer["ray"] = null) =>
+    boardTool.pointer?.(event("down", hit, ray), s);
+  const entries = (s: Store) => s.getState().history?.entries.length;
+  const floorRay = { origin: [3, 10, 4], dir: [0, -1, 0] } as const;
+  const current = (s: Store) => s.getState().history?.entries.at(-1)?.project as Project;
+
+  it("starts a board where the sight line meets the floor", () => {
+    const s = started();
+    down(s, null, floorRay);
+    expect(s.getState().pending).toEqual({
+      tool: "board",
+      from: { placed: null, point: [3 * IN, -4 * IN, 0] },
+    });
+  });
+
+  it("starts nothing when the sight line looks above the floor", () => {
+    const s = started();
+    down(s, null, { origin: [3, 10, 4], dir: [0, 1, 0] });
+    expect(s.getState().pending).toBeNull();
+  });
+
+  it("starts nothing when there is no sight line and no board", () => {
+    const s = started();
+    down(s, null);
+    expect(s.getState().pending).toBeNull();
+  });
+
+  it("starts a board on the face of a board where it was clicked", () => {
+    const s = started();
+    const hit = onSide(s, "Top");
+    down(s, hit);
+    expect(s.getState().pending).toMatchObject({ tool: "board", from: { point: hit.point } });
+  });
+
+  it('draws the board typed as 24", 6" from the floor point, and picks it', () => {
+    const s = started();
+    down(s, null, floorRay);
+    expect(boardTool.measure?.('24", 6"', s)).toBeNull();
+    const board = placed(current(s), "Board 1");
+    expect(board.box).toEqual({ min: [3 * IN, -4 * IN, 0], max: [27 * IN, 2 * IN, 146_050] });
+    expect(s.getState().selection).toEqual({ kind: "boards", instances: [board.instance] });
+    expect(s.getState().history?.entries.at(-1)?.label).toBe("Added Board 1");
+    expect(s.getState().pending).toBeNull();
+  });
+
+  it("draws in the stock chosen for boards", () => {
+    const p = base();
+    const thin = p.stock.find((x) => x.name === "1/4 plywood")?.id ?? "";
+    const s = started(p);
+    s.getState().setBoardStock(thin);
+    down(s, null, floorRay);
+    boardTool.measure?.('24", 6"', s);
+    expect(placed(current(s), "Board 1").size.thickness).toBe(IN / 4);
+  });
+
+  it("draws in the first sheet stock when none was chosen", () => {
+    const s = started();
+    down(s, null, floorRay);
+    boardTool.measure?.('24", 6"', s);
+    expect(placed(current(s), "Board 1").size.thickness).toBe(146_050);
+  });
+
+  it.each([
+    ["a zero length", '0", 6"'],
+    ["a negative width", '24", -6"'],
+  ])("refuses %s and records nothing", (_name, text) => {
+    const s = started();
+    down(s, null, floorRay);
+    const before = entries(s);
+    expect(boardTool.measure?.(text, s)).toBe("A board needs a length and a width above zero.");
+    expect(entries(s)).toBe(before);
+    expect(s.getState().pending).not.toBeNull();
+  });
+
+  it.each(["24", 'abc, 6"', '24", 6", 3"', '24"'])("refuses %j and records nothing", (text) => {
+    const s = started();
+    down(s, null, floorRay);
+    const before = entries(s);
+    expect(boardTool.measure?.(text, s)).not.toBeNull();
+    expect(entries(s)).toBe(before);
+  });
+
+  it("asks for a starting point first when sizes are typed with none", () => {
+    const s = started();
+    expect(boardTool.measure?.('24", 6"', s)).toBe("Click where the board starts first.");
+  });
+
+  it("asks which project to draw in when there is none", () => {
+    const s = createKerfStore({ storage: createStorage(memoryStorage()) });
+    expect(boardTool.measure?.('24", 6"', s)).toBe("Start a project first.");
+  });
+
+  it("refuses a length beyond what a project allows (100000 inches)", () => {
+    const s = started();
+    down(s, null, floorRay);
+    const before = entries(s);
+    const message = boardTool.measure?.('100001", 6"', s);
+    expect(message).not.toBeNull();
+    expect(entries(s)).toBe(before);
+  });
+
+  it("fits a board between two boards clicked in turn, and picks it", () => {
+    const s = started();
+    down(s, onSide(s, "Right side"));
+    down(s, onSide(s, "Left side", 0));
+    const board = placed(current(s), "Board 1");
+    expect(board.size.length).toBe(7_023_100);
+    expect(board.box.min[2]).toBe(36 * IN);
+    expect(s.getState().selection).toEqual({ kind: "boards", instances: [board.instance] });
+    expect(s.getState().history?.entries.at(-1)?.label).toBe(
+      "Added Board 1 between Right side and Left side",
+    );
+    expect(s.getState().pending).toBeNull();
+  });
+
+  it("says why when the two boards have no gap between them, and records nothing", () => {
+    const s = started();
+    down(s, onSide(s, "Bottom"));
+    const before = entries(s);
+    down(s, onSide(s, "Top"));
+    expect(s.getState().notice?.text).toBe(
+      "A board between two boards one above the other is not supported yet; draw it on the lower board.",
+    );
+    expect(entries(s)).toBe(before);
+    expect(s.getState().pending).toBeNull();
+  });
+
+  it("starts again from the second click when it is on the same board", () => {
+    const s = started();
+    down(s, onSide(s, "Right side"));
+    const again = onSide(s, "Right side", 10 * IN);
+    down(s, again);
+    expect(s.getState().pending).toMatchObject({ tool: "board", from: { point: again.point } });
+  });
+
+  it("ignores moves and releases", () => {
+    const s = started();
+    boardTool.pointer?.(event("move", onSide(s, "Top")), s);
+    boardTool.pointer?.(event("up", onSide(s, "Top")), s);
+    expect(s.getState().pending).toBeNull();
+  });
+
+  it("tells the user to add stock when the project has none", () => {
+    const s = started({ ...base(), stock: [], parts: [], instances: [] });
+    down(s, null, floorRay);
+    expect(s.getState().notice?.text).toBe("Add a stock to the project first.");
+    expect(s.getState().pending).toBeNull();
+  });
+
+  it("asks what to do next", () => {
+    const s = started();
+    expect(boardTool.prompt?.(s.getState())).toBe("Click a board or the floor");
+    down(s, null, floorRay);
+    expect(boardTool.prompt?.(s.getState())).toBe(
+      'Length, width (e.g. 24", 6"), or click a second board',
+    );
+  });
+});

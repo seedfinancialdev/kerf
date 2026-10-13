@@ -7,6 +7,7 @@
 
 import { gridSize, type PlacedPart, type Vec3 } from "@kerf/core";
 import type { ThreeEvent } from "@react-three/fiber";
+import type { Camera } from "three";
 import type { Ray } from "../model/pending";
 import { type KerfStore, shownProject } from "../model/store";
 import { fromScene } from "../viewport/frames";
@@ -21,12 +22,17 @@ export function axisOf(x: number, y: number, z: number): Vec3 {
   return [0, 1, 2].map((i) => (i === k ? Math.sign(project[i] ?? 0) : 0)) as unknown as Vec3;
 }
 
-/** Sends a pointer event on `placed` (or on empty space, when null) to the active tool. */
+/**
+ * Sends a pointer event on `placed` (or on empty space, when null) to the active tool. A click on
+ * empty space is a plain mouse event with no camera of its own, so the view's `camera` gives it its
+ * line of sight; a tool can then still find the floor under the pointer.
+ */
 export function dispatchPointer(
   store: KerfStore,
   kind: "down" | "move" | "up",
   e: ThreeEvent<PointerEvent> | MouseEvent,
   placed: PlacedPart | null,
+  camera?: Camera,
 ): void {
   const s = store.getState();
   const project = shownProject(s);
@@ -42,11 +48,10 @@ export function dispatchPointer(
     };
   }
   // The same arithmetic as every later move of the drag, so a click starts where it ends.
-  const canvas = "nativeEvent" in e ? e.nativeEvent.target : null;
+  const native = "nativeEvent" in e ? e.nativeEvent : e;
+  const eye = "camera" in e ? e.camera : camera;
   const ray =
-    "camera" in e && canvas instanceof HTMLElement
-      ? sightLine(e.nativeEvent, canvas, e.camera)
-      : null;
+    eye && native.target instanceof HTMLElement ? sightLine(native, native.target, eye) : null;
   handlerFor(s.tool).pointer?.(
     { kind, hit, ray, shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey },
     store,

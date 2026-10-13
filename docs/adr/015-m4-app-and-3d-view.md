@@ -40,5 +40,5 @@ through `@kerf/core`. Design: `docs/superpowers/specs/2026-10-12-m4-app-3d-view-
 
 ## Consequences
 
-- New public API: `assemblyOrder`, `proposeJoint`, `gapBetween`; `SolveResult` gains `placements` and `joints`; case and box forms accept `joineryReviewed`.
+- New public API: `assemblyOrder`, `proposeJoint`, `gapBetween`, `orientationFor` (the orientation index for a board's length and width axes, used by the Board tool); `SolveResult` gains `placements` and `joints`; case and box forms accept `joineryReviewed`.
 - Known limits: openings are picked in the project tree, not in the 3D view, because the engine does not report where an opening is; two structures in one project still share the origin (ADR 014); history is not kept across a reload; the PDF and `.skp` import are M5.

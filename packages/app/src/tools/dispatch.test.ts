@@ -6,9 +6,14 @@
 // (Interaction spec, "Measurements": the grid is 1/64" in inches, 0.5 mm in metric).
 
 import { INCH } from "@kerf/core";
+import { PerspectiveCamera } from "three";
 import { describe, expect, it } from "vitest";
+import { startProject } from "../model/commands";
+import { createStorage } from "../model/storage";
+import { createKerfStore } from "../model/store";
+import { memoryStorage } from "../testing/memory-storage";
 import { fromScene } from "../viewport/frames";
-import { axisOf } from "./dispatch";
+import { axisOf, dispatchPointer } from "./dispatch";
 
 describe("axisOf()", () => {
   it("turns scene up into project up (z)", () => {
@@ -33,5 +38,27 @@ describe("fromScene()", () => {
 
   it("maps scene (x, y, z) to project (x, −z, y)", () => {
     expect(fromScene([1, 2, -3], grid)).toEqual([INCH, 3 * INCH, 2 * INCH]);
+  });
+});
+
+describe("dispatchPointer()", () => {
+  it("gives a click on empty space its line of sight from the view's camera", () => {
+    const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+    store.getState().apply(startProject("Bookcase", "imperial"));
+    store.getState().setTool("board");
+    const canvas = document.createElement("canvas");
+    canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 200 }) as DOMRect;
+    // Straight above scene (3, 0, 4), looking down: the middle of the canvas meets the floor
+    // there, which is project (3", -4", 0).
+    const camera = new PerspectiveCamera(50, 1, 0.1, 1000);
+    camera.position.set(3, 50, 4);
+    camera.lookAt(3, 0, 4);
+    camera.updateMatrixWorld();
+    canvas.addEventListener("click", (e) => dispatchPointer(store, "down", e, null, camera));
+    canvas.dispatchEvent(new MouseEvent("click", { clientX: 100, clientY: 100 }));
+    expect(store.getState().pending).toEqual({
+      tool: "board",
+      from: { placed: null, point: [3 * INCH, -4 * INCH, 0] },
+    });
   });
 });

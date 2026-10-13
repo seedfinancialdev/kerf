@@ -4,6 +4,7 @@
 
 // The right panel (Interaction spec, "Inspector"): what the current step offers.
 
+import { BoardStockPanel } from "../tools/BoardStockPanel";
 import { BoardInspector } from "./BoardInspector";
 import { DivideStep } from "./DivideStep";
 import { JoineryStep } from "./JoineryStep";
@@ -12,7 +13,18 @@ import { ShapeStep } from "./ShapeStep";
 import { StartStep } from "./StartStep";
 import { useKerf } from "./useKerf";
 
+/** The right panel; with the Board tool active, the stock to draw in comes first. */
 export function Inspector() {
+  const tool = useKerf((s) => s.tool);
+  return (
+    <>
+      {tool === "board" && <BoardStockPanel />}
+      <StepPanel />
+    </>
+  );
+}
+
+function StepPanel() {
   const step = useKerf((s) => s.step);
   const selection = useKerf((s) => s.selection);
   if (step !== "Start" && selection.kind === "boards") {

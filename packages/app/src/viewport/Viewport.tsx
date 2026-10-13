@@ -8,8 +8,16 @@
 
 import { INCH, type PlacedPart } from "@kerf/core";
 import { addAfterEffect, Canvas, type ThreeEvent, useThree } from "@react-three/fiber";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BufferAttribute, BufferGeometry, Matrix4 } from "three";
+import {
+  type MutableRefObject,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { BufferAttribute, BufferGeometry, type Camera, Matrix4 } from "three";
 import { shownProject } from "../model/store";
 import { dispatchPointer } from "../tools/dispatch";
 import { useKerf, useKerfStore } from "../ui/useKerf";
@@ -191,11 +199,23 @@ function FirstPicture({ drawn }: { drawn(): void }) {
   return null;
 }
 
+/** Hands the view's camera to code outside the canvas, which a click on empty space needs for its line of sight. */
+function CameraKeeper({ into }: { into: MutableRefObject<Camera | null> }) {
+  const camera = useThree((s) => s.camera);
+  useEffect(() => {
+    into.current = camera;
+    return () => {
+      into.current = null;
+    };
+  }, [camera, into]);
+  return null;
+}
+
 interface ModelCanvasProps {
   /** True once the next frame shows the model framed (see `isFramed`). */
   framed: boolean;
   /** A click that hit no board. */
-  missed(e: MouseEvent): void;
+  missed(e: MouseEvent, camera: Camera | undefined): void;
   children: ReactNode;
 }
 
@@ -209,13 +229,15 @@ interface ModelCanvasProps {
 function ModelCanvas({ framed, missed, children }: ModelCanvasProps) {
   const [drawn, setDrawn] = useState(false);
   const markDrawn = useCallback(() => setDrawn(true), []);
+  const camera = useRef<Camera | null>(null);
   return (
     <div className="model-view" aria-busy={!drawn}>
       <Canvas
         camera={{ fov: FOV_DEGREES, near: 0.1, far: 10_000 }}
         gl={{ preserveDrawingBuffer: true }}
-        onPointerMissed={missed}
+        onPointerMissed={(e) => missed(e, camera.current ?? undefined)}
       >
+        <CameraKeeper into={camera} />
         {children}
         {framed && !drawn && <FirstPicture drawn={markDrawn} />}
       </Canvas>
@@ -283,8 +305,8 @@ export function Viewport() {
   return (
     <ModelCanvas
       framed={isFramed(view, placements.length)}
-      missed={(e) => {
-        if (e.button !== 2) dispatchPointer(store, "down", e, null);
+      missed={(e, camera) => {
+        if (e.button !== 2) dispatchPointer(store, "down", e, null, camera);
       }}
     >
       <hemisphereLight intensity={0.9} groundColor={palette.ground} />
