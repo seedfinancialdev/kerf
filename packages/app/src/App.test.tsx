@@ -5,7 +5,7 @@
 // Interaction spec, "Workflow modules" and "Screen layout"; design spec, "Layout".
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { startProject } from "./model/commands";
 import { createStorage } from "./model/storage";
@@ -194,5 +194,29 @@ describe("<App>", () => {
   it("puts the theme on the page", () => {
     renderApp();
     expect(document.documentElement.dataset.theme).toBe("dark");
+  });
+
+  describe("when the 3D view fails (silent-failure review C1)", () => {
+    /** A model view that throws while drawing, as r3f's Canvas does when WebGL cannot start. */
+    function Broken(): never {
+      throw new Error("Error creating WebGL context.");
+    }
+
+    it("keeps the panels, the drawer and the cut list working, and says what to do", () => {
+      // React reports the caught error on the console; the test is about what the user sees.
+      const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+      store.getState().apply(startProject("Bookcase", "imperial"));
+      render(<App store={store} model={<Broken />} />);
+      quiet.mockRestore();
+      expect(screen.getByRole("complementary", { name: "Project" })).toBeTruthy();
+      expect(screen.getByRole("complementary", { name: "Inspector" })).toBeTruthy();
+      expect(screen.getByRole("region", { name: "Drawer" }).textContent).toMatch(/Cut list/);
+      const told =
+        "The 3D view could not start (Error creating WebGL context.). The cut list, plans and " +
+        "Save still work; to see the model, turn on hardware acceleration or try another browser.";
+      expect(screen.getByRole("region", { name: "Model" }).textContent).toBe(told);
+      expect(screen.getByRole("status").textContent).toContain(told);
+    });
   });
 });

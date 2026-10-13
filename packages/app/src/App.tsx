@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // The Kerf window (Interaction spec, "Screen layout"; design spec, "Layout"). The model view is
-// passed in, so the window can be drawn without WebGL in tests.
+// passed in, so the window can be drawn without WebGL in tests, and a failure inside it stays
+// inside it (ThreeDGuard).
 
 import { type ReactNode, useEffect } from "react";
 import type { KerfStore } from "./model/store";
@@ -14,6 +15,7 @@ import { HistoryPanel } from "./ui/HistoryPanel";
 import { Inspector } from "./ui/Inspector";
 import { Notice } from "./ui/Notice";
 import { ProjectTree } from "./ui/ProjectTree";
+import { ThreeDGuard } from "./ui/ThreeDGuard";
 import { ToolRow } from "./ui/ToolRow";
 import { TopBar } from "./ui/TopBar";
 import { useShortcuts } from "./ui/useShortcuts";
@@ -44,7 +46,7 @@ function Window({ model }: { model: ReactNode }) {
         </aside>
         <main className="center">
           <section aria-label="Model" className="model">
-            {model}
+            <ThreeDGuard showsFailure>{model}</ThreeDGuard>
           </section>
           <ToolRow />
           <Drawer />

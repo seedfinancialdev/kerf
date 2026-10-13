@@ -14,6 +14,7 @@ import { useGeometry } from "../viewport/useGeometry";
 import { EdgePanel } from "./EdgePanel";
 import { Problems } from "./Problems";
 import { Section } from "./Section";
+import { ThreeDGuard } from "./ThreeDGuard";
 
 /** `34-9/16" · cut 35-1/16"` when the cut differs from the visible size (Domain model, decision 3). */
 function sized(visible: number, cut: number, units: Project["units"]): string {
@@ -38,10 +39,18 @@ function listOf(placed: PlacedPart[]): string {
   return [...counts].map(([name, n]) => (n > 1 ? `${name} × ${n}` : name)).join(", ");
 }
 
-/** Why the 3D view draws this board as a plain blank, when it does (ADR 015, rule 10). */
-function undrawnReason(shape: PartShape | undefined): string | null {
-  const built = shape && meshFor(shape);
-  return built && !built.ok ? built.reason : null;
+/**
+ * Why the 3D view draws this board as a plain blank, when it does (ADR 015, rule 10). It asks the
+ * geometry engine, so it is drawn inside ThreeDGuard: an engine failure must not take the
+ * inspector with it.
+ */
+function UndrawnNote({ shape }: { shape: PartShape | undefined }) {
+  const { ready } = useGeometry();
+  const built = ready && shape ? meshFor(shape) : undefined;
+  if (!built || built.ok) return null;
+  return (
+    <p className="problem warning">The 3D view shows this board without its cuts: {built.reason}</p>
+  );
 }
 
 /** The facts about the picked boards, their problems, and a way to hand a taken-over one back. */
@@ -51,7 +60,6 @@ export function BoardInspector({ instances }: { instances: Id[] }) {
   const result = useKerf((s) => s.solved?.result);
   const shop = useKerf((s) => s.shop);
   const tool = useKerf((s) => s.tool);
-  const { ready } = useGeometry();
   if (!project || !result) return null;
   const placed = result.placements.filter((p) => instances.includes(p.instance));
   const first = placed[0];
@@ -62,9 +70,6 @@ export function BoardInspector({ instances }: { instances: Id[] }) {
     ? `${first.partName}${placed.length > 1 ? ` × ${placed.length}` : ""}`
     : `${placed.length} boards`;
   const stock = project.stock.find((s) => s.id === first.stock);
-  const undrawn = ready
-    ? undrawnReason(result.shapes.find((s) => s.definition === first.shape))
-    : null;
   const handBackToForm = () => {
     const r = handBack(project, first, shop);
     if (r.ok) store.getState().apply(r.edit);
@@ -100,9 +105,9 @@ export function BoardInspector({ instances }: { instances: Id[] }) {
           </button>
         )}
       </Section>
-      {undrawn && (
-        <p className="problem warning">The 3D view shows this board without its cuts: {undrawn}</p>
-      )}
+      <ThreeDGuard>
+        <UndrawnNote shape={result.shapes.find((s) => s.definition === first.shape)} />
+      </ThreeDGuard>
       <Problems parts={new Set(placed.map((p) => p.part))} />
     </div>
   );
