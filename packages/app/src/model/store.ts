@@ -9,7 +9,17 @@
 
 import { assemblyOrder, type Project, type ShopProfile, serializeProject, solve } from "@kerf/core";
 import { createStore } from "zustand/vanilla";
-import { currentProject, type History, jumpTo, record, redo, startHistory, undo } from "./history";
+import {
+  canRedo,
+  canUndo,
+  currentProject,
+  type History,
+  jumpTo,
+  record,
+  redo,
+  startHistory,
+  undo,
+} from "./history";
 import { afterHistoryMoved, dismiss, type NoticeLine, tell, warn, warningsFirst } from "./notices";
 import {
   NOT_KEPT,
@@ -214,13 +224,14 @@ export function createKerfStore(deps: {
         show({ history: history ? record(history, edit) : startHistory(edit), previewed: null });
       },
       cancelPreview: () => show({ previewed: null }),
+      // With nothing to step to, History has not moved, so nothing it clears is cleared.
       undo: () => {
         const h = get().history;
-        if (h) moveHistory(undo(h));
+        if (h && canUndo(h)) moveHistory(undo(h));
       },
       redo: () => {
         const h = get().history;
-        if (h) moveHistory(redo(h));
+        if (h && canRedo(h)) moveHistory(redo(h));
       },
       jumpTo: (index) => {
         const h = get().history;

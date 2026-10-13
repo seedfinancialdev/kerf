@@ -473,6 +473,36 @@ describe("a tool action under way (final branch review I1 and M1)", () => {
   });
 });
 
+describe("Undo and Redo with nothing to step to (code review M1)", () => {
+  /** One entry only, with Join's first click, its proposal and an Undo offer on screen. */
+  const startedJoin = () => {
+    const s = fresh();
+    s.getState().apply(startProject("Bookcase", "imperial"));
+    s.getState().setTool("join");
+    s.getState().setPending({ tool: "join", first: "a" });
+    s.getState().setProposal({ a: "a", b: "b", result: { ok: false, reason: "No." }, taken: [] });
+    s.getState().say("Shelf 2 now overlaps Back; Undo puts it back.", true);
+    return s;
+  };
+
+  it.each([
+    ["Undo at the first entry", (s: ReturnType<typeof fresh>) => s.getState().undo()],
+    ["Redo at the last entry", (s: ReturnType<typeof fresh>) => s.getState().redo()],
+  ])("%s leaves the tool's action, the proposal and the notice as they were", (_, step) => {
+    const s = startedJoin();
+    const before = s.getState();
+    step(s);
+    const after = s.getState();
+    expect(after.history).toBe(before.history);
+    expect(after.pending).toEqual({ tool: "join", first: "a" });
+    expect(after.proposal).toBe(before.proposal);
+    expect(after.notice).toEqual({
+      text: "Shelf 2 now overlaps Back; Undo puts it back.",
+      kind: "undo",
+    });
+  });
+});
+
 describe("the tape and guide lines", () => {
   const measured = () => {
     const s = fresh();
