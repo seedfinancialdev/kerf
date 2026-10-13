@@ -50,6 +50,8 @@ export interface KerfState {
   notice: Notice | null;
   tool: ToolId;
   theme: "dark" | "light";
+  /** Open state by section title; a title not listed has its own default. */
+  sections: Record<string, boolean>;
 }
 
 export interface KerfActions {
@@ -77,6 +79,8 @@ export interface KerfActions {
   setTool(tool: ToolId): void;
   /** Uses and saves the colour theme. */
   setTheme(theme: "dark" | "light"): void;
+  /** Opens or closes the section `title` (open when never stored unless `defaultOpen` is false) and remembers it. */
+  toggleSection(title: string, defaultOpen?: boolean): void;
   /** Shows a notice; `undo` says whether it offers Undo (default no, so it stays until dismissed). */
   say(text: string, undo?: boolean): void;
   /** Clears the notice. */
@@ -94,6 +98,23 @@ export function shownProject(state: KerfState): Project | null {
 
 /** Shown once when a change could not be written to browser storage (ADR 015, rule 11). */
 const NOT_KEPT = "Your latest changes couldn't be kept in this browser. Use Save to keep a copy.";
+
+/**
+ * Which sections the user closed or opened (Interaction spec: "Sections remember their open state").
+ * A damaged value only loses which sections were open, so it reads as "none stored" without a
+ * notice: nothing the user made is lost.
+ */
+function readSections(storage: AppStorage): Record<string, boolean> {
+  try {
+    const parsed: unknown = JSON.parse(storage.read("kerf.sections") ?? "{}");
+    if (typeof parsed !== "object" || parsed === null) return {};
+    return Object.fromEntries(
+      Object.entries(parsed).filter(([, v]) => typeof v === "boolean"),
+    ) as Record<string, boolean>;
+  } catch {
+    return {};
+  }
+}
 
 /**
  * Makes the store. `storage` keeps the shop and theme; `clock` returns milliseconds and times the
@@ -191,6 +212,7 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
       notice: firstNotice ? { text: firstNotice, undo: false } : null,
       tool: "select",
       theme: deps.storage.read("kerf.theme") === "light" ? "light" : "dark",
+      sections: readSections(deps.storage),
 
       apply: (edit, notice) => {
         const h = get().history;
@@ -234,6 +256,11 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
       setTheme: (theme) => {
         deps.storage.write("kerf.theme", theme);
         set({ theme });
+      },
+      toggleSection: (title, defaultOpen = true) => {
+        const sections = { ...get().sections, [title]: !(get().sections[title] ?? defaultOpen) };
+        deps.storage.write("kerf.sections", JSON.stringify(sections));
+        set({ sections });
       },
       say: (text, undoable = false) => set({ notice: { text, undo: undoable } }),
       dismissNotice: () => set({ notice: null }),

@@ -218,3 +218,70 @@ select:focus-visible,
   color: var(--color-error);
   font-size: var(--font-size-small);
 }
+
+.step-panel {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.section {
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.section-title {
+  margin: 0;
+  font-size: var(--font-size-panel);
+}
+
+.section-title button {
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: none;
+  font-weight: var(--font-weight-strong);
+}
+
+.section-title button::after {
+  content: "▾";
+  float: right;
+  color: var(--color-text-muted);
+}
+
+.section-title button[aria-expanded="false"]::after {
+  content: "▸";
+}
+
+.section-body {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.template-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.template-card {
+  width: 100%;
+  min-height: 56px;
+}
+
+.primary {
+  background: var(--color-accent);
+  color: var(--color-step-active-text);
+  border-color: var(--color-accent);
+  font-weight: var(--font-weight-strong);
+}
+
+.check {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}

@@ -18,6 +18,12 @@ const shelfCut = (s: ReturnType<typeof fresh>) =>
     ?.length;
 
 describe("createKerfStore()", () => {
+  it("remembers which sections are open across a reload", () => {
+    const storage = createStorage(memoryStorage());
+    createKerfStore({ storage }).getState().toggleSection("Your shop");
+    expect(createKerfStore({ storage }).getState().sections["Your shop"]).toBe(false);
+  });
+
   it("starts with no project, on the Start step", () => {
     const s = fresh().getState();
     expect(s.history).toBeNull();

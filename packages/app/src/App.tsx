@@ -8,6 +8,7 @@
 import { type ReactNode, useEffect } from "react";
 import type { KerfStore } from "./model/store";
 import { HintLine } from "./ui/HintLine";
+import { Inspector } from "./ui/Inspector";
 import { Notice } from "./ui/Notice";
 import { TopBar } from "./ui/TopBar";
 import { KerfProvider, useKerf } from "./ui/useKerf";
@@ -39,7 +40,9 @@ function Window({ model }: { model: ReactNode }) {
             {model}
           </section>
         </main>
-        <aside aria-label="Inspector" className="panel panel-right" />
+        <aside aria-label="Inspector" className="panel panel-right">
+          <Inspector />
+        </aside>
       </div>
     </div>
   );

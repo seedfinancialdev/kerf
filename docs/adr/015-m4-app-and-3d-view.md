@@ -35,7 +35,7 @@ through `@kerf/core`. Design: `docs/superpowers/specs/2026-10-12-m4-app-3d-view-
 8. **Placements** are reported even when an assembly error withholds the shapes, so the viewport can draw every board as a plain blank and colour the broken one.
 9. **Joint summaries** use an empty shop when the shop is invalid (every cut then shows its tool as missing); the `invalid-shop` error is reported beside them.
 10. **A shape that cannot be made into a display mesh** is drawn as its blank with a warning badge; the reason is shown in the inspector.
-11. **Browser storage** holds the shop, the last units, the theme, section open state and the current project. If storage is unavailable the app says so once and works without it. A stored project the engine rejects is set aside with a notice; the app starts empty.
+11. **Browser storage** holds the shop, the last units, the theme, section open state and the current project. If storage is unavailable the app says so once and works without it. A stored project the engine rejects is set aside with a notice; the app starts empty. The shop card shows inches; a metric shop display is a later setting.
 12. **New tokens** extend `tokens.css` (both themes); nothing in M0's tokens changes.
 
 ## Consequences
