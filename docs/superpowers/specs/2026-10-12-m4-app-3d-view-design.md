@@ -65,7 +65,7 @@ The layout never moves; each step changes what the inspector offers and what the
 | --- | --- | --- |
 | Start | **New** with the four template cards; overall size (**Width**, **Height**, **Depth**; a box uses Length, Width, Height); the **Your shop** card (first-launch checklist, defaults ticked); **Open…** and **Save** | The whole piece |
 | Shape | The form: Size; Construction (**Carcase stock**, **Top and bottom**); Back (**Back**, **Back stock**); a box's walls, corner joint, bottom, grain wraps. Advanced fields (rabbet depth, fit) behind **More** | The case outline |
-| Divide | For the selected opening: **Add shelves** (**Count**, **Spacing**: Evenly spaced or At set heights), **Add partition** (a length or a fraction such as 1/3), **Split into bays** | Empty openings |
+| Divide | For the opening picked in the project tree: **Add shelves** (**Count**, **Spacing**: Evenly spaced or At set heights), **Add partition** (a length or a fraction such as 1/3), **Split into bays** | — (openings are picked in the tree; see "Not in M4") |
 | Joinery | Every joint in shop words with what the shop can do ("Shelves in dados, 23/32" wide, 1/4" deep · your dado stack cuts this", or "you'd need a router with a 1/4" straight bit"); a type choice where the engine offers one (box corners); **Accept all** | Joint cuts, coloured |
 | Build plan | Drawer tall; a banner when any error exists ("Not ready to build: …") | — |
 
@@ -79,7 +79,10 @@ The layout never moves; each step changes what the inspector offers and what the
 
 ### The end-to-end contract
 
-`packages/app/e2e/bookcase.spec.ts` is unchanged. The names it uses are binding: buttons New,
+`packages/app/e2e/bookcase.spec.ts` changes by one line, approved by the maintainer on 2026-10-12:
+`getByLabel("Back")` becomes `getByLabel("Back", { exact: true })`, because Playwright matches
+labels by substring and "Back" also matches "Back stock" (checked in a real browser: it fails even
+when "Back stock" is hidden). Otherwise the names it uses are binding: buttons New,
 Bookcase, Shape, Divide, Joinery, Accept all, Add shelves, Edge profile, Both front edges, Build
 plan; labels Width, Height, Depth, Carcase stock, Top and bottom, Back, Back stock, Count, Spacing,
 Radius; options "3/4 plywood", "Between the sides", "Inset in rabbets", "1/4 plywood", "Evenly
@@ -90,8 +93,8 @@ model's opening hotspots), `part-group-shelves` (the tree row of a board group),
 ## Editing
 
 ### Number fields
-- Drag the label: 1/64" (0.1 mm) per step, Shift ×16, Alt ÷4 down to the grid; the model and
-  drawer update while dragging; one history entry on release.
+- Drag the label: 1/16" (1 mm) per 4 pixels, 1" (10 mm) with Shift, the 1/64" grid (0.01 mm) with
+  Alt; the model and drawer update while dragging; one history entry on release.
 - Click to type anything the engine parses (`30"`, `29-1/2"`, `762mm`, `width - 1"`), via
   `parseLength` and the expression rules. A field that names a parameter keeps the expression.
 - Shown snapped, as fractions (`formatLength`), tabular numerals.
@@ -169,9 +172,16 @@ option if a benchmark shows the need.
 3. **Joint proposal:** `proposeJoint(project, shop, a, b)` for two instances: the joint type and
    parameters that fit their contact, and whether the shop can cut it (the tool, or the tool it
    would need), or the reason no joint fits.
-4. **Gap binding:** an expression reference to the clear distance between two named boards along
-   an axis, worked out exactly and snapped once, so a board drawn between two boards follows them.
-   ADR 015 records its syntax and edge cases.
+4. **Gap binding:** `gapBetween(project, a, b)` writes the clear distance between two boards as an
+   ordinary expression built from their own position and size expressions, so a board drawn
+   between them follows them with no change to the expression language. ADR 015 records the rules.
+5. **Where each board sits:** `solve(...).placements`, one per placed copy: its shape, its box in
+   the case, and how its length, width and thickness point, so the 3D view never needs the
+   engine's internals.
+6. **The joints in shop words:** `solve(...).joints`, one per joint: the two boards, how many
+   pairs, and each cut with the tool that makes it (or the tool the shop lacks).
+7. **Which way a new board faces:** `orientationFor(length, width)`, so the Board tool never needs
+   the engine's orientation table.
 
 Existing API used as is: `solve`, `TEMPLATES`, `projectFromTemplate`, `STOCK_OPTIONS`,
 `detachPartIn`, `detachCopyIn`, `attachPartIn`, `attachCopyIn`, `parseLength`, `formatLength`,
@@ -183,8 +193,8 @@ Existing API used as is: `solve`, `TEMPLATES`, `projectFromTemplate`, `STOCK_OPT
   "3/4 plywood" (23/32" actual, 4' × 8' sheet), "1/4 plywood" (1/4", 4' × 8') and "4/4 walnut"
   (solid, milled to 1/2", boards 8' long and up to 8" wide, 1/4" width allowance). These are the
   reference fixtures' stock exactly (`packages/fixtures/*/structure.json`).
-- **Starter shop** = `packages/fixtures/shop-profile.json`: 1/8" kerf, dado stack up to 6", router
-  with a 1/8" roundover bit, hand tools for dovetails.
+- **Starter shop** = `packages/fixtures/shop-profile.json`: 1/8" kerf, dado stack up to 3/4" wide,
+  router with a 1/8" roundover bit and no straight bits, hand tools for dovetails.
 - The shop is per person (Domain model, `ShopProfile`): kept in browser storage, never in the
   project. The Your shop card and the Shop panel edit it; an invalid shop is shown with the
   engine's `invalid-shop` message.
@@ -218,6 +228,12 @@ calculation.
 4. PR from `m4-app-3d-view`, describing plainly what is not done. The maintainer merges.
 
 ## Not in M4
+
+- Picking an opening in the 3D model: the engine does not report where an opening is, and working
+  it out in the app would put woodworking maths outside the engine. Openings are picked in the
+  project tree (as the end-to-end test does). Adding opening boxes to the engine is a follow-up.
+- A board drawn between two boards one above the other (Board binds to side-by-side gaps only).
+- The shop card shows inches only.
 
 - The build plan PDF and `.skp` import (M5).
 - Two structures placed apart in one project: they still share the origin (ADR 014, known limits).
