@@ -124,6 +124,11 @@ export function detachPart(project: Project, part: Id): PartDef {
 // Build plan (M4)
 
 /**
+ * The Join tool's proposal for two placed boards (ADR 015, rule 6): the joint and the tool, or the
+ * reason there is none. Pure; `jointId` is supplied by the caller. Never throws.
+ */
+export { type JointProposal, proposeJoint } from "./joints/propose";
+/**
  * The order to put each structure together, written from its form: dry-fit, glue, square, and
  * for a case the back last. Each step names the placed boards it touches. Empty for a project
  * with no structure or one that cannot be solved. Never throws; the project and the shop profile
