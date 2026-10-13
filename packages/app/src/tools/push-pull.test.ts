@@ -183,6 +183,17 @@ describe("the Push/Pull tool", () => {
     expect(s.getState().pending).toBeNull();
   });
 
+  it("drops an end clicked earlier when a broad face is pressed next, so a typed distance changes nothing (final branch review, Task 28)", () => {
+    const s = started();
+    pushPullTool.pointer?.(event("down", endOf(top())), s);
+    pushPullTool.pointer?.(event("up", endOf(top())), s);
+    pushPullTool.pointer?.(event("down", { ...endOf(top()), normal: top().frame.z }), s);
+    expect(s.getState().pending).toBeNull();
+    expect(pushPullTool.measure?.('1"', s)).toBe("Click an end or edge of a board first.");
+    // The top is as the form made it: 34-9/16" long (7023100 units).
+    expect(lengthOfTop(s)).toBe(7_023_100);
+  });
+
   it("asks for an end or edge first when a distance is typed too early", () => {
     expect(pushPullTool.measure?.('1"', started())).toBe("Click an end or edge of a board first.");
   });

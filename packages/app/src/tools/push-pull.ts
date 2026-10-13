@@ -159,6 +159,8 @@ export const pushPullTool: ToolHandler = {
     if (e.kind === "down") {
       if (!e.hit) return;
       if (faceOf(e.hit.placed, e.hit.normal) === "thickness") {
+        // A face clicked earlier is no longer the one meant, so a typed distance must not move it.
+        s.setPending(null);
         s.say(THICKNESS_LOCKED);
         return;
       }
