@@ -18,6 +18,11 @@ export interface Diagnostic {
   part?: Id;
   joint?: Id;
   /**
+   * The two placed boards a problem lies between, by instance id, when it is about a pair (two
+   * boards in the same space). The message names both; this lets an editor say which one it moved.
+   */
+  instances?: readonly [Id, Id];
+  /**
    * What the problem is on, in the user's words: a board or stock name ("Shelf"), a setting
    * ("the number of bays"), or a field of a part ("Side length").
    */

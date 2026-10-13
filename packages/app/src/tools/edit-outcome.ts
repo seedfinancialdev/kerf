@@ -21,54 +21,71 @@ import {
 import { instanceOf } from "../model/commands";
 import { followsForm, takenOver, takeOverNotice } from "../model/take-over";
 
-/**
- * The part each board taken over by the change now has, mapped back to the part it had before.
- * Taking a copy out of a row gives it a part (and a name) of its own, so its errors are said in
- * other words; mapped back, an error it already had is not mistaken for a new one (re-review N4).
- */
-function partsBefore(before: readonly PlacedPart[], after: SolveResult, next: Project) {
-  const parts = new Map<Id, Id>();
-  for (const b of before.filter(followsForm)) {
-    const saved = instanceOf(next, b);
-    const now = saved && after.placements.find((p) => p.instance === saved.id);
-    if (now && now.part !== b.part) parts.set(now.part, b.part);
-  }
-  return parts;
+/** A board the change took over and the engine renamed: its instance now, and before. */
+export interface Renamed {
+  now: Id;
+  was: Id;
 }
+
+/**
+ * The boards the change took over that now stand as instances of their own: a copy taken out of a
+ * row gets a new instance, a part and a name ("Shelf 2" becomes "Shelf copy 2"), so its errors are
+ * said in other words. Mapped back, an error it already had is not mistaken for a new one.
+ */
+function renamedBy(before: readonly PlacedPart[], next: Project): Renamed[] {
+  return before.filter(followsForm).flatMap((b) => {
+    const saved = instanceOf(next, b);
+    return saved && saved.id !== b.instance ? [{ now: saved.id, was: b.instance }] : [];
+  });
+}
+
+/** The boards an error is about: its pair when it names one, else every copy of its board. */
+function boardsOf(d: Diagnostic, placements: readonly PlacedPart[]): Id[] {
+  if (d.instances) return [...d.instances];
+  return placements.filter((p) => p.part === d.part).map((p) => p.instance);
+}
+
+type Solved = Pick<SolveResult, "diagnostics" | "placements">;
 
 /**
  * The first error in `after` that `before` did not have, or null. Errors are told apart by rule,
  * board and words, and counted, because the engine folds repeats of one message into one line
  * with a count: the same words a second time are still a new error (silent-failure review M12).
- * An error on a board the change took over and renamed (`renamed`: its part now → its part before)
- * is new only if that board had no error of the same rule before, since its words name it anew.
+ * An error on a board the change took over and `renamed` is said in new words, so it is compared
+ * board by board instead: it is new unless that same board had an error of its rule before
+ * (re-review N4; second-pass review M4).
  */
-function firstNewError(
-  before: readonly Diagnostic[],
-  after: readonly Diagnostic[],
-  renamed: ReadonlyMap<Id, Id> = new Map(),
+export function firstNewError(
+  before: Solved,
+  after: Solved,
+  renamed: readonly Renamed[],
 ): Diagnostic | null {
   const errors = (list: readonly Diagnostic[]) => list.filter((d) => d.severity === "error");
   const key = (d: Diagnostic): string => JSON.stringify([d.rule, d.part, d.message]);
   const known = new Map<string, number>();
-  for (const d of errors(before)) known.set(key(d), (known.get(key(d)) ?? 0) + (d.count ?? 1));
-  const hadRule = (rule: string, part: Id): boolean =>
-    errors(before).some((d) => d.rule === rule && d.part === part);
+  for (const d of errors(before.diagnostics))
+    known.set(key(d), (known.get(key(d)) ?? 0) + (d.count ?? 1));
+  /** True when board `was` had an error of `rule` before the change. */
+  const hadOn = (rule: string, was: Id): boolean =>
+    errors(before.diagnostics).some(
+      (d) => d.rule === rule && boardsOf(d, before.placements).includes(was),
+    );
   return (
-    errors(after).find((d) => {
-      const was = d.part === undefined ? undefined : renamed.get(d.part);
-      if (was !== undefined) return !hadRule(d.rule, was);
+    errors(after.diagnostics).find((d) => {
+      const on = boardsOf(d, after.placements);
+      const moved = renamed.filter((r) => on.includes(r.now));
+      if (moved.length > 0) return moved.some((r) => !hadOn(d.rule, r.was));
       return (d.count ?? 1) > (known.get(key(d)) ?? 0);
     }) ?? null
   );
 }
 
-/** The first error `after` brings, from a full solve of each, with the boards' parts mapped. */
+/** The first error `after` brings, from a full solve of each, with renamed boards mapped back. */
 function brought(before: Project, after: Project, shop: ShopProfile) {
   const was = solve(before, shop);
   const now = solve(after, shop);
-  const renamed = partsBefore(was.placements, now, after);
-  return { was, now, error: firstNewError(was.diagnostics, now.diagnostics, renamed) };
+  const renamed = renamedBy(was.placements, after);
+  return { was, now, error: firstNewError(was, now, renamed) };
 }
 
 /**
@@ -80,34 +97,46 @@ export function newProblem(before: Project, after: Project, shop: ShopProfile): 
 }
 
 /**
- * What an error says the change caused, starting "<board> now …" (ruling R45). A joint's error
- * names the board that sits in the joint and the one that holds it; any other names its board.
+ * What an error says the change caused, starting "<board> now …" (ruling R45). The board named is
+ * the one the change edited (`edited`, instances as they are now) when the error is about it.
+ * Two boards in one space are both named; a joint's error names the board in the joint and the
+ * one holding it, and says only that the joint has a problem unless the engine says which.
  */
-function causedBy(error: Diagnostic, now: SolveResult): string {
+function causedBy(error: Diagnostic, now: SolveResult, edited: readonly Id[]): string {
+  const name = (id: Id): string => now.placements.find((p) => p.instance === id)?.name ?? "A board";
   const joint = error.joint && now.joints.find((j) => j.joint === error.joint);
   if (joint) {
+    const kind = JOINT_NAME[joint.type];
     if (error.rule === "joint-overlap") return `${joint.guest} now overlaps ${joint.host}`;
-    const name = JOINT_NAME[joint.type];
     if (error.rule === "joint-no-contact")
-      return `${joint.guest} now misses its ${name} in ${joint.host}`;
-    return `${joint.guest} now does not fit its ${name} in ${joint.host}`;
+      return `${joint.guest} now misses its ${kind} in ${joint.host}`;
+    return `${joint.guest} now has a problem with its ${kind} in ${joint.host} (see Problems)`;
   }
-  const board = now.placements.find((p) => p.part === error.part);
-  if (!board) return "The project now has a problem (see Problems)";
-  if (error.rule === "overlap") return `${board.name} now runs into another board`;
-  return `${board.name} now has a problem (see Problems)`;
+  const boards = boardsOf(error, now.placements);
+  const subject = boards.find((id) => edited.includes(id)) ?? boards[0];
+  if (subject === undefined) return "The project now has a problem (see Problems)";
+  const other = error.instances?.find((id) => id !== subject);
+  if (error.rule === "overlap" && other !== undefined)
+    return `${name(subject)} now overlaps ${name(other)}`;
+  return `${name(subject)} now has a problem (see Problems)`;
 }
 
 /**
  * The notice for a change that reshapes or arranges boards (ruling R45): the boards it took over
- * from the form, then what the change caused and that Undo puts it back. Undefined when there is
+ * from the form, then what the change caused and that Undo puts it back. `edited` are the boards
+ * the tool acted on, as instances in `after`, so the notice names them. Undefined when there is
  * nothing to tell.
  */
-export function editNotice(before: Project, after: Project, shop: ShopProfile): string | undefined {
+export function editNotice(
+  before: Project,
+  after: Project,
+  shop: ShopProfile,
+  edited: readonly Id[] = [],
+): string | undefined {
   const { was, now, error } = brought(before, after, shop);
   const told = [
     takeOverNotice(takenOver(was.placements, after)),
-    error === null ? undefined : `${causedBy(error, now)}; Undo puts it back.`,
+    error === null ? undefined : `${causedBy(error, now, edited)}; Undo puts it back.`,
   ].filter((sentence) => sentence !== undefined);
   return told.length > 0 ? told.join(" ") : undefined;
 }

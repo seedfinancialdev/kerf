@@ -11,8 +11,9 @@ import { handMadeBookcase } from "@kerf/fixtures/builders";
 import { describe, expect, it } from "vitest";
 import { setOption, startProject } from "../model/commands";
 import { drawBoard } from "./board";
-import { editNotice, newProblem } from "./edit-outcome";
+import { editNotice, firstNewError, newProblem } from "./edit-outcome";
 import { moveBoards } from "./move";
+import { pushPull } from "./push-pull";
 
 const shop = loadShopProfile();
 const IN = 203_200;
@@ -105,5 +106,109 @@ describe("newProblem()", () => {
     expect(editNotice(rounded, moved.edit.project, shop)).toBe(
       "Shelf 2 becomes Shelf copy 2, custom; the form won't change it.",
     );
+  });
+});
+
+describe("editNotice() names what the change caused (ruling R45; second-pass review I1, M4)", () => {
+  const placedIn = (p: Project, name: string) => {
+    const found = solve(p, shop).placements.find((x) => x.name === name);
+    if (!found) throw new Error(`no ${name}`);
+    return found;
+  };
+
+  it("names the board that moved and the one it now runs into", () => {
+    // Board 1 lies 24" × 6" at x -30"..-6", 36" up, clear of the case. Moved 27" right it spans
+    // x -3"..21" and runs into the Right side (x 0..23/32") and nothing else.
+    const drawn = drawBoard(
+      clean,
+      stock,
+      [-30 * IN, 2 * IN, 36 * IN],
+      { axis: 0, size: 24 * IN },
+      { axis: 1, size: 6 * IN },
+    ).project;
+    const board = placedIn(drawn, "Board 1");
+    const moved = moveBoards(drawn, [board], [27 * IN, 0, 0], "move", shop);
+    if (!moved.ok) throw new Error(moved.message);
+    expect(editNotice(drawn, moved.edit.project, shop, [board.instance])).toBe(
+      "Board 1 now overlaps Right side; Undo puts it back.",
+    );
+  });
+
+  it("names the side that was edited, not the first copy of the board the two sides share", () => {
+    // The sides are one board in two places with a 1/2" roundover on the front edge. Narrowing the
+    // Left side to 1/4" leaves the roundover larger than the board: a problem of the board itself.
+    const side = clean.parts.find((d) => d.name === "Side");
+    if (!side) throw new Error("no side");
+    const roundover = {
+      id: "01K7M3Q8ZD00000000F3000A01",
+      type: "roundover" as const,
+      edges: ["edge1/face1" as const],
+      radius: "1/2in",
+    };
+    const rounded = {
+      ...clean,
+      parts: clean.parts.map((d) => (d.id === side.id ? { ...d, ops: [roundover] } : d)),
+    };
+    const left = placedIn(rounded, "Left side");
+    const narrowed = pushPull(rounded, left, "edge1", -(11 * IN + (3 * IN) / 4), shop);
+    if (!narrowed.ok) throw new Error(narrowed.message);
+    expect(editNotice(rounded, narrowed.edit.project, shop, [left.instance])).toBe(
+      "Left side now has a problem (see Problems); Undo puts it back.",
+    );
+  });
+
+  it("says a joint has a problem, without guessing why, for a dado deeper than its board", () => {
+    // A 1" dado depth in 23/32" sides: the engine says the dado is as deep as the board is thick.
+    const form = startProject("Bookcase", "imperial").project;
+    const deep = setOption(form, form.structures[0]?.id ?? "", "dadoDepth", "1in").project;
+    expect(editNotice(form, deep, shop)).toBe(
+      "Shelf now has a problem with its dado in Right side (see Problems); Undo puts it back.",
+    );
+  });
+});
+
+describe("firstNewError() on a board a take-over renamed (second-pass review M4)", () => {
+  // The template bookcase; Shelf 3 is taken out of its row as "Shelf copy 3" by a 1" move up.
+  const form = startProject("Bookcase", "imperial").project;
+  const was = solve(form, shop);
+  const shelf = (n: number) => {
+    const found = was.placements.find((p) => p.name === `Shelf ${n}`);
+    if (!found) throw new Error(`no Shelf ${n}`);
+    return found;
+  };
+  const moved = moveBoards(form, [shelf(3)], [0, 0, IN], "move", shop);
+  if (!moved.ok) throw new Error(moved.message);
+  const now = solve(moved.edit.project, shop);
+  const copy = now.placements.find((p) => p.name === "Shelf copy 3");
+  const back = now.placements.find((p) => p.name === "Back");
+  if (!copy || !back) throw new Error("no copy or back");
+  const renamed = [{ now: copy.instance, was: shelf(3).instance }];
+  const overlap = (part: Id, pair: readonly [Id, Id], message: string) => ({
+    severity: "error" as const,
+    rule: "overlap" as const,
+    message,
+    part,
+    instances: pair,
+  });
+
+  it("names a new overlap on the renamed copy although another shelf of its row already overlapped", () => {
+    // Before: Shelf 1 runs into the Back, an error on the row's shared part.
+    const before = overlap(shelf(1).part, [shelf(1).instance, back.instance], "Shelf 1 and Back …");
+    // After: that error is still there, and the moved copy now runs into the Back too.
+    const brought = overlap(copy.part, [copy.instance, back.instance], "Shelf copy 3 and Back …");
+    const error = firstNewError(
+      { ...was, diagnostics: [before] },
+      { ...now, diagnostics: [before, brought] },
+      renamed,
+    );
+    expect(error).toBe(brought);
+  });
+
+  it("does not report the copy's own earlier overlap again under its new name", () => {
+    const before = overlap(shelf(3).part, [shelf(3).instance, back.instance], "Shelf 3 and Back …");
+    const after = overlap(copy.part, [copy.instance, back.instance], "Shelf copy 3 and Back …");
+    expect(
+      firstNewError({ ...was, diagnostics: [before] }, { ...now, diagnostics: [after] }, renamed),
+    ).toBeNull();
   });
 });

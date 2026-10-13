@@ -289,14 +289,14 @@
   {
     "id": "new-error-renamed-any",
     "file": "packages/app/src/tools/edit-outcome.ts",
-    "find": "if (was !== undefined) return !hadRule(d.rule, was);",
-    "replace": "if (was !== undefined) return true;",
+    "find": "if (moved.length > 0) return moved.some((r) => !hadOn(d.rule, r.was));",
+    "replace": "if (moved.length > 0) return true;",
     "why": "An error a taken-over board already had is reported as new because its name changed."
   },
   {
     "id": "new-error-renamed-ignored",
     "file": "packages/app/src/tools/edit-outcome.ts",
-    "find": "if (was !== undefined) return !hadRule(d.rule, was);",
+    "find": "if (moved.length > 0) return moved.some((r) => !hadOn(d.rule, r.was));",
     "replace": "",
     "why": "A taken-over board is compared by its new words, so an error it already had is new."
   },

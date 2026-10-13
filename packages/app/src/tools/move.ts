@@ -212,7 +212,7 @@ const previewKey = (delta: Vec3, mode: MoveMode): string => `${mode}:${delta.joi
  */
 function finish(store: KerfStore, project: Project, r: Extract<MoveResult, { ok: true }>): void {
   const s = store.getState();
-  s.apply(r.edit, editNotice(project, r.edit.project, s.shop));
+  s.apply(r.edit, editNotice(project, r.edit.project, s.shop, r.picked));
   s.select({ kind: "boards", instances: r.picked });
   s.setPending(null);
 }

@@ -56,6 +56,20 @@ describe("validate", () => {
     expect(d).toHaveLength(4);
     for (const x of d) expect(x.count).toBeUndefined();
   });
+  it("an overlap names the two boards it lies between by instance, in the order the message names them", () => {
+    const p = boards(
+      [ply("P", "4in", "4in")],
+      ["A", "B"].map((name) => ({
+        name,
+        part: "P",
+        at: ["0in", "0in", "0in"] as [string, string, string],
+      })),
+    );
+    const overlap = solve(p, shop).diagnostics.find((d) => d.rule === "overlap");
+    const id = (name: string) => p.instances.find((i) => i.name === name)?.id;
+    expect(overlap?.message).toMatch(/^This part can't be built: A and B occupy/);
+    expect(overlap?.instances).toEqual([id("A"), id("B")]);
+  });
   it("exactly 10 overlapping pairs name all ten; 15 pairs name ten and count fifteen", () => {
     const blocks = (n: number): Project =>
       boards(

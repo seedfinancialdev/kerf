@@ -65,6 +65,7 @@ export function validateAssembly(model: SolvedModel, derived: Derived): Diagnost
         rule: "overlap",
         message: `This part can't be built: ${a.instance.name} and ${b.instance.name} occupy the same space and are not joined.`,
         part: a.part.id,
+        instances: [a.instance.id, b.instance.id],
         field: a.instance.name,
       });
     }

@@ -7,6 +7,7 @@
 
 import { type EdgeRef, edgeName, formatLength, type PlacedPart } from "@kerf/core";
 import { useId, useState } from "react";
+import { instanceOf } from "../model/commands";
 import { shownProject } from "../model/store";
 import { useKerf, useKerfStore } from "../state/useKerf";
 import { BOTH_FRONT_EDGES, roundEdges, roundsEveryShelf } from "../tools/edge";
@@ -40,8 +41,12 @@ export function EdgePanel({ placed }: { placed: PlacedPart[] }) {
     const project = shownProject(s);
     if (!project) return;
     const r = roundEdges(project, placed, edges, radius, s.shop);
-    if (r.ok) s.apply(r.edit, editNotice(project, r.edit.project, s.shop));
-    else s.say(r.message);
+    if (!r.ok) {
+      s.say(r.message);
+      return;
+    }
+    const edited = placed.map((p) => instanceOf(r.edit.project, p)?.id ?? p.instance);
+    s.apply(r.edit, editNotice(project, r.edit.project, s.shop, edited));
   };
   return (
     <Section title="Roundover">

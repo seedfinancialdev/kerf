@@ -144,9 +144,10 @@ function dragTravel(e: ModelPointer, pending: PushPullPending, project: Project)
 function finish(store: KerfStore, project: Project, placed: PlacedPart, edit: Edit): void {
   // Read before applying: the store drops a pick of an instance the edit removed.
   const { selection, shop } = store.getState();
-  store.getState().apply(edit, editNotice(project, edit.project, shop));
-  const s = store.getState();
   const now = instanceOf(edit.project, placed);
+  const edited = [now?.id ?? placed.instance];
+  store.getState().apply(edit, editNotice(project, edit.project, shop, edited));
+  const s = store.getState();
   if (now && selection.kind === "boards" && selection.instances.includes(placed.instance)) {
     s.select({
       kind: "boards",
