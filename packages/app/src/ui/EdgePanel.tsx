@@ -9,7 +9,7 @@ import { type EdgeRef, edgeName, formatLength, type PlacedPart } from "@kerf/cor
 import { useId, useState } from "react";
 import { shownProject } from "../model/store";
 import { useKerf, useKerfStore } from "../state/useKerf";
-import { BOTH_FRONT_EDGES, roundEdges } from "../tools/edge";
+import { BOTH_FRONT_EDGES, roundEdges, roundsEveryShelf } from "../tools/edge";
 import { editNotice } from "../tools/edit-outcome";
 import { Section } from "./Section";
 
@@ -66,6 +66,11 @@ export function EdgePanel({ placed }: { placed: PlacedPart[] }) {
       <button type="button" onClick={() => round(BOTH_FRONT_EDGES)}>
         Both front edges
       </button>
+      {roundsEveryShelf(placed) && (
+        <p className="muted">
+          Both front edges rounds every shelf the form makes, so they keep following it.
+        </p>
+      )}
       <fieldset className="edge-list">
         <legend>Or pick edges</legend>
         {ALL_EDGES.map((edge) => (

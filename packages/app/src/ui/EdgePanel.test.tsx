@@ -56,6 +56,26 @@ describe("<EdgePanel>", () => {
     });
   });
 
+  it("tells the user before they press it that Both front edges changes every shelf the form makes (branch deferred row 26)", () => {
+    const store = setup();
+    const { selection } = store.getState();
+    if (selection.kind !== "boards") throw new Error("no shelves picked");
+    // One shelf picked: the roundover is still the form's, for all four (ADR 015, D3).
+    act(() =>
+      store.getState().select({ kind: "boards", instances: selection.instances.slice(0, 1) }),
+    );
+    expect(
+      screen.getByText(
+        "Both front edges rounds every shelf the form makes, so they keep following it.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("says nothing about every shelf when the pick is not the form's shelves", () => {
+    setup("Top");
+    expect(screen.queryByText(/every shelf the form makes/)).toBeNull();
+  });
+
   it("rounds the ticked edges", () => {
     const store = setup("Top");
     fireEvent.click(screen.getByLabelText("Back edge, show face"));

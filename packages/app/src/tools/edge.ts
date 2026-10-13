@@ -47,6 +47,14 @@ function boardsToTakeOver(placed: PlacedPart[]): PlacedPart[] {
 }
 
 const isFormShelf = (p: PlacedPart): boolean => p.source?.role === "shelf" && !p.detached;
+
+/**
+ * True when Both front edges on this pick sets the form's own shelf roundover, which rounds every
+ * shelf the form makes, not only those picked (ADR 015, D3), so the panel can say so first.
+ */
+export function roundsEveryShelf(placed: PlacedPart[]): boolean {
+  return placed.length > 0 && placed.every(isFormShelf);
+}
 const sameEdges = (a: EdgeRef[], b: EdgeRef[]): boolean =>
   a.length === b.length && a.every((x) => b.includes(x));
 
@@ -72,7 +80,7 @@ export function roundEdges(
   const [first] = placed;
   if (!first) return { ok: false, message: "Pick a board first." };
   const boards = boardsIn(placed, first);
-  if (placed.every(isFormShelf) && sameEdges(edges, BOTH_FRONT_EDGES) && first.source) {
+  if (roundsEveryShelf(placed) && sameEdges(edges, BOTH_FRONT_EDGES) && first.source) {
     const edit = setShelfRoundover(project, first.source.structure, radius);
     return radius === null && sameProject(edit.project, project) ? NOTHING_TO_REMOVE : ok(edit);
   }

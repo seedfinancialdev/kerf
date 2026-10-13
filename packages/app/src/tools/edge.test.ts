@@ -154,6 +154,13 @@ describe("roundEdges()", () => {
     expect(project.structures[0]?.options.shelfRoundover).toBeUndefined();
   });
 
+  it("asks for a board when none is picked (branch deferred row 26)", () => {
+    expect(tryRoundEdges(bookcase(), [], BOTH_FRONT_EDGES, IN / 8, shop)).toEqual({
+      ok: false,
+      message: "Pick a board first.",
+    });
+  });
+
   it("says there is nothing to remove from a board that has no roundover", () => {
     const r = tryRoundEdges(bookcase(), named("Top"), BOTH_FRONT_EDGES, null, shop);
     expect(r).toEqual({ ok: false, message: "There's no roundover on those edges to remove." });
