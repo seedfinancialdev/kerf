@@ -11,11 +11,12 @@ import { type Builder, depth, type FormSpec } from "./builder";
 import { wrap } from "./lengths";
 import { WALL_BACK, WALL_FRONT, WALL_SIDE_A, WALL_SIDE_B } from "./orientations";
 
+// joineryReviewed: the user accepted the proposed joinery (ADR 015, D2); it changes no board.
 /** The options a box reads: each stock and how a woodworker names it, and the plain settings. */
 export const BOX_SPEC = {
   stockLabels: { wallStock: "the walls", bottomStock: "the bottom" },
   textOptions: ["cornerJoint", "bottom", "rabbetDepth", "grooveDepth", "grooveOffset"],
-  flags: ["grainWraps"],
+  flags: ["grainWraps", "joineryReviewed"],
 } as const satisfies FormSpec;
 
 /** The box form's choices, read and checked once. */
