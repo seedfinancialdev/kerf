@@ -122,3 +122,53 @@ describe("<Measurements>", () => {
     expect(store.getState().tool).toBe("pushPull");
   });
 });
+
+describe("the arrow keys while moving", () => {
+  it("lock the direction: right is x, left is y, up is z", () => {
+    const store = setup();
+    fireEvent.keyDown(window, { key: "m" });
+    for (const [key, axis] of [
+      ["ArrowRight", 0],
+      ["ArrowLeft", 1],
+      ["ArrowUp", 2],
+    ] as const) {
+      fireEvent.keyDown(window, { key });
+      expect(store.getState().pending).toMatchObject({ tool: "move", axis });
+    }
+  });
+
+  it("keep the boards and start of a drag already under way", () => {
+    const store = setup();
+    fireEvent.keyDown(window, { key: "m" });
+    act(() =>
+      store
+        .getState()
+        .setPending({ tool: "move", from: [1, 2, 3], placed: [], axis: null, last: "a" }),
+    );
+    fireEvent.keyDown(window, { key: "ArrowUp" });
+    expect(store.getState().pending).toEqual({
+      tool: "move",
+      from: [1, 2, 3],
+      placed: [],
+      axis: 2,
+      last: "a",
+    });
+  });
+
+  it("do nothing in other tools, and are left to a field being typed in", () => {
+    const store = setup();
+    fireEvent.keyDown(window, { key: "ArrowUp" });
+    expect(store.getState().pending).toBeNull();
+    fireEvent.keyDown(window, { key: "m" });
+    fireEvent.keyDown(screen.getByLabelText("Measurements"), { key: "ArrowUp" });
+    expect(store.getState().pending).toBeNull();
+  });
+
+  it("are dropped with the tool, so a lock does not outlive the move", () => {
+    const store = setup();
+    fireEvent.keyDown(window, { key: "m" });
+    fireEvent.keyDown(window, { key: "ArrowUp" });
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(store.getState().pending).toBeNull();
+  });
+});

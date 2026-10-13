@@ -21,7 +21,10 @@ export function isTyping(target: EventTarget | null): boolean {
   );
 }
 
-/** Ctrl/⌘+Z undoes (with Shift, redoes); O and H make left-drag orbit and pan, the tool keys pick a tool, Escape goes back to Select and clears the pick, Shift+Z fits the model. */
+/** SketchUp's red, green and blue directions: the arrow keys that lock a move to x, y or z. */
+const AXIS_KEYS: Partial<Record<string, 0 | 1 | 2>> = { ArrowRight: 0, ArrowLeft: 1, ArrowUp: 2 };
+
+/** Ctrl/⌘+Z undoes (with Shift, redoes); O and H make left-drag orbit and pan, the tool keys pick a tool, Escape goes back to Select and clears the pick, Shift+Z fits the model; while moving, the arrow keys lock the direction. */
 export function useShortcuts(): void {
   const store = useKerfStore();
   useEffect(() => {
@@ -36,6 +39,13 @@ export function useShortcuts(): void {
         return;
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const axis = AXIS_KEYS[e.key];
+      if (s.tool === "move" && axis !== undefined && !e.defaultPrevented) {
+        e.preventDefault();
+        const pending = s.pending?.tool === "move" ? s.pending : null;
+        s.setPending({ tool: "move", from: [0, 0, 0], placed: [], last: null, ...pending, axis });
+        return;
+      }
       const key = e.key.toLowerCase();
       if (e.shiftKey && key === "z") s.requestFit();
       else if (key === "o") s.setNavigation("orbit");

@@ -8,6 +8,7 @@
 import type { ModelHit } from "../model/pending";
 import type { ToolId } from "../model/store";
 import type { ModelPointer, ToolHandler } from "./handler";
+import { moveTool } from "./move";
 import { pushPullTool } from "./push-pull";
 
 export type { ModelHit, ModelPointer, ToolHandler };
@@ -27,14 +28,14 @@ const select: ToolHandler = {
 
 /**
  * Every tool's handler, written out so the wiring is visible. A tool whose task has not landed yet
- * selects; Tasks 28-31 replace their entry and import their handler here. The Edge tool works from
+ * selects; Tasks 29-31 replace their entry and import their handler here. The Edge tool works from
  * the inspector (Task 26), so clicking boards while it is active picks them.
  */
 const HANDLERS: Record<ToolId, ToolHandler> = {
   select,
   board: select,
   pushPull: pushPullTool,
-  move: select,
+  move: moveTool,
   join: select,
   edge: select,
   tape: select,

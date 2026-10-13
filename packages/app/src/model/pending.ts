@@ -21,4 +21,12 @@ export type Pending =
   | { tool: "tape"; from: Vec3 }
   | { tool: "board"; from: ModelHit }
   | { tool: "pushPull"; hit: ModelHit; dragged: string | null }
-  | { tool: "move"; from: Vec3; placed: PlacedPart[]; axis: 0 | 1 | 2 | null };
+  | {
+      tool: "move";
+      from: Vec3;
+      placed: PlacedPart[];
+      /** The direction locked with an arrow key (x, y, z), or null to follow the largest. */
+      axis: 0 | 1 | 2 | null;
+      /** The last move and mode previewed; null for a click that has not been dragged. */
+      last: string | null;
+    };

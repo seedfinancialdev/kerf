@@ -17,7 +17,7 @@ import {
 import { detachForEdit, type Edit, type EditResult, instanceOf } from "../model/commands";
 import { literalFor, readLength } from "../model/size";
 import type { KerfStore } from "../model/store";
-import type { ToolHandler } from "./handler";
+import { recordedProject, type ToolHandler } from "./handler";
 
 export type BoardFace = "end0" | "end1" | "edge0" | "edge1";
 
@@ -108,12 +108,6 @@ export function travelAlong(from: Vec3, to: Vec3, normal: Vec3): Len {
   );
 }
 
-/** History's current project: drags and typed sizes are measured from what was recorded. */
-function recorded(store: KerfStore): Project | null {
-  const h = store.getState().history;
-  return h?.entries[h.at]?.project ?? null;
-}
-
 /**
  * Applies one Push/Pull, with the take-over notice when the form made the board. A board taken out
  * of a row gets a new instance, so a pick of it follows (the store prunes picks only when History
@@ -141,7 +135,7 @@ function finish(store: KerfStore, placed: PlacedPart, edit: Edit): void {
 export const pushPullTool: ToolHandler = {
   pointer(e, store) {
     const s = store.getState();
-    const project = recorded(store);
+    const project = recordedProject(store);
     if (!project) return;
     if (e.kind === "down") {
       if (!e.hit) return;
@@ -182,7 +176,7 @@ export const pushPullTool: ToolHandler = {
     const s = store.getState();
     const pending = s.pending?.tool === "pushPull" ? s.pending : null;
     if (!pending) return "Click an end or edge of a board first.";
-    const project = recorded(store);
+    const project = recordedProject(store);
     if (!project) return "Start a project first.";
     const read = readLength(text, project);
     if (!read.ok) return read.message;

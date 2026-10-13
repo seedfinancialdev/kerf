@@ -5,6 +5,7 @@
 // What a tool handler receives and offers. Kept apart from the handler table (pointer.ts) so a
 // tool can name these types without importing the table that imports it.
 
+import type { Project } from "@kerf/core";
 import type { ModelHit } from "../model/pending";
 import type { KerfState, KerfStore } from "../model/store";
 
@@ -21,4 +22,10 @@ export interface ToolHandler {
   measure?(text: string, store: KerfStore): string | null;
   /** What the Measurements box asks for now. */
   prompt?(state: KerfState): string;
+}
+
+/** History's current project: drags and typed sizes are measured from what was recorded. */
+export function recordedProject(store: KerfStore): Project | null {
+  const h = store.getState().history;
+  return h?.entries[h.at]?.project ?? null;
 }
