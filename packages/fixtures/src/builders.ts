@@ -7,7 +7,8 @@
 // edge cases use these instead.
 
 import type { Instance, Joint, MatchSet, PartDef, Pattern, Project, Stock } from "@kerf/core";
-import { INCH } from "@kerf/core";
+import { generateStructures, INCH } from "@kerf/core";
+import { loadProject, loadShopProfile } from "./index";
 
 export const uid = (n: number): string =>
   `01K7M3Q8ZD00000000F3${n.toString(16).toUpperCase().padStart(6, "0")}`;
@@ -154,5 +155,24 @@ export function boards(
       ...(m.axis ? { axis: m.axis } : {}),
     })),
     structures: [],
+  };
+}
+
+/**
+ * The reference bookcase form's sides, top, bottom and back as hand-made boards with no joints and
+ * no shelves: a plain project for tools that work between boards (gap binding, Join).
+ */
+export function handMadeBookcase(): Project {
+  const g = generateStructures(loadProject("bookcase", "structure"), loadShopProfile());
+  return {
+    ...g,
+    structures: [],
+    joints: [],
+    matchSets: [],
+    patterns: [],
+    parts: g.parts.map(({ source: _s, detached: _d, ...p }) => p),
+    instances: g.instances
+      .filter((i) => !i.name?.startsWith("Shelf"))
+      .map(({ generatedBy: _g, ...i }) => i),
   };
 }

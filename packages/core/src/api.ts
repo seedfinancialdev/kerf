@@ -135,3 +135,9 @@ export { type JointProposal, proposeJoint } from "./joints/propose";
  * are not changed.
  */
 export { assemblyOrder } from "./outputs/assembly-order";
+
+/**
+ * The clear gap between two placed boards as expressions (ADR 015, rule 7): where it starts and how
+ * long it is, along the one axis on which they face each other. Never throws.
+ */
+export { type Gap, gapBetween } from "./solve/gap";
