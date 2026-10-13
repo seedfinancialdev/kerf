@@ -19,7 +19,7 @@ const shop = loadShopProfile();
 const IN = 203_200;
 const project = () => startProject("Bookcase", "imperial").project;
 const board = (name: string, p = project()): PlacedPart => {
-  const found = solve(p, shop).placements.find((x) => x.partName === name);
+  const found = solve(p, shop).placements.find((x) => x.partName === name || x.name === name);
   if (!found) throw new Error(`no ${name}`);
   return found;
 };
@@ -73,9 +73,53 @@ describe("pushPull()", () => {
     expect(r.ok && r.edit.project.parts.find((d) => d.name === "Top")?.detached).toBe(true);
   });
 
+  it("changes nothing for a distance of zero: no take-over, nothing to record", () => {
+    const r = pushPull(project(), top(), "end1", 0, shop);
+    expect(r).toEqual({ ok: false, message: "A distance of zero changes nothing." });
+  });
+
   it("refuses to push a board to nothing", () => {
     const r = pushPull(project(), top(), "end1", -40 * IN, shop);
     expect(r.ok).toBe(false);
+  });
+});
+
+describe("pushPull() on a side, where the board's length runs up the case", () => {
+  // Hand calculation from the placements (solve of the starter bookcase): the Right side has
+  // x = +z, y = +y and its thickness along -x (box x 0..146050); the Left side the same way
+  // round (box x 7169150..7315200). Both are 14630400 long and 2438400 wide.
+  const cases = [
+    { side: "Right side", face: "end1", axis: 2, moved: "max", fixed: "min", sign: 1 },
+    { side: "Right side", face: "end0", axis: 2, moved: "min", fixed: "max", sign: -1 },
+    { side: "Right side", face: "edge1", axis: 1, moved: "max", fixed: "min", sign: 1 },
+    { side: "Right side", face: "edge0", axis: 1, moved: "min", fixed: "max", sign: -1 },
+    { side: "Left side", face: "end1", axis: 2, moved: "max", fixed: "min", sign: 1 },
+    { side: "Left side", face: "end0", axis: 2, moved: "min", fixed: "max", sign: -1 },
+    { side: "Left side", face: "edge1", axis: 1, moved: "max", fixed: "min", sign: 1 },
+    { side: "Left side", face: "edge0", axis: 1, moved: "min", fixed: "max", sign: -1 },
+  ] as const;
+
+  it.each(cases)(
+    'pulling $side $face moves that face by exactly 1" and keeps the opposite face',
+    ({ side, face, axis, moved, fixed, sign }) => {
+      const before = board(side);
+      const r = pushPull(project(), before, face, IN, shop);
+      if (!r.ok) throw new Error(r.message);
+      const after = board(side, r.edit.project);
+      expect(after.box[fixed][axis]).toBe(before.box[fixed][axis]);
+      expect(after.box[moved][axis]).toBe((before.box[moved][axis] ?? 0) + sign * IN);
+    },
+  );
+
+  it("does not change the other two directions of the board", () => {
+    const before = board("Left side");
+    const r = pushPull(project(), before, "end1", IN, shop);
+    if (!r.ok) throw new Error(r.message);
+    const after = board("Left side", r.edit.project);
+    expect(after.box.min[0]).toBe(before.box.min[0]);
+    expect(after.box.max[0]).toBe(before.box.max[0]);
+    expect(after.box.min[1]).toBe(before.box.min[1]);
+    expect(after.box.max[1]).toBe(before.box.max[1]);
   });
 });
 
@@ -203,5 +247,91 @@ describe("the Push/Pull tool", () => {
     expect(now?.length).toBe(1);
     expect(now?.[0]?.partName).toMatch(/^Shelf/);
     expect(now?.[0]?.size.length).toBe(shelf.size.length + IN);
+  });
+
+  const alongPoint = (placed: PlacedPart, inches: number): [number, number, number] => {
+    const point: [number, number, number] = [0, 0, 0];
+    const k = placed.frame.x.findIndex((n) => n !== 0);
+    point[k] = inches * IN * (placed.frame.x[k] ?? 0);
+    return point;
+  };
+  const at = (placed: PlacedPart, inches: number): ModelHit => ({
+    ...endOf(placed),
+    point: alongPoint(placed, inches),
+  });
+  const entries = (s: ReturnType<typeof started>) => s.getState().history?.entries.length;
+
+  it("records nothing and shows no preview when a drag moves and returns to zero", () => {
+    const s = started();
+    const placed = top();
+    const before = entries(s);
+    pushPullTool.pointer?.(event("down", at(placed, 0)), s);
+    pushPullTool.pointer?.(event("move", at(placed, 1)), s);
+    expect(s.getState().previewed).not.toBeNull();
+    pushPullTool.pointer?.(event("move", at(placed, 0)), s);
+    expect(s.getState().previewed).toBeNull();
+    pushPullTool.pointer?.(event("up", at(placed, 0)), s);
+    expect(entries(s)).toBe(before);
+    expect(s.getState().previewed).toBeNull();
+    expect(s.getState().notice).toBeNull();
+    expect(s.getState().pending).toBeNull();
+    expect(lengthOfTop(s)).toBe(7_023_100);
+  });
+
+  it("records nothing and keeps the pick for typing when a click moves nowhere", () => {
+    const s = started();
+    const before = entries(s);
+    pushPullTool.pointer?.(event("down", at(top(), 0)), s);
+    pushPullTool.pointer?.(event("move", at(top(), 0)), s);
+    pushPullTool.pointer?.(event("up", at(top(), 0)), s);
+    expect(entries(s)).toBe(before);
+    expect(s.getState().notice).toBeNull();
+    expect(s.getState().pending?.tool).toBe("pushPull");
+  });
+
+  it("refuses a typed zero and leaves the board with the form", () => {
+    const s = started();
+    pushPullTool.pointer?.(event("down", at(top(), 0)), s);
+    const before = entries(s);
+    expect(pushPullTool.measure?.('0"', s)).toBe("A distance of zero changes nothing.");
+    expect(entries(s)).toBe(before);
+    expect(s.getState().notice).toBeNull();
+    expect(s.getState().history?.entries[0]?.project.parts.some((d) => d.detached)).toBeFalsy();
+  });
+
+  it("explains a refused release, records nothing and leaves no preview", () => {
+    const s = started();
+    const placed = top();
+    const before = entries(s);
+    pushPullTool.pointer?.(event("down", at(placed, 0)), s);
+    pushPullTool.pointer?.(event("move", at(placed, 1)), s);
+    pushPullTool.pointer?.(event("move", at(placed, -40)), s);
+    expect(s.getState().previewed).not.toBeNull();
+    pushPullTool.pointer?.(event("up", at(placed, -40)), s);
+    expect(s.getState().notice?.text).toBeTruthy();
+    expect(s.getState().previewed).toBeNull();
+    expect(entries(s)).toBe(before);
+    expect(s.getState().pending).toBeNull();
+  });
+
+  it("explains a drag pushed straight to nothing and released", () => {
+    const s = started();
+    const placed = top();
+    pushPullTool.pointer?.(event("down", at(placed, 0)), s);
+    pushPullTool.pointer?.(event("up", at(placed, -40)), s);
+    expect(s.getState().notice?.text).toBeTruthy();
+    expect(s.getState().pending).toBeNull();
+  });
+
+  it("drops the preview when the drag is released off the model", () => {
+    const s = started();
+    const placed = top();
+    const before = entries(s);
+    pushPullTool.pointer?.(event("down", at(placed, 0)), s);
+    pushPullTool.pointer?.(event("move", at(placed, 1)), s);
+    pushPullTool.pointer?.(event("up", null), s);
+    expect(s.getState().previewed).toBeNull();
+    expect(entries(s)).toBe(before);
+    expect(s.getState().pending).toBeNull();
   });
 });

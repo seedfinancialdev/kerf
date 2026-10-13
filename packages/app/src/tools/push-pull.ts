@@ -34,13 +34,14 @@ export function faceOf(placed: PlacedPart, normal: Vec3): BoardFace | "thickness
   return "thickness";
 }
 
+const NO_DISTANCE = "A distance of zero changes nothing.";
 const THICKNESS_LOCKED = "A board's thickness is set by its stock. Pick an end or an edge.";
 
 /**
  * Moves one end or edge outward by `distance` (inward when negative), in project units. The far
  * end or edge stays where it was. A board the form made is taken over first, using the project's
- * real `shop`. Comes back `ok: false`, saying why, when the board would be left with no size or
- * cannot be found or taken over.
+ * real `shop`. Comes back `ok: false`, saying why, for a distance of zero (nothing to record), when
+ * the board would be left with no size, or when it cannot be found or taken over.
  */
 export function pushPull(
   project: Project,
@@ -49,6 +50,7 @@ export function pushPull(
   distance: Len,
   shop: ShopProfile,
 ): EditResult {
+  if (distance === 0) return { ok: false, message: NO_DISTANCE };
   let taken: ReturnType<typeof detachForEdit>;
   try {
     taken = detachForEdit(project, placed, shop);
@@ -59,7 +61,10 @@ export function pushPull(
   const inst = instanceOf(taken.project, placed);
   const def = inst && taken.project.parts.find((d) => d.id === inst.def);
   if (!inst || !def)
-    return { ok: false, message: `${placed.partName} could not be found to change.` };
+    return {
+      ok: false,
+      message: `${placed.partName} could not be found to change. Click the board again.`,
+    };
 
   const lengthwise = face.startsWith("end");
   const along = lengthwise ? placed.frame.x : placed.frame.y;
@@ -115,11 +120,14 @@ function recorded(store: KerfStore): Project | null {
  * moves).
  */
 function finish(store: KerfStore, placed: PlacedPart, edit: Edit): void {
-  const s = store.getState();
   const taken = placed.source !== undefined && !placed.detached;
-  s.apply(edit, taken ? `${placed.partName} is now custom; the form won't change it.` : undefined);
+  // Read before applying: the store drops a pick of an instance the edit removed.
+  const { selection } = store.getState();
+  store
+    .getState()
+    .apply(edit, taken ? `${placed.partName} is now custom; the form won't change it.` : undefined);
+  const s = store.getState();
   const now = instanceOf(edit.project, placed);
-  const { selection } = s;
   if (now && selection.kind === "boards" && selection.instances.includes(placed.instance)) {
     s.select({
       kind: "boards",
@@ -133,7 +141,6 @@ function finish(store: KerfStore, placed: PlacedPart, edit: Edit): void {
 export const pushPullTool: ToolHandler = {
   pointer(e, store) {
     const s = store.getState();
-    const pending = s.pending?.tool === "pushPull" ? s.pending : null;
     const project = recorded(store);
     if (!project) return;
     if (e.kind === "down") {
@@ -145,15 +152,30 @@ export const pushPullTool: ToolHandler = {
       s.setPending({ tool: "pushPull", hit: e.hit, dragged: null });
       return;
     }
-    if (!pending || !e.hit) return;
+    if (s.pending?.tool !== "pushPull") return;
+    const pending = s.pending;
     const { placed, normal, point } = pending.hit;
-    const face = faceOf(placed, normal) as BoardFace;
-    const r = pushPull(project, placed, face, travelAlong(point, e.hit.point, normal), s.shop);
-    if (e.kind === "move" && r.ok && r.edit.label !== pending.dragged) {
-      s.preview(r.edit.project);
-      s.setPending({ ...pending, dragged: r.edit.label });
+    const distance = e.hit ? travelAlong(point, e.hit.point, normal) : null;
+    const r =
+      distance === null || distance === 0
+        ? null
+        : pushPull(project, placed, faceOf(placed, normal) as BoardFace, distance, s.shop);
+    if (e.kind === "move") {
+      if (r?.ok && (r.edit.label !== pending.dragged || s.previewed === null)) {
+        s.preview(r.edit.project);
+        s.setPending({ ...pending, dragged: r.edit.label });
+      } else if (distance === 0 && s.previewed !== null) {
+        // Back at the start: the board is as it was, so there is nothing to show.
+        s.cancelPreview();
+      }
+      return;
     }
-    if (e.kind === "up" && pending.dragged !== null && r.ok) finish(store, placed, r.edit);
+    if (r?.ok && pending.dragged !== null) return finish(store, placed, r.edit);
+    // Nothing is recorded. A click that has not moved keeps its pick so a distance can be typed;
+    // a drag that ended with nothing to record is over.
+    s.cancelPreview();
+    if (r && !r.ok) s.say(r.message);
+    if (pending.dragged !== null || (r && !r.ok)) s.setPending(null);
   },
   prompt: (s) => (s.pending?.tool === "pushPull" ? 'Distance, e.g. 1"' : "Click an end or edge"),
   measure(text, store) {
