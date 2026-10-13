@@ -15,11 +15,11 @@ import { keptByField } from "./useShortcuts";
 const SIZE_START = /^[0-9\-./'"]$/;
 
 /**
- * The box under the model where a size is typed for the active tool. Enter sends it; a refusal is
- * shown in plain words until the text or the tool changes; Escape hands the keyboard back to the
- * window so tool keys work again. While the tool waits for a size (it has begun an action and
- * takes typed sizes), a size typed anywhere outside a field comes here, as in SketchUp; letters
- * are left to pick tools.
+ * The box under the model where a size is typed for the active tool. Enter sends it and, once the
+ * size is taken, hands the keyboard back to the window; a refusal is shown in plain words until the
+ * text or the tool changes; Escape hands the keyboard back so tool keys work again. While the tool
+ * waits for a size (it has begun an action and takes typed sizes), a size typed anywhere outside a
+ * field comes here, as in SketchUp; letters are left to pick tools.
  */
 export function Measurements() {
   const store = useKerfStore();
@@ -53,7 +53,11 @@ export function Measurements() {
       ? handler.measure(text, store)
       : "This tool takes no typed size.";
     setRefusal(refused ? { tool, text: refused } : null);
-    if (!refused) setText("");
+    if (refused) return;
+    setText("");
+    // The size is in: the keyboard goes back to the window so tool keys and Ctrl/⌘+Z work again
+    // (final fix re-review N1); a refusal keeps it here so the size can be corrected.
+    box.current?.blur();
   };
   return (
     <div className="measurements">

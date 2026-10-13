@@ -170,6 +170,31 @@ describe("a size typed anywhere (Interaction spec, Measurements; final branch re
     ).toBe(7_429_500);
   });
 
+  it('gives the keyboard back after 2" Enter, so a tool letter picks the tool (re-review N1)', async () => {
+    const { store } = waiting();
+    await userEvent.keyboard('2"{Enter}m');
+    expect(document.activeElement).not.toBe(box());
+    expect(box().value).toBe("");
+    expect(store.getState().tool).toBe("move");
+  });
+
+  it('gives the keyboard back after 2" Enter, so Ctrl+Z undoes the change (re-review N1)', async () => {
+    const { store } = waiting();
+    await userEvent.keyboard('2"{Enter}{Control>}z{/Control}');
+    // Undone: the Top is back to 34-9/16" (7023100), and the redo entry is the change.
+    expect(store.getState().history?.entries.at(-1)?.label).toBe('Lengthened Top by 2"');
+    expect(
+      store.getState().solved?.result.placements.find((p) => p.partName === "Top")?.size.length,
+    ).toBe(7_023_100);
+  });
+
+  it("keeps the keyboard in the box after a refusal, so the size can be corrected", async () => {
+    waiting();
+    await userEvent.keyboard("2x{Enter}");
+    expect(document.activeElement).toBe(box());
+    expect(screen.getByRole("alert")).toBeTruthy();
+  });
+
   it.each(["2", "-", ".", "/", "'", '"'])(
     "starts the box with %s and gives it the keyboard",
     (key) => {

@@ -27,4 +27,12 @@ test("a size typed without clicking into Measurements draws the board", async ({
   await expect(page.getByRole("option", { name: "Added Board 1" })).toBeVisible();
   // The board is the size typed: 24" long and 6" wide.
   await expect(page.getByTestId("cutlist-line").filter({ hasText: '24" × 6"' })).toHaveCount(1);
+  // The keyboard is the window's again: a tool letter picks the tool and Ctrl+Z undoes the board.
+  await page.keyboard.press("m");
+  await expect(page.getByRole("button", { name: "Move M" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.keyboard.press("Control+z");
+  await expect(page.getByTestId("cutlist-line").filter({ hasText: '24" × 6"' })).toHaveCount(0);
 });
