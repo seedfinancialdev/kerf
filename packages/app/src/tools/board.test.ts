@@ -276,10 +276,11 @@ describe("the Board tool", () => {
     });
   });
 
-  it("starts nothing when the sight line looks above the floor", () => {
+  it("starts nothing when the sight line looks above the floor, and says where to click (silent-failure review M11)", () => {
     const s = started();
     down(s, null, { origin: [3, 10, 4], dir: [0, 1, 0] });
     expect(s.getState().pending).toBeNull();
+    expect(s.getState().notice?.text).toBe("Click a board, or the floor below the horizon.");
   });
 
   it("starts nothing when there is no sight line and no board", () => {

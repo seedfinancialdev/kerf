@@ -7,7 +7,7 @@
 // lines live for the session and are never saved (ADR 015, D6).
 
 import { gridSize, type Len, type Project, type Vec3 } from "@kerf/core";
-import { floorPoint } from "./drag";
+import { floorPoint, OFF_THE_FLOOR } from "./drag";
 import { recordedProject, type ToolHandler } from "./handler";
 
 /** What the Tape reads between two points: each direction, and the straight line. All are distances (never negative). */
@@ -62,9 +62,12 @@ export const tapeTool: ToolHandler = {
     if (e.kind !== "down") return;
     const project = recordedProject(store);
     if (!project) return;
-    const point = e.hit?.point ?? floorPoint(e.ray, gridSize(project.units));
-    if (!point) return;
     const s = store.getState();
+    const point = e.hit?.point ?? floorPoint(e.ray, gridSize(project.units));
+    if (!point) {
+      s.say(OFF_THE_FLOOR);
+      return;
+    }
     if (s.pending?.tool === "tape") {
       s.setTape({ from: s.pending.from, to: point });
       s.setPending(null);

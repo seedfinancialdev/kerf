@@ -100,10 +100,11 @@ describe("tapeTool", () => {
     expect(s.getState().tape).toBeNull();
   });
 
-  it("ignores a click on the sky", () => {
+  it("measures nothing from a click on the sky, and says where to click (silent-failure review M11)", () => {
     const s = started();
     tapeTool.pointer?.({ ...click(null), ray: { origin: [0, 10, 0], dir: [0, 1, 0] } }, s);
     expect(s.getState().pending).toBeNull();
+    expect(s.getState().notice?.text).toBe("Click a board, or the floor below the horizon.");
   });
 
   it("ignores moves and releases", () => {

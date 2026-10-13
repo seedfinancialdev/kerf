@@ -70,6 +70,9 @@ export function pointOnPlane(ray: Ray, from: Vec3, normal: Axis, grid: Len): Vec
   return fromScene(at, grid).map(capped) as unknown as Vec3;
 }
 
+/** Said when a click that needs a point lands on neither a board nor the floor (`floorPoint`). */
+export const OFF_THE_FLOOR = "Click a board, or the floor below the horizon.";
+
 /**
  * Where the line of sight meets the floor (the plane through the project's origin), snapped to the
  * grid. Null when it does not come down onto the floor from above, e.g. a click on the sky.

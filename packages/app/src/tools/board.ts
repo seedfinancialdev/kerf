@@ -23,7 +23,7 @@ import type { Edit } from "../model/commands";
 import { newId } from "../model/ids";
 import { literalFor, readLength } from "../model/size";
 import type { KerfStore } from "../model/store";
-import { floorPoint } from "./drag";
+import { floorPoint, OFF_THE_FLOOR } from "./drag";
 import { newProblem } from "./edit-outcome";
 import { type ModelPointer, recordedProject, type ToolHandler } from "./handler";
 
@@ -264,6 +264,7 @@ export const boardTool: ToolHandler = {
     }
     const point = e.hit?.point ?? floorPoint(e.ray, gridSize(project.units));
     if (point) s.setPending({ tool: "board", from: { placed: e.hit?.placed ?? null, point } });
+    else s.say(OFF_THE_FLOOR);
   },
   prompt: (s) =>
     s.pending?.tool === "board"
