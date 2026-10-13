@@ -24,7 +24,7 @@ export default defineConfig({
         plugins: [react()],
         test: {
           name: "app",
-          include: ["packages/app/src/**/*.test.{ts,tsx}", "packages/app/e2e/support/**/*.test.ts"],
+          include: ["packages/app/src/**/*.test.{ts,tsx}"],
           environment: "jsdom",
           setupFiles: ["packages/app/src/test-setup.ts"],
         },

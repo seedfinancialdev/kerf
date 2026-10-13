@@ -8,12 +8,12 @@
 import { readKerf } from "@kerf/io";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { bannedWordsIn } from "../../e2e/support/banned-words";
 import { startProject } from "../model/commands";
 import { openKerfBytes, saveKerfBytes } from "../model/files";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
+import { bannedWordsIn } from "../testing/banned-words";
 import { memoryStorage } from "../testing/memory-storage";
 import { FileSection } from "./FileSection";
 

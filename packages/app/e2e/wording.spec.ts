@@ -6,7 +6,7 @@
 // boolean. Checked on every step, every plan tab and every tool panel of the core flow.
 
 import { expect, type Page, test } from "@playwright/test";
-import { bannedWordsIn } from "./support/banned-words";
+import { bannedWordsIn } from "../src/testing/banned-words";
 
 const TOOL_NAMES: Record<string, string> = {
   b: "Board",

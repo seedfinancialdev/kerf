@@ -8,7 +8,7 @@
 import { serializeProject } from "@kerf/core";
 import { strToU8, zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
-import { bannedWordsIn } from "../../e2e/support/banned-words";
+import { bannedWordsIn } from "../testing/banned-words";
 import { startProject } from "./commands";
 import { fileNameFor, openKerfBytes, saveKerfBytes } from "./files";
 
