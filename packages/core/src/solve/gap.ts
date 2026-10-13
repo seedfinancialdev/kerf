@@ -6,6 +6,7 @@
 // them (Interaction spec, "Board": "its length binds to the gap") follows every resize without
 // any change to the expression language. Built from the boards' own position and size expressions.
 
+import { stockKey } from "../expr/parser";
 import type { Expr, Id, Instance, PartDef, Project } from "../types";
 import { axisMaps } from "./assembly";
 import { type SolvedInstance, solveModel } from "./model";
@@ -33,7 +34,7 @@ function sizeExpr(project: Project, part: PartDef, local: 0 | 1 | 2): Expr {
   if (part.thickness !== undefined) return `(${part.thickness})`;
   const stock = project.stock.find((s) => s.id === part.stock);
   if (!stock) throw new Error("unreachable: validateProject refuses a part whose stock is missing");
-  return `stock["${stock.name.replaceAll('"', '\\"')}"].thickness`;
+  return stockKey(stock.name, "thickness");
 }
 
 /** The far face of `inst` along a project axis as an expression, or undefined if it has no part. */

@@ -91,6 +91,41 @@ describe("gapBetween()", () => {
     expect(lengthOf(p, gap.start)).toBe(2 * 203_200);
   });
 
+  describe("with a stock whose name holds a quote or a backslash (PR review tests-M1)", () => {
+    /**
+     * The hand-made bookcase with its 3/4 plywood renamed `name`, every expression that names it
+     * rewritten with `written`, the name as an expression's quoted text spells it.
+     */
+    function renamed(name: string, written: string): Project {
+      const p = handMade();
+      const rewrite = (v: unknown): unknown => {
+        if (typeof v === "string")
+          return v.replaceAll('stock["3/4 plywood"]', `stock["${written}"]`);
+        if (Array.isArray(v)) return v.map(rewrite);
+        if (v && typeof v === "object")
+          return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, rewrite(x)]));
+        return v;
+      };
+      const q = rewrite(p) as Project;
+      return {
+        ...q,
+        stock: q.stock.map((s) => (s.name === "3/4 plywood" ? { ...s, name } : s)),
+      };
+    }
+
+    it.each([
+      ['3/4" ply', '3/4\\" ply'],
+      ["3/4 ply\\", "3/4 ply\\\\"],
+    ])("measures 34-9/16 between the sides of stock %s", (name, written) => {
+      // The same hand calculation as above: 36 − 2 × 23/32 = 34-9/16" = 7023100 units.
+      const p = renamed(name, written);
+      expect(solveModel(p).diagnostics).toEqual([]);
+      const gap = gapBetween(p, idOf(p, "Right side"), idOf(p, "Left side"));
+      if (!gap.ok) throw new Error(gap.reason);
+      expect(lengthOf(p, gap.length)).toBe(7_023_100);
+    });
+  });
+
   it("refuses boards that touch: they enclose no gap", () => {
     const p = handMade();
     expect(gapBetween(p, idOf(p, "Top"), idOf(p, "Right side"))).toMatchObject({ ok: false });
