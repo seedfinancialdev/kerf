@@ -410,6 +410,20 @@ describe("the Move tool", () => {
       expect(s.getState().pending).toBeNull();
     });
 
+    it("keeps an arrow lock pressed before the click, so the typed distance follows it (final branch review M2)", () => {
+      const s = started();
+      const top = topOf(s);
+      lock(s, 2);
+      // A click on the top that never moves: press and release at the same point.
+      moveTool.pointer?.(event("down", hit(top, [0, 0, 0])), s);
+      moveTool.pointer?.(event("up", hit(top, [0, 0, 0])), s);
+      expect(s.getState().pending).toMatchObject({ tool: "move", axis: 2 });
+      expect(moveTool.measure?.('2"', s)).toBeNull();
+      // Up 2" (z), not 2" left to right (x).
+      expect(topOf(s).box.min[2]).toBe(top.box.min[2] + 2 * IN);
+      expect(topOf(s).box.min[0]).toBe(top.box.min[0]);
+    });
+
     it("moves down for a negative distance", () => {
       const s = started();
       const top = topOf(s);
