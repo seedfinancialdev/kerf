@@ -185,6 +185,17 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
       return notice && !notice.undo ? notice : null;
     };
 
+    /** Shows another History entry; boards that entry does not have are no longer selected. */
+    const moveTo = (history: History): void => {
+      show({ history, previewed: null, notice: keepPlainNotice() });
+      const { selection, solved } = get();
+      if (selection.kind !== "boards") return;
+      const present = new Set(solved?.result.placements.map((p) => p.instance));
+      const instances = selection.instances.filter((id) => present.has(id));
+      if (instances.length === selection.instances.length) return;
+      set({ selection: instances.length > 0 ? { kind: "boards", instances } : NOTHING });
+    };
+
     /**
      * Keeps the shown History entry in storage and remembers its units. When the project cannot be
      * written, says so once with a plain notice, which waits behind any plain notice already shown.
@@ -239,17 +250,21 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
       cancelPreview: () => show({ previewed: null }),
       undo: () => {
         const h = get().history;
-        if (h) show({ history: undo(h), previewed: null, notice: keepPlainNotice() });
+        if (h) moveTo(undo(h));
       },
       redo: () => {
         const h = get().history;
-        if (h) show({ history: redo(h), previewed: null, notice: keepPlainNotice() });
+        if (h) moveTo(redo(h));
       },
       jumpTo: (index) => {
         const h = get().history;
-        if (h) show({ history: jumpTo(h, index), previewed: null, notice: keepPlainNotice() });
+        if (h) moveTo(jumpTo(h, index));
       },
-      setStep: (step) => set({ step }),
+      setStep: (step) => {
+        // Each step shows its own panel, so a board picked on one step does not cover the next.
+        const { selection } = get();
+        set({ step, selection: selection.kind === "boards" ? NOTHING : selection });
+      },
       select: (selection) => set({ selection }),
       setShop: (shop) => {
         saveShop(deps.storage, shop);

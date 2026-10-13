@@ -14,6 +14,7 @@ import {
   addRoundover,
   clearDivision,
   detachForEdit,
+  handBack,
   instanceOf,
   setOption,
   setShelfRoundover,
@@ -307,5 +308,28 @@ describe("a missing opening", () => {
     ["clearDivision", () => clearDivision(p, id, "nope")],
   ])("%s throws a RangeError", (_name, run) => {
     expect(run).toThrow(RangeError);
+  });
+});
+
+describe("handBack()", () => {
+  it("returns a taken-over board to the form", () => {
+    const p = start().project;
+    const taken = addRoundover(p, placementNamed(p, "Top"), ["edge1/face1"], IN / 8, shop).project;
+    const { project, label } = handBack(taken, placementNamed(taken, "Top"), shop);
+    expect(label).toBe("Top follows the form again");
+    expect(project.parts).toEqual([]);
+  });
+
+  it("puts a shelf taken out of its row back in the row", () => {
+    const p = start().project;
+    const member = shelfMember(p, 1);
+    const taken = detachForEdit(p, member, shop).project;
+    const own = solve(taken, shop).placements.find((x) => x.source?.role === "shelf" && x.detached);
+    if (!own) throw new Error("no detached shelf");
+    const { project } = handBack(taken, own, shop);
+    expect(project.instances).toEqual([]);
+    expect(solve(project, shop).placements.filter((x) => x.source?.role === "shelf")).toHaveLength(
+      4,
+    );
   });
 });

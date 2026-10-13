@@ -4,6 +4,7 @@
 
 // The right panel (Interaction spec, "Inspector"): what the current step offers.
 
+import { BoardInspector } from "./BoardInspector";
 import { DivideStep } from "./DivideStep";
 import { JoineryStep } from "./JoineryStep";
 import { ShapeStep } from "./ShapeStep";
@@ -12,6 +13,10 @@ import { useKerf } from "./useKerf";
 
 export function Inspector() {
   const step = useKerf((s) => s.step);
+  const selection = useKerf((s) => s.selection);
+  if (step !== "Start" && selection.kind === "boards") {
+    return <BoardInspector instances={selection.instances} />;
+  }
   switch (step) {
     case "Start":
       return <StartStep />;

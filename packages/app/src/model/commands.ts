@@ -7,6 +7,8 @@
 // Nothing here mutates its input; the store records what these return.
 
 import {
+  attachCopyIn,
+  attachPartIn,
   detachCopyIn,
   detachPartIn,
   type EdgeRef,
@@ -327,6 +329,22 @@ export function addRoundover(
     project: next,
     label: `Roundover ${formatLength(radius, project.units)} on ${placed.name}`,
   };
+}
+
+/**
+ * Hands a taken-over board back to its form (Domain model: "Undo re-attaches"). A copy taken out
+ * of a row goes back into the row. Like `detachForEdit`, the engine re-attaches within the
+ * generated project, so the form is generated first and what it made is dropped again.
+ * Throws RangeError when the board was not taken over or something added by hand refers to it
+ * (the message says what to remove first).
+ */
+export function handBack(project: Project, placed: PlacedPart, shop: ShopProfile): Edit {
+  const generated = generateStructures(project, shop);
+  const own = instanceOf(generated, placed);
+  const attached = own?.detachedFrom
+    ? attachCopyIn(generated, own.id)
+    : attachPartIn(generated, own?.def ?? placed.part);
+  return { project: withoutGenerated(attached), label: `${placed.name} follows the form again` };
 }
 
 /** Inches or millimetres for this project (ADR 015, rule 4). */

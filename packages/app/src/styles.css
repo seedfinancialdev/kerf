@@ -401,3 +401,38 @@ button[aria-pressed="true"] {
   margin: 0;
   color: var(--color-text-muted);
 }
+
+.board-title {
+  margin: 0;
+  font-size: 15px;
+}
+.facts {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+}
+.facts dt {
+  color: var(--color-text-muted);
+}
+.facts dd {
+  margin: 0;
+  font-variant-numeric: var(--font-numeric);
+}
+.origin {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+.problems {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0 var(--space-3);
+  list-style: none;
+}
+.problem.error {
+  color: var(--color-error);
+}
+.problem.warning {
+  color: var(--color-warning);
+}

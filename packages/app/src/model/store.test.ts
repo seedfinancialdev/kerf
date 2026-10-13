@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 import { memoryStorage } from "../testing/memory-storage";
-import { setSize, startProject } from "./commands";
+import { setShelves, setSize, startProject } from "./commands";
 import { STARTER_SHOP } from "./starter";
 import { createStorage } from "./storage";
 import { createKerfStore, shownProject } from "./store";
@@ -256,5 +256,49 @@ describe("createKerfStore()", () => {
     s.getState().undo();
     expect(s.getState().previewed).toBeNull();
     expect(shelfCut(s)).toBe(7_124_700);
+  });
+});
+
+describe("selected boards", () => {
+  const started = () => {
+    const s = fresh();
+    s.getState().apply(startProject("Bookcase", "imperial"));
+    return s;
+  };
+  const shelves = (s: ReturnType<typeof fresh>) =>
+    (s.getState().solved?.result.placements ?? []).filter((p) => p.source?.role === "shelf");
+
+  it("are unselected when the step changes, but a selected structure stays", () => {
+    const s = started();
+    s.getState().select({ kind: "boards", instances: shelves(s).map((p) => p.instance) });
+    s.getState().setStep("Shape");
+    expect(s.getState().selection).toEqual({ kind: "none" });
+    s.getState().select({ kind: "structure", structure: "form" });
+    s.getState().setStep("Divide");
+    expect(s.getState().selection).toEqual({ kind: "structure", structure: "form" });
+  });
+
+  it("drop the boards that undo removes and keep the others", () => {
+    const s = started();
+    const p = shownProject(s.getState());
+    const structure = p?.structures[0];
+    const opening = structure?.openings[0];
+    if (!p || !structure || !opening) throw new Error("no opening");
+    const r = setShelves(p, structure.id, opening.id, "5", "even");
+    if (!r.ok) throw new Error(r.message);
+    s.getState().apply(r.edit);
+    const picked = shelves(s).map((x) => x.instance);
+    expect(picked).toHaveLength(5);
+    s.getState().select({ kind: "boards", instances: picked });
+    s.getState().undo();
+    const sel = s.getState().selection;
+    expect(sel.kind === "boards" && sel.instances).toHaveLength(4);
+  });
+
+  it("become no selection when every one is gone", () => {
+    const s = started();
+    s.getState().select({ kind: "boards", instances: ["not-a-board"] });
+    s.getState().jumpTo(0);
+    expect(s.getState().selection).toEqual({ kind: "none" });
   });
 });
