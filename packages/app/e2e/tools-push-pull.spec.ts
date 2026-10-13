@@ -23,6 +23,5 @@ test("Push/Pull on a board's broad face says the thickness is the stock's", asyn
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await expect(page.getByRole("status")).toContainText(
     "A board's thickness is set by its stock. Pick an end or an edge.",
-    { timeout: 10_000 },
   );
 });

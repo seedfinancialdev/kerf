@@ -5,7 +5,17 @@
 // Interaction spec, "Move / copy": M moves with axis locks and typed distances; the arrow keys lock
 // the direction (up is the vertical one).
 
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
+
+/** The project the app keeps in browser storage after each recorded change (its saved intent). */
+async function keptProject(page: Page): Promise<{
+  instances: { name?: string; position: { z: string } }[];
+  parts: { name: string; detached?: boolean }[];
+}> {
+  const text = await page.evaluate(() => localStorage.getItem("kerf.project"));
+  if (!text) throw new Error("no project kept");
+  return JSON.parse(text);
+}
 
 test("moves the top by a typed distance and undoes it", async ({ page }) => {
   await page.goto("/");
@@ -22,10 +32,14 @@ test("moves the top by a typed distance and undoes it", async ({ page }) => {
   await expect(page.getByRole("option", { name: 'Moved Top 2"' })).toBeVisible();
   await page.getByRole("region", { name: "Model" }).click({ position: { x: 5, y: 5 } });
   await page.keyboard.press("Control+z");
-  await expect(page.getByRole("option", { name: 'Moved Top 2"' })).not.toHaveAttribute(
+  await expect(page.getByRole("option", { name: "New bookcase" })).toHaveAttribute(
     "aria-selected",
     "true",
   );
+  // The top is the form's again: nothing is taken over in the project kept after Undo.
+  await expect
+    .poll(async () => (await keptProject(page)).parts.some((d) => d.detached))
+    .toBe(false);
 });
 
 test("lifts a shelf by dragging it upward, even past the top of the model", async ({ page }) => {
@@ -47,5 +61,11 @@ test("lifts a shelf by dragging it upward, even past the top of the model", asyn
   await page.mouse.move(x, box.y + box.height * 0.18, { steps: 5 });
   await page.mouse.move(x, box.y - 30, { steps: 10 });
   await page.mouse.up();
-  await expect(page.getByRole("option", { name: /^Moved / })).toBeVisible();
+  // A shelf of the row is taken out as a copy of its own and moved.
+  await expect(page.getByRole("option", { name: /^Moved Shelf( copy)? \d+ / })).toBeVisible();
+  // Up, not down: the moved copy's height is written as its old height plus the distance.
+  const moved = (await keptProject(page)).instances.find((i) =>
+    /^Shelf copy \d+$/.test(i.name ?? ""),
+  );
+  expect(moved?.position.z).toMatch(/\) \+ \S/);
 });

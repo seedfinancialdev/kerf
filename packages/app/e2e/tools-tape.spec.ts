@@ -19,5 +19,8 @@ test("two clicks on the model show what was measured", async ({ page }) => {
   await page.mouse.click(box.x + box.width * 0.4, box.y + box.height * 0.5);
   await page.mouse.click(box.x + box.width * 0.6, box.y + box.height * 0.5);
   await expect(page.getByText("Measured")).toBeVisible();
-  await expect(page.getByText("Straight line")).toBeVisible();
+  // The exact reading depends on the camera; two points 20% of the view apart are not 0" apart.
+  const straight = page.locator("dt", { hasText: "Straight line" }).locator("+ dd");
+  await expect(straight).toHaveText(/\d/);
+  await expect(straight).not.toHaveText('0"');
 });

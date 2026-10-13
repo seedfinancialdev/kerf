@@ -12,7 +12,9 @@ test("draws a 24 x 6 board on the floor and it joins the cut list", async ({ pag
   await page.getByRole("button", { name: "New" }).click();
   await page.getByRole("button", { name: "Blank case" }).click();
   await page.getByRole("tab", { name: "Cut list" }).click();
-  const before = await page.getByTestId("cutlist-line").count();
+  // The blank case: sides, top and bottom, back: 3 lines (the bookcase's 3 without its shelves,
+  // which share the top and bottom's line).
+  await expect(page.getByTestId("cutlist-line")).toHaveCount(3);
   const model = page.getByRole("region", { name: "Model" });
   await expect(model.locator("canvas")).toBeVisible();
   await expect(model.getByText("Drawing the model…")).toBeHidden();
@@ -24,5 +26,7 @@ test("draws a 24 x 6 board on the floor and it joins the cut list", async ({ pag
   await page.getByLabel("Measurements").fill('24", 6"');
   await page.getByLabel("Measurements").press("Enter");
   await expect(page.getByRole("option", { name: "Added Board 1" })).toBeVisible();
-  await expect(page.getByTestId("cutlist-line")).toHaveCount(before + 1);
+  await expect(page.getByTestId("cutlist-line")).toHaveCount(4);
+  // The new line is the size typed.
+  await expect(page.getByTestId("cutlist-line").filter({ hasText: '24" × 6"' })).toHaveCount(1);
 });

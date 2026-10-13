@@ -43,5 +43,8 @@ test("a width change reaches the cut list in under 100 ms", async ({ page }) => 
     type: "width change to cut list",
     description: `${ms.toFixed(1)} ms`,
   });
+  // Budget: the spec's 100 ms. Baseline: 5.9 to 6.2 ms over five runs on the full template when
+  // this test was written (INTEGRATION_TEST_STANDARD §5). It runs against `pnpm dev`, React's
+  // development build, which is slower than the shipped one, so the figure is conservative.
   expect(ms).toBeLessThan(100);
 });
