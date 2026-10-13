@@ -2,8 +2,10 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// What the app keeps in the browser for the open project and the screens (ADR 015, rule 11 and
-// D4), and the plain words used when it cannot. The shop has its own module (shop.ts).
+// Reading and writing the open project and the sections' open state in the browser (ADR 015,
+// rule 11 and D4), and the plain words used when it cannot. The store decides when each write
+// happens and when a notice shows, and keeps the theme, units and start date itself (ADR 015,
+// known limits); the shop has its own module (shop.ts).
 
 import { type Project, ProjectFormatError, parseProject, serializeProject } from "@kerf/core";
 import { DAMAGED_CONTENTS } from "./files";

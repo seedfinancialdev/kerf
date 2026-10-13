@@ -153,8 +153,8 @@ Three layers, depending in one direction:
 2. **The app's model** (`packages/app/src/model/`): no React, no DOM. Holds the project (intent),
    the history, the step, the selection and the shop; applies named commands; calls `solve` after
    each. Zustand holds it for React (Build plan stack).
-3. **The screens** (`packages/app/src/ui/`, `viewport/`, `tools/`): show the model and send it
-   commands. No woodworking rules here. Inside this layer the folders also depend one way, as
+3. **The screens** (`packages/app/src/ui/`, `viewport/`, `tools/`, `state/`, `scene/`): show the
+   model and send it commands. No woodworking rules here. Inside this layer the folders also depend one way, as
    dependency-cruiser checks: `state/` hands the store to React; `scene/` converts between project
    and scene coordinates; `tools/` holds what each tool does to the model, with no React or
    three.js; `viewport/` is the 3D canvas and sends pointer events to the tools; `ui/` holds the

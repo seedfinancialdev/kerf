@@ -118,9 +118,9 @@ export interface KerfActions {
   commit(label: string): void;
   /** Drops the preview and shows the recorded project again. */
   cancelPreview(): void;
-  /** Steps back one change; drops any preview and the active tool's action. Does nothing at the first entry. */
+  /** Steps back one change; drops any preview and the active tool's action, even at the first entry, where History stays put. */
   undo(): void;
-  /** Steps forward one change; drops any preview and the active tool's action. Does nothing at the last entry. */
+  /** Steps forward one change; drops any preview and the active tool's action, even at the last entry, where History stays put. */
   redo(): void;
   /** Shows History entry `index`, dropping any preview and the active tool's action. Throws RangeError for an index outside the list. */
   jumpTo(index: number): void;

@@ -42,11 +42,20 @@ through `@kerf/core`. Design: `docs/superpowers/specs/2026-10-12-m4-app-3d-view-
 
 - New public API: `assemblyOrder`, `proposeJoint`, `gapBetween`, `orientationFor` (the orientation index for a board's length and width axes, used by the Board tool), `edgeName`, `JOINT_NAME` and `JOINT_WORD` (the shop words for edges and joints, used by the engine's own messages and the app's panels alike); `SolveResult` gains `placements` and `joints`; case and box forms accept `joineryReviewed`.
 - Known limits: openings are picked in the project tree, not in the 3D view, because the engine does not report where an opening is; two structures in one project still share the origin (ADR 014); history is not kept across a reload; the PDF and `.skp` import are M5.
-- Known limit: the app's store (`model/store.ts`) still holds view-only state (`hovered`,
-  `navigation`, `fitRequest`) and the viewport's thumbnail callback beside the project and History.
-  Browser persistence moved out to `model/persist.ts` without changing behaviour, but moving the
-  view state to a viewport-owned store changes what every screen and its tests read, so it is not
-  a mechanical split and is left for a later milestone (final branch review M5).
+- Known limit: the app's store (`model/store.ts`) still has several jobs (final branch review M5).
+  Only the stateless persistence moved to `model/persist.ts`, without changing behaviour: reading
+  and setting aside the stored project (`restoreProject`), writing it (`writeProject`), reading
+  section open state (`readSections`), the start-up "this browser keeps nothing" warning
+  (`storageNotice`) and the not-kept wording (`NOT_KEPT`, `UNITS_NOT_KEPT`). Still in the store:
+  `keep()` (writing each recorded change back) and the once-only flags that decide when a not-kept
+  notice is shown for the project, the shop and the units; the reads and writes of the theme
+  (`kerf.theme`), the units for new projects (`kerf.units`), section open state (`kerf.sections`)
+  and when the project began (`kerf.created`); view-only state (`hovered`, `navigation`,
+  `fitRequest`); and the viewport's thumbnail callback. They stay because each one is tied to the
+  store's own state changes and notices (a write happens inside the action that changes the
+  value, and a failed write decides which notice shows), or, for the view state and the
+  thumbnail, because moving them changes what every screen and its tests read. Neither is a
+  mechanical split, so both are left for a later milestone.
 - Known limit: a stored project the engine rejects is kept in browser storage
   (`kerf.project.setAside`, then `.2`, `.3`, … so none is overwritten), but nothing in the app
   offers it back yet; recovering it means reading browser storage by hand. A download of the
