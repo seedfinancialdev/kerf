@@ -31,6 +31,7 @@ function Window({ model }: { model: ReactNode }) {
     <div className="window">
       <TopBar />
       <HintLine />
+      <Notice />
       <div className="workspace">
         <aside aria-label="Project" className="panel panel-left" />
         <main className="center">
@@ -40,7 +41,6 @@ function Window({ model }: { model: ReactNode }) {
         </main>
         <aside aria-label="Inspector" className="panel panel-right" />
       </div>
-      <Notice />
     </div>
   );
 }

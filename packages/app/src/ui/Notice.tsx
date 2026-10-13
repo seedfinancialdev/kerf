@@ -11,18 +11,21 @@ export function Notice() {
   const notice = useKerf((s) => s.notice);
   const undo = useKerf((s) => s.undo);
   const dismiss = useKerf((s) => s.dismissNotice);
-  if (!notice) return null;
   return (
     <div role="status" className="notice">
-      <span>{notice.text}</span>
-      {notice.undo && (
-        <button type="button" onClick={undo}>
-          Undo this
-        </button>
+      {notice && (
+        <>
+          <span>{notice.text}</span>
+          {notice.undo && (
+            <button type="button" onClick={undo}>
+              Undo this
+            </button>
+          )}
+          <button type="button" onClick={dismiss}>
+            Dismiss
+          </button>
+        </>
       )}
-      <button type="button" onClick={dismiss}>
-        Dismiss
-      </button>
     </div>
   );
 }

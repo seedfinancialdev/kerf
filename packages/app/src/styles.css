@@ -25,7 +25,7 @@ body {
 
 .window {
   display: grid;
-  grid-template-rows: var(--topbar-height) var(--hint-height) 1fr;
+  grid-template-rows: var(--topbar-height) var(--hint-height) auto 1fr;
   height: 100%;
 }
 
@@ -129,17 +129,16 @@ body {
 }
 
 .notice {
-  position: fixed;
-  left: 50%;
-  bottom: var(--space-5);
-  transform: translateX(-50%);
   display: flex;
   gap: var(--space-3);
   align-items: center;
   padding: var(--space-2) var(--space-4);
   background: var(--color-surface-raised);
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-2);
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.notice:empty {
+  display: none;
 }
 
 button {

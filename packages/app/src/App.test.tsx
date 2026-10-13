@@ -89,7 +89,30 @@ describe("<App>", () => {
     expect(screen.getByRole("status").textContent).toContain("Shelf 3 is now custom");
     fireEvent.click(screen.getByRole("button", { name: "Undo this" }));
     expect(store.getState().history?.at).toBe(0);
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByRole("status").textContent).toBe("");
+  });
+
+  it("leaves Ctrl+Z alone while typing in a field", () => {
+    const store = renderApp();
+    change(() => {
+      store.getState().apply(startProject("Bookcase", "imperial"));
+      store.getState().apply(startProject("Blank case", "imperial"));
+    });
+    const field = document.createElement("input");
+    document.body.append(field);
+    fireEvent.keyDown(field, { key: "z", ctrlKey: true });
+    field.remove();
+    expect(store.getState().history?.at).toBe(1);
+  });
+
+  it("undoes with Cmd+Z", () => {
+    const store = renderApp();
+    change(() => {
+      store.getState().apply(startProject("Bookcase", "imperial"));
+      store.getState().apply(startProject("Blank case", "imperial"));
+    });
+    fireEvent.keyDown(window, { key: "z", metaKey: true });
+    expect(store.getState().history?.at).toBe(0);
   });
 
   it("puts the theme on the page", () => {

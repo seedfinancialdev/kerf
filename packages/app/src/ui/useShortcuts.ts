@@ -8,7 +8,7 @@
 import { useEffect } from "react";
 import { useKerfStore } from "./useKerf";
 
-/** True when the key press belongs to a text field or a list, not to the app. */
+/** True when the key press is aimed at a text field, a menu or an editable area, not at the app. */
 export function isTyping(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLElement &&
