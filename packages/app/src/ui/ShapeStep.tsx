@@ -6,7 +6,7 @@
 // ("Fewer panels, progressive disclosure"). Each change is one named History entry.
 
 import type { Id, Project, Structure } from "@kerf/core";
-import { setOption } from "../model/commands";
+import { resetOption, setOption } from "../model/commands";
 import { CHOICES, DEFAULT_CORNER_JOINT, optionLabel } from "../model/labels";
 import { readLength } from "../model/size";
 import { shownProject } from "../model/store";
@@ -16,6 +16,7 @@ import { NumberField } from "./NumberField";
 import { Section } from "./Section";
 import { SizeFields } from "./SizeFields";
 
+/** The Shape step's panel: the form's size, construction and, behind More, its joint depths. */
 export function ShapeStep() {
   const project = useKerf((s) => shownProject(s));
   const structure = project?.structures[0];
@@ -43,27 +44,34 @@ interface FormProps {
   structure: Structure;
 }
 
-/** Sets one form option as a named change. */
+/** Sets one form option as a named change; `null` puts it back to its default. */
 function useOption(structure: Id) {
   const store = useKerfStore();
-  return (key: string, value: string | boolean): void => {
+  return (key: string, value: string | boolean | null): void => {
     const p = shownProject(store.getState());
-    if (p) store.getState().apply(setOption(p, structure, key, value));
+    if (!p) return;
+    store
+      .getState()
+      .apply(value === null ? resetOption(p, structure, key) : setOption(p, structure, key, value));
   };
 }
 
-const text = (s: Structure, key: string, fallback: string): string => {
+/** The text of form option `key`, or `fallback` when the form does not set it. */
+const optionText = (s: Structure, key: string, fallback: string): string => {
   const v = s.options[key];
   return typeof v === "string" ? v : fallback;
 };
 
+/** A form's stock field; when the form names none it says so instead of showing the first stock. */
 function StockChoice({ project, structure, field }: FormProps & { field: string }) {
   const set = useOption(structure.id);
+  const chosen = optionText(structure, field, "");
+  const stocks = project.stock.map((s) => ({ value: s.id, label: s.name }));
   return (
     <Choice
       label={optionLabel(field)}
-      value={text(structure, field, "")}
-      options={project.stock.map((s) => ({ value: s.id, label: s.name }))}
+      value={chosen}
+      options={chosen === "" ? [{ value: "", label: "Choose a stock" }, ...stocks] : stocks}
       onChange={(v) => set(field, v)}
     />
   );
@@ -71,14 +79,14 @@ function StockChoice({ project, structure, field }: FormProps & { field: string 
 
 function CaseForm({ project, structure }: FormProps) {
   const set = useOption(structure.id);
-  const back = text(structure, "back", "none");
+  const back = optionText(structure, "back", "none");
   return (
     <>
       <Section title="Construction">
         <StockChoice project={project} structure={structure} field="carcaseStock" />
         <Choice
           label="Top and bottom"
-          value={text(structure, "topBottom", "between-sides")}
+          value={optionText(structure, "topBottom", "between-sides")}
           options={CHOICES.topBottom}
           onChange={(v) => set("topBottom", v)}
         />
@@ -101,7 +109,7 @@ function BoxForm({ project, structure }: FormProps) {
         <StockChoice project={project} structure={structure} field="wallStock" />
         <Choice
           label="Corners"
-          value={text(structure, "cornerJoint", DEFAULT_CORNER_JOINT)}
+          value={optionText(structure, "cornerJoint", DEFAULT_CORNER_JOINT)}
           options={CHOICES.cornerJoint}
           onChange={(v) => set("cornerJoint", v)}
         />
@@ -117,11 +125,11 @@ function BoxForm({ project, structure }: FormProps) {
       <Section title="Bottom panel">
         <Choice
           label="Bottom"
-          value={text(structure, "bottom", "groove")}
+          value={optionText(structure, "bottom", "groove")}
           options={CHOICES.bottom}
           onChange={(v) => set("bottom", v)}
         />
-        {text(structure, "bottom", "groove") !== "none" && (
+        {optionText(structure, "bottom", "groove") !== "none" && (
           <StockChoice project={project} structure={structure} field="bottomStock" />
         )}
       </Section>
@@ -139,7 +147,7 @@ function Depths({ project, structure }: FormProps) {
   return (
     <>
       {keys.map((key) => {
-        const value = text(structure, key, "");
+        const value = optionText(structure, key, "");
         return (
           <NumberField
             key={key}
@@ -148,7 +156,7 @@ function Depths({ project, structure }: FormProps) {
             onSubmit={(typed) => {
               const t = typed.trim();
               if (t === "" || t === "Default") {
-                set(key, "");
+                set(key, null);
                 return null;
               }
               const read = readLength(t, project);

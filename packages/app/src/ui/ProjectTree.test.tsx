@@ -32,6 +32,14 @@ describe("<ProjectTree>", () => {
     expect(sel.kind === "boards" ? sel.instances.length : 0).toBe(4);
   });
 
+  it("picks a row with Space without scrolling the panel (branch deferred row 18)", () => {
+    const store = setup();
+    // fireEvent returns false when the page's own handling of the key was stopped.
+    expect(fireEvent.keyDown(screen.getByTestId("part-group-shelves"), { key: " " })).toBe(false);
+    const sel = store.getState().selection;
+    expect(sel.kind === "boards" ? sel.instances.length : 0).toBe(4);
+  });
+
   it("selects the opening from its row", () => {
     const store = setup();
     fireEvent.click(screen.getAllByTestId("opening")[0] as HTMLElement);
@@ -50,6 +58,15 @@ describe("<HistoryPanel>", () => {
     const store = setup();
     store.getState().apply(startProject("Blank case", "imperial"));
     fireEvent.click(screen.getByRole("option", { name: "New bookcase" }));
+    expect(store.getState().history?.at).toBe(0);
+  });
+
+  it("steps back with Space without scrolling the panel (branch deferred row 18)", () => {
+    const store = setup();
+    store.getState().apply(startProject("Blank case", "imperial"));
+    expect(
+      fireEvent.keyDown(screen.getByRole("option", { name: "New bookcase" }), { key: " " }),
+    ).toBe(false);
     expect(store.getState().history?.at).toBe(0);
   });
 });

@@ -131,6 +131,18 @@ export function setOption(
   return { project: next, label: `${optionLabel(key)}: ${shown}` };
 }
 
+/**
+ * Puts a form option back to its default by removing it, so the engine applies the spec's rule
+ * (ADR 014, D1); an option already absent leaves the project as it was, which records nothing.
+ */
+export function resetOption(project: Project, structure: Id, key: string): Edit {
+  const next = withStructure(project, structure, (s) => {
+    const { [key]: _, ...rest } = s.options;
+    return { ...s, options: rest };
+  });
+  return { project: next, label: `${optionLabel(key)}: Default` };
+}
+
 /** The project with one opening (anywhere in the tree) replaced; RangeError when it is not there. */
 function withOpening(
   project: Project,

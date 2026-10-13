@@ -72,4 +72,53 @@ describe("the Divide step", () => {
     fireEvent.blur(count);
     expect(store.getState().history?.entries.at(-1)?.label).toBe("Added 3 shelves");
   });
+
+  describe("Spacing (branch deferred row 18, silent-failure review M1)", () => {
+    const entries = (s: ReturnType<typeof setup>) => s.getState().history?.entries.length;
+
+    it("shows the heights box for At set heights and records nothing until heights are typed", () => {
+      const store = setup();
+      fireEvent.click(screen.getByRole("button", { name: "Add shelves" }));
+      const before = entries(store);
+      fireEvent.change(screen.getByLabelText("Spacing"), { target: { value: "heights" } });
+      expect(screen.getByLabelText("Heights from the bottom")).toBeTruthy();
+      expect(entries(store)).toBe(before);
+      expect(line(store)?.quantity).toBe(6);
+    });
+
+    it("refuses Evenly spaced when the count cannot be worked out, instead of writing 1 shelf", () => {
+      const store = setup();
+      const p = shownProject(store.getState());
+      const structure = p?.structures[0];
+      const opening = structure?.openings[0];
+      if (!p || !structure || !opening) throw new Error("no opening");
+      // Shelves at two set heights, counted by a name the project does not have.
+      const unknownCount = {
+        ...p,
+        structures: [
+          {
+            ...structure,
+            openings: [
+              {
+                ...opening,
+                division: {
+                  type: "shelves" as const,
+                  count: "no_such_count",
+                  spacing: ["10in", "20in"],
+                },
+              },
+            ],
+          },
+        ],
+      };
+      act(() => store.getState().apply({ label: "Heights", project: unknownCount }));
+      fireEvent.click(screen.getByRole("button", { name: "Add shelves" }));
+      const before = entries(store);
+      fireEvent.change(screen.getByLabelText("Spacing"), { target: { value: "even" } });
+      expect(entries(store)).toBe(before);
+      expect(store.getState().notice?.text).toBe(
+        "The shelf count can't be worked out; type a count first.",
+      );
+    });
+  });
 });

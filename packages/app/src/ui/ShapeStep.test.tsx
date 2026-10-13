@@ -7,7 +7,7 @@
 
 import { solve } from "@kerf/core";
 import { loadShopProfile } from "@kerf/fixtures";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
@@ -78,6 +78,48 @@ describe("the Shape step", () => {
     fireEvent.blur(field);
     expect(document.querySelector(".field-problem")?.textContent).toBeTruthy();
     expect(store.getState().history?.entries.length).toBe(before);
+  });
+
+  it("puts a depth back to Default once, and records nothing when it is cleared again (branch deferred row 17)", () => {
+    // The bookcase's form sets a 1/4" dado depth; clearing the field hands it back to the rule.
+    const store = setup();
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    const field = screen.getByLabelText("Dado depth");
+    for (const _ of [1, 2]) {
+      fireEvent.change(field, { target: { value: "" } });
+      fireEvent.blur(field);
+    }
+    expect(store.getState().history?.entries.map((e) => e.label)).toEqual([
+      "New bookcase",
+      "Dado depth: Default",
+    ]);
+  });
+
+  it("puts a typed depth back to Default, as one named change with no empty option left", () => {
+    const store = setup();
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    const field = screen.getByLabelText("Dado depth");
+    fireEvent.change(field, { target: { value: '1/4"' } });
+    fireEvent.blur(field);
+    fireEvent.change(field, { target: { value: "" } });
+    fireEvent.blur(field);
+    expect(store.getState().history?.entries.at(-1)?.label).toBe("Dado depth: Default");
+    expect(shownProject(store.getState())?.structures[0]?.options).not.toHaveProperty("dadoDepth");
+  });
+
+  it("says no stock is chosen, rather than showing the first stock, when the form names none", () => {
+    const store = setup();
+    const p = shownProject(store.getState());
+    const structure = p?.structures[0];
+    if (!p || !structure) throw new Error("no form");
+    const { carcaseStock: _, ...rest } = structure.options;
+    act(() =>
+      store.getState().apply({
+        label: "No carcase stock",
+        project: { ...p, structures: [{ ...structure, options: rest }] },
+      }),
+    );
+    expect(optionText(select("Carcase stock"))).toBe("Choose a stock");
   });
 
   it("has no button named Joinery, so the step switcher stays unique", () => {

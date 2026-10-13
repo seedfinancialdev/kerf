@@ -34,7 +34,11 @@ export function ProjectTree() {
       selection.kind === "boards" &&
       row.instances.every((i) => selection.instances.includes(i)));
   const onKey = (e: KeyboardEvent<HTMLElement>, row: TreeRow): void => {
-    if (e.key === "Enter" || e.key === " ") pick(row);
+    if (e.key === "Enter" || e.key === " ") {
+      // Space would also scroll the panel; the row is what was meant.
+      e.preventDefault();
+      pick(row);
+    }
     if (e.key === "ArrowDown") (e.currentTarget.nextElementSibling as HTMLElement | null)?.focus();
     if (e.key === "ArrowUp")
       (e.currentTarget.previousElementSibling as HTMLElement | null)?.focus();

@@ -13,6 +13,7 @@ interface Props {
   onChange(value: string): void;
 }
 
+/** A labelled select of `options`, reporting the value picked. */
 export function Choice({ label, value, options, onChange }: Props) {
   const id = useId();
   return (

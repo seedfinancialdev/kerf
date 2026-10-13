@@ -26,7 +26,10 @@ export function HistoryPanel() {
             className={index > history.at ? "history-entry undone" : "history-entry"}
             onClick={() => jumpTo(index)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") jumpTo(index);
+              if (e.key !== "Enter" && e.key !== " ") return;
+              // Space would also scroll the list; the entry is what was meant.
+              e.preventDefault();
+              jumpTo(index);
             }}
           >
             {entry.label}

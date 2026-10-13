@@ -22,6 +22,9 @@ import { NumberField } from "./NumberField";
 import { Section } from "./Section";
 
 type Mode = "shelves" | "partition" | "bays" | null;
+type Spacing = "even" | "heights";
+
+const NO_COUNT = "The shelf count can't be worked out; type a count first.";
 
 function findOpening(list: Opening[], id: Id): Opening | undefined {
   for (const o of list) {
@@ -32,6 +35,7 @@ function findOpening(list: Opening[], id: Id): Opening | undefined {
   return undefined;
 }
 
+/** The Divide step's panel: what divides the opening picked in the project tree. */
 export function DivideStep() {
   const selection = useKerf((s) => s.selection);
   const project = useKerf((s) => shownProject(s));
@@ -63,7 +67,19 @@ function OpeningForm({ project, structure, opening }: FormProps) {
   const count = shelves ? readCount(shelves.count, project) : undefined;
   const countText = count?.ok ? String(count.value) : "";
   const heights = Array.isArray(shelves?.spacing) ? shelves.spacing : [];
-  const spacing = shelves && shelves.spacing !== "even" ? "heights" : "even";
+  // "At set heights" with no heights typed yet is only shown, never recorded: an empty list of
+  // heights is not a division the user asked for (final branch review, Task 18).
+  const [wantsHeights, setWantsHeights] = useState(false);
+  const spacing: Spacing =
+    (shelves && shelves.spacing !== "even") || wantsHeights ? "heights" : "even";
+  /** Evenly spaced keeps the count; a choice has no box, so a refusal goes to the notice line. */
+  const spaceEvenly = (): void => {
+    const refusal = countText
+      ? run(setShelves(project, structure, opening.id, countText, "even"))
+      : NO_COUNT;
+    if (refusal !== null) store.getState().say(refusal);
+    else setWantsHeights(false);
+  };
 
   return (
     <div className="step-panel">
@@ -111,17 +127,7 @@ function OpeningForm({ project, structure, opening }: FormProps) {
                 { value: "even", label: "Evenly spaced" },
                 { value: "heights", label: "At set heights" },
               ]}
-              onChange={(v) =>
-                run(
-                  setShelves(
-                    project,
-                    structure,
-                    opening.id,
-                    countText || "1",
-                    v === "even" ? "even" : heights,
-                  ),
-                )
-              }
+              onChange={(v) => (v === "even" ? spaceEvenly() : setWantsHeights(true))}
             />
             {spacing === "heights" && (
               <NumberField

@@ -102,9 +102,9 @@ export function treeRows(project: Project, result: SolveResult): TreeRow[] {
 
   const groups = new Map<string, { label: string; testId: string; placed: PlacedPart[] }>();
   for (const p of result.placements) {
-    const key =
-      p.source && followsForm(p) ? `${p.source.structure}:${p.source.role}` : `part:${p.part}`;
-    const testId = `part-group-${p.source && followsForm(p) ? (PLURAL[p.source.role] ?? slug(p.source.role)) : slug(p.name)}`;
+    const role = followsForm(p) ? p.source : undefined;
+    const key = role ? `${role.structure}:${role.role}` : `part:${p.part}`;
+    const testId = `part-group-${role ? (PLURAL[role.role] ?? slug(role.role)) : slug(p.name)}`;
     const group = groups.get(key) ?? { label: groupLabel(p), testId, placed: [] };
     group.placed.push(p);
     groups.set(key, group);
