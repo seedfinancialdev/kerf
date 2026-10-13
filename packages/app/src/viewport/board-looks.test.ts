@@ -32,12 +32,11 @@ describe("boardLooks()", () => {
     expect(result.blocked).toBe(true);
     expect(result.shapes).toEqual([]);
     const looks = boardLooks(result, project);
-    expect(looks.length).toBe(result.placements.length);
+    // Still all 9 boards, each a blank. The dado errors are on the Side part (one per side's
+    // dado joint), so the two sides, and only they, are red.
+    expect(looks).toHaveLength(9);
     expect(looks.every((l) => l.geometry === "blank")).toBe(true);
-    const failing = new Set(
-      result.diagnostics.flatMap((d) => (d.severity === "error" && d.part ? [d.part] : [])),
-    );
-    expect(failing.size).toBeGreaterThan(0);
-    for (const l of looks) expect(l.tone === "error").toBe(failing.has(l.placed.part));
+    const red = looks.filter((l) => l.tone === "error").map((l) => l.placed.name);
+    expect(red.sort()).toEqual(["Left side", "Right side"]);
   });
 });
