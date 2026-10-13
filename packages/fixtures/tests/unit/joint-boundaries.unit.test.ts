@@ -201,6 +201,8 @@ describe("joints", () => {
     const d = solve(p, shop).diagnostics.filter((x) => x.rule === "joint-no-contact");
     expect(d).toHaveLength(1);
     expect(d[0]?.count).toBeUndefined();
+    // The joint is named in shop words, not by its key (code review I2: "throughDovetail").
+    expect(d[0]?.message).toBe("Guest does not meet Host for a dado, so there is nothing to join.");
   });
   it("guests of a pattern that overlap the host are reported as one aggregate, not per pair", () => {
     const p = boards(

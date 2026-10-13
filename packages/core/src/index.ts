@@ -40,3 +40,4 @@ export {
 } from "./structures";
 export * from "./types";
 export * from "./units";
+export { edgeName, JOINT_NAME, JOINT_WORD } from "./words";

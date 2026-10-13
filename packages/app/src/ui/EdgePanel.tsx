@@ -5,11 +5,11 @@
 // The Edge profile panel: a radius from the shop's roundover bits, then both front edges or the
 // edges ticked by name.
 
-import { type EdgeRef, formatLength, type PlacedPart } from "@kerf/core";
+import { type EdgeRef, edgeName, formatLength, type PlacedPart } from "@kerf/core";
 import { useId, useState } from "react";
 import { shownProject } from "../model/store";
 import { useKerf, useKerfStore } from "../state/useKerf";
-import { BOTH_FRONT_EDGES, edgeName, roundEdges } from "../tools/edge";
+import { BOTH_FRONT_EDGES, roundEdges } from "../tools/edge";
 import { editNotice } from "../tools/edit-outcome";
 import { Section } from "./Section";
 

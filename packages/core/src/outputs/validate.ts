@@ -15,6 +15,7 @@ import type { Diagnostic } from "../outputs";
 import { type Box, boxOf, contactOf, type Frame, toParent } from "../solve/assembly";
 import type { SolvedModel } from "../solve/model";
 import type { Id } from "../types";
+import { edgeName } from "../words";
 
 /** How many overlapping pairs are named before the rest are only counted. */
 const OVERLAPS_SHOWN = 10;
@@ -138,7 +139,7 @@ export function validateAssembly(model: SolvedModel, derived: Derived): Diagnost
       out.push({
         severity: "warning",
         rule: "roundover-hidden",
-        message: `The roundover on the ${edge.replace("/", " ")} edge of ${frame.instance.name} is hidden by a joint.`,
+        message: `The roundover on ${frame.instance.name} (${edgeName(edge)}) is hidden by a joint.`,
         part: frame.part.id,
         field: `${frame.instance.name} roundover`,
       });

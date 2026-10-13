@@ -4,11 +4,11 @@
 
 // The Join proposal: what the engine suggests, whether the shop can cut it, Accept, or another type.
 
-import type { Joint } from "@kerf/core";
+import { JOINT_WORD, type Joint } from "@kerf/core";
 import { shownProject } from "../model/store";
 import { namesTaken } from "../model/take-over";
 import { useKerf, useKerfStore } from "../state/useKerf";
-import { acceptProposal, JOINT_WORD, propose } from "../tools/join";
+import { acceptProposal, propose } from "../tools/join";
 import { Section } from "./Section";
 
 const OTHER: Partial<Record<Joint["type"], Joint["type"]>> = { dado: "rabbet", rabbet: "dado" };

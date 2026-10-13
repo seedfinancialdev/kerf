@@ -27,22 +27,6 @@ import {
 /** The front edge on both faces (Operation specs, bookcase: edge1/face0 and edge1/face1). */
 export const BOTH_FRONT_EDGES: EdgeRef[] = ["edge1/face0", "edge1/face1"];
 
-const EDGE_NAMES: Record<EdgeRef, string> = {
-  "edge1/face1": "Front edge, show face",
-  "edge1/face0": "Front edge, inside face",
-  "edge0/face1": "Back edge, show face",
-  "edge0/face0": "Back edge, inside face",
-  "end0/face1": "First end, show face",
-  "end0/face0": "First end, inside face",
-  "end1/face1": "Second end, show face",
-  "end1/face0": "Second end, inside face",
-};
-
-/** "edge1/face1" → "Front edge, show face" (Interaction spec, "Shop language"). */
-export function edgeName(edge: EdgeRef): string {
-  return EDGE_NAMES[edge];
-}
-
 const NOTHING_TO_REMOVE: EditResult = {
   ok: false,
   message: "There's no roundover on those edges to remove.",

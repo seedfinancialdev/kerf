@@ -10,7 +10,7 @@ import { loadShopProfile } from "@kerf/fixtures";
 import { describe, expect, it } from "vitest";
 import { addRoundover, detachForEdit, setShelves, startProject } from "../model/commands";
 import { newId } from "../model/ids";
-import { BOTH_FRONT_EDGES, edgeName, roundEdges as tryRoundEdges } from "./edge";
+import { BOTH_FRONT_EDGES, roundEdges as tryRoundEdges } from "./edge";
 
 const shop = loadShopProfile();
 const IN = 203_200;
@@ -157,11 +157,5 @@ describe("roundEdges()", () => {
   it("says there is nothing to remove from a board that has no roundover", () => {
     const r = tryRoundEdges(bookcase(), named("Top"), BOTH_FRONT_EDGES, null, shop);
     expect(r).toEqual({ ok: false, message: "There's no roundover on those edges to remove." });
-  });
-
-  it("names the edges in shop words", () => {
-    expect(edgeName("edge1/face1")).toBe("Front edge, show face");
-    expect(edgeName("edge0/face0")).toBe("Back edge, inside face");
-    expect(edgeName("end0/face1")).toBe("First end, show face");
   });
 });

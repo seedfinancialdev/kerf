@@ -232,8 +232,8 @@ describe("the Move tool", () => {
     // Raised 1" the Top leaves its rabbet in the Right side (core joints/derive.ts wording): the
     // move is recorded and the problem named with Undo (ruling R45).
     expect(s.getState().notice?.text).toBe(
-      "Top is now custom; the form won't change it. Top does not meet Right side the way a " +
-        "rabbet needs, so there is nothing to join. Undo puts it back.",
+      "Top is now custom; the form won't change it. Top does not meet Right side for a rabbet, " +
+        "so there is nothing to join. Undo puts it back.",
     );
     expect(s.getState().pending).toBeNull();
   });
@@ -262,7 +262,7 @@ describe("the Move tool", () => {
     expect(s.getState().notice).toEqual({
       text:
         "Shelf 2 becomes Shelf copy 2, custom; the form won't change it. Shelf copy 2 does not " +
-        "meet Right side the way a dado needs, so there is nothing to join. Undo puts it back.",
+        "meet Right side for a dado, so there is nothing to join. Undo puts it back.",
       kind: "undo",
     });
   });

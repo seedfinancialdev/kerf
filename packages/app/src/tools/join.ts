@@ -9,6 +9,7 @@
 import {
   generateStructures,
   type Instance,
+  JOINT_WORD,
   type Joint,
   type JointProposal,
   type PlacedPart,
@@ -31,13 +32,6 @@ import { shownProject } from "../model/store";
 import { takenOver, takeOverNotice } from "../model/take-over";
 import { newProblem } from "./edit-outcome";
 import type { ToolHandler } from "./handler";
-
-/** How each joint reads in a sentence. */
-export const JOINT_WORD: Record<Joint["type"], string> = {
-  dado: "a dado",
-  rabbet: "a rabbet",
-  throughDovetail: "through dovetails",
-};
 
 const GONE = "That board is no longer in the project; click it again.";
 
