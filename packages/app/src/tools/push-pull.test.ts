@@ -6,7 +6,7 @@
 // stock." Editing a form's board detaches only that board (Interaction spec, "Tweak").
 
 import { type PlacedPart, solve } from "@kerf/core";
-import { loadShopProfile } from "@kerf/fixtures";
+import { loadProject, loadShopProfile } from "@kerf/fixtures";
 import { describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
@@ -16,6 +16,12 @@ import type { ModelHit, ModelPointer } from "./pointer";
 import { faceOf, pushPull, pushPullTool, travelAlong } from "./push-pull";
 
 const shop = loadShopProfile();
+/**
+ * The canonical bookcase saves its shelf row by hand (a pattern no form makes), so the engine can
+ * take no one shelf out of it (code review I1; ADR 015, known limit 25).
+ */
+const HAND_ROW =
+  "Shelf 1 is one of a row made by hand, and Kerf can't change one board of that row on its own yet.";
 const IN = 203_200;
 const project = () => startProject("Bookcase", "imperial").project;
 const board = (name: string, p = project()): PlacedPart => {
@@ -79,6 +85,14 @@ describe("pushPull()", () => {
   it("changes nothing for a distance of zero: no take-over, nothing to record", () => {
     const r = pushPull(project(), top(), "end1", 0, shop);
     expect(r).toEqual({ ok: false, message: "A distance of zero changes nothing." });
+  });
+
+  it("refuses to change one shelf of a row saved by hand, saying why instead of asking for another click", () => {
+    const p = loadProject("bookcase");
+    expect(pushPull(p, board("Shelf 1", p), "end1", IN, shop)).toEqual({
+      ok: false,
+      message: HAND_ROW,
+    });
   });
 
   it("refuses to push a board to nothing", () => {

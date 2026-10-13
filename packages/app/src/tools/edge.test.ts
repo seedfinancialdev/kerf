@@ -6,13 +6,19 @@
 // shelves get a 1/8" roundover on edge1/face0 and edge1/face1. ADR 015, D3.
 
 import { type EdgeRef, type PlacedPart, type Project, solve } from "@kerf/core";
-import { loadShopProfile } from "@kerf/fixtures";
+import { loadProject, loadShopProfile } from "@kerf/fixtures";
 import { describe, expect, it } from "vitest";
 import { addRoundover, detachForEdit, setShelves, startProject } from "../model/commands";
 import { newId } from "../model/ids";
 import { BOTH_FRONT_EDGES, roundEdges as tryRoundEdges } from "./edge";
 
 const shop = loadShopProfile();
+/**
+ * The canonical bookcase saves its shelf row by hand (a pattern no form makes), so the engine can
+ * take no one shelf out of it (code review I1; ADR 015, known limit 25).
+ */
+const HAND_ROW =
+  "Shelf 1 is one of a row made by hand, and Kerf can't change one board of that row on its own yet.";
 const IN = 203_200;
 const bookcase = () => startProject("Bookcase", "imperial").project;
 const named = (name: string) =>
@@ -158,6 +164,15 @@ describe("roundEdges()", () => {
     expect(tryRoundEdges(bookcase(), [], BOTH_FRONT_EDGES, IN / 8, shop)).toEqual({
       ok: false,
       message: "Pick a board first.",
+    });
+  });
+
+  it("refuses to round one shelf of a row saved by hand, saying why instead of asking for another click", () => {
+    const p = loadProject("bookcase");
+    const shelf1 = solve(p, shop).placements.filter((x) => x.name === "Shelf 1");
+    expect(tryRoundEdges(p, shelf1, BOTH_FRONT_EDGES, IN / 8, shop)).toEqual({
+      ok: false,
+      message: HAND_ROW,
     });
   });
 

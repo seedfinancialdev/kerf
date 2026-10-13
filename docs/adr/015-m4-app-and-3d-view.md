@@ -122,3 +122,7 @@ maintainer decides which become work.
     `resetOption` in `commands.ts` repeats a rest-omit; unused design tokens are not checked.
 24. The shop card shows inches only (rule 11); fit-a-space sizing, drawers, doors and an
     icon-only toolbar are v1.
+25. One board of a row saved by hand (a pattern no form makes, as in the canonical bookcase) cannot
+    be moved, resized, rounded or joined on its own: the engine takes a copy out only of a form's
+    row. Each tool says so ("Shelf 1 is one of a row made by hand, and Kerf can't change one board
+    of that row on its own yet."); taking a copy out of a hand-made row needs the engine first.

@@ -7,7 +7,7 @@
 // board detaches only that board (Interaction spec, "Tweak").
 
 import { type PlacedPart, type Project, solve, type Vec3 } from "@kerf/core";
-import { loadShopProfile } from "@kerf/fixtures";
+import { loadProject, loadShopProfile } from "@kerf/fixtures";
 import { describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
 import type { Pending } from "../model/pending";
@@ -18,6 +18,12 @@ import { lockedDelta, type MoveMode, moveBoards, moveTool } from "./move";
 import type { ModelHit, ModelPointer } from "./pointer";
 
 const shop = loadShopProfile();
+/**
+ * The canonical bookcase saves its shelf row by hand (a pattern no form makes), so the engine can
+ * take no one shelf out of it (code review I1; ADR 015, known limit 25).
+ */
+const HAND_ROW =
+  "Shelf 1 is one of a row made by hand, and Kerf can't change one board of that row on its own yet.";
 const IN = 203_200;
 const project = () => startProject("Bookcase", "imperial").project;
 const named = (p: Project, name: string) =>
@@ -155,6 +161,12 @@ describe("moveBoards()", () => {
     expect(first(r.edit.project, "Top").box.min[2]).toBe(top.box.min[2] - 400_000);
     const z = r.edit.project.instances.find((i) => i.name === "Top")?.position.z;
     expect(z).toMatch(/\) - 50mm$/);
+  });
+
+  it("refuses to move one shelf of a row saved by hand, saying why instead of asking for another click", () => {
+    const p = loadProject("bookcase");
+    const r = moveBoards(p, [first(p, "Shelf 1")], [0, 0, IN], "move", shop);
+    expect(r).toEqual({ ok: false, message: HAND_ROW });
   });
 
   it("refuses with nothing picked", () => {

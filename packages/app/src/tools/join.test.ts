@@ -6,7 +6,7 @@
 // shop profile". Default dado depth for 23/32" stock: 15/64" (Task 6's hand calculation).
 
 import { type Project, solve } from "@kerf/core";
-import { loadShopProfile } from "@kerf/fixtures";
+import { loadProject, loadShopProfile } from "@kerf/fixtures";
 import { describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
 import { newId } from "../model/ids";
@@ -19,6 +19,12 @@ import { acceptProposal, joinTool, propose } from "./join";
 import type { ModelHit } from "./pointer";
 
 const shop = loadShopProfile();
+/**
+ * The canonical bookcase saves its shelf row by hand (a pattern no form makes), so the engine can
+ * take no one shelf out of it (code review I1; ADR 015, known limit 25).
+ */
+const HAND_ROW =
+  "Shelf 1 is one of a row made by hand, and Kerf can't change one board of that row on its own yet.";
 const placed = (p: Project, name: string) => {
   const found = solve(p, shop).placements.find((x) => x.name === name);
   if (!found) throw new Error(`no ${name}`);
@@ -210,6 +216,12 @@ describe("taking over form boards", () => {
       ok: false,
       reason: "Shelf 1 and Right side are already joined.",
     });
+  });
+
+  it("refuses one shelf of a row saved by hand, saying why instead of asking for another click", () => {
+    const p = loadProject("bookcase");
+    const r = propose(p, shop, placed(p, "Right side"), placed(p, "Shelf 1"));
+    expect(r.result).toEqual({ ok: false, reason: HAND_ROW });
   });
 
   it("says why, and does not throw, when a board cannot be taken over", () => {

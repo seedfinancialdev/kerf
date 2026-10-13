@@ -342,22 +342,34 @@ const gone = (placed: PlacedPart): TakeOverError =>
   new TakeOverError(`${placed.name} is no longer in the project; click it again.`);
 
 /**
+ * Said for a member of a row saved by hand: the engine takes one copy out only of a row a form
+ * makes (`detachCopyIn`), so no tool can edit it on its own (ADR 015, known limit 25).
+ */
+const inHandMadeRow = (placed: PlacedPart): TakeOverError =>
+  new TakeOverError(
+    `${placed.name} is one of a row made by hand, and Kerf can't change one board of that row on its own yet.`,
+  );
+
+/**
  * Takes over a board the form made so it can be edited by hand (Interaction spec, "Tweak":
  * "detaches only that board"). A member of a row is taken out of the row on its own; a board that
- * shares its part with others (the two sides) takes them over with it.
+ * shares its part with others (the two sides) takes them over with it. A board made by hand is
+ * left as it is.
  * The engine detaches within the generated project (the saved one holds no generated boards), so
  * the form is generated first and what it made is dropped again, keeping the board taken over.
  * Callers pass the project's real shop: it only matters to an "auto" roundover, which takes the
  * largest bit the shop owns.
- * Throws TakeOverError, saying why, when the project's boards cannot be placed or the board is
- * gone or cannot be detached.
+ * Throws TakeOverError, saying why, when the project's boards cannot be placed, the board is gone
+ * or cannot be detached, or it is one of a row saved by hand.
  */
 export function detachForEdit(
   project: Project,
   placed: PlacedPart,
   shop: ShopProfile,
 ): { project: Project; detached: boolean } {
-  if (!placed.source || placed.detached) return { project, detached: false };
+  const formMade = placed.source !== undefined && !placed.detached;
+  if (placed.pattern && !formMade) throw inHandMadeRow(placed);
+  if (!formMade) return { project, detached: false };
   let generated: Project;
   try {
     generated = generateStructures(project, shop);

@@ -117,7 +117,9 @@ export function moveBoards(
   const moved: Instance[] = [];
   try {
     for (const p of placed) {
-      if (followsForm(p) && !isTakenOver(next, p)) next = detachForEdit(next, p, shop).project;
+      // A row member always goes through the take-over, which refuses a row saved by hand.
+      if ((followsForm(p) || p.pattern) && !isTakenOver(next, p))
+        next = detachForEdit(next, p, shop).project;
       const inst = instanceOf(next, p);
       if (!inst)
         return {
