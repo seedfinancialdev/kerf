@@ -187,8 +187,13 @@ const NO_TOOLS: ShopProfile = { kerf: 0, tools: [] };
 function jointSummariesOf(p: Pipeline, shop: ShopProfile | undefined): JointSummary[] {
   if (!p.project) return [];
   const names = new Map<Id, string>();
+  const defNames = new Map(p.project.parts.map((d) => [d.id, d.name]));
   for (const i of p.project.instances) names.set(i.id, i.name ?? i.id);
-  for (const row of p.project.patterns) names.set(row.id, names.get(row.source) ?? row.id);
+  // A row is named for its part ("Shelf"), not for the copy it repeats ("Shelf 1").
+  for (const row of p.project.patterns) {
+    const source = p.project.instances.find((i) => i.id === row.source);
+    names.set(row.id, (source && defNames.get(source.def)) ?? row.id);
+  }
   return p.project.joints.map((joint) => {
     const pairs = p.derived.pairs.filter((pair) => pair.joint === joint.id);
     const cuts = new Map<string, JointCut>();

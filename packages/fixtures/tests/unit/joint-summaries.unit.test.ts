@@ -4,7 +4,7 @@
 
 // ADR 015 rule 9: every joint in shop words, with the tool each cut needs.
 
-import { type JointSummary, type ShopProfile, solve } from "@kerf/core";
+import { type JointSummary, type Project, type ShopProfile, solve } from "@kerf/core";
 import { describe, expect, it } from "vitest";
 import { loadProject, loadShopProfile } from "../../src/index";
 
@@ -51,8 +51,23 @@ describe("solve().joints", () => {
 
   it("names the boards each joint joins and the form that made it", () => {
     const dado = solve(form, shop).joints.find((j) => j.type === "dado");
-    expect(dado?.guest).toMatch(/^Shelf/);
+    expect(dado?.guest).toBe("Shelf");
+    expect(dado?.host).toMatch(/^(Left|Right) side$/);
     expect(dado?.source?.role).toBeTypeOf("string");
+  });
+
+  it("names a row by its part, and a single board by its own name", () => {
+    // R3: the Joinery list reads "Shelf in dados in Right side", never "Shelf 1 in dados ...".
+    const expanded = loadProject("bookcase", "project");
+    const named: Project = {
+      ...expanded,
+      instances: expanded.instances.map((i) =>
+        i.name === "Shelf" ? { ...i, name: "Shelf 1" } : i,
+      ),
+    };
+    const joints = solve(named, shop).joints;
+    expect(joints.find((j) => j.type === "dado")?.guest).toBe("Shelf");
+    expect(joints.find((j) => j.type === "dado")?.host).toBe("Right side");
   });
 
   it("cuts the box's dovetails with hand tools", () => {

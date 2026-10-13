@@ -5,6 +5,7 @@
 // The right panel (Interaction spec, "Inspector"): what the current step offers.
 
 import { DivideStep } from "./DivideStep";
+import { JoineryStep } from "./JoineryStep";
 import { ShapeStep } from "./ShapeStep";
 import { StartStep } from "./StartStep";
 import { useKerf } from "./useKerf";
@@ -18,6 +19,8 @@ export function Inspector() {
       return <ShapeStep />;
     case "Divide":
       return <DivideStep />;
+    case "Joinery":
+      return <JoineryStep />;
     default:
       return null;
   }

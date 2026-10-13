@@ -374,3 +374,30 @@ button[aria-pressed="true"] {
   padding: var(--space-3);
   color: var(--color-text-muted);
 }
+
+.joint-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.joint {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--color-surface-raised);
+}
+.joint.missing {
+  border-left: 3px solid var(--color-warning);
+}
+.joint-detail,
+.joint-shop {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+.ok {
+  margin: 0;
+  color: var(--color-text-muted);
+}
