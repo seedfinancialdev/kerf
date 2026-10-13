@@ -18,6 +18,9 @@ function elapsedMs(fn: () => void): number {
   return performance.now() - start;
 }
 
+// Baseline, Apple M5, 2026-10-13, median of three `pnpm bench` runs (test durations, whole ms):
+// reference bookcase 7 ms (budget 100 ms); form 3 ms (budget 100 ms); 6 bays of 6 shelves 4 ms
+// (budget 250 ms); nest 100 parts 4 ms (budget 1 s). None is within 25% of its budget.
 describe("benchmarks", () => {
   // The Build plan lists this under M4, but the whole pipeline exists from M2, so the budget is held
   // from M2 on: a regression is caught the milestone it is introduced in.

@@ -24,9 +24,11 @@ describe("bannedWordsIn()", () => {
     ]);
   });
 
-  it("allows the shop phrases show face, inside face, outside face and face to face", () => {
+  it("allows the shop phrases show face, inside face, outside face, face to face and face frame", () => {
     expect(
-      bannedWordsIn("Round the show face. The inside face. Outside face. Lie face to face."),
+      bannedWordsIn(
+        "Round the show face. The inside face. Outside face. Lie face to face. Glue the face frame.",
+      ),
     ).toEqual([]);
   });
 

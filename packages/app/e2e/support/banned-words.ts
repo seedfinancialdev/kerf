@@ -22,8 +22,11 @@ const BANNED_PATTERNS = BANNED_WORDS.map((word) => ({
   pattern: new RegExp(`\\b${word}(es|s)?\\b`, "i"),
 }));
 
-/** Shop phrases that use "face" the way a woodworker does (Interaction spec, "Shop language"). */
-const SHOP_FACE = /\b(show|inside|outside) faces?\b|\bface to face\b/gi;
+/**
+ * Shop phrases that use "face" the way a woodworker does (Interaction spec, "Shop language"). A face
+ * frame is a cabinet part, not geometry, so it is allowed; any other bare "face" is reported.
+ */
+const SHOP_FACE = /\b(show|inside|outside) faces?\b|\bface (to face|frames?)\b/gi;
 
 /** The banned words found in `text` (whole words, any case, singular or plural), in list order. */
 export function bannedWordsIn(text: string): string[] {
