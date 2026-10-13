@@ -42,3 +42,8 @@ through `@kerf/core`. Design: `docs/superpowers/specs/2026-10-12-m4-app-3d-view-
 
 - New public API: `assemblyOrder`, `proposeJoint`, `gapBetween`, `orientationFor` (the orientation index for a board's length and width axes, used by the Board tool); `SolveResult` gains `placements` and `joints`; case and box forms accept `joineryReviewed`.
 - Known limits: openings are picked in the project tree, not in the 3D view, because the engine does not report where an opening is; two structures in one project still share the origin (ADR 014); history is not kept across a reload; the PDF and `.skp` import are M5.
+- Known limit: the app's store (`model/store.ts`) still holds view-only state (`hovered`,
+  `navigation`, `fitRequest`) and the viewport's thumbnail callback beside the project and History.
+  Browser persistence moved out to `model/persist.ts` without changing behaviour, but moving the
+  view state to a viewport-owned store changes what every screen and its tests read, so it is not
+  a mechanical split and is left for a later milestone (final branch review M5).

@@ -12,7 +12,6 @@ import {
   assemblyOrder,
   type Id,
   type Project,
-  parseProject,
   type ShopProfile,
   type SolveResult,
   serializeProject,
@@ -23,6 +22,14 @@ import { createStore, type StoreApi } from "zustand/vanilla";
 import type { Edit } from "./commands";
 import { currentProject, type History, jumpTo, record, redo, startHistory, undo } from "./history";
 import type { Pending, Proposal } from "./pending";
+import {
+  NOT_KEPT,
+  readSections,
+  restoreProject,
+  storageNotice,
+  UNITS_NOT_KEPT,
+  writeProject,
+} from "./persist";
 import { NOTHING, type Selection } from "./selection";
 import { loadShop, saveShop } from "./shop";
 import type { Step } from "./steps";
@@ -148,38 +155,14 @@ export function shownProject(state: KerfState): Project | null {
   return state.previewed ?? (state.history ? currentProject(state.history) : null);
 }
 
-/** Shown once when a change could not be written to browser storage (ADR 015, rule 11). */
-const NOT_KEPT = "Your latest changes couldn't be kept in this browser. Use Save to keep a copy.";
-
-/** Shown once when the choice of units for new projects could not be written (ADR 015, rule 11). */
-const UNITS_NOT_KEPT =
-  "Your choice of units couldn't be kept in this browser; it applies until you close the page.";
-
 /**
- * Which sections the user closed or opened (Interaction spec: "Sections remember their open state").
- * A damaged value only loses which sections were open, so it reads as "none stored" without a
- * notice: nothing the user made is lost.
- */
-function readSections(storage: AppStorage): Record<string, boolean> {
-  try {
-    const parsed: unknown = JSON.parse(storage.read("kerf.sections") ?? "{}");
-    if (typeof parsed !== "object" || parsed === null) return {};
-    return Object.fromEntries(
-      Object.entries(parsed).filter(([, v]) => typeof v === "boolean"),
-    ) as Record<string, boolean>;
-  } catch {
-    return {};
-  }
-}
-
-/**
- * Makes the store. `storage` keeps the shop and theme; `clock` returns milliseconds and times the
- * solve (default `performance.now`); `clockDate` returns epoch milliseconds for when a project
- * began (default `Date.now`). Starts on the Start step, with the stored project if there is
- * one and the engine accepts it; otherwise with none. A stored project the engine rejects is set
- * aside under `kerf.project.setAside`, never deleted. Every recorded change is written back to
- * storage; if that fails, the user is told once. Only one start-up notice is shown: a shop problem first, then a project problem, then
- * the warning that this browser keeps nothing.
+ * Makes the store. `storage` keeps the project, shop, theme and screen choices (persist.ts and
+ * shop.ts); `clock` returns milliseconds and times the solve (default `performance.now`);
+ * `clockDate` returns epoch milliseconds for when a project began (default `Date.now`). Starts on
+ * the Start step, with the stored project if the engine accepts it (one it rejects is set aside,
+ * never deleted); otherwise with none. Every recorded change is written back to storage; if that
+ * fails, the user is told once. Only one start-up notice is shown: a shop problem first, then a
+ * project problem, then the warning that this browser keeps nothing.
  */
 export function createKerfStore(deps: {
   storage: AppStorage;
@@ -198,37 +181,8 @@ export function createKerfStore(deps: {
     return { result, assembly, ms: clock() - started };
   };
 
-  /** The stored project, or why it could not be opened (it is then set aside, never lost). */
-  const restore = (): { history: History | null; problem?: string } => {
-    const text = deps.storage.read("kerf.project");
-    if (text === undefined) return { history: null };
-    try {
-      return {
-        history: startHistory({ label: "Opened your last project", project: parseProject(text) }),
-      };
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : "it was damaged";
-      // The stored text may be the only copy, so it is removed only once the set-aside copy exists.
-      if (!deps.storage.write("kerf.project.setAside", text)) {
-        return {
-          history: null,
-          problem: `Your last project could not be opened (${reason}). It was left as it was.`,
-        };
-      }
-      deps.storage.remove("kerf.project");
-      return {
-        history: null,
-        problem: `Your last project could not be opened (${reason}). It was set aside.`,
-      };
-    }
-  };
-  const restored = restore();
-  const firstNotice =
-    loaded.problem ??
-    restored.problem ??
-    (deps.storage.available
-      ? undefined
-      : "This browser won't keep your work between visits. Use Save to keep a copy.");
+  const restored = restoreProject(deps.storage);
+  const firstNotice = loaded.problem ?? restored.problem ?? storageNotice(deps.storage);
 
   /** True once the user has been told that work is not being kept (the notice is given once). */
   let toldNotKept = !deps.storage.available;
@@ -281,7 +235,7 @@ export function createKerfStore(deps: {
     const keep = (history: History | null): void => {
       if (!history) return;
       const project = currentProject(history);
-      if (deps.storage.write("kerf.project", serializeProject(project))) return;
+      if (writeProject(deps.storage, project)) return;
       if (toldNotKept) return;
       toldNotKept = true;
       if (get().notice?.undo === false) return;
