@@ -128,4 +128,34 @@ describe("<SizeFields>", () => {
     expect(store.getState().history?.at).toBe(0);
     expect(store.getState().previewed).toBeNull();
   });
+
+  describe("a drag that cannot go on (silent-failure review M9)", () => {
+    it("says why under the field when it reaches a size that is refused", () => {
+      setup();
+      const label = screen.getByText("Width");
+      fireEvent.pointerDown(label, { clientX: 0, pointerId: 1, button: 0 });
+      // Shift steps are 1" (ADR 015, rule 2): 36 steps left reach 36" − 36" = 0, which is refused.
+      fireEvent.pointerMove(label, { clientX: -4 * 36, pointerId: 1, shiftKey: true });
+      expect(document.querySelector(".field-problem")?.textContent).toBe(
+        "Width must be more than zero.",
+      );
+    });
+
+    it("drops its preview when the field goes away mid-drag", () => {
+      const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+      store.getState().apply(startProject("Bookcase", "imperial"));
+      const id = shownProject(store.getState())?.structures[0]?.id ?? "";
+      const view = render(
+        <KerfProvider store={store}>
+          <SizeFields structure={id} />
+        </KerfProvider>,
+      );
+      const label = screen.getByText("Width");
+      fireEvent.pointerDown(label, { clientX: 0, pointerId: 1, button: 0 });
+      fireEvent.pointerMove(label, { clientX: -40, pointerId: 1 });
+      expect(store.getState().previewed).not.toBeNull();
+      view.unmount();
+      expect(store.getState().previewed).toBeNull();
+    });
+  });
 });

@@ -22,11 +22,17 @@ export const SCRUB_STEPS: Record<Project["units"], { step: Len; shift: Len; alt:
 export interface Scrub {
   value: Len;
   units: Project["units"];
-  /** Called with the new value (internal units) at every step of the drag. */
-  onScrub(value: Len): void;
+  /**
+   * Called with the new value (internal units) at every step of the drag; returns why that step
+   * was refused, shown under the field while the drag lasts, or null.
+   */
+  onScrub(value: Len): string | null;
   /** Called once when the pointer is released after a drag that changed the value. */
   onScrubEnd(): void;
-  /** Called when the browser takes the pointer away mid-drag; the drag's changes are dropped. */
+  /**
+   * Called when the browser takes the pointer away, or the field goes away, mid-drag; the drag's
+   * changes are dropped.
+   */
   onScrubCancel(): void;
 }
 
@@ -45,6 +51,18 @@ export function NumberField({ label, display, onSubmit, scrub }: Props) {
   const [text, setText] = useState(display);
   const [problem, setProblem] = useState<string | null>(null);
   const drag = useRef<{ x: number; start: Len; moved: boolean } | null>(null);
+  // The latest scrub, for the clean-up below, which runs only when the field goes away.
+  const latestScrub = useRef(scrub);
+  useEffect(() => {
+    latestScrub.current = scrub;
+  });
+  // A field that goes away mid-drag (a step change, say) must not leave its preview on screen.
+  useEffect(
+    () => () => {
+      if (drag.current?.moved) latestScrub.current?.onScrubCancel();
+    },
+    [],
+  );
 
   useEffect(() => {
     setText(display);
@@ -71,17 +89,21 @@ export function NumberField({ label, display, onSubmit, scrub }: Props) {
     d.moved = true;
     const size = SCRUB_STEPS[scrub.units];
     const unit = e.altKey ? size.alt : e.shiftKey ? size.shift : size.step;
-    scrub.onScrub(d.start + steps * unit);
+    setProblem(scrub.onScrub(d.start + steps * unit));
   };
   const onPointerUp = (): void => {
     const d = drag.current;
     drag.current = null;
-    if (scrub && d?.moved) scrub.onScrubEnd();
+    if (!scrub || !d?.moved) return;
+    setProblem(null);
+    scrub.onScrubEnd();
   };
   const onPointerCancel = (): void => {
     const d = drag.current;
     drag.current = null;
-    if (scrub && d?.moved) scrub.onScrubCancel();
+    if (!scrub || !d?.moved) return;
+    setProblem(null);
+    scrub.onScrubCancel();
   };
 
   const messageId = `${id}-problem`;

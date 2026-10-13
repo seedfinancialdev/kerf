@@ -20,7 +20,7 @@ import { NumberField } from "./NumberField";
 
 type Tool = ShopProfile["tools"][number];
 
-/** The widest dado a newly ticked dado stack cuts: 3/4", as in the starter shop (model/starter.ts). */
+/** The widest dado a newly ticked dado stack cuts: 3/4", as in the starter shop (starter.ts). */
 const NEW_DADO_STACK_WIDTH = (3 * INCH) / 4;
 
 /**

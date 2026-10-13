@@ -72,12 +72,14 @@ function SizeField({ structure, sizeKey }: { structure: Id; sizeKey: SizeKey }) 
                 // measured from another entry and replace the redo (final branch review M7).
                 if (drag.current.from !== history) {
                   drag.current.last = null;
-                  return;
+                  return null;
                 }
                 const r = setSize(recorded(), structure, sizeKey, literalFor(next, project.units));
-                if (!r.ok) return;
+                // The preview stays at the last size that was accepted; the field says why.
+                if (!r.ok) return r.message;
                 drag.current.last = r.edit;
                 store.getState().preview(r.edit.project);
+                return null;
               },
               onScrubEnd: () => {
                 const last = drag.current?.last;

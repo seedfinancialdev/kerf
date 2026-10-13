@@ -75,7 +75,7 @@ describe("<NumberField>", () => {
   });
 
   it('changes by 1/16" for every 4 pixels dragged', () => {
-    const onScrub = vi.fn();
+    const onScrub = vi.fn(() => null);
     field({
       scrub: {
         value: 7_315_200,
@@ -91,7 +91,7 @@ describe("<NumberField>", () => {
   });
 
   it("moves whole steps only: 7 px is one step of 4, never two", () => {
-    const onScrub = vi.fn();
+    const onScrub = vi.fn(() => null);
     field({
       scrub: {
         value: 7_315_200,
@@ -109,7 +109,7 @@ describe("<NumberField>", () => {
   });
 
   it('changes by 1" per step with Shift and by 1/64" with Alt', () => {
-    const onScrub = vi.fn();
+    const onScrub = vi.fn(() => null);
     field({
       scrub: {
         value: 7_315_200,

@@ -31,9 +31,10 @@ type Axis = 0 | 1 | 2;
 const AXES = ["x", "y", "z"] as const;
 const NO_SIZE = "A board needs a length and a width above zero.";
 const NO_STOCK = "Add a stock to the project first.";
-/** The user's decision (final fix plan, 2026-10-13; ADR 015, rule 7): no binding to form boards yet. */
+/** The maintainer's decision (2026-10-13; ADR 015, rule 7): no binding to form boards yet. */
 const FORM_MADE =
-  "Boards the form made can't be measured between yet; use Divide to add shelves, or take a side over first.";
+  "Boards the form made can't be measured between yet; " +
+  "use Divide to add shelves, or take a side over first.";
 
 /** A new board: the change, and the instance to leave picked. */
 export type DrawnBoard = Edit & { picked: Id };
