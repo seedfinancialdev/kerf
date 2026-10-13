@@ -15,6 +15,14 @@ import {
 
 const TOOL = { dadoStack: "Dado stack", router: "Router", handTools: "Hand tools" } as const;
 
+/**
+ * A stock's name. The engine only lists stock the project has, so "unknown stock" would mean a
+ * fault; it is shown rather than a blank so the line still reads (silent-failure review M10).
+ */
+export function stockName(project: Project, stock: string): string {
+  return project.stock.find((st) => st.id === stock)?.name ?? "unknown stock";
+}
+
 /** The plural "s" for a count other than one. */
 function s(count: number): string {
   return count === 1 ? "" : "s";
@@ -44,7 +52,7 @@ export function cutLineText(
     parts: line.parts
       .map((p) => (p.quantity > 1 ? `${p.name} × ${p.quantity}` : p.name))
       .join(", "),
-    stock: project.stock.find((st) => st.id === line.stock)?.name ?? "",
+    stock: stockName(project, line.stock),
     cut: `${f(line.length)} × ${f(line.width)} × ${f(line.thickness)}`,
     visible: `${f(line.visible.length)} × ${f(line.visible.width)}${line.visibleVaries ? " (varies)" : ""}`,
   };
@@ -58,12 +66,14 @@ function tenths(value: { num: bigint; den: bigint }): string {
 
 /** What to buy for one stock, e.g. `3/4 plywood: 3 sheets`. */
 export function totalsText(totals: StockTotals, project: Project): string {
-  const name = project.stock.find((st) => st.id === totals.stock)?.name ?? "";
+  const name = stockName(project, totals.stock);
   if (totals.sheets !== undefined) return `${name}: ${totals.sheets} sheet${s(totals.sheets)}`;
   const parts = [
     totals.boards !== undefined ? `${totals.boards} board${s(totals.boards)}` : "",
     totals.boardFeet && totals.boardFeet.num !== 0n ? `${tenths(totals.boardFeet)} board feet` : "",
-    totals.linearFeet ? `${tenths(totals.linearFeet)} linear feet` : "",
+    totals.linearFeet && totals.linearFeet.num !== 0n
+      ? `${tenths(totals.linearFeet)} linear feet`
+      : "",
   ].filter((p) => p !== "");
   return `${name}: ${parts.join(", ")}`;
 }

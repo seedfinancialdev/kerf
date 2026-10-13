@@ -13,7 +13,10 @@ import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
 import { memoryStorage } from "../testing/memory-storage";
+import { drawBoard } from "../tools/board";
 import { Drawer } from "./Drawer";
+
+const IN = 203_200;
 
 function setup() {
   const store = createKerfStore({ storage: createStorage(memoryStorage()) });
@@ -100,5 +103,45 @@ describe("<Drawer>", () => {
     expect(selected()).toBe("Assembly");
     fireEvent.keyDown(screen.getByRole("tab", { name: "Assembly" }), { key: "Home" });
     expect(selected()).toBe("Shopping");
+  });
+
+  describe("a tab with nothing in it (branch deferred row 21)", () => {
+    /** A project of one hand-drawn board: nothing to machine or glue, and no error. */
+    function oneBoard() {
+      const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+      const base = { ...startProject("Bookcase", "imperial").project, structures: [], params: [] };
+      const ply = base.stock.find((s) => s.name === "3/4 plywood")?.id ?? "";
+      const drawn = drawBoard(
+        base,
+        ply,
+        [0, 0, 0],
+        { axis: 0, size: 24 * IN },
+        { axis: 1, size: 6 * IN },
+      );
+      store.getState().apply(drawn);
+      render(
+        <KerfProvider store={store}>
+          <Drawer />
+        </KerfProvider>,
+      );
+      return store;
+    }
+
+    it("says there is nothing to machine, not that a problem is in the way, when there is no error", () => {
+      const store = oneBoard();
+      expect(store.getState().solved?.result.blocked).toBe(false);
+      fireEvent.click(screen.getByRole("tab", { name: "Setups" }));
+      expect(
+        screen.getByText("Nothing needs a machine setup: no joint or roundover to cut."),
+      ).toBeTruthy();
+      expect(screen.queryByText(/until the problem above is fixed/)).toBeNull();
+    });
+  });
+
+  it("describes each sheet's parts in words for a screen reader (branch deferred row 21)", () => {
+    setup();
+    fireEvent.click(screen.getByRole("tab", { name: "Sheets" }));
+    const [first] = screen.getAllByRole("img");
+    expect(first?.getAttribute("aria-label")).toMatch(/^Parts on this sheet: \S/);
   });
 });

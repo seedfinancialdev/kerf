@@ -7,6 +7,7 @@
 
 import { useState } from "react";
 import { startProject, type TemplateName } from "../model/commands";
+import { NOTHING } from "../model/selection";
 import { shownProject } from "../model/store";
 import { useKerf, useKerfStore } from "../state/useKerf";
 import { FileSection } from "./FileSection";
@@ -24,7 +25,9 @@ export function StartStep() {
     const s = store.getState();
     const edit = startProject(name, s.unitsForNew);
     s.begin(edit);
-    s.select({ kind: "structure", structure: edit.project.structures[0]?.id ?? "" });
+    // Every template has a form; pick it, and pick nothing rather than a form that is not there.
+    const form = edit.project.structures[0];
+    s.select(form ? { kind: "structure", structure: form.id } : NOTHING);
     setChoosing(false);
   };
   return (

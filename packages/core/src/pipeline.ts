@@ -186,16 +186,22 @@ function placementsOf(p: Pipeline): PlacedPart[] {
 
 const NO_TOOLS: ShopProfile = { kerf: 0, tools: [] };
 
+/** A board's name when the project gives it none at all (validation makes this unreachable). */
+const UNNAMED = "an unnamed board";
+
 /** Each joint with its cuts grouped by kind and size (ADR 015, rule 9). */
 function jointSummariesOf(p: Pipeline, shop: ShopProfile | undefined): JointSummary[] {
   if (!p.project) return [];
+  // The Joinery step shows these names, so a board is never named by its id: one with no name of
+  // its own takes its part's name, as the cut list does.
   const names = new Map<Id, string>();
   const defNames = new Map(p.project.parts.map((d) => [d.id, d.name]));
-  for (const i of p.project.instances) names.set(i.id, i.name ?? i.id);
+  const partName = (def: Id | undefined): string =>
+    (def !== undefined ? defNames.get(def) : undefined) ?? UNNAMED;
+  for (const i of p.project.instances) names.set(i.id, i.name ?? partName(i.def));
   // A row is named for its part ("Shelf"), not for the copy it repeats ("Shelf 1").
   for (const row of p.project.patterns) {
-    const source = p.project.instances.find((i) => i.id === row.source);
-    names.set(row.id, (source && defNames.get(source.def)) ?? row.id);
+    names.set(row.id, partName(p.project.instances.find((i) => i.id === row.source)?.def));
   }
   return p.project.joints.map((joint) => {
     const pairs = p.derived.pairs.filter((pair) => pair.joint === joint.id);
@@ -216,8 +222,8 @@ function jointSummariesOf(p: Pipeline, shop: ShopProfile | undefined): JointSumm
     const summary: JointSummary = {
       joint: joint.id,
       type: joint.type,
-      host: names.get(joint.host) ?? joint.host,
-      guest: names.get(joint.guest) ?? joint.guest,
+      host: names.get(joint.host) ?? UNNAMED,
+      guest: names.get(joint.guest) ?? UNNAMED,
       pairs: pairs.length,
       cuts: [...cuts.values()],
     };

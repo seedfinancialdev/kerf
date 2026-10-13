@@ -14,7 +14,7 @@ export function CutListTab() {
   const project = useKerf((s) => shownProject(s));
   const lines = useKerf((s) => s.solved?.result.cutList.lines);
   if (!project || !lines) return null;
-  if (lines.length === 0) return <NothingToShow />;
+  if (lines.length === 0) return <NothingToShow empty="No boards to cut yet." />;
   return (
     <table className="plan-table">
       <thead>

@@ -56,6 +56,20 @@ describe("solve().joints", () => {
     expect(dado?.source?.role).toBeTypeOf("string");
   });
 
+  it("names a board with no name of its own by its part, never by its id (branch deferred row 19)", () => {
+    const hand = loadProject("bookcase");
+    const host = hand.joints[0]?.host;
+    const unnamed: Project = {
+      ...hand,
+      instances: hand.instances.map((i) => (i.id === host ? { ...i, name: undefined } : i)),
+    };
+    const def = hand.instances.find((i) => i.id === host)?.def;
+    const partName = hand.parts.find((d) => d.id === def)?.name;
+    const summary = solve(unnamed, shop).joints.find((j) => j.joint === hand.joints[0]?.id);
+    expect(partName).toBeTypeOf("string");
+    expect(summary?.host).toBe(partName);
+  });
+
   it("names a row by its part, and a single board by its own name", () => {
     // R3: the Joinery list reads "Shelf in dados in Right side", never "Shelf 1 in dados ...".
     const expanded = loadProject("bookcase", "project");

@@ -13,7 +13,8 @@ export function SetupsTab() {
   const units = useKerf((s) => shownProject(s)?.units ?? "imperial");
   const setups = useKerf((s) => s.solved?.result.setups);
   if (!setups) return null;
-  if (setups.length === 0) return <NothingToShow />;
+  if (setups.length === 0)
+    return <NothingToShow empty="Nothing needs a machine setup: no joint or roundover to cut." />;
   return (
     <ol className="plan-list">
       {setups.map((setup) => (

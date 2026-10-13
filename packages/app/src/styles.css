@@ -560,6 +560,11 @@ button[aria-pressed="true"] {
   margin: 0 0 var(--space-1);
 }
 
+.sheet-drawing {
+  display: block;
+  width: var(--sheet-diagram-width);
+}
+
 .sheet-board {
   fill: var(--color-bg);
   stroke: var(--color-border);
@@ -571,7 +576,7 @@ button[aria-pressed="true"] {
 }
 
 .sheet-label {
-  font-size: 9px;
+  font-size: var(--font-size-diagram);
   text-anchor: middle;
   dominant-baseline: middle;
   fill: var(--color-step-active-text);

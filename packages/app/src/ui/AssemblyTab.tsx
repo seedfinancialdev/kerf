@@ -10,7 +10,8 @@ import { NothingToShow } from "./NothingToShow";
 export function AssemblyTab() {
   const steps = useKerf((s) => s.solved?.assembly);
   if (!steps) return null;
-  if (steps.length === 0) return <NothingToShow />;
+  if (steps.length === 0)
+    return <NothingToShow empty="No assembly steps: nothing is glued or fitted together." />;
   return (
     <ol className="plan-list">
       {steps.map((step, i) => (

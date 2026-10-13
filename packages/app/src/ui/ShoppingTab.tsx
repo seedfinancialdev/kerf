@@ -14,7 +14,7 @@ export function ShoppingTab() {
   const project = useKerf((s) => shownProject(s));
   const totals = useKerf((s) => s.solved?.result.nesting.totals);
   if (!project || !totals) return null;
-  if (totals.length === 0) return <NothingToShow />;
+  if (totals.length === 0) return <NothingToShow empty="Nothing to buy yet." />;
   return (
     <ul className="plan-list">
       {totals.map((t) => (
