@@ -2,7 +2,11 @@
 
 Status: Proposed. Every rule below marked "maintainer to confirm" was chosen while designing M4
 because the spec is silent; the maintainer approved the design on 2026-10-12 and confirms each
-rule at the M4 review.
+rule at the M4 review. Rule 6's thickness clause was confirmed on 2026-10-13. Reviews before the
+M4 PR (2026-10-13): code quality, silent failures, tests and a whole-branch review found
+2 critical, 26 important and 41 minor issues; all were fixed or are listed under Known limits,
+and a second pass over the fixes found 1 important and 9 minor issues, all fixed.
+`pnpm mutate`: 88 mutants, 87 killed, 1 equivalent.
 
 ## Context
 
