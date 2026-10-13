@@ -9,10 +9,20 @@ import { type ShopProfile, shopProblem } from "@kerf/core";
 import { STARTER_SHOP } from "./starter";
 import type { AppStorage } from "./storage";
 
+/** Said when the browser would not let the saved shop be read. */
+const SHOP_UNREADABLE =
+  "Your saved shop could not be read from this browser, so the starter shop is in use. Your " +
+  "saved shop is left as it was.";
+
 /** The saved shop, or the starter shop with the reason the saved one could not be used. */
 export function loadShop(storage: AppStorage): { shop: ShopProfile; problem?: string } {
   const text = storage.read("kerf.shop");
-  if (text === undefined) return { shop: STARTER_SHOP };
+  if (text === undefined) {
+    // The storage does not write over a shop it could not read (`AppStorage.couldNotRead`).
+    return storage.couldNotRead("kerf.shop")
+      ? { shop: STARTER_SHOP, problem: SHOP_UNREADABLE }
+      : { shop: STARTER_SHOP };
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);

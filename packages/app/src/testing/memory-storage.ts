@@ -24,3 +24,30 @@ export function memoryStorage(failWrites = false): Storage {
     },
   };
 }
+
+/**
+ * `backing` with reads of `keys` throwing, as a corrupted browser store does
+ * (NS_ERROR_FILE_CORRUPTED), while `readable()` is false; writes still work.
+ */
+export function unreadable(
+  keys: readonly string[],
+  backing: Storage = memoryStorage(),
+): Storage & { readable(ok: boolean): void } {
+  let ok = false;
+  return {
+    get length() {
+      return backing.length;
+    },
+    clear: () => backing.clear(),
+    getItem: (k) => {
+      if (!ok && keys.includes(k)) throw new DOMException("The store is damaged.", "UnknownError");
+      return backing.getItem(k);
+    },
+    key: (i) => backing.key(i),
+    removeItem: (k) => backing.removeItem(k),
+    setItem: (k, v) => backing.setItem(k, v),
+    readable: (now) => {
+      ok = now;
+    },
+  };
+}

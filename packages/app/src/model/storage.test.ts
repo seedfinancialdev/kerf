@@ -5,7 +5,7 @@
 // ADR 015, rule 11: storage never throws; when it cannot work it says so once.
 
 import { describe, expect, it } from "vitest";
-import { memoryStorage as memory } from "../testing/memory-storage";
+import { memoryStorage as memory, unreadable } from "../testing/memory-storage";
 import { createStorage } from "./storage";
 
 describe("createStorage()", () => {
@@ -28,5 +28,36 @@ describe("createStorage()", () => {
 
   it("returns undefined for a key never written", () => {
     expect(createStorage(memory()).read("kerf.theme")).toBeUndefined();
+  });
+
+  describe("when a key cannot be read (PR review errors-M2)", () => {
+    it("says so, and does not write over what the key holds", () => {
+      const backing = unreadable(["kerf.project"]);
+      backing.setItem("kerf.project", "the last project");
+      const s = createStorage(backing);
+      expect(s.read("kerf.project")).toBeUndefined();
+      expect(s.couldNotRead("kerf.project")).toBe(true);
+      expect(s.write("kerf.project", "a new project")).toBe(false);
+      s.remove("kerf.project");
+      backing.readable(true);
+      expect(backing.getItem("kerf.project")).toBe("the last project");
+    });
+
+    it("writes the key again once a read of it has worked", () => {
+      const backing = unreadable(["kerf.project"]);
+      const s = createStorage(backing);
+      s.read("kerf.project");
+      backing.readable(true);
+      expect(s.read("kerf.project")).toBeUndefined();
+      expect(s.couldNotRead("kerf.project")).toBe(false);
+      expect(s.write("kerf.project", "a new project")).toBe(true);
+    });
+
+    it("keeps writing the keys it could read", () => {
+      const s = createStorage(unreadable(["kerf.project"]));
+      s.read("kerf.project");
+      expect(s.couldNotRead("kerf.units")).toBe(false);
+      expect(s.write("kerf.units", "metric")).toBe(true);
+    });
   });
 });

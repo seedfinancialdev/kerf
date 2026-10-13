@@ -34,14 +34,27 @@ export function storageNotice(storage: AppStorage): string | undefined {
 export const OPEN_STORED_FAULT = "Kerf hit a problem opening your last project; please report it.";
 
 /**
+ * Said when the browser would not let the stored project be read: it is left as it was, and the
+ * storage does not write over it (`AppStorage.couldNotRead`).
+ */
+const PROJECT_UNREADABLE =
+  "Your last project could not be read from this browser, so Kerf started without it. It is " +
+  "left as it was; use Save to keep a copy of new work.";
+
+/**
  * The stored project as the first History entry, or why it could not be opened. A stored project
  * that cannot be opened is set aside (`setAsideStoredProject`), whether the engine rejects it or
  * Kerf itself fails on it, so a fault never stops the app starting; a fault is logged for a bug
- * report. Never throws.
+ * report. A stored project the browser would not let be read is left as it was, and said. Never
+ * throws.
  */
 export function restoreProject(storage: AppStorage): { history: History | null; problem?: string } {
   const text = storage.read("kerf.project");
-  if (text === undefined) return { history: null };
+  if (text === undefined) {
+    return storage.couldNotRead("kerf.project")
+      ? { history: null, problem: PROJECT_UNREADABLE }
+      : { history: null };
+  }
   try {
     return {
       history: startHistory({ label: "Opened your last project", project: parseProject(text) }),

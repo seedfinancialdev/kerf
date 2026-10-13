@@ -2,8 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Browser storage that never throws (ADR 015, rule 11). A private window, a full store or blocked
-// site data must not stop the app; callers learn from `available` and from `write`'s result.
+// Browser storage that never throws (ADR 015, rule 11). A private window, a full store, blocked
+// site data or a damaged store must not stop the app; callers learn from `available`,
+// `couldNotRead` and `write`'s result. A key that could not be read is never written over.
 
 /** Every key the app keeps in browser storage. */
 export type StorageKey =
@@ -21,8 +22,15 @@ export type StorageKey =
 export interface AppStorage {
   /** False when the browser gives no storage at all. */
   readonly available: boolean;
+  /** The text kept under `key`; undefined when nothing is, or it could not be read. */
   read(key: StorageKey): string | undefined;
-  /** True when the value was stored. */
+  /**
+   * True when the last read of `key` failed: whatever it holds is unknown, so it is not written
+   * or removed until a read of it works, so work the app could not read is never overwritten
+   * (ADR 015, rule 11).
+   */
+  couldNotRead(key: StorageKey): boolean;
+  /** True when the value was stored; false too for a key that could not be read. */
   write(key: StorageKey, value: string): boolean;
   remove(key: StorageKey): void;
 }
@@ -37,15 +45,31 @@ export function createStorage(backing: Storage | undefined): AppStorage {
       return otherwise;
     }
   };
+  // Keys whose last read threw: what they hold is unknown, so they are not written over.
+  const unread = new Set<StorageKey>();
   return {
     available: backing !== undefined,
-    read: (key) => attempt((storage) => storage.getItem(key) ?? undefined, undefined),
+    read: (key) => {
+      if (!backing) return undefined;
+      try {
+        const text = backing.getItem(key) ?? undefined;
+        unread.delete(key);
+        return text;
+      } catch {
+        unread.add(key);
+        return undefined;
+      }
+    },
+    couldNotRead: (key) => unread.has(key),
     write: (key, value) =>
+      !unread.has(key) &&
       attempt((storage) => {
         storage.setItem(key, value);
         return true;
       }, false),
-    remove: (key) => attempt((storage) => storage.removeItem(key), undefined),
+    remove: (key) => {
+      if (!unread.has(key)) attempt((storage) => storage.removeItem(key), undefined);
+    },
   };
 }
 

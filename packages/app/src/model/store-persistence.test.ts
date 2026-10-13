@@ -9,8 +9,9 @@ import { type Project, serializeProject } from "@kerf/core";
 import { handMadeBookcase } from "@kerf/fixtures/builders";
 import { describe, expect, it } from "vitest";
 import { bannedWordsIn } from "../testing/banned-words";
-import { memoryStorage } from "../testing/memory-storage";
+import { memoryStorage, unreadable } from "../testing/memory-storage";
 import { type Edit, setSize, startProject } from "./commands";
+import { STARTER_SHOP } from "./starter";
 import { type AppStorage, createStorage } from "./storage";
 import { createKerfStore, shownProject } from "./store";
 
@@ -157,6 +158,7 @@ describe("a browser store that cannot be written", () => {
       available: true,
       read: (key) => (key === "kerf.project" ? bad : undefined),
       write: () => false,
+      couldNotRead: () => false,
       remove: (key) => {
         removed.push(key);
       },
@@ -303,5 +305,36 @@ describe("section open state that storage holds damaged (PR review tests-M3)", (
     const storage = memory();
     storage.write("kerf.sections", stored);
     expect(createKerfStore({ storage }).getState().sections).toEqual(sections);
+  });
+});
+
+describe("work the browser could not read at start (PR review errors-M2)", () => {
+  const PROJECT_UNREADABLE =
+    "Your last project could not be read from this browser, so Kerf started without it. It is " +
+    "left as it was; use Save to keep a copy of new work.";
+  const SHOP_UNREADABLE =
+    "Your saved shop could not be read from this browser, so the starter shop is in use. Your " +
+    "saved shop is left as it was.";
+
+  it("says the last project could not be read, and never writes over it", () => {
+    const backing = unreadable(["kerf.project"]);
+    backing.setItem("kerf.project", "the last project");
+    const s = createKerfStore({ storage: createStorage(backing) });
+    expect(s.getState().history).toBeNull();
+    expect(s.getState().notice).toEqual({ text: PROJECT_UNREADABLE, kind: "warning" });
+    s.getState().apply(startProject("Bookcase", "imperial"));
+    backing.readable(true);
+    expect(backing.getItem("kerf.project")).toBe("the last project");
+  });
+
+  it("says the saved shop could not be read, uses the starter shop, and never writes over it", () => {
+    const backing = unreadable(["kerf.shop"]);
+    backing.setItem("kerf.shop", "the saved shop");
+    const s = createKerfStore({ storage: createStorage(backing) });
+    expect(s.getState().shop).toEqual(STARTER_SHOP);
+    expect(s.getState().notice).toEqual({ text: SHOP_UNREADABLE, kind: "warning" });
+    s.getState().setShop({ ...STARTER_SHOP, kerf: 0 });
+    backing.readable(true);
+    expect(backing.getItem("kerf.shop")).toBe("the saved shop");
   });
 });
