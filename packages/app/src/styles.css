@@ -601,3 +601,42 @@ button[aria-pressed="true"] {
   margin-bottom: var(--space-1);
   color: var(--color-text-muted);
 }
+
+.tool-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.tools kbd {
+  color: var(--color-text-muted);
+  font-family: inherit;
+}
+
+.measurements {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  color: var(--color-text-muted);
+}
+
+.measurements input {
+  width: 140px;
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-1);
+  font: inherit;
+}

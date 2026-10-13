@@ -21,6 +21,7 @@ import {
 import { createStore, type StoreApi } from "zustand/vanilla";
 import type { Edit } from "./commands";
 import { currentProject, type History, jumpTo, record, redo, startHistory, undo } from "./history";
+import type { Pending } from "./pending";
 import { NOTHING, type Selection } from "./selection";
 import { loadShop, saveShop } from "./shop";
 import type { Step } from "./steps";
@@ -52,6 +53,8 @@ export interface KerfState {
   shop: ShopProfile;
   notice: Notice | null;
   tool: ToolId;
+  /** What the active tool has started and not finished; cleared when the tool changes. */
+  pending: Pending | null;
   drawerTab: DrawerTab;
   theme: "dark" | "light";
   /** Units a new project starts in: the user's choice in Settings, never the open project's (ADR 015, rule 4). */
@@ -103,6 +106,8 @@ export interface KerfActions {
   setShop(shop: ShopProfile): void;
   /** Picks the active tool. */
   setTool(tool: ToolId): void;
+  /** Sets or clears the active tool's half-finished action. */
+  setPending(pending: Pending | null): void;
   /** Shows a tab of the build-plan drawer. */
   setDrawerTab(tab: DrawerTab): void;
   /** Uses and saves the colour theme. */
@@ -219,11 +224,17 @@ export function createKerfStore(deps: {
       return instances.length > 0 ? { kind: "boards", instances } : NOTHING;
     };
 
-    /** Sets new state and re-solves what is shown, dropping selected boards that are gone. */
+    /**
+     * Sets new state and re-solves what is shown. Selected boards that are gone are dropped only
+     * when History moved: a drag's preview may lack a board for a moment, and the board must
+     * still be picked when the drag is cancelled (ruling R19).
+     */
     const show = (patch: Partial<KerfState>): void => {
       const next = { ...get(), ...patch };
       const solved = solveFor(shownProject(next), next.shop);
-      set({ ...patch, solved, selection: stillThere(next.selection, solved) });
+      const selection =
+        patch.history !== undefined ? stillThere(next.selection, solved) : next.selection;
+      set({ ...patch, solved, selection });
       if (patch.history !== undefined) keep(get().history);
     };
 
@@ -256,6 +267,7 @@ export function createKerfStore(deps: {
       shop: loaded.shop,
       notice: firstNotice ? { text: firstNotice, undo: false } : null,
       tool: "select",
+      pending: null,
       drawerTab: "Cut list",
       theme: deps.storage.read("kerf.theme") === "light" ? "light" : "dark",
       unitsForNew: deps.storage.read("kerf.units") === "metric" ? "metric" : "imperial",
@@ -328,7 +340,8 @@ export function createKerfStore(deps: {
         saveShop(deps.storage, shop);
         show({ shop });
       },
-      setTool: (tool) => set({ tool }),
+      setTool: (tool) => set({ tool, pending: null }),
+      setPending: (pending) => set({ pending }),
       setDrawerTab: (drawerTab) => set({ drawerTab }),
       setTheme: (theme) => {
         deps.storage.write("kerf.theme", theme);

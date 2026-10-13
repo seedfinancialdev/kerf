@@ -302,3 +302,41 @@ describe("selected boards", () => {
     expect(s.getState().selection).toEqual({ kind: "none" });
   });
 });
+
+describe("selected boards while dragging (ruling R19)", () => {
+  it("are kept by a preview that lacks them, and by cancelling it", () => {
+    const s = fresh();
+    s.getState().apply(startProject("Bookcase", "imperial"));
+    const p = shownProject(s.getState());
+    const structure = p?.structures[0];
+    const opening = structure?.openings[0];
+    if (!p || !structure || !opening) throw new Error("no opening");
+    const more = setShelves(p, structure.id, opening.id, "5", "even");
+    if (!more.ok) throw new Error(more.message);
+    s.getState().apply(more.edit);
+    const shelf = s
+      .getState()
+      .solved?.result.placements.filter((x) => x.source?.role === "shelf")
+      .at(-1);
+    if (!shelf) throw new Error("no shelf");
+    s.getState().select({ kind: "boards", instances: [shelf.instance] });
+    s.getState().preview(p);
+    expect(s.getState().solved?.result.placements.some((x) => x.instance === shelf.instance)).toBe(
+      false,
+    );
+    expect(s.getState().selection).toEqual({ kind: "boards", instances: [shelf.instance] });
+    s.getState().cancelPreview();
+    expect(s.getState().selection).toEqual({ kind: "boards", instances: [shelf.instance] });
+  });
+});
+
+describe("pending tool state", () => {
+  it("starts empty, holds a half-finished action, and is cleared by picking a tool", () => {
+    const s = fresh();
+    expect(s.getState().pending).toBeNull();
+    s.getState().setPending({ tool: "tape", from: [0, 0, 0] });
+    expect(s.getState().pending).toEqual({ tool: "tape", from: [0, 0, 0] });
+    s.getState().setTool("move");
+    expect(s.getState().pending).toBeNull();
+  });
+});

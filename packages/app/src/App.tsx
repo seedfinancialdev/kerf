@@ -7,6 +7,7 @@
 
 import { type ReactNode, useEffect } from "react";
 import type { KerfStore } from "./model/store";
+import { ToolRow } from "./tools/ToolRow";
 import { Drawer } from "./ui/Drawer";
 import { HintLine } from "./ui/HintLine";
 import { HistoryPanel } from "./ui/HistoryPanel";
@@ -45,6 +46,7 @@ function Window({ model }: { model: ReactNode }) {
           <section aria-label="Model" className="model">
             {model}
           </section>
+          <ToolRow />
           <Drawer />
         </main>
         <aside aria-label="Inspector" className="panel panel-right">

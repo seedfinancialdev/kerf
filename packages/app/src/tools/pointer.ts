@@ -5,15 +5,10 @@
 // What the model view tells a tool: which board was hit, where (project units, on the grid) and
 // which way the surface faces (a project axis). Each tool turns this into named changes.
 
-import type { PlacedPart, Vec3 } from "@kerf/core";
+import type { ModelHit } from "../model/pending";
 import type { KerfState, KerfStore, ToolId } from "../model/store";
 
-export interface ModelHit {
-  placed: PlacedPart;
-  point: Vec3;
-  /** The surface's outward direction: a signed project axis. */
-  normal: Vec3;
-}
+export type { ModelHit };
 
 export interface ModelPointer {
   kind: "down" | "move" | "up";
