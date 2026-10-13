@@ -128,7 +128,7 @@ export interface KerfActions {
   setStep(step: Step): void;
   /** Sets what is picked. */
   select(selection: Selection): void;
-  /** Uses and saves the shop, then solves again with it. When the browser cannot keep it, says so once. */
+  /** Uses and saves the shop, then solves again; says once when the browser cannot keep it. */
   setShop(shop: ShopProfile): void;
   /** Picks the active tool, dropping the last one's action and any preview it drew. */
   setTool(tool: ToolId): void;
