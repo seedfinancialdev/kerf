@@ -158,8 +158,8 @@ describe("<BoardInspector>", () => {
   describe("when the 3D view cannot draw a board's cuts", () => {
     beforeAll(initGeometry);
 
-    function withCuts(removals: unknown[]) {
-      const store = setup(topOf);
+    function withCuts(removals: unknown[], pick = topOf) {
+      const store = setup(pick);
       const solved = store.getState().solved;
       const top = placements(store).find((x) => x.name === "Top");
       if (!solved || !top) throw new Error("no top");
@@ -180,9 +180,13 @@ describe("<BoardInspector>", () => {
 
     it("shows the reason as a warning on the board", async () => {
       withCuts([{ kind: "nonsense" }]);
-      expect(
-        await screen.findByText(/^The 3D view shows this board without its cuts: /),
-      ).toBeTruthy();
+      expect(await screen.findByText(/^The 3D view shows Top without its cuts: /)).toBeTruthy();
+    });
+
+    it("names every picked board drawn without its cuts, not only the first (silent-failure review I7)", async () => {
+      // Shelf 1 comes first in the pick; only the Top's cuts cannot be drawn.
+      withCuts([{ kind: "nonsense" }], (st) => [...shelves(st).slice(0, 1), ...topOf(st)]);
+      expect(await screen.findByText(/^The 3D view shows Top without its cuts: /)).toBeTruthy();
     });
 
     it("shows no warning for a board whose cuts can be drawn, once the engine is ready", async () => {

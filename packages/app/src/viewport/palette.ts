@@ -11,6 +11,8 @@ export interface Palette {
   sheet: string;
   solid: string;
   error: string;
+  /** The badge on a board drawn without its cuts (ADR 015, rule 10). */
+  warning: string;
   accent: string;
   grain: string;
   /** The Tape's guide lines. */
@@ -26,6 +28,7 @@ function read(): Palette {
     sheet: token("--color-wood-sheet"),
     solid: token("--color-wood-solid"),
     error: token("--color-error"),
+    warning: token("--color-warning"),
     accent: token("--color-accent"),
     grain: token("--color-focus"),
     guide: token("--color-focus"),

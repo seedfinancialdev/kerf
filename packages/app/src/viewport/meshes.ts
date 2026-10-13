@@ -8,7 +8,7 @@
 // outside `core`: each entry is a pure function of its key, so it can only return a remembered
 // answer, never a wrong one.
 
-import type { PartShape } from "@kerf/core";
+import type { Id, PartShape, SolveResult } from "@kerf/core";
 import { buildDisplayMesh, type DisplayMesh, MeshError } from "@kerf/geometry";
 
 export type MeshResult = { ok: true; mesh: DisplayMesh } | { ok: false; reason: string };
@@ -38,4 +38,21 @@ export function meshFor(shape: PartShape): MeshResult {
   if (cache.size >= CACHE_LIMIT) cache.delete(cache.keys().next().value as string);
   cache.set(key, result);
   return result;
+}
+
+/**
+ * Why each board whose cuts cannot be drawn is drawn as its plain blank, by placed instance (ADR
+ * 015, rule 10): the view puts a warning badge on it and the inspector says why. A board with no
+ * shape (an error withholds them all) is not listed: it is a blank for that reason instead. Call
+ * after initGeometry().
+ */
+export function undrawnBoards(result: SolveResult): Map<Id, string> {
+  const shapes = new Map(result.shapes.map((s) => [s.definition, s]));
+  const undrawn = new Map<Id, string>();
+  for (const placed of result.placements) {
+    const shape = shapes.get(placed.shape);
+    const built = shape && meshFor(shape);
+    if (built && !built.ok) undrawn.set(placed.instance, built.reason);
+  }
+  return undrawn;
 }

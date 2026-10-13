@@ -8,7 +8,7 @@
 import { INCH } from "@kerf/core";
 import { initGeometry } from "@kerf/geometry";
 import { beforeAll, describe, expect, it } from "vitest";
-import { blankGeometry, geometryOf } from "./board-geometry";
+import { badgePosition, blankGeometry, geometryOf } from "./board-geometry";
 import { meshFor } from "./meshes";
 
 // A 4 × 2 × 1 inch board.
@@ -69,5 +69,14 @@ describe("geometryOf()", () => {
 
   it("falls back to the blank when the mesh could not be built", () => {
     expect(geometryOf({ ok: false, reason: "x" }, size).getAttribute("position").count).toBe(36);
+  });
+});
+
+describe("badgePosition()", () => {
+  it("floats the warning badge 2 inches over the middle of the board's top, in scene inches", () => {
+    // Project box (2, 4, 0)..(6, 8, 10) inches: middle (4, 6), top 10, so the badge is at project
+    // (4, 6, 12), which the scene (x, z, -y) puts at (4, 12, -6).
+    const box = { min: [2 * INCH, 4 * INCH, 0], max: [6 * INCH, 8 * INCH, 10 * INCH] } as const;
+    expect(badgePosition(box)).toEqual([4, 12, -6]);
   });
 });

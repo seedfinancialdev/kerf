@@ -5,11 +5,11 @@
 // The selected boards (Interaction spec, "Inspector": "a part's properties ('Length 34-9/16" · cut
 // 35-1/16"')"), where they came from, and their problems. Shown as a list of facts, not fields.
 
-import { formatLength, type Id, type PartShape, type PlacedPart, type Project } from "@kerf/core";
+import { formatLength, type Id, type PlacedPart, type Project, type SolveResult } from "@kerf/core";
 import { handBack } from "../model/commands";
 import { shownProject } from "../model/store";
 import { useKerf, useKerfStore } from "../state/useKerf";
-import { meshFor } from "../viewport/meshes";
+import { undrawnBoards } from "../viewport/meshes";
 import { useGeometry } from "../viewport/useGeometry";
 import { EdgePanel } from "./EdgePanel";
 import { Problems } from "./Problems";
@@ -40,17 +40,24 @@ function listOf(placed: PlacedPart[]): string {
 }
 
 /**
- * Why the 3D view draws this board as a plain blank, when it does (ADR 015, rule 10). It asks the
- * geometry engine, so it is drawn inside ThreeDGuard: an engine failure must not take the
+ * Why the 3D view draws each picked board as a plain blank, when it does (ADR 015, rule 10). It
+ * asks the geometry engine, so it is drawn inside ThreeDGuard: an engine failure must not take the
  * inspector with it.
  */
-function UndrawnNote({ shape }: { shape: PartShape | undefined }) {
+function UndrawnNotes({ placed, result }: { placed: PlacedPart[]; result: SolveResult }) {
   const { ready } = useGeometry();
-  const built = ready && shape ? meshFor(shape) : undefined;
-  if (!built || built.ok) return null;
-  return (
-    <p className="problem warning">The 3D view shows this board without its cuts: {built.reason}</p>
-  );
+  if (!ready) return null;
+  const undrawn = undrawnBoards(result);
+  return placed.flatMap((p) => {
+    const reason = undrawn.get(p.instance);
+    return reason === undefined
+      ? []
+      : [
+          <p key={p.instance} className="problem warning">
+            The 3D view shows {p.name} without its cuts: {reason}
+          </p>,
+        ];
+  });
 }
 
 /** The facts about the picked boards, their problems, and a way to hand a taken-over one back. */
@@ -106,7 +113,7 @@ export function BoardInspector({ instances }: { instances: Id[] }) {
         )}
       </Section>
       <ThreeDGuard>
-        <UndrawnNote shape={result.shapes.find((s) => s.definition === first.shape)} />
+        <UndrawnNotes placed={placed} result={result} />
       </ThreeDGuard>
       <Problems parts={new Set(placed.map((p) => p.part))} />
     </div>

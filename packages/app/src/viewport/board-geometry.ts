@@ -9,6 +9,7 @@
 
 import { INCH, type PlacedPart } from "@kerf/core";
 import { BufferAttribute, BufferGeometry } from "three";
+import { toScene } from "../scene/frames";
 import type { MeshResult } from "./meshes";
 
 /** Flat-shaded geometry from indexed triangles. */
@@ -48,4 +49,19 @@ export function geometryOf(
   size: PlacedPart["size"],
 ): BufferGeometry {
   return built?.ok ? flat(built.mesh.positions, built.mesh.indices) : blankGeometry(size);
+}
+
+/** How far the warning badge floats over a board's top, in inches. */
+const BADGE_RISE_INCHES = 2;
+
+/**
+ * Where the warning badge of a board drawn without its cuts sits (ADR 015, rule 10): over the
+ * middle of the board's top, clear of it, in scene inches. `box` is the board's box, project units.
+ */
+export function badgePosition(box: {
+  min: readonly [number, number, number];
+  max: readonly [number, number, number];
+}): [number, number, number] {
+  const middle = (i: 0 | 1): number => (box.min[i] + box.max[i]) / 2 / INCH;
+  return toScene([middle(0), middle(1), box.max[2] / INCH + BADGE_RISE_INCHES]);
 }

@@ -4,7 +4,8 @@
 
 // The model (Interaction spec, "Viewport (center)"): every placed board, drawn with its cuts, wood-
 // toned by stock, red when the engine reports an error on it, lit when selected, its grain shown on
-// hover; SketchUp navigation. Picks go to the active tool through dispatch.ts.
+// hover, and badged when its cuts cannot be drawn (ADR 015, rule 10); SketchUp navigation. Picks go
+// to the active tool through dispatch.ts.
 
 import { INCH, type PlacedPart } from "@kerf/core";
 import { addAfterEffect, Canvas, type ThreeEvent, useThree } from "@react-three/fiber";
@@ -21,12 +22,12 @@ import { BufferAttribute, BufferGeometry, type Camera, Matrix4 } from "three";
 import { shownProject } from "../model/store";
 import { matrixOf, toScene } from "../scene/frames";
 import { useKerf, useKerfStore } from "../state/useKerf";
-import { geometryOf } from "./board-geometry";
+import { badgePosition, geometryOf } from "./board-geometry";
 import { type BoardLook, boardLooks } from "./board-looks";
 import { cameraPosition, FOV_DEGREES, fitView, isFramed, type View } from "./camera";
 import { dispatchPointer } from "./dispatch";
 import { followDrag, followsDrag } from "./follow-drag";
-import { meshFor } from "./meshes";
+import { meshFor, undrawnBoards } from "./meshes";
 import { usePalette } from "./palette";
 import { useGeometry } from "./useGeometry";
 import { listenForViewDrags } from "./view-drag";
@@ -69,6 +70,22 @@ function Board({ look, ready, color, selected, glow }: BoardProps) {
       onPointerOut={() => store.getState().hover(null)}
     >
       <meshStandardMaterial color={color} emissive={glow} emissiveIntensity={selected ? 0.35 : 0} />
+    </mesh>
+  );
+}
+
+/** Half the size of the warning badge, in inches. */
+const BADGE_RADIUS_INCHES = 0.75;
+
+/**
+ * The warning badge over a board the view draws as its plain blank because its cuts cannot be
+ * drawn (ADR 015, rule 10); the inspector says why when the board is picked.
+ */
+function WarningBadge({ placed, color }: { placed: PlacedPart; color: string }) {
+  return (
+    <mesh position={badgePosition(placed.box)}>
+      <octahedronGeometry args={[BADGE_RADIUS_INCHES]} />
+      <meshBasicMaterial color={color} />
     </mesh>
   );
 }
@@ -248,6 +265,10 @@ export function Viewport() {
   const { ready, failure } = useGeometry();
   const [view, setView] = useState<View | null>(null);
   const placements = useMemo(() => result?.placements ?? [], [result]);
+  const undrawn = useMemo(
+    () => (ready && result ? undrawnBoards(result) : new Map<string, string>()),
+    [ready, result],
+  );
   const hasBoards = placements.length > 0;
   const change = useMemo(() => (update: (v: View) => View) => setView((v) => v && update(v)), []);
 
@@ -292,6 +313,11 @@ export function Viewport() {
           glow={palette.accent}
         />
       ))}
+      {placements
+        .filter((p) => undrawn.has(p.instance))
+        .map((p) => (
+          <WarningBadge key={p.instance} placed={p} color={palette.warning} />
+        ))}
       <Guides color={palette.guide} />
       {hoveredBoard && <GrainLine placed={hoveredBoard} color={palette.grain} />}
     </ModelCanvas>
