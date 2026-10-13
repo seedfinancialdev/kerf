@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// One placed board in the model (Interaction spec, "Viewport (center)"): its cuts, or its blank with
-// a warning badge when they cannot be drawn (ADR 015, rule 10), tinted by stock or error and lit
-// when selected. A press on it goes to the active tool through dispatch.ts.
+// One placed board in the model (Interaction spec, "Viewport (center)"): its cuts, or its blank
+// with a warning badge when they cannot be drawn (ADR 015, rule 10), tinted by stock or error and
+// lit when selected. A press on it goes to the active tool through dispatch.ts.
 
 import type { PlacedPart } from "@kerf/core";
 import type { ThreeEvent } from "@react-three/fiber";

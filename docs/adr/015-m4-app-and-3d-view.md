@@ -85,23 +85,30 @@ maintainer decides which become work.
     its wording until `@kerf/io` raises a typed error. `begin` and `apply` repeat one shape.
 12. Units: a metric length can read "18.0 mm" with a trailing `.0` (`formatLength` in core; fix it
     there). The units and the work have separate "not kept" notices.
-13. Engine inputs: a parameter cycle through other parameters is not detected; a position of zero or
-    less is accepted and the solver reports it; an empty count has a general wording.
-14. `proposeJoint` matches an error that carries no rule by its words, and compares the errors of the
-    two solves as a set, which hides one that exactly repeats an old one.
+13. Size fields: the field refuses only a direct reference to itself. A parameter cycle through
+    other parameters (depth = width / 3, then Width = depth) is accepted and then reported by the
+    engine as a problem. A length position of zero or less is accepted and the solver reports it.
+    A count is limited to 64 (`MAX_COUNT`), and an empty count has the engine's general wording.
+14. `proposeJoint` keys the errors of its two solves by rule, board, joint and message and compares
+    them as a set, so a new error that exactly repeats an old one is hidden.
 15. Join: "Joinery accepted" stays after a corner joint is changed (the maintainer to confirm), and
     the sentence for a missing tool does not name the cut.
 16. Problems: a diagnostic that names no board never shows when a board is picked.
 17. In Chrome, middle-button autoscroll can start over the view.
 18. A mirror copy is mirrored where it stands, as the Interaction spec words it.
-19. The project tree and History have no roving tab stop and no Arrow, Home or End keys. Long hints
-    and names are clipped.
+19. The project tree takes ArrowUp and ArrowDown but has no roving tab stop and no Home or End key.
+    History has no arrow, Home or End keys, and every entry is a tab stop. Long hints and names
+    are clipped.
 20. Two full solves run for each Board attempt (the figure is reported by the timing test), and the
     row-shelf height is read off the solve.
 21. Tests not yet written: a light-theme App test (the end-to-end test covers it), Section
-    collapse, the `setupText` branches, tab focus, the Space guard on controls that are not
-    buttons, the two-board take-over notice beyond its unit test, and an unmount in the middle of
-    a drag. The tape end-to-end test and the arrow-key tests were not seen failing first. One
-    mutant of the half-to-even tie in the Tape is equivalent, and the empty-History branch cannot
-    be reached.
+    collapse beyond its open state, the `setupText` branches, tab focus, an unmount in the middle
+    of a drag of a viewport tool (a size-field drag is covered), and the two-board take-over notice
+    beyond its unit test. The tape end-to-end test and the arrow-key tests were not seen failing
+    first. One mutant of the half-to-even tie in the Tape is equivalent, and the empty-History
+    branch cannot be reached.
 22. The rules above quote UI strings; a later wording change cites this ADR.
+23. Small tidying left: `tools/pointer.ts` re-exports `ModelHit`, `ModelPointer` and `ToolHandler`;
+    `resetOption` in `commands.ts` repeats a rest-omit; unused design tokens are not checked.
+24. The shop card shows inches only (rule 11); fit-a-space sizing, drawers, doors and an
+    icon-only toolbar are v1.

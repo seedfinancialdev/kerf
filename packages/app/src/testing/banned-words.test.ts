@@ -42,7 +42,11 @@ describe("bannedWordsIn()", () => {
   });
 
   it("does not flag a word that merely contains a banned word", () => {
-    expect(bannedWordsIn("Surface, facet, meshwork")).toEqual([]);
+    expect(bannedWordsIn("Surface, facet, meshwork, vertical, interface, extra")).toEqual([]);
+  });
+
+  it("flags material wherever it is whole, as CLAUDE.md bans it", () => {
+    expect(bannedWordsIn("Materials list")).toEqual(["material"]);
   });
 
   it("returns nothing for plain shop language", () => {

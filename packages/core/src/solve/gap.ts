@@ -22,22 +22,20 @@ const AXIS = ["x", "y", "z"] as const;
 const PICK_TWO = "Pick two boards to measure between.";
 
 /**
- * The expression for a part's size along one of its own axes (0 length, 1 width, 2 thickness), or
- * undefined when the thickness is its stock's and the project has no such stock. The solve has
- * already left such a board out, so this only keeps a missing stock from becoming a name.
+ * The expression for a part's size along one of its own axes (0 length, 1 width, 2 thickness).
+ * Throws when the thickness is its stock's and the project has no such stock: the solve leaves such
+ * a board out, so `gapBetween` never reaches a board like that.
  */
-function sizeExpr(project: Project, part: PartDef, local: 0 | 1 | 2): Expr | undefined {
+function sizeExpr(project: Project, part: PartDef, local: 0 | 1 | 2): Expr {
   if (local === 0) return `(${part.length})`;
   if (local === 1) return `(${part.width})`;
   if (part.thickness !== undefined) return `(${part.thickness})`;
   const stock = project.stock.find((s) => s.id === part.stock);
-  return stock && `stock["${stock.name.replaceAll('"', '\\"')}"].thickness`;
+  if (!stock) throw new Error("gapBetween accepted a board whose stock is not in the project.");
+  return `stock["${stock.name.replaceAll('"', '\\"')}"].thickness`;
 }
 
-/**
- * The far face of `inst` along a project axis as an expression, or undefined if its size is
- * unknown.
- */
+/** The far face of `inst` along a project axis as an expression, or undefined if it has no part. */
 function farFace(
   project: Project,
   inst: Instance,
@@ -47,8 +45,7 @@ function farFace(
   const part = project.parts.find((d) => d.id === inst.def);
   const local = axisMaps(solved).findIndex((m) => m.axis === axis);
   if (!part || (local !== 0 && local !== 1 && local !== 2)) return undefined;
-  const size = sizeExpr(project, part, local);
-  return size && `(${inst.position[AXIS[axis]]}) + ${size}`;
+  return `(${inst.position[AXIS[axis]]}) + ${sizeExpr(project, part, local)}`;
 }
 
 const overlaps = (a: SolvedInstance, b: SolvedInstance, k: "x" | "y" | "z"): boolean =>

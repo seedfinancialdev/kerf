@@ -200,7 +200,8 @@ describe("proposeJoint()", () => {
   });
 
   it("offers a preferred type that seats, in place of the contact rule's choice", () => {
-    // The top at the end of a side is a rabbet by contact; a dado of 23/32 ÷ 3 = 23/96", snapped down to 15/64", also seats.
+    // The top at the end of a side is a rabbet by contact; a dado of 23/32 ÷ 3 = 23/96", snapped
+    // down to 15/64", also seats.
     const p = looseBoards();
     const r = proposeJoint(p, shop, idOf(p, "Top"), idOf(p, "Right side"), JOINT, "dado");
     expect(r).toMatchObject({ ok: true, joint: { type: "dado" } });

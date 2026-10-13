@@ -70,7 +70,7 @@ The layout never moves; each step changes what the inspector offers and what the
 | Build plan | Drawer tall; a banner when any error exists ("Not ready to build: …") | — |
 
 - Selecting a board anywhere shows its properties: "Length 34-9/16" · cut 35-1/16"" (Domain
-  model, decision 3), its stock, its operations, and where it came from.
+  model, decision 3), its stock and where it came from (its operations are listed under "Not in M4").
 - An error shows three ways at once: the board is red, the tree has a badge, the inspector explains
   it in the engine's words, with a one-click fix where one exists (Interaction spec, "Feedback").
 - Detaching shows a notice with Undo: "Shelf 3 is now custom; the form won't change it".
@@ -235,8 +235,8 @@ calculation.
 
 ## Not in M4
 
-Everything below is unbuilt or only partly built; ADR 015, "Known limits", carries the same list
-with the reasons. Type-anywhere Measurements is built (a digit, `-`, `.`, `/`, `'` or `"` goes to
+Everything below is unbuilt or only partly built. ADR 015, "Known limits", lists these too, and
+adds the smaller limits found in review, with the reasons. Type-anywhere Measurements is built (a digit, `-`, `.`, `/`, `'` or `"` goes to
 the Measurements box while a tool waits for a size).
 
 - Picking an opening in the 3D model: the engine does not report where an opening is, and working
