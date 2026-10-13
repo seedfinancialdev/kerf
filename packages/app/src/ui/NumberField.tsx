@@ -48,7 +48,12 @@ interface Props {
 /** A labelled box that shows a value, takes typed text, and changes by dragging its label. */
 export function NumberField({ label, display, onSubmit, scrub }: Props) {
   const id = useId();
-  const [text, setText] = useState(display);
+  // What the user has typed and not yet had taken; null shows `display`. The box never holds a
+  // copy of `display` itself: a copy taken while a change is being recorded would be the value
+  // before it, and leaving the box would then record that old value back (found by
+  // bookcase-every-step.spec.ts: a depth set with Enter went back to Default).
+  const [typed, setTyped] = useState<string | null>(null);
+  const text = typed ?? display;
   const [problem, setProblem] = useState<string | null>(null);
   const drag = useRef<{ x: number; start: Len; moved: boolean } | null>(null);
   // The latest scrub, for the clean-up below, which runs only when the field goes away.
@@ -64,16 +69,17 @@ export function NumberField({ label, display, onSubmit, scrub }: Props) {
     [],
   );
 
+  // A value changed elsewhere (Undo, another field) replaces whatever was being typed.
   useEffect(() => {
-    setText(display);
+    setTyped(null);
     setProblem(null);
   }, [display]);
 
   const submit = (): void => {
-    if (text === display) return;
-    const refusal = onSubmit(text);
+    if (typed === null || typed === display) return;
+    const refusal = onSubmit(typed);
     setProblem(refusal);
-    if (refusal === null) setText(display);
+    if (refusal === null) setTyped(null);
   };
 
   const onPointerDown = (e: PointerEvent<HTMLLabelElement>): void => {
@@ -125,12 +131,12 @@ export function NumberField({ label, display, onSubmit, scrub }: Props) {
         value={text}
         aria-invalid={problem !== null}
         aria-describedby={problem ? messageId : undefined}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => setTyped(e.target.value)}
         onBlur={submit}
         onKeyDown={(e) => {
           if (e.key === "Enter") submit();
           if (e.key === "Escape") {
-            setText(display);
+            setTyped(null);
             setProblem(null);
           }
         }}

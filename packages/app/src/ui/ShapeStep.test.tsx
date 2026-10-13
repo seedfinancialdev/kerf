@@ -16,7 +16,7 @@ import { KerfProvider } from "../state/useKerf";
 import { memoryStorage } from "../testing/memory-storage";
 import { Inspector } from "./Inspector";
 
-function setup(template: "Bookcase" | "Keepsake box" = "Bookcase") {
+function setup(template: "Bookcase" | "Keepsake box" | "Blank case" = "Bookcase") {
   const store = createKerfStore({ storage: createStorage(memoryStorage()) });
   store.getState().apply(startProject(template, "imperial"));
   store.getState().setStep("Shape");
@@ -105,6 +105,22 @@ describe("the Shape step", () => {
     fireEvent.blur(field);
     expect(store.getState().history?.entries.at(-1)?.label).toBe("Dado depth: Default");
     expect(shownProject(store.getState())?.structures[0]?.options).not.toHaveProperty("dadoDepth");
+  });
+
+  it("keeps a depth committed with Enter when the field is left afterwards", () => {
+    // Found by bookcase-every-step.spec.ts: on the Blank case (depths at Default), Enter recorded
+    // 1/4", and leaving the field then recorded "Dado depth: Default" on top of it.
+    const store = setup("Blank case");
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    const field = screen.getByLabelText("Dado depth") as HTMLInputElement;
+    fireEvent.change(field, { target: { value: '1/4"' } });
+    fireEvent.keyDown(field, { key: "Enter" });
+    fireEvent.blur(field);
+    expect(store.getState().history?.entries.map((e) => e.label)).toEqual([
+      "New blank case",
+      'Dado depth: 1/4"',
+    ]);
+    expect(field.value).toBe('1/4"');
   });
 
   it("says no stock is chosen, rather than showing the first stock, when the form names none", () => {
