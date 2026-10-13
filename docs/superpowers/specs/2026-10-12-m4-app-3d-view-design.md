@@ -239,6 +239,9 @@ calculation.
   it out in the app would put woodworking maths outside the engine. Openings are picked in the
   project tree (as the end-to-end test does). Adding opening boxes to the engine is a follow-up.
 - A board drawn between two boards one above the other (Board binds to side-by-side gaps only).
+- A board drawn between two boards a form made (every template's sides): the engine binds only
+  boards saved in the project, so the Board tool refuses them in shop words and points to Divide or
+  taking a side over first (ADR 015, rule 7; the maintainer's decision, 2026-10-13).
 - The shop card shows inches only.
 
 - The build plan PDF and `.skp` import (M5).

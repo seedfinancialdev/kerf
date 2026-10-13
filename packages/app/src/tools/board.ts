@@ -9,6 +9,7 @@
 import {
   formatLength,
   gapBetween,
+  generateStructures,
   gridSize,
   type Id,
   type Len,
@@ -30,6 +31,9 @@ type Axis = 0 | 1 | 2;
 const AXES = ["x", "y", "z"] as const;
 const NO_SIZE = "A board needs a length and a width above zero.";
 const NO_STOCK = "Add a stock to the project first.";
+/** The user's decision (final fix plan, 2026-10-13; ADR 015, rule 7): no binding to form boards yet. */
+const FORM_MADE =
+  "Boards the form made can't be measured between yet; use Divide to add shelves, or take a side over first.";
 
 /** A new board: the change, and the instance to leave picked. */
 export type DrawnBoard = Edit & { picked: Id };
@@ -100,13 +104,14 @@ export function drawBoard(
 
 /**
  * A board spanning the gap between boards `a` and `b`, lying flat with its low face `height` up
- * (the height of the first click, so a board is fitted where the user pointed; ADR 015, rule 7).
- * It sits flush with the front edges of the two boards (the far end of the span they share, ruling
- * R35). `widthSize` is measured back from there; null reaches back to the nearest other board
- * crossing the gap at that height (the back panel), or the full shared span. Its length is the
- * engine's gap expression, so it follows every resize. Comes back `ok: false`, saying why, when
- * the boards have no gap (the engine's reason), are one above the other, there is no free room, the
- * width is zero or less, or the full solve finds a new error.
+ * (the height of the first click, so a board is fitted where the user pointed; ADR 015, rule 7,
+ * and ruling R35). It sits flush with the front edges of the two boards (the far end of the span
+ * they share). `widthSize` is measured back from there; null reaches back to the nearest other
+ * board crossing the gap at that height (the back panel), or the full shared span. Its length is
+ * the engine's gap expression, so it follows every resize. Comes back `ok: false`, saying why, when
+ * either board is one the form makes (the engine binds only saved boards), the stock is not in the
+ * project, the boards have no gap (the engine's reason), are one above the other, there is no free
+ * room, the width is zero or less, or the full solve finds a new error.
  */
 export function boardBetween(
   project: Project,
@@ -117,6 +122,9 @@ export function boardBetween(
   widthSize: Len | null,
   shop: ShopProfile,
 ): BetweenResult {
+  if (anyFormMade(project, shop, [a, b])) return { ok: false, message: FORM_MADE };
+  const thickness = project.stock.find((s) => s.id === stock)?.thickness;
+  if (thickness === undefined) return { ok: false, message: NO_STOCK };
   const gap = gapBetween(project, a, b);
   if (!gap.ok) return { ok: false, message: gap.reason };
   const lengthAxis = AXES.indexOf(gap.axis) as Axis;
@@ -132,13 +140,16 @@ export function boardBetween(
   const across = AXES[widthAxis];
   const along = gap.axis;
   const solved = solveModel(project).instances;
-  const spanned = solved.filter((i) => i.id === a || i.id === b);
+  // gapBetween found both boards, so the model has them.
+  const [low, high] = solved
+    .filter((i) => i.id === a || i.id === b)
+    .sort((x, y) => x.position[along] - y.position[along]);
+  if (!low || !high) throw new Error("gapBetween accepted boards the model does not have.");
+  const spanned = [low, high];
   const near = Math.max(...spanned.map((i) => i.position[across]));
   const front = Math.min(...spanned.map((i) => i.position[across] + i.extent[across]));
-  const [low, high] = [...spanned].sort((x, y) => x.position[along] - y.position[along]);
-  const gapStart = (low?.position[along] ?? 0) + (low?.extent[along] ?? 0);
-  const gapEnd = high?.position[along] ?? gapStart;
-  const thickness = project.stock.find((s) => s.id === stock)?.thickness ?? 0;
+  const gapStart = low.position[along] + low.extent[along];
+  const gapEnd = high.position[along];
   // Other boards crossing the gap at the new board's height, behind its front: the nearest bounds it.
   const limit = Math.max(
     near,
@@ -185,6 +196,14 @@ export function boardBetween(
     },
     picked: made.instance,
   };
+}
+
+/** True when any of `ids` is a board the form makes: in the generated project, not the saved one. */
+function anyFormMade(project: Project, shop: ShopProfile, ids: Id[]): boolean {
+  const unsaved = ids.filter((id) => !project.instances.some((i) => i.id === id));
+  if (unsaved.length === 0) return false;
+  const generated = generateStructures(project, shop).instances;
+  return unsaved.some((id) => generated.some((i) => i.id === id));
 }
 
 /** The stock a new board is drawn in: the one chosen in the inspector, else the first sheet. */

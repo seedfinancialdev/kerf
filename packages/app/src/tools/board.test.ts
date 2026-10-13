@@ -11,6 +11,7 @@ import { type Id, type PlacedPart, type Project, solve } from "@kerf/core";
 import { loadShopProfile, withParam } from "@kerf/fixtures";
 import { handMadeBookcase } from "@kerf/fixtures/builders";
 import { describe, expect, it } from "vitest";
+import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { memoryStorage } from "../testing/memory-storage";
@@ -185,6 +186,33 @@ describe("boardBetween()", () => {
     expect(r.ok).toBe(false);
   });
 
+  it("refuses the form's two sides, in shop words, saying what to do instead (branch review C1)", () => {
+    // The user's decision (fix plan, 2026-10-13): no binding to boards a form made yet.
+    const p = startProject("Bookcase", "imperial").project;
+    const side = (name: string) => placed(p, name).instance;
+    expect(
+      boardBetween(p, plywood(p), side("Right side"), side("Left side"), 36 * IN, null, shop),
+    ).toEqual({
+      ok: false,
+      message:
+        "Boards the form made can't be measured between yet; use Divide to add shelves, or take a side over first.",
+    });
+  });
+
+  it("refuses a stock the project does not have instead of measuring with no thickness (branch deferred row 29)", () => {
+    const p = base();
+    const r = boardBetween(
+      p,
+      "01J9ZZZZZZZZZZZZZZZZZZZZZZ",
+      instanceId(p, "Right side"),
+      instanceId(p, "Left side"),
+      36 * IN,
+      null,
+      shop,
+    );
+    expect(r).toEqual({ ok: false, message: "Add a stock to the project first." });
+  });
+
   it("says why when the boards are one above the other", () => {
     const p = base();
     const r = boardBetween(
@@ -357,6 +385,17 @@ describe("the Board tool", () => {
       "Added Board 1 between Right side and Left side",
     );
     expect(s.getState().pending).toBeNull();
+  });
+
+  it("tells the user, and records nothing, when both clicks are on the template's sides (branch review C1)", () => {
+    const s = started(startProject("Bookcase", "imperial").project);
+    down(s, onSide(s, "Right side"));
+    const before = entries(s);
+    down(s, onSide(s, "Left side", 0));
+    expect(s.getState().notice?.text).toBe(
+      "Boards the form made can't be measured between yet; use Divide to add shelves, or take a side over first.",
+    );
+    expect(entries(s)).toBe(before);
   });
 
   it("says why when the two boards have no gap between them, and records nothing", () => {
