@@ -16,7 +16,7 @@ export function Notice() {
       {notice && (
         <>
           <span>{notice.text}</span>
-          {notice.undo && (
+          {notice.kind === "undo" && (
             <button type="button" onClick={undo}>
               Undo this
             </button>

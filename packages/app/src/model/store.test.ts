@@ -105,7 +105,7 @@ describe("createKerfStore()", () => {
     );
     expect(s.getState().notice).toEqual({
       text: "Shelf 3 is now custom; the form won't change it",
-      undo: true,
+      kind: "undo",
     });
   });
 
@@ -149,7 +149,7 @@ describe("createKerfStore()", () => {
       const { s, edit } = withNotice();
       s.getState().say("plain");
       s.getState().apply(edit);
-      expect(s.getState().notice).toEqual({ text: "plain", undo: false });
+      expect(s.getState().notice).toEqual({ text: "plain", kind: "said" });
       s.getState().dismissNotice();
       expect(s.getState().notice).toBeNull();
     });
@@ -195,7 +195,7 @@ describe("createKerfStore()", () => {
     backing.setItem("kerf.shop", JSON.stringify({ kerf: 0 }));
     const s = createKerfStore({ storage: createStorage(backing) }).getState();
     expect(s.shop).toEqual(STARTER_SHOP);
-    expect(s.notice?.undo).toBe(false);
+    expect(s.notice?.kind).toBe("warning");
     expect(s.notice?.text.startsWith("Your saved shop could not be used")).toBe(true);
   });
 
@@ -241,7 +241,7 @@ describe("createKerfStore()", () => {
     const p = shownProject(s.getState());
     if (!p) throw new Error("no project");
     s.getState().apply({ label: "Nothing", project: structuredClone(p) });
-    expect(s.getState().notice).toEqual({ text: "Resized", undo: true });
+    expect(s.getState().notice).toEqual({ text: "Resized", kind: "undo" });
   });
 
   it("drops the preview on undo and shows the previous entry", () => {

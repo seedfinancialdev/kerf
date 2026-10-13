@@ -205,7 +205,7 @@ describe("the Push/Pull tool", () => {
     expect(lengthOfTop(s)).toBe(7_023_100 + IN);
     expect(s.getState().notice).toEqual({
       text: "Top is now custom; the form won't change it.",
-      undo: true,
+      kind: "undo",
     });
     expect(s.getState().pending).toBeNull();
   });

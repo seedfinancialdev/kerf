@@ -105,7 +105,7 @@ describe("a browser store that cannot be written", () => {
     s.getState().setUnitsForNew("metric");
     const told =
       "Your choice of units couldn't be kept in this browser; it applies until you close the page.";
-    expect(s.getState().notice).toEqual({ text: told, undo: false });
+    expect(s.getState().notice).toEqual({ text: told, kind: "warning" });
     s.getState().dismissNotice();
     s.getState().setUnitsForNew("imperial");
     s.getState().setUnitsForNew("metric");
@@ -120,7 +120,7 @@ describe("a browser store that cannot be written", () => {
     s.getState().apply(startProject("Bookcase", "imperial"));
     const warning =
       "Your latest changes couldn't be kept in this browser. Use Save to keep a copy.";
-    expect(s.getState().notice).toEqual({ text: warning, undo: false });
+    expect(s.getState().notice).toEqual({ text: warning, kind: "warning" });
     s.getState().dismissNotice();
     const p = shownProject(s.getState());
     if (!p) throw new Error("no project");
@@ -133,19 +133,11 @@ describe("a browser store that cannot be written", () => {
     expect(s.getState().history?.entries).toHaveLength(2);
   });
 
-  it("replaces an Undo notice with the warning but leaves a plain notice showing", () => {
+  it("replaces an Undo notice with the warning, since the change is still in History", () => {
     const s = createKerfStore({ storage: full() });
     s.getState().apply(startProject("Bookcase", "imperial"), "Started");
-    expect(s.getState().notice?.undo).toBe(false);
+    expect(s.getState().notice?.kind).toBe("warning");
     expect(s.getState().notice?.text).toMatch(/^Your latest changes couldn't be kept/);
-
-    const t = createKerfStore({ storage: full() });
-    t.getState().say("Something else");
-    t.getState().apply(startProject("Bookcase", "imperial"));
-    expect(t.getState().notice?.text).toBe("Something else");
-    t.getState().dismissNotice();
-    t.getState().apply(startProject("Bookcase", "imperial"));
-    expect(t.getState().notice).toBeNull();
   });
 
   it("does not remember the units when the project was not kept", () => {
@@ -194,5 +186,50 @@ describe("when a project began", () => {
       "New bookcase",
       "Opened Bookcase.kerf",
     ]);
+  });
+});
+
+describe("warnings that must not be lost (ADR 015, rule 11: the app says so once)", () => {
+  const full = (): AppStorage => createStorage(memoryStorage(true));
+  const NOT_KEPT_TEXT =
+    "Your latest changes couldn't be kept in this browser. Use Save to keep a copy.";
+
+  it("shows the not-kept warning after a plain notice that was showing is dismissed", () => {
+    const s = createKerfStore({ storage: full() });
+    s.getState().say("Something else");
+    s.getState().apply(startProject("Bookcase", "imperial"));
+    expect(s.getState().notice?.text).toBe("Something else");
+    s.getState().dismissNotice();
+    expect(s.getState().notice).toEqual({ text: NOT_KEPT_TEXT, kind: "warning" });
+  });
+
+  it("keeps the set-aside warning when the 3D view's warning arrives, and shows that one next", () => {
+    const storage = memory();
+    storage.write("kerf.project", '{"schemaVersion": 1, "name": 7}');
+    const s = createKerfStore({ storage });
+    const view = "The 3D view could not start (no WebGL), so boards are shown as plain blanks.";
+    s.getState().warn(view);
+    expect(s.getState().notice?.text).toMatch(/^Your last project could not be opened/);
+    s.getState().dismissNotice();
+    expect(s.getState().notice).toEqual({ text: view, kind: "warning" });
+  });
+
+  it("shows every start-up warning in turn: the shop's, then the project's", () => {
+    const storage = memory();
+    storage.write("kerf.shop", "not json");
+    storage.write("kerf.project", '{"schemaVersion": 1, "name": 7}');
+    const s = createKerfStore({ storage });
+    expect(s.getState().notice?.text).toMatch(/^Your saved shop could not be used/);
+    s.getState().dismissNotice();
+    expect(s.getState().notice?.text).toMatch(/^Your last project could not be opened/);
+  });
+
+  it("shows an answer at once over a warning, and the warning again once it is dismissed", () => {
+    const s = createKerfStore({ storage: createStorage(undefined) });
+    const nothingKept = s.getState().notice?.text;
+    s.getState().say("A distance of zero changes nothing.");
+    expect(s.getState().notice?.text).toBe("A distance of zero changes nothing.");
+    s.getState().dismissNotice();
+    expect(s.getState().notice).toEqual({ text: nothingKept, kind: "warning" });
   });
 });

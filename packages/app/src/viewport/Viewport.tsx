@@ -255,7 +255,7 @@ export function Viewport() {
     if (failure)
       store
         .getState()
-        .say(`The 3D view could not start (${failure}), so boards are shown as plain blanks.`);
+        .warn(`The 3D view could not start (${failure}), so boards are shown as plain blanks.`);
   }, [failure, store]);
 
   // Fit when boards first appear, when another project is started or opened, and whenever Shift+Z asks. Later edits keep the user's view, so

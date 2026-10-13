@@ -21,6 +21,15 @@ import {
 import { createStore, type StoreApi } from "zustand/vanilla";
 import type { Edit } from "./commands";
 import { currentProject, type History, jumpTo, record, redo, startHistory, undo } from "./history";
+import {
+  afterHistoryMoved,
+  dismiss,
+  type Notice,
+  type NoticeLine,
+  tell,
+  warn,
+  warningsFirst,
+} from "./notices";
 import type { Pending, Proposal } from "./pending";
 import {
   NOT_KEPT,
@@ -42,12 +51,6 @@ export interface Solved {
   ms: number;
 }
 
-export interface Notice {
-  text: string;
-  /** True when the notice offers Undo for the change it describes. */
-  undo: boolean;
-}
-
 export type ToolId = "select" | "board" | "pushPull" | "move" | "join" | "edge" | "tape";
 
 export type DrawerTab = "Shopping" | "Cut list" | "Sheets" | "Setups" | "Assembly";
@@ -59,7 +62,10 @@ export interface KerfState {
   step: Step;
   selection: Selection;
   shop: ShopProfile;
+  /** The notice line (notices.ts). */
   notice: Notice | null;
+  /** Warnings waiting behind the notice on screen, oldest first (notices.ts). */
+  waiting: readonly string[];
   tool: ToolId;
   /** What the active tool has started and not finished; cleared when the tool changes or History is stepped through. */
   pending: Pending | null;
@@ -90,7 +96,11 @@ export interface KerfState {
 }
 
 export interface KerfActions {
-  /** Records `edit` as one named change and solves it; an edit that leaves the project as it was is ignored. A `notice` is shown with Undo; any other Undo notice is cleared, a plain one stays. */
+  /**
+   * Records `edit` as one named change and solves it; an edit that leaves the project as it was is
+   * ignored. A `notice` is shown with Undo; without one an Undo notice is cleared and any other
+   * notice stays.
+   */
   apply(edit: Edit, notice?: string): void;
   /** Records a project that starts afresh (New, Open) as one History entry, even if equal to the shown one, noting when it began; drops the active tool's action. */
   begin(edit: Edit): void;
@@ -140,9 +150,14 @@ export interface KerfActions {
   setTheme(theme: "dark" | "light"): void;
   /** Opens or closes the section `title` (open when never stored unless `defaultOpen` is false) and remembers it. */
   toggleSection(title: string, defaultOpen?: boolean): void;
-  /** Shows a notice; `undo` says whether it offers Undo (default no, so it stays until dismissed). */
+  /**
+   * Shows an answer to the user's last action at once, over any warning (which shows again after).
+   * `undo` says whether it offers Undo; without it the notice stays until dismissed.
+   */
   say(text: string, undo?: boolean): void;
-  /** Clears the notice. */
+  /** Adds a warning the user must not miss: shown in turn, never replaced, kept until dismissed. */
+  warn(text: string): void;
+  /** Clears the notice and shows the next waiting warning. */
   dismissNotice(): void;
   /** Remembers the units new projects start in; an open project is not touched. When the browser cannot keep the choice, says so once. */
   setUnitsForNew(units: Project["units"]): void;
@@ -161,7 +176,7 @@ export function shownProject(state: KerfState): Project | null {
  * `clockDate` returns epoch milliseconds for when a project began (default `Date.now`). Starts on
  * the Start step, with the stored project if the engine accepts it (one it rejects is set aside,
  * never deleted); otherwise with none. Every recorded change is written back to storage; if that
- * fails, the user is told once. Only one start-up notice is shown: a shop problem first, then a
+ * fails, the user is told once. Start-up warnings are shown in turn: a shop problem first, then a
  * project problem, then the warning that this browser keeps nothing.
  */
 export function createKerfStore(deps: {
@@ -182,7 +197,11 @@ export function createKerfStore(deps: {
   };
 
   const restored = restoreProject(deps.storage);
-  const firstNotice = loaded.problem ?? restored.problem ?? storageNotice(deps.storage);
+  const startup = warningsFirst(
+    [loaded.problem, restored.problem, storageNotice(deps.storage)].filter(
+      (w): w is string => w !== undefined,
+    ),
+  );
 
   /** True once the user has been told that work is not being kept (the notice is given once). */
   let toldNotKept = !deps.storage.available;
@@ -210,7 +229,16 @@ export function createKerfStore(deps: {
       // A joint proposed for the project as it was is stale once History moves (ruling R37).
       const moved = patch.history !== undefined;
       const pending = moved && next.pending?.tool === "join" ? null : next.pending;
-      set({ ...patch, solved, selection, pending, ...(moved ? { proposal: null } : {}) });
+      // An edit's own Undo offer comes in `patch`; otherwise the last change's offer goes (R13).
+      const notices = moved && patch.notice === undefined ? afterHistoryMoved(line()) : {};
+      set({
+        ...patch,
+        solved,
+        selection,
+        pending,
+        ...notices,
+        ...(moved ? { proposal: null } : {}),
+      });
       if (moved) keep(get().history);
     };
 
@@ -220,26 +248,19 @@ export function createKerfStore(deps: {
      * preview (final branch review I1, M1); a tool that records its own change keeps its action.
      */
     const moveHistory = (history: History, patch: Partial<KerfState> = {}): void =>
-      show({ history, previewed: null, pending: null, notice: keepPlainNotice(), ...patch });
+      show({ history, previewed: null, pending: null, ...patch });
 
-    /** A notice that offers Undo describes one change, so it goes when History moves (ruling R13). */
-    const keepPlainNotice = (): Notice | null => {
-      const { notice } = get();
-      return notice && !notice.undo ? notice : null;
-    };
+    const line = (): NoticeLine => ({ notice: get().notice, waiting: get().waiting });
 
     /**
-     * Keeps the shown History entry in storage. When the project cannot be
-     * written, says so once with a plain notice, which waits behind any plain notice already shown.
+     * Keeps the shown History entry in storage. When the project cannot be written, warns once; the
+     * warning waits behind any notice the user has not dismissed yet.
      */
     const keep = (history: History | null): void => {
       if (!history) return;
-      const project = currentProject(history);
-      if (writeProject(deps.storage, project)) return;
-      if (toldNotKept) return;
+      if (writeProject(deps.storage, currentProject(history)) || toldNotKept) return;
       toldNotKept = true;
-      if (get().notice?.undo === false) return;
-      set({ notice: { text: NOT_KEPT, undo: false } });
+      set(warn(line(), NOT_KEPT));
     };
 
     return {
@@ -249,7 +270,7 @@ export function createKerfStore(deps: {
       step: "Start",
       selection: NOTHING,
       shop: loaded.shop,
-      notice: firstNotice ? { text: firstNotice, undo: false } : null,
+      ...startup,
       tool: "select",
       pending: null,
       proposal: null,
@@ -288,7 +309,8 @@ export function createKerfStore(deps: {
         show({
           history: h ? record(h, edit) : startHistory(edit),
           previewed: null,
-          notice: notice ? { text: notice, undo: true } : keepPlainNotice(),
+          // The Undo offer replaces the one History's move just cleared (ruling R13).
+          ...(notice ? tell(afterHistoryMoved(line()), { text: notice, kind: "undo" }) : {}),
         });
       },
       preview: (project) => show({ previewed: project }),
@@ -296,11 +318,7 @@ export function createKerfStore(deps: {
         const { previewed, history } = get();
         if (!previewed) return;
         const edit = { label, project: previewed };
-        show({
-          history: history ? record(history, edit) : startHistory(edit),
-          previewed: null,
-          notice: keepPlainNotice(),
-        });
+        show({ history: history ? record(history, edit) : startHistory(edit), previewed: null });
       },
       cancelPreview: () => show({ previewed: null }),
       undo: () => {
@@ -348,13 +366,15 @@ export function createKerfStore(deps: {
         deps.storage.write("kerf.sections", JSON.stringify(sections));
         set({ sections });
       },
-      say: (text, undoable = false) => set({ notice: { text, undo: undoable } }),
-      dismissNotice: () => set({ notice: null }),
+      say: (text, undoable = false) =>
+        set(tell(line(), { text, kind: undoable ? "undo" : "said" })),
+      warn: (text) => set(warn(line(), text)),
+      dismissNotice: () => set(dismiss(line())),
       setUnitsForNew: (unitsForNew) => {
         set({ unitsForNew });
         if (deps.storage.write("kerf.units", unitsForNew) || toldUnitsNotKept) return;
         toldUnitsNotKept = true;
-        set({ notice: { text: UNITS_NOT_KEPT, undo: false } });
+        set(warn(line(), UNITS_NOT_KEPT));
       },
     };
   });
