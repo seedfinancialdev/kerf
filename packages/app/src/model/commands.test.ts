@@ -50,7 +50,7 @@ describe("startProject()", () => {
   it("starts a metric bookcase on 18 mm plywood, solved with no errors", () => {
     const { project } = startProject("Bookcase", "metric");
     const result = solve(project, shop);
-    expect(result.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+    expect(result.diagnostics).toEqual([]);
     expect(result.cutList.lines).toHaveLength(3);
     // 72" = 1828.8 mm = 14630400 units; the sides do not depend on the plywood's thickness.
     expect(result.cutList.lines.find((l) => l.parts.some((x) => x.name === "Side"))?.length).toBe(
@@ -62,6 +62,18 @@ describe("startProject()", () => {
       "4/4 walnut",
     ]);
   });
+
+  it("starts the imperial bookcase with no diagnostics at all", () => {
+    expect(solve(start().project, shop).diagnostics).toEqual([]);
+  });
+
+  it.each(["Bookcase", "Keepsake box", "Blank case", "Blank box"] as const)(
+    "starts a metric %s that solves with no errors",
+    (name) => {
+      const { project } = startProject(name, "metric");
+      expect(solve(project, shop).diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+    },
+  );
 
   it("copies the starter stock into the project", () => {
     expect(start().project.stock.map((s) => s.name)).toEqual([
@@ -223,7 +235,7 @@ describe("switchUnits()", () => {
     expect(r).toEqual({
       ok: false,
       message:
-        "This project stays in inches because its 3/4 plywood (23/32\") isn't a whole number of 0.01 mm.",
+        "This project stays in inches because its 3/4 plywood is 23/32\" thick, which isn't a whole number of 0.01 mm.",
     });
   });
 
@@ -233,7 +245,7 @@ describe("switchUnits()", () => {
     expect(r).toEqual({
       ok: false,
       message:
-        "This project stays in millimetres because its 18 mm plywood (18.0 mm) isn't a whole number of 1/64\".",
+        "This project stays in millimetres because its 18 mm plywood is 18.0 mm thick, which isn't a whole number of 1/64\".",
     });
   });
 });

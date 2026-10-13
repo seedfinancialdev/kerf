@@ -44,7 +44,15 @@ describe("the store across a reload", () => {
   it("starts new projects in the units last chosen, even in a later session", () => {
     const storage = memory();
     createKerfStore({ storage }).getState().setUnitsForNew("metric");
-    expect(createKerfStore({ storage }).getState().unitsForNew()).toBe("metric");
+    expect(createKerfStore({ storage }).getState().unitsForNew).toBe("metric");
+  });
+
+  it("leaves the units for new projects alone when a metric project is restored", () => {
+    const storage = memory();
+    createKerfStore({ storage }).getState().apply(startProject("Bookcase", "metric"));
+    const again = createKerfStore({ storage }).getState();
+    expect(shownProject(again)?.units).toBe("metric");
+    expect(again.unitsForNew).toBe("imperial");
   });
 
   it("keeps the chosen units for new projects when an open project stays in the other ones", () => {
@@ -53,7 +61,7 @@ describe("the store across a reload", () => {
     s.getState().apply(startProject("Bookcase", "imperial"));
     s.getState().setUnitsForNew("metric");
     s.getState().apply(startProject("Bookcase", "imperial"));
-    expect(s.getState().unitsForNew()).toBe("metric");
+    expect(s.getState().unitsForNew).toBe("metric");
   });
 
   it("writes the project exactly as the engine saves it", () => {
@@ -90,6 +98,22 @@ describe("the store across a reload", () => {
 
 describe("a browser store that cannot be written", () => {
   const full = (): AppStorage => createStorage(memoryStorage(true));
+
+  it("uses the chosen units for new projects until the page closes, and says so once", () => {
+    const s = createKerfStore({ storage: full() });
+    s.getState().dismissNotice();
+    s.getState().setUnitsForNew("metric");
+    const told =
+      "Your choice of units couldn't be kept in this browser; it applies until you close the page.";
+    expect(s.getState().notice).toEqual({ text: told, undo: false });
+    s.getState().dismissNotice();
+    s.getState().setUnitsForNew("imperial");
+    s.getState().setUnitsForNew("metric");
+    expect(s.getState().notice).toBeNull();
+    expect(s.getState().unitsForNew).toBe("metric");
+    s.getState().apply(startProject("Bookcase", s.getState().unitsForNew));
+    expect(shownProject(s.getState())?.units).toBe("metric");
+  });
 
   it("keeps working and warns once that the latest changes were not kept", () => {
     const s = createKerfStore({ storage: full() });

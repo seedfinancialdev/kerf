@@ -15,6 +15,7 @@ import {
   type Project,
   parseProject,
   projectFromTemplate,
+  STOCK_FIELDS,
   serializeProject,
   solve,
   TEMPLATES,
@@ -306,6 +307,35 @@ describe("templates", () => {
     expect(lines.map((l) => [l.length, l.quantity])).toEqual(
       expected.lines.map((l) => [l.length, l.quantity]),
     );
+  });
+
+  it("writes only the stock fields of the template's own structure type", () => {
+    if (!ply || !back) throw new Error("fixture stock missing");
+    const everyField = {
+      carcaseStock: ply.id,
+      backStock: back.id,
+      wallStock: ply.id,
+      bottomStock: back.id,
+    };
+    const optionsOf = (name: string) => {
+      const template = TEMPLATES.find((t) => t.name === name);
+      if (!template) throw new Error(`no template ${name}`);
+      return Object.keys(
+        projectFromTemplate(template, { stock, stockFor: everyField }).structures[0]?.options ?? {},
+      );
+    };
+    expect(STOCK_FIELDS).toEqual({
+      case: ["carcaseStock", "backStock"],
+      box: ["wallStock", "bottomStock"],
+    });
+    const bookcase = optionsOf("Bookcase");
+    expect(bookcase).toEqual(expect.arrayContaining(["carcaseStock", "backStock"]));
+    expect(bookcase).not.toContain("wallStock");
+    expect(bookcase).not.toContain("bottomStock");
+    const keepsake = optionsOf("Keepsake box");
+    expect(keepsake).toEqual(expect.arrayContaining(["wallStock", "bottomStock"]));
+    expect(keepsake).not.toContain("carcaseStock");
+    expect(keepsake).not.toContain("backStock");
   });
 
   it("starts a blank case that solves without errors once stock is chosen", () => {

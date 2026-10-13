@@ -17,7 +17,7 @@ const UNITS_NAME = { imperial: "inches", metric: "millimetres" } as const;
 export function SettingsMenu() {
   const store = useKerfStore();
   const [open, setOpen] = useState(false);
-  const [forNew, setForNew] = useState(() => store.getState().unitsForNew());
+  const forNew = useKerf((s) => s.unitsForNew);
   const theme = useKerf((s) => s.theme);
   const projectUnits = useKerf((s) => shownProject(s)?.units);
   const units = projectUnits ?? forNew;
@@ -34,7 +34,6 @@ export function SettingsMenu() {
   const chooseUnits = (chosen: Project["units"]): void => {
     const state = store.getState();
     state.setUnitsForNew(chosen);
-    setForNew(chosen);
     const project = shownProject(state);
     if (!project || project.units === chosen) return;
     const result = switchUnits(project, chosen);

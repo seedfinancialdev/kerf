@@ -53,6 +53,8 @@ export interface KerfState {
   tool: ToolId;
   drawerTab: DrawerTab;
   theme: "dark" | "light";
+  /** Units a new project starts in: the user's choice in Settings, never the open project's (ADR 015, rule 4). */
+  unitsForNew: Project["units"];
   /** Open state by section title; a title not listed has its own default. */
   sections: Record<string, boolean>;
   /** When the shown project was first started or opened (meta.json "created"). */
@@ -98,9 +100,7 @@ export interface KerfActions {
   say(text: string, undo?: boolean): void;
   /** Clears the notice. */
   dismissNotice(): void;
-  /** Units for a new project: the last ones the user chose (ADR 015, rule 4). */
-  unitsForNew(): Project["units"];
-  /** Remembers the units new projects start in; an open project is not touched. */
+  /** Remembers the units new projects start in; an open project is not touched. When the browser cannot keep the choice, says so once. */
   setUnitsForNew(units: Project["units"]): void;
 }
 
@@ -113,6 +113,10 @@ export function shownProject(state: KerfState): Project | null {
 
 /** Shown once when a change could not be written to browser storage (ADR 015, rule 11). */
 const NOT_KEPT = "Your latest changes couldn't be kept in this browser. Use Save to keep a copy.";
+
+/** Shown once when the choice of units for new projects could not be written (ADR 015, rule 11). */
+const UNITS_NOT_KEPT =
+  "Your choice of units couldn't be kept in this browser; it applies until you close the page.";
 
 /**
  * Which sections the user closed or opened (Interaction spec: "Sections remember their open state").
@@ -191,6 +195,7 @@ export function createKerfStore(deps: {
 
   /** True once the user has been told that work is not being kept (the notice is given once). */
   let toldNotKept = !deps.storage.available;
+  let toldUnitsNotKept = false;
 
   return createStore<KerfState & KerfActions>()((set, get) => {
     /** Boards the solve does not have are no longer selected; none left means nothing is selected. */
@@ -240,6 +245,7 @@ export function createKerfStore(deps: {
       tool: "select",
       drawerTab: "Cut list",
       theme: deps.storage.read("kerf.theme") === "light" ? "light" : "dark",
+      unitsForNew: deps.storage.read("kerf.units") === "metric" ? "metric" : "imperial",
       sections: readSections(deps.storage),
       created: deps.storage.read("kerf.created") ?? null,
       thumbnail: null,
@@ -316,10 +322,12 @@ export function createKerfStore(deps: {
       },
       say: (text, undoable = false) => set({ notice: { text, undo: undoable } }),
       dismissNotice: () => set({ notice: null }),
-      setUnitsForNew: (units) => {
-        deps.storage.write("kerf.units", units);
+      setUnitsForNew: (unitsForNew) => {
+        set({ unitsForNew });
+        if (deps.storage.write("kerf.units", unitsForNew) || toldUnitsNotKept) return;
+        toldUnitsNotKept = true;
+        set({ notice: { text: UNITS_NOT_KEPT, undo: false } });
       },
-      unitsForNew: () => (deps.storage.read("kerf.units") === "metric" ? "metric" : "imperial"),
     };
   });
 }

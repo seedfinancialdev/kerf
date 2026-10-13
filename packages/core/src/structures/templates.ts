@@ -28,6 +28,12 @@ export const STOCK_OPTIONS = [
   ...Object.keys(BOX_SPEC.stockLabels),
 ] as StockOption[];
 
+/** The stock fields each structure type's form reads; a project writes no others onto it. */
+export const STOCK_FIELDS: Record<Structure["type"], readonly StockOption[]> = {
+  case: Object.keys(CASE_SPEC.stockLabels) as StockOption[],
+  box: Object.keys(BOX_SPEC.stockLabels) as StockOption[],
+};
+
 export const TEMPLATES: readonly Template[] = [
   {
     id: id(1),
@@ -130,7 +136,7 @@ export function projectFromTemplate(
     ...template.structure,
     options: { ...template.structure.options },
   };
-  for (const key of STOCK_OPTIONS) {
+  for (const key of STOCK_FIELDS[structure.type]) {
     const chosen = options.stockFor[key];
     if (chosen !== undefined) structure.options[key] = chosen;
   }

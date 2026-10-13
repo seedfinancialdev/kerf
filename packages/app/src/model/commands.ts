@@ -25,6 +25,7 @@ import {
   type Project,
   projectFromTemplate,
   type ShopProfile,
+  STOCK_FIELDS,
   type Stock,
   type Structure,
   TEMPLATES,
@@ -33,7 +34,7 @@ import {
 import { newId } from "./ids";
 import { choiceLabel, optionLabel, type SizeKey, sizeLabel } from "./labels";
 import { exactLiteral, lengthOf, readCount, readLength, readPosition } from "./size";
-import { starterStock, stockFor } from "./starter";
+import { starterStockFor, stockForUnits } from "./starter";
 
 export interface Edit {
   project: Project;
@@ -51,8 +52,8 @@ export function startProject(name: TemplateName, units: Project["units"]): Edit 
   const template = TEMPLATES.find((t) => t.name === name);
   if (!template) throw new RangeError(`There is no template named "${name}".`);
   const project = projectFromTemplate(template, {
-    stock: structuredClone([...starterStock(units)]),
-    stockFor: stockFor(units),
+    stock: structuredClone([...starterStockFor(units)]),
+    stockFor: stockForUnits(units),
   });
   return { project: { ...project, units }, label: `New ${name.toLowerCase()}` };
 }
@@ -360,12 +361,6 @@ export function handBack(project: Project, placed: PlacedPart, shop: ShopProfile
   }
 }
 
-/** The form fields that take a stock, by structure type; a project may carry others unused. */
-const STOCK_FIELDS: Record<Structure["type"], readonly string[]> = {
-  case: ["carcaseStock", "backStock"],
-  box: ["wallStock", "bottomStock"],
-};
-
 /** Every stock a part or a structure's form uses (ADR 015, rule 4: units follow the stock). */
 function stockInUse(project: Project): Stock[] {
   const ids = new Set<Id>(project.parts.map((p) => p.stock));
@@ -392,7 +387,7 @@ export function switchUnits(project: Project, units: Project["units"]): EditResu
     const thickness = formatLength(off.thickness, project.units);
     return {
       ok: false,
-      message: `This project stays in ${now} because its ${off.name} (${thickness}) isn't a whole number of ${step}.`,
+      message: `This project stays in ${now} because its ${off.name} is ${thickness} thick, which isn't a whole number of ${step}.`,
     };
   }
   return {

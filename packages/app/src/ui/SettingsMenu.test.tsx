@@ -50,17 +50,17 @@ describe("<SettingsMenu>", () => {
     fireEvent.click(screen.getByLabelText("Millimetres"));
     expect(shownProject(store.getState())?.units).toBe("metric");
     expect(store.getState().history?.entries.at(-1)?.label).toBe("Units: millimetres");
-    expect(store.getState().unitsForNew()).toBe("metric");
+    expect(store.getState().unitsForNew).toBe("metric");
   });
 
   it("keeps a project whose 3/4 plywood is off the grid in inches and says why", () => {
     const store = setup("bookcase");
     fireEvent.click(screen.getByLabelText("Millimetres"));
     expect(shownProject(store.getState())?.units).toBe("imperial");
-    expect(store.getState().unitsForNew()).toBe("metric");
+    expect(store.getState().unitsForNew).toBe("metric");
     expect(store.getState().notice?.text).toBe(
       "New projects will use millimetres. " +
-        "This project stays in inches because its 3/4 plywood (23/32\") isn't a whole number of 0.01 mm.",
+        "This project stays in inches because its 3/4 plywood is 23/32\" thick, which isn't a whole number of 0.01 mm.",
     );
   });
 
@@ -68,7 +68,7 @@ describe("<SettingsMenu>", () => {
     const store = setup("none");
     expect((screen.getByLabelText("Millimetres") as HTMLInputElement).disabled).toBe(false);
     fireEvent.click(screen.getByLabelText("Millimetres"));
-    expect(store.getState().unitsForNew()).toBe("metric");
+    expect(store.getState().unitsForNew).toBe("metric");
     expect((screen.getByLabelText("Millimetres") as HTMLInputElement).checked).toBe(true);
   });
 

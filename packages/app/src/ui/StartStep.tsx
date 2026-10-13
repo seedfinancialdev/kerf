@@ -22,7 +22,7 @@ export function StartStep() {
   const structure = useKerf((s) => shownProject(s)?.structures[0]?.id);
   const start = (name: TemplateName): void => {
     const s = store.getState();
-    const edit = startProject(name, s.unitsForNew());
+    const edit = startProject(name, s.unitsForNew);
     s.begin(edit);
     s.select({ kind: "structure", structure: edit.project.structures[0]?.id ?? "" });
     setChoosing(false);
