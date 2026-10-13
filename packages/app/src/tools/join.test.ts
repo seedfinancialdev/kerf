@@ -9,6 +9,7 @@ import { type Project, solve } from "@kerf/core";
 import { loadShopProfile } from "@kerf/fixtures";
 import { describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
+import { newId } from "../model/ids";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { bookcaseWithShelf } from "../testing/bookcase-with-shelf";
@@ -45,10 +46,45 @@ describe("Join", () => {
   it("refuses two boards that do not touch, with the engine's reason", () => {
     const p = bookcaseWithShelf();
     const r = acceptProposal(p, shop, placed(p, "Top"), placed(p, "Board 1"), "dado");
-    expect(r).toMatchObject({ ok: false });
+    expect(r).toEqual({
+      ok: false,
+      message: "Top and Board 1 do not touch, so there is nothing to join.",
+    });
   });
 
-  it("refuses a joint that brings a new error: the same dado twice cut two overlapping dados", () => {
+  it("refuses a joint the engine proposes when the full solve finds it brings an error", () => {
+    // Board 1 is cut from a sheet exactly its size, 34-9/16" x 11" (7023100 x 2235200): it fits
+    // with no joint. A dado in the 23/32" Right side is 15/64" deep (146050 / 3 = 48683, snapped
+    // down to 15 x 3175 = 47625), and the guest's cut length grows by it (ADR 004): 7023100 +
+    // 47625 = 7070725 = 34-51/64", which no longer fits the sheet. proposeJoint does not nest, so
+    // only the full solve after it sees the error (final tests review I1).
+    const p = bookcaseWithShelf();
+    const ply = p.stock.find((st) => st.name === "3/4 plywood");
+    if (!ply) throw new Error("no 3/4 plywood");
+    const offcut = {
+      ...ply,
+      id: newId(),
+      name: "Offcut",
+      sheet: { length: 7_023_100, width: 2_235_200, grain: "none" as const },
+      allowance: { length: 0, width: 0 },
+    };
+    const board = p.instances.find((i) => i.name === "Board 1")?.def;
+    const tight: Project = {
+      ...p,
+      stock: [...p.stock, offcut],
+      parts: p.parts.map((d) => (d.id === board ? { ...d, stock: offcut.id } : d)),
+    };
+    expect(solve(tight, shop).diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+    const right = placed(tight, "Right side");
+    const shelf = placed(tight, "Board 1");
+    expect(propose(tight, shop, right, shelf).result).toMatchObject({ ok: true });
+    expect(acceptProposal(tight, shop, right, shelf, "dado")).toEqual({
+      ok: false,
+      message: 'Board 1 (34-51/64" x 11") is larger than a 34-9/16" x 11" sheet of Offcut.',
+    });
+  });
+
+  it("says two boards already joined are already joined", () => {
     const p = bookcaseWithShelf();
     const first = acceptProposal(p, shop, placed(p, "Right side"), placed(p, "Board 1"), "dado");
     if (!first.ok) throw new Error(first.message);
