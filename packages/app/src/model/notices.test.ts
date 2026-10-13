@@ -15,6 +15,7 @@ describe("the notice line", () => {
     expect(warningsFirst(["shop", "project"])).toEqual({
       notice: { text: "shop", kind: "warning" },
       waiting: ["project"],
+      held: null,
     });
   });
 
@@ -66,5 +67,35 @@ describe("the notice line", () => {
     expect(afterHistoryMoved(said)).toEqual(said);
     const warned = warningsFirst(["not kept"]);
     expect(afterHistoryMoved(warned)).toEqual(warned);
+  });
+
+  describe("an Undo offer covered by an answer", () => {
+    // The offer may be the only words naming a problem the change brought: Push/Pull, Move and
+    // Edge record such a change and name the problem with Undo (tools/edit-outcome.ts).
+    const offer = { text: "Shelf 2 now overlaps Back; Undo puts it back.", kind: "undo" } as const;
+    const answer = { text: "Thickness is set by the stock.", kind: "said" } as const;
+
+    it("shows the answer at once and the offer again when the answer is dismissed", () => {
+      const line = tell(tell(empty, offer), answer);
+      expect(line.notice).toEqual(answer);
+      expect(dismiss(line).notice).toEqual(offer);
+    });
+
+    it("shows the offer again before the warnings waiting behind it", () => {
+      const line = tell(warn(tell(empty, offer), "not kept"), answer);
+      expect(dismiss(line).notice).toEqual(offer);
+      expect(dismiss(dismiss(line)).notice).toEqual({ text: "not kept", kind: "warning" });
+    });
+
+    it("keeps the offer through a second answer", () => {
+      const line = tell(tell(tell(empty, offer), answer), { text: "Pick a board.", kind: "said" });
+      expect(dismiss(line).notice).toEqual(offer);
+    });
+
+    it("drops the offer once History moves, as it describes a change no longer the latest", () => {
+      const line = afterHistoryMoved(tell(tell(empty, offer), answer));
+      expect(line.notice).toEqual(answer);
+      expect(dismiss(line).notice).toBeNull();
+    });
   });
 });

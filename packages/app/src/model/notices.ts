@@ -17,27 +17,36 @@ export interface Notice {
   kind: "undo" | "said" | "warning";
 }
 
-/** The notice on screen and the warnings still to show, oldest first. */
+/**
+ * The notice on screen, the warnings still to show, oldest first, and the Undo offer an answer
+ * covered (`held`), shown again when that answer goes.
+ */
 export interface NoticeLine {
   notice: Notice | null;
   waiting: readonly string[];
+  held: Notice | null;
 }
 
 /** A line showing the first of `warnings` with the rest waiting, or an empty line. */
 export function warningsFirst(warnings: readonly string[]): NoticeLine {
   const [first, ...rest] = warnings;
   return first === undefined
-    ? { notice: null, waiting: [] }
-    : { notice: { text: first, kind: "warning" }, waiting: rest };
+    ? { notice: null, waiting: [], held: null }
+    : { notice: { text: first, kind: "warning" }, waiting: rest, held: null };
 }
 
 /**
  * Shows an answer or an Undo offer at once. A warning on screen is not lost: it goes back to the
- * front of the queue and shows again when this notice goes.
+ * front of the queue and shows again when this notice goes. An Undo offer an answer covers is held
+ * and shows again when the answer goes, since it may be the only words naming a problem the change
+ * brought; a new Undo offer replaces it.
  */
 export function tell(line: NoticeLine, notice: Notice): NoticeLine {
   const covered = line.notice?.kind === "warning" ? [line.notice.text] : [];
-  return { notice, waiting: [...covered, ...line.waiting] };
+  const waiting = [...covered, ...line.waiting];
+  if (notice.kind !== "said") return { notice, waiting, held: null };
+  const held = line.notice?.kind === "undo" ? line.notice : line.held;
+  return { notice, waiting, held };
 }
 
 /**
@@ -48,18 +57,22 @@ export function tell(line: NoticeLine, notice: Notice): NoticeLine {
 export function warn(line: NoticeLine, text: string): NoticeLine {
   if (line.notice?.text === text || line.waiting.includes(text)) return line;
   const waiting = [...line.waiting, text];
-  return line.notice === null ? warningsFirst(waiting) : { notice: line.notice, waiting };
+  return line.notice === null
+    ? { ...warningsFirst(waiting), held: line.held }
+    : { notice: line.notice, waiting, held: line.held };
 }
 
-/** Takes the notice away and shows the next waiting warning. */
+/** Takes the notice away and shows the held Undo offer, if any, else the next waiting warning. */
 export function dismiss(line: NoticeLine): NoticeLine {
+  if (line.held) return { notice: line.held, waiting: line.waiting, held: null };
   return warningsFirst(line.waiting);
 }
 
 /**
  * The line once History has moved: an Undo offer describes a change that is no longer the latest,
- * so it goes (ruling R13) and the next waiting warning shows; anything else stays.
+ * so it goes (ruling R13), held or shown, and the next waiting warning shows; anything else stays.
  */
 export function afterHistoryMoved(line: NoticeLine): NoticeLine {
-  return line.notice?.kind === "undo" ? dismiss(line) : line;
+  const unheld = { ...line, held: null };
+  return line.notice?.kind === "undo" ? dismiss(unheld) : unheld;
 }

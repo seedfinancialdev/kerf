@@ -44,6 +44,8 @@ export interface KerfState {
   notice: Notice | null;
   /** Warnings waiting behind the notice on screen, oldest first (notices.ts). */
   waiting: readonly string[];
+  /** The Undo offer an answer covers, shown again when the answer goes (notices.ts). */
+  held: Notice | null;
   tool: ToolId;
   /**
    * What the active tool has started and not finished; cleared when the tool changes or History is

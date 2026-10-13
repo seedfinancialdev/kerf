@@ -192,7 +192,11 @@ export function createKerfStore(deps: {
     const moveHistory = (history: History, patch: Partial<KerfState> = {}): void =>
       show({ history, previewed: null, pending: null, ...patch });
 
-    const line = (): NoticeLine => ({ notice: get().notice, waiting: get().waiting });
+    const line = (): NoticeLine => ({
+      notice: get().notice,
+      waiting: get().waiting,
+      held: get().held,
+    });
 
     /**
      * Keeps the shown History entry in storage. When the project cannot be written, warns once; the
