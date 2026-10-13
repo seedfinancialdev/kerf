@@ -7,8 +7,8 @@
 // hover; SketchUp navigation. Picks go to the active tool through tools/dispatch.ts.
 
 import { INCH, type PlacedPart } from "@kerf/core";
-import { Canvas, type ThreeEvent, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { addAfterEffect, Canvas, type ThreeEvent, useThree } from "@react-three/fiber";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BufferAttribute, BufferGeometry, Matrix4 } from "three";
 import { shownProject } from "../model/store";
 import { dispatchPointer } from "../tools/dispatch";
@@ -170,6 +170,51 @@ function Navigation({ view, change }: { view: View; change(update: (v: View) => 
   return null;
 }
 
+/** Calls `drawn` after the next frame is on screen, then stops listening. */
+function FirstPicture({ drawn }: { drawn(): void }) {
+  useEffect(() => {
+    const stop = addAfterEffect(() => {
+      stop();
+      drawn();
+    });
+    return stop;
+  }, [drawn]);
+  return null;
+}
+
+interface ModelCanvasProps {
+  /** True once the view has been fitted to the boards, so the next frame shows them. */
+  fitted: boolean;
+  /** A click that hit no board. */
+  missed(e: MouseEvent): void;
+  children: ReactNode;
+}
+
+/**
+ * The canvas, and "Drawing the model…" over it until its first picture of the fitted view is up.
+ * The canvas is on the page a few frames before the 3D view starts listening and draws, and until
+ * then a click lands on nothing; the line tells the user (and a browser test) to wait. The wait
+ * starts once the view is fitted, in the same commit that moves the camera, so the frame it waits
+ * for is taken from the fitted view.
+ */
+function ModelCanvas({ fitted, missed, children }: ModelCanvasProps) {
+  const [drawn, setDrawn] = useState(false);
+  const markDrawn = useCallback(() => setDrawn(true), []);
+  return (
+    <div className="model-view" aria-busy={!drawn}>
+      <Canvas
+        camera={{ fov: FOV_DEGREES, near: 0.1, far: 10_000 }}
+        gl={{ preserveDrawingBuffer: true }}
+        onPointerMissed={missed}
+      >
+        {children}
+        {fitted && !drawn && <FirstPicture drawn={markDrawn} />}
+      </Canvas>
+      {!drawn && <p className="model-drawing">Drawing the model…</p>}
+    </div>
+  );
+}
+
 /** The corners of the box around every board, in scene inches. */
 function sceneBounds(
   placements: PlacedPart[],
@@ -226,10 +271,9 @@ export function Viewport() {
   const hoveredBoard = placements.find((p) => p.instance === hovered);
 
   return (
-    <Canvas
-      camera={{ fov: FOV_DEGREES, near: 0.1, far: 10_000 }}
-      gl={{ preserveDrawingBuffer: true }}
-      onPointerMissed={(e) => {
+    <ModelCanvas
+      fitted={view !== null}
+      missed={(e) => {
         if (e.button !== 2) dispatchPointer(store, "down", e, null);
       }}
     >
@@ -248,6 +292,6 @@ export function Viewport() {
         />
       ))}
       {hoveredBoard && <GrainLine placed={hoveredBoard} color={palette.grain} />}
-    </Canvas>
+    </ModelCanvas>
   );
 }

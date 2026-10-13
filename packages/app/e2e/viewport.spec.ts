@@ -15,8 +15,27 @@ test("clicking the middle of the bookcase selects the back", async ({ page }) =>
   await page.getByRole("button", { name: "Shape" }).click();
   const model = page.getByRole("region", { name: "Model" });
   await expect(model.locator("canvas")).toBeVisible();
+  await expect(model.getByText("Drawing the model…")).toBeHidden();
   const box = await model.boundingBox();
   if (!box) throw new Error("no model area");
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-  await expect(page.getByRole("heading", { name: "Back" })).toBeVisible({ timeout: 10_000 });
+  // The Shape step has a "Back" section too, so the heading is looked for in the inspector.
+  const inspector = page.getByRole("complementary", { name: "Inspector" });
+  await expect(inspector.getByRole("heading", { name: "Back" })).toBeVisible();
+});
+
+// The canvas appears a few frames before the view can be picked from: until the first picture is
+// drawn a click lands on nothing. Holding the page's clock holds the frames, so that wait is seen.
+test("the model area says it is drawing until the first picture is up", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/");
+  await page.getByRole("button", { name: "New" }).click();
+  await page.getByRole("button", { name: "Bookcase" }).click();
+  await page.clock.pauseAt(Date.now() + 60_000);
+  await page.getByRole("button", { name: "Shape" }).click();
+  const model = page.getByRole("region", { name: "Model" });
+  await expect(model.locator("canvas")).toBeVisible();
+  await expect(model.getByText("Drawing the model…")).toBeVisible();
+  await page.clock.resume();
+  await expect(model.getByText("Drawing the model…")).toBeHidden();
 });

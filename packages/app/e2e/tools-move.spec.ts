@@ -35,9 +35,9 @@ test("lifts a shelf by dragging it upward, even past the top of the model", asyn
   await page.getByRole("button", { name: "Shape" }).click();
   const model = page.getByRole("region", { name: "Model" });
   await expect(model.locator("canvas")).toBeVisible();
+  await expect(model.getByText("Drawing the model…")).toBeHidden();
   const box = await model.boundingBox();
   if (!box) throw new Error("no model area");
-  await page.waitForTimeout(1500); // the 3D view has fitted the bookcase
   await page.keyboard.press("m");
   await page.keyboard.press("ArrowUp");
   // At the default view the bottom shelf's top face sits about a quarter of the way down the model.

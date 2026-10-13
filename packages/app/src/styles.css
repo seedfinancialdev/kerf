@@ -140,6 +140,21 @@ body {
   color: var(--color-text-muted);
 }
 
+.model-view {
+  position: absolute;
+  inset: 0;
+}
+
+.model-drawing {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
 .notice {
   grid-row: 3;
   display: flex;
