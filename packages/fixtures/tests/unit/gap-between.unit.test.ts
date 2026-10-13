@@ -109,11 +109,12 @@ describe("gapBetween()", () => {
     expect(gapBetween(p, idOf(p, "One"), idOf(p, "Two"))).toMatchObject({ ok: false });
   });
 
-  it("offers no gap past a board whose stock is not in the project", () => {
-    // The sides' thickness is their stock's; with no stock there is nothing to bind the gap to.
+  it("refuses a project the engine cannot read: a part names a stock it does not have", () => {
+    // validateProject refuses the whole project, so no board is placed and none can be picked.
     const p = { ...handMade(), stock: [] };
-    expect(gapBetween(p, idOf(p, "Right side"), idOf(p, "Left side"))).toMatchObject({
+    expect(gapBetween(p, idOf(p, "Right side"), idOf(p, "Left side"))).toEqual({
       ok: false,
+      reason: "Pick two boards to measure between.",
     });
   });
 

@@ -23,15 +23,16 @@ const PICK_TWO = "Pick two boards to measure between.";
 
 /**
  * The expression for a part's size along one of its own axes (0 length, 1 width, 2 thickness).
- * Throws when the thickness is its stock's and the project has no such stock: the solve leaves such
- * a board out, so `gapBetween` never reaches a board like that.
+ * A part whose stock is missing never gets here: `validateProject` refuses the whole project, so
+ * `solveModel` places no boards and `gapBetween` has already refused. Throws on that broken
+ * invariant only.
  */
 function sizeExpr(project: Project, part: PartDef, local: 0 | 1 | 2): Expr {
   if (local === 0) return `(${part.length})`;
   if (local === 1) return `(${part.width})`;
   if (part.thickness !== undefined) return `(${part.thickness})`;
   const stock = project.stock.find((s) => s.id === part.stock);
-  if (!stock) throw new Error("gapBetween accepted a board whose stock is not in the project.");
+  if (!stock) throw new Error("unreachable: validateProject refuses a part whose stock is missing");
   return `stock["${stock.name.replaceAll('"', '\\"')}"].thickness`;
 }
 
@@ -56,8 +57,9 @@ const overlaps = (a: SolvedInstance, b: SolvedInstance, k: "x" | "y" | "z"): boo
  * along the one axis on which they face each other, as expressions in project lengths.
  *
  * Refuses (`ok: false`, with a reason to show the user) when a board is missing, is a member of a
- * row (detach it first), or the boards touch, overlap, or do not face each other. Never throws of
- * its own accord; it relies on `solveModel` reporting problems as diagnostics rather than throwing.
+ * row (detach it first), or the boards touch, overlap, or do not face each other. A project the
+ * engine cannot read places no boards, so it is refused the same way. Throws only on a broken
+ * invariant; `solveModel` reports every problem as a diagnostic rather than throwing.
  */
 export function gapBetween(project: Project, a: Id, b: Id): Gap {
   const model = solveModel(project);
