@@ -71,11 +71,32 @@ describe("history", () => {
     expect(() => jumpTo(startHistory(edit("a")), 5)).toThrow(RangeError);
   });
 
+  it("jumps to the last entry, and refuses one past it and one before the first", () => {
+    const h = record(record(startHistory(edit("a")), edit("b")), edit("c"));
+    expect(currentProject(jumpTo(undo(h), h.entries.length - 1)).name).toBe("c");
+    expect(() => jumpTo(h, h.entries.length)).toThrow(RangeError);
+    expect(() => jumpTo(h, -1)).toThrow(RangeError);
+  });
+
   it("keeps the last 200 changes, dropping the oldest", () => {
     let h = startHistory(edit("0"));
     for (let i = 1; i <= HISTORY_LIMIT + 5; i += 1) h = record(h, edit(String(i)));
     expect(h.entries).toHaveLength(HISTORY_LIMIT);
     expect(h.entries[0]?.label).toBe("6");
+    // The newest of 200 entries is at index 199.
+    expect(h.at).toBe(HISTORY_LIMIT - 1);
     expect(currentProject(h).name).toBe(String(HISTORY_LIMIT + 5));
+  });
+
+  it("drops only the entries after the one stepped back to when the full History changes", () => {
+    // 200 entries labelled 6..205; stepping back to index 100 (label 106) and changing keeps
+    // indexes 0..100 (101 entries) plus the change: 102, and the oldest is still 6.
+    let h = startHistory(edit("0"));
+    for (let i = 1; i <= HISTORY_LIMIT + 5; i += 1) h = record(h, edit(String(i)));
+    h = record(jumpTo(h, 100), edit("new"));
+    expect(h.entries).toHaveLength(102);
+    expect(h.entries[0]?.label).toBe("6");
+    expect(h.entries[100]?.label).toBe("106");
+    expect(h.at).toBe(101);
   });
 });

@@ -129,6 +129,14 @@ describe("createKerfStore()", () => {
       expect(s.getState().notice).toBeNull();
     });
 
+    it("clears an Undo notice when that change is undone", () => {
+      const { s, edit, p } = withNotice();
+      s.getState().apply(edit, custom);
+      s.getState().undo();
+      expect(s.getState().notice).toBeNull();
+      expect(shownProject(s.getState())).toEqual(p);
+    });
+
     it("clears an Undo notice on redo, jumpTo and commit", () => {
       const { s, edit } = withNotice();
       s.getState().apply(edit, custom);

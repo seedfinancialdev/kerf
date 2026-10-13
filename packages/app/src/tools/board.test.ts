@@ -183,8 +183,10 @@ describe("boardBetween()", () => {
   });
 
   it.each([0, -IN])("refuses a width of %i", (width) => {
-    const r = between(base(), width);
-    expect(r.ok).toBe(false);
+    expect(between(base(), width)).toEqual({
+      ok: false,
+      message: "A board needs a length and a width above zero.",
+    });
   });
 
   it("refuses the form's two sides, in shop words, saying what to do instead (branch review C1)", () => {
@@ -337,11 +339,17 @@ describe("the Board tool", () => {
     expect(s.getState().pending).not.toBeNull();
   });
 
-  it.each(["24", 'abc, 6"', '24", 6", 3"', '24"'])("refuses %j and records nothing", (text) => {
+  it.each([
+    ["24", 'Type the length and width, like 24", 6".'],
+    ['24, 6"', '"24" is not a length; add a unit (in, " or mm).'],
+    ['abc, 6"', 'Unknown name "abc"'],
+    ['24", 6", 3"', 'Type the length and width, like 24", 6".'],
+    ['24"', 'Type the length and width, like 24", 6".'],
+  ])("refuses %j, says why and records nothing", (text, why) => {
     const s = started();
     down(s, null, floorRay);
     const before = entries(s);
-    expect(boardTool.measure?.(text, s)).not.toBeNull();
+    expect(boardTool.measure?.(text, s)).toBe(why);
     expect(entries(s)).toBe(before);
   });
 
@@ -360,7 +368,7 @@ describe("the Board tool", () => {
     down(s, null, floorRay);
     const before = entries(s);
     const message = boardTool.measure?.('100001", 6"', s);
-    expect(message).not.toBeNull();
+    expect(message).toBe("Length is too large: the limit is 100,000 inches");
     expect(entries(s)).toBe(before);
   });
 

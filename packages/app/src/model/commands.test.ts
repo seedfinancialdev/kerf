@@ -250,7 +250,10 @@ describe("addPartition()", () => {
   it("refuses text that is not a place", () => {
     const p = startProject("Blank case", "imperial").project;
     const opening = structureOf(p).openings[0]?.id ?? "";
-    expect(addPartition(p, structureOf(p).id, opening, "abc").ok).toBe(false);
+    expect(addPartition(p, structureOf(p).id, opening, "abc")).toEqual({
+      ok: false,
+      message: 'Unknown name "abc"',
+    });
   });
 });
 

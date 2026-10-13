@@ -24,6 +24,9 @@ const board = (name: string, p = project()): PlacedPart => {
   return found;
 };
 const top = () => board("Top");
+/** Domain model: a part's size must come out above zero (the solver's invalid-dimension rule). */
+const TOP_TO_NOTHING =
+  "Top length must be greater than zero (it is zero or negative after rounding to the grid).";
 
 describe("pushPull()", () => {
   it('lengthens the top by 1" at its second end: 34-9/16 + 1 = 35-9/16', () => {
@@ -80,7 +83,20 @@ describe("pushPull()", () => {
 
   it("refuses to push a board to nothing", () => {
     const r = pushPull(project(), top(), "end1", -40 * IN, shop);
-    expect(r.ok).toBe(false);
+    expect(r).toEqual({ ok: false, message: TOP_TO_NOTHING });
+  });
+
+  it("refuses to shorten the top by exactly its length, which leaves nothing", () => {
+    // The top is 34-9/16" long (36 - 2 x 23/32 = 7023100 units); less all of it is zero.
+    const r = pushPull(project(), top(), "end1", -7_023_100, shop);
+    expect(r).toEqual({ ok: false, message: TOP_TO_NOTHING });
+  });
+
+  it("shortens the top to one 1/64\" step, one step short of its length", () => {
+    // 7023100 - 3175 = 7019925 (34-35/64") off leaves 3175 units, one 1/64" step.
+    const r = pushPull(project(), top(), "end1", -7_019_925, shop);
+    if (!r.ok) throw new Error(r.message);
+    expect(board("Top", r.edit.project).size.length).toBe(3_175);
   });
 });
 
@@ -217,7 +233,7 @@ describe("the Push/Pull tool", () => {
   it("refuses a typed distance that is not a length", () => {
     const s = started();
     pushPullTool.pointer?.(event("down", endOf(top())), s);
-    expect(pushPullTool.measure?.("abc", s)).not.toBeNull();
+    expect(pushPullTool.measure?.("abc", s)).toBe('Unknown name "abc"');
     expect(s.getState().pending?.tool).toBe("pushPull");
   });
 

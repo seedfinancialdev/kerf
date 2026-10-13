@@ -48,6 +48,15 @@ describe("readLength()", () => {
     expect(readLength("abc", bookcase)).toEqual({ ok: false, message: 'Unknown name "abc"' });
   });
 
+  it("reads 100,000 inches, the limit itself", () => {
+    // 100000 x 203200 = 20320000000 units.
+    expect(readLength('100000"', bookcase)).toEqual({
+      ok: true,
+      expr: '100000"',
+      value: 20_320_000_000,
+    });
+  });
+
   it("refuses a length beyond the 100,000 inch limit instead of throwing", () => {
     expect(readLength('100001"', bookcase)).toEqual({
       ok: false,
@@ -130,6 +139,17 @@ describe("readPosition()", () => {
       ok: false,
       message: 'Type a length like 12" or a fraction like 1/3.',
     });
+  });
+
+  it("refuses a fraction of 0: that is the opening's left face, not a place inside it", () => {
+    expect(readPosition("0", bookcase)).toEqual({
+      ok: false,
+      message: 'Type a length like 12" or a fraction like 1/3.',
+    });
+  });
+
+  it("passes a negative length on for the solver to report (ADR 015, known limit 13)", () => {
+    expect(readPosition('-2"', bookcase)).toEqual({ ok: true, expr: '-2"' });
   });
 
   it("refuses a fraction of 1 or more", () => {
