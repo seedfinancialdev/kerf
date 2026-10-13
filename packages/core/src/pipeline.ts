@@ -20,6 +20,8 @@ import { nestProject } from "./nest";
 import type {
   CutList,
   Diagnostic,
+  JointCut,
+  JointSummary,
   MachiningSetup,
   NestingResult,
   PartShape,
@@ -29,7 +31,7 @@ import type {
   Vec3,
 } from "./outputs";
 import { buildCutListFrom, type CutPart, cutParts } from "./outputs/cutlist";
-import { buildSetups } from "./outputs/machining";
+import { buildSetups, toolFor } from "./outputs/machining";
 import { validateAssembly } from "./outputs/validate";
 import { shopProblem } from "./shop";
 import { boxOf, toParent } from "./solve/assembly";
@@ -179,6 +181,43 @@ function placementsOf(p: Pipeline): PlacedPart[] {
   });
 }
 
+const NO_TOOLS: ShopProfile = { kerf: 0, tools: [] };
+
+/** Each joint with its cuts grouped by kind and size (ADR 015, rule 9). */
+function jointSummariesOf(p: Pipeline, shop: ShopProfile | undefined): JointSummary[] {
+  if (!p.project) return [];
+  const names = new Map<Id, string>();
+  for (const i of p.project.instances) names.set(i.id, i.name ?? i.id);
+  for (const row of p.project.patterns) names.set(row.id, names.get(row.source) ?? row.id);
+  return p.project.joints.map((joint) => {
+    const pairs = p.derived.pairs.filter((pair) => pair.joint === joint.id);
+    const cuts = new Map<string, JointCut>();
+    for (const cut of pairs.flatMap((pair) => pair.machined)) {
+      const key = `${cut.kind}|${cut.width}|${cut.depth}`;
+      const found = cuts.get(key);
+      if (found) found.count += 1;
+      else
+        cuts.set(key, {
+          kind: cut.kind,
+          width: cut.width,
+          depth: cut.depth,
+          ...toolFor(cut, shop ?? NO_TOOLS),
+          count: 1,
+        });
+    }
+    const summary: JointSummary = {
+      joint: joint.id,
+      type: joint.type,
+      host: names.get(joint.host) ?? joint.host,
+      guest: names.get(joint.guest) ?? joint.guest,
+      pairs: pairs.length,
+      cuts: [...cuts.values()],
+    };
+    if (joint.generatedBy) summary.source = joint.generatedBy;
+    return summary;
+  });
+}
+
 /**
  * Reads the shop profile once, into a plain copy that is then validated and used, so a profile
  * whose answers change between reads (or that throws when read) cannot be valid and then not.
@@ -231,6 +270,7 @@ export function solveProject(project: Project, shop: ShopProfile): SolveResult {
     setups,
     shapes: p.stopped ? [] : shapesOf(p),
     placements: placementsOf(p),
+    joints: jointSummariesOf(p, copy),
     blocked,
   };
 }

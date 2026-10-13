@@ -8,7 +8,7 @@
 
 import type { Rational } from "./rational";
 import type { RuleId } from "./rules";
-import type { EdgeRef, Id, Len } from "./types";
+import type { EdgeRef, GeneratedFrom, Id, Joint, Len } from "./types";
 
 export interface Diagnostic {
   severity: "error" | "warning" | "info";
@@ -276,6 +276,30 @@ export interface PlacedPart {
   pattern?: { id: Id; index: number };
 }
 
+/** One kind of cut a joint needs, how many, and the tool that makes it (or the one the shop lacks). */
+export interface JointCut {
+  kind: "dado" | "groove" | "rabbet" | "dovetail";
+  width: Len;
+  depth: Len;
+  tool: MachiningSetup["tool"];
+  missing: boolean;
+  count: number;
+}
+
+/** A joint in shop words (ADR 015, rule 9): the two boards, how many pairs, and its cuts. */
+export interface JointSummary {
+  joint: Id;
+  type: Joint["type"];
+  /** Shop names of the host and guest boards ("Right side", "Shelf 1"). */
+  host: string;
+  guest: string;
+  /** Host/guest pairs it makes: a row of 4 shelves in one side is 4. */
+  pairs: number;
+  cuts: JointCut[];
+  /** The structure and role that made it; absent for a joint made by hand. */
+  source?: GeneratedFrom;
+}
+
 export interface SolveResult {
   diagnostics: Diagnostic[];
   cutList: CutList;
@@ -288,6 +312,8 @@ export interface SolveResult {
   shapes: PartShape[];
   /** Every placed copy (ADR 015, rule 8). Empty only when the project itself is invalid. */
   placements: PlacedPart[];
+  /** Every joint, in project order, with the tools its cuts need (ADR 015, rule 9). */
+  joints: JointSummary[];
   /**
    * True when any error exists (Operation specs: "Error blocks the solve"; Interaction spec: the
    * build plan cannot be exported). An error in the assembly also withholds the cut list, layouts
