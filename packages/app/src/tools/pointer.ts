@@ -6,24 +6,11 @@
 // which way the surface faces (a project axis). Each tool turns this into named changes.
 
 import type { ModelHit } from "../model/pending";
-import type { KerfState, KerfStore, ToolId } from "../model/store";
+import type { ToolId } from "../model/store";
+import type { ModelPointer, ToolHandler } from "./handler";
+import { pushPullTool } from "./push-pull";
 
-export type { ModelHit };
-
-export interface ModelPointer {
-  kind: "down" | "move" | "up";
-  hit: ModelHit | null;
-  shift: boolean;
-  ctrl: boolean;
-}
-
-export interface ToolHandler {
-  pointer?(e: ModelPointer, store: KerfStore): void;
-  /** Takes text typed in the Measurements box; returns why it was refused, or null. */
-  measure?(text: string, store: KerfStore): string | null;
-  /** What the Measurements box asks for now. */
-  prompt?(state: KerfState): string;
-}
+export type { ModelHit, ModelPointer, ToolHandler };
 
 const select: ToolHandler = {
   pointer(e, store) {
@@ -40,13 +27,13 @@ const select: ToolHandler = {
 
 /**
  * Every tool's handler, written out so the wiring is visible. A tool whose task has not landed yet
- * selects; Tasks 27-31 replace their entry and import their handler here. The Edge tool works from
+ * selects; Tasks 28-31 replace their entry and import their handler here. The Edge tool works from
  * the inspector (Task 26), so clicking boards while it is active picks them.
  */
 const HANDLERS: Record<ToolId, ToolHandler> = {
   select,
   board: select,
-  pushPull: select,
+  pushPull: pushPullTool,
   move: select,
   join: select,
   edge: select,

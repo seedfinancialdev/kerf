@@ -20,5 +20,5 @@ export type Pending =
   | { tool: "join"; first: Id }
   | { tool: "tape"; from: Vec3 }
   | { tool: "board"; from: ModelHit }
-  | { tool: "pushPull"; hit: ModelHit }
+  | { tool: "pushPull"; hit: ModelHit; dragged: string | null }
   | { tool: "move"; from: Vec3; placed: PlacedPart[]; axis: 0 | 1 | 2 | null };
