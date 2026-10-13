@@ -436,3 +436,119 @@ button[aria-pressed="true"] {
 .problem.warning {
   color: var(--color-warning);
 }
+
+.drawer {
+  display: flex;
+  flex-direction: column;
+  height: var(--drawer-height);
+  background: var(--color-surface);
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.drawer.tall {
+  height: var(--drawer-height-tall);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: 0 var(--space-3);
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.tabs [role="tab"] {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--color-text-muted);
+  padding: var(--space-2) var(--space-3);
+}
+
+.tabs [role="tab"][aria-selected="true"] {
+  color: var(--color-text);
+  border-bottom-color: var(--color-accent);
+  font-weight: var(--font-weight-strong);
+}
+
+.banner {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-error);
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.tab-panel {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-2) var(--space-3);
+}
+
+.plan-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-small);
+}
+
+.plan-table th {
+  text-align: left;
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-muted);
+  padding: var(--space-1) var(--space-2);
+}
+
+.plan-table td {
+  padding: var(--space-1) var(--space-2);
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: var(--font-numeric);
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.plan-list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.plan-list .missing {
+  color: var(--color-warning);
+}
+
+.sheets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sheet-title {
+  margin: 0 0 var(--space-1);
+}
+
+.sheet-board {
+  fill: var(--color-bg);
+  stroke: var(--color-border);
+}
+
+.sheet-part {
+  fill: var(--color-wood-sheet);
+  stroke: var(--color-surface);
+}
+
+.sheet-label {
+  font-size: 9px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  fill: var(--color-step-active-text);
+}

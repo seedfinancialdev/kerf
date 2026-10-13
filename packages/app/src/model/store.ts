@@ -40,6 +40,8 @@ export interface Notice {
 
 export type ToolId = "select" | "board" | "pushPull" | "move" | "join" | "edge" | "tape";
 
+export type DrawerTab = "Shopping" | "Cut list" | "Sheets" | "Setups" | "Assembly";
+
 export interface KerfState {
   history: History | null;
   previewed: Project | null;
@@ -49,6 +51,7 @@ export interface KerfState {
   shop: ShopProfile;
   notice: Notice | null;
   tool: ToolId;
+  drawerTab: DrawerTab;
   theme: "dark" | "light";
   /** Open state by section title; a title not listed has its own default. */
   sections: Record<string, boolean>;
@@ -77,6 +80,8 @@ export interface KerfActions {
   setShop(shop: ShopProfile): void;
   /** Picks the active tool. */
   setTool(tool: ToolId): void;
+  /** Shows a tab of the build-plan drawer. */
+  setDrawerTab(tab: DrawerTab): void;
   /** Uses and saves the colour theme. */
   setTheme(theme: "dark" | "light"): void;
   /** Opens or closes the section `title` (open when never stored unless `defaultOpen` is false) and remembers it. */
@@ -220,6 +225,7 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
       shop: loaded.shop,
       notice: firstNotice ? { text: firstNotice, undo: false } : null,
       tool: "select",
+      drawerTab: "Cut list",
       theme: deps.storage.read("kerf.theme") === "light" ? "light" : "dark",
       sections: readSections(deps.storage),
 
@@ -269,6 +275,7 @@ export function createKerfStore(deps: { storage: AppStorage; clock?: () => numbe
         show({ shop });
       },
       setTool: (tool) => set({ tool }),
+      setDrawerTab: (drawerTab) => set({ drawerTab }),
       setTheme: (theme) => {
         deps.storage.write("kerf.theme", theme);
         set({ theme });

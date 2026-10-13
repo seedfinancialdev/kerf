@@ -7,6 +7,7 @@
 import { BoardInspector } from "./BoardInspector";
 import { DivideStep } from "./DivideStep";
 import { JoineryStep } from "./JoineryStep";
+import { Problems } from "./Problems";
 import { ShapeStep } from "./ShapeStep";
 import { StartStep } from "./StartStep";
 import { useKerf } from "./useKerf";
@@ -26,7 +27,11 @@ export function Inspector() {
       return <DivideStep />;
     case "Joinery":
       return <JoineryStep />;
-    default:
-      return null;
+    case "Build plan":
+      return (
+        <div className="step-panel">
+          <Problems />
+        </div>
+      );
   }
 }
