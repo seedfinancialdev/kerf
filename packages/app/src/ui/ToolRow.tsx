@@ -4,9 +4,9 @@
 
 // The tool row under the model: each tool's name and key ("Icons always carry text labels").
 
-import { useKerf } from "../ui/useKerf";
+import { useKerf } from "../state/useKerf";
+import { TOOLS } from "../tools/tools";
 import { Measurements } from "./Measurements";
-import { TOOLS } from "./tools";
 
 /** One button per tool, the active one pressed, then the Measurements box. */
 export function ToolRow() {

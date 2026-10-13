@@ -7,15 +7,15 @@
 
 import { type ReactNode, useEffect } from "react";
 import type { KerfStore } from "./model/store";
-import { ToolRow } from "./tools/ToolRow";
+import { KerfProvider, useKerf } from "./state/useKerf";
 import { Drawer } from "./ui/Drawer";
 import { HintLine } from "./ui/HintLine";
 import { HistoryPanel } from "./ui/HistoryPanel";
 import { Inspector } from "./ui/Inspector";
 import { Notice } from "./ui/Notice";
 import { ProjectTree } from "./ui/ProjectTree";
+import { ToolRow } from "./ui/ToolRow";
 import { TopBar } from "./ui/TopBar";
-import { KerfProvider, useKerf } from "./ui/useKerf";
 import { useShortcuts } from "./ui/useShortcuts";
 
 export function App({ store, model }: { store: KerfStore; model: ReactNode }) {

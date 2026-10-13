@@ -10,11 +10,11 @@ import { setOption } from "../model/commands";
 import { CHOICES, DEFAULT_CORNER_JOINT, optionLabel } from "../model/labels";
 import { readLength } from "../model/size";
 import { shownProject } from "../model/store";
+import { useKerf, useKerfStore } from "../state/useKerf";
 import { Choice } from "./Choice";
 import { NumberField } from "./NumberField";
 import { Section } from "./Section";
 import { SizeFields } from "./SizeFields";
-import { useKerf, useKerfStore } from "./useKerf";
 
 export function ShapeStep() {
   const project = useKerf((s) => shownProject(s));

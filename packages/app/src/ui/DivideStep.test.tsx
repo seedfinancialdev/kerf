@@ -10,9 +10,9 @@ import { describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
+import { KerfProvider } from "../state/useKerf";
 import { memoryStorage } from "../testing/memory-storage";
 import { Inspector } from "./Inspector";
-import { KerfProvider } from "./useKerf";
 
 function setup(template: "Bookcase" | "Blank case" = "Bookcase") {
   const store = createKerfStore({ storage: createStorage(memoryStorage()) });

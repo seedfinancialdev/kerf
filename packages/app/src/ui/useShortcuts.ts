@@ -7,8 +7,8 @@
 // Ctrl/⌘+Z and the tool keys still work after a choice in one (final branch review I4).
 
 import { useEffect } from "react";
+import { useKerfStore } from "../state/useKerf";
 import { toolForKey } from "../tools/tools";
-import { useKerfStore } from "./useKerf";
 
 /** Controls that press or move with the keyboard, so Space and the arrows must reach them and not act on the model. */
 const SPACE_CONTROLS =

@@ -4,16 +4,16 @@
 
 // The right panel (Interaction spec, "Inspector"): what the current step offers.
 
-import { BoardStockPanel } from "../tools/BoardStockPanel";
-import { JoinPanel } from "../tools/JoinPanel";
-import { TapePanel } from "../tools/TapePanel";
+import { useKerf } from "../state/useKerf";
 import { BoardInspector } from "./BoardInspector";
+import { BoardStockPanel } from "./BoardStockPanel";
 import { DivideStep } from "./DivideStep";
 import { JoineryStep } from "./JoineryStep";
+import { JoinPanel } from "./JoinPanel";
 import { Problems } from "./Problems";
 import { ShapeStep } from "./ShapeStep";
 import { StartStep } from "./StartStep";
-import { useKerf } from "./useKerf";
+import { TapePanel } from "./TapePanel";
 
 /** The right panel; the Board tool's stock, the Join tool's proposal or the Tape's reading comes first. */
 export function Inspector() {

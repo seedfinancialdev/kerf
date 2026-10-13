@@ -4,7 +4,7 @@
 
 // The model (Interaction spec, "Viewport (center)"): every placed board, drawn with its cuts, wood-
 // toned by stock, red when the engine reports an error on it, lit when selected, its grain shown on
-// hover; SketchUp navigation. Picks go to the active tool through tools/dispatch.ts.
+// hover; SketchUp navigation. Picks go to the active tool through dispatch.ts.
 
 import { INCH, type PlacedPart } from "@kerf/core";
 import { addAfterEffect, Canvas, type ThreeEvent, useThree } from "@react-three/fiber";
@@ -19,13 +19,13 @@ import {
 } from "react";
 import { BufferAttribute, BufferGeometry, type Camera, Matrix4 } from "three";
 import { shownProject } from "../model/store";
-import { dispatchPointer } from "../tools/dispatch";
-import { useKerf, useKerfStore } from "../ui/useKerf";
+import { matrixOf, toScene } from "../scene/frames";
+import { useKerf, useKerfStore } from "../state/useKerf";
 import { geometryOf } from "./board-geometry";
 import { type BoardLook, boardLooks } from "./board-looks";
 import { cameraPosition, FOV_DEGREES, fitView, isFramed, type View } from "./camera";
+import { dispatchPointer } from "./dispatch";
 import { followDrag, followsDrag } from "./follow-drag";
-import { matrixOf, toScene } from "./frames";
 import { meshFor } from "./meshes";
 import { usePalette } from "./palette";
 import { useGeometry } from "./useGeometry";

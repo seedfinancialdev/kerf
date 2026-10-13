@@ -4,8 +4,8 @@
 
 // Assembly order (Interaction spec, "6. The build plan", item 6; ADR 015, rule 5).
 
+import { useKerf } from "../state/useKerf";
 import { NothingToShow } from "./NothingToShow";
-import { useKerf } from "./useKerf";
 
 export function AssemblyTab() {
   const steps = useKerf((s) => s.solved?.assembly);

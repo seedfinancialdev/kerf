@@ -7,8 +7,8 @@
 // is checked by the engine (`shopProblem`) before it is kept.
 
 import { formatLength, type Len, parseLength, type ShopProfile, shopProblem } from "@kerf/core";
+import { useKerf, useKerfStore } from "../state/useKerf";
 import { NumberField } from "./NumberField";
-import { useKerf, useKerfStore } from "./useKerf";
 
 type Tool = ShopProfile["tools"][number];
 const IN = 203_200;

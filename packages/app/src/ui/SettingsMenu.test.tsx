@@ -12,9 +12,9 @@ import { setOption, startProject } from "../model/commands";
 import { STOCK_IDS } from "../model/starter";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
+import { KerfProvider } from "../state/useKerf";
 import { memoryStorage } from "../testing/memory-storage";
 import { SettingsMenu } from "./SettingsMenu";
-import { KerfProvider } from "./useKerf";
 
 type Fixture = "none" | "bookcase" | "quarter-inch-bookcase";
 

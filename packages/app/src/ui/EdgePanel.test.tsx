@@ -9,10 +9,10 @@ import { describe, expect, it } from "vitest";
 import { setShelves, startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
+import { KerfProvider } from "../state/useKerf";
 import { memoryStorage } from "../testing/memory-storage";
-import { Inspector } from "../ui/Inspector";
-import { KerfProvider } from "../ui/useKerf";
 import { EdgePanel } from "./EdgePanel";
+import { Inspector } from "./Inspector";
 
 function setup(boards = "Shelf") {
   const store = createKerfStore({ storage: createStorage(memoryStorage()) });

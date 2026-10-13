@@ -9,9 +9,9 @@ import { acceptJoinery, setOption } from "../model/commands";
 import { joineryRows } from "../model/joinery";
 import { CHOICES, DEFAULT_CORNER_JOINT } from "../model/labels";
 import { shownProject } from "../model/store";
+import { useKerf, useKerfStore } from "../state/useKerf";
 import { Choice } from "./Choice";
 import { Section } from "./Section";
-import { useKerf, useKerfStore } from "./useKerf";
 
 export function JoineryStep() {
   const store = useKerfStore();

@@ -154,7 +154,11 @@ Three layers, depending in one direction:
    the history, the step, the selection and the shop; applies named commands; calls `solve` after
    each. Zustand holds it for React (Build plan stack).
 3. **The screens** (`packages/app/src/ui/`, `viewport/`, `tools/`): show the model and send it
-   commands. No woodworking rules here.
+   commands. No woodworking rules here. Inside this layer the folders also depend one way, as
+   dependency-cruiser checks: `state/` hands the store to React; `scene/` converts between project
+   and scene coordinates; `tools/` holds what each tool does to the model, with no React or
+   three.js; `viewport/` is the 3D canvas and sends pointer events to the tools; `ui/` holds the
+   panels, including each tool's panel, and may show what `viewport/` builds.
 
 Solving runs on the main thread straight after each change (the reference bookcase solves well
 under 100 ms). Meshes are built asynchronously and cached. A web worker is not used; it stays an

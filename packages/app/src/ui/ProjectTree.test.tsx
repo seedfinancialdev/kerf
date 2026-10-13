@@ -7,10 +7,10 @@ import { describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
+import { KerfProvider } from "../state/useKerf";
 import { memoryStorage } from "../testing/memory-storage";
 import { HistoryPanel } from "./HistoryPanel";
 import { ProjectTree } from "./ProjectTree";
-import { KerfProvider } from "./useKerf";
 
 function setup() {
   const store = createKerfStore({ storage: createStorage(memoryStorage()) });

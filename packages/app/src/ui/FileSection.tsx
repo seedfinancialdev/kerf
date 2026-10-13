@@ -7,7 +7,7 @@
 import { useRef } from "react";
 import { fileNameFor, openKerfBytes, saveFailureReason, saveKerfBytes } from "../model/files";
 import { shownProject } from "../model/store";
-import { useKerf, useKerfStore } from "./useKerf";
+import { useKerf, useKerfStore } from "../state/useKerf";
 
 /** Hands the browser `bytes` as a download; the link is attached while clicked, as Firefox needs. */
 function download(bytes: Uint8Array, name: string): void {

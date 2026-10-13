@@ -5,10 +5,10 @@
 // The Board tool's panel: which stock a new board is cut from (its thickness is the stock's).
 
 import { shownProject } from "../model/store";
-import { Choice } from "../ui/Choice";
-import { Section } from "../ui/Section";
-import { useKerf, useKerfStore } from "../ui/useKerf";
-import { boardStockFor } from "./board";
+import { useKerf, useKerfStore } from "../state/useKerf";
+import { boardStockFor } from "../tools/board";
+import { Choice } from "./Choice";
+import { Section } from "./Section";
 
 /** The stock to draw new boards in; nothing when the project has no stock. */
 export function BoardStockPanel() {

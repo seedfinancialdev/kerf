@@ -7,12 +7,12 @@
 
 import type { KeyboardEvent } from "react";
 import type { DrawerTab } from "../model/store";
+import { useKerf } from "../state/useKerf";
 import { AssemblyTab } from "./AssemblyTab";
 import { CutListTab } from "./CutListTab";
 import { SetupsTab } from "./SetupsTab";
 import { SheetsTab } from "./SheetsTab";
 import { ShoppingTab } from "./ShoppingTab";
-import { useKerf } from "./useKerf";
 
 const TABS: DrawerTab[] = ["Shopping", "Cut list", "Sheets", "Setups", "Assembly"];
 

@@ -6,7 +6,7 @@
 // explains it").
 
 import type { Id } from "@kerf/core";
-import { useKerf } from "./useKerf";
+import { useKerf } from "../state/useKerf";
 
 /** Every error and warning of the shown project, or only those on `parts` (part definitions). */
 export function Problems({ parts }: { parts?: Set<Id> }) {

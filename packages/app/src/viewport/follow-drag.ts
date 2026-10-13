@@ -7,7 +7,7 @@
 
 import type { Camera } from "three";
 import type { KerfState, KerfStore } from "../model/store";
-import { dispatchDrag } from "../tools/dispatch";
+import { dispatchDrag } from "./dispatch";
 import { sightLine } from "./sight-line";
 
 /** How far the pointer must travel before a press is a drag and not a click. */

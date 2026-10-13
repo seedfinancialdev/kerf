@@ -13,9 +13,9 @@ import { startProject } from "../model/commands";
 import { openKerfBytes, saveKerfBytes } from "../model/files";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
+import { KerfProvider } from "../state/useKerf";
 import { memoryStorage } from "../testing/memory-storage";
 import { FileSection } from "./FileSection";
-import { KerfProvider } from "./useKerf";
 
 const times = { created: "2026-10-12T10:00:00.000Z", modified: "2026-10-12T11:00:00.000Z" };
 

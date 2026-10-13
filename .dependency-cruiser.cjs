@@ -47,6 +47,62 @@ module.exports = {
       to: { path: ["^(jsdom|happy-dom)$", "(^|/)node_modules/(jsdom|happy-dom)(/|$)"] },
     },
     {
+      name: "app-model-has-no-screens",
+      comment:
+        "The app's model is layer 2: no React, no DOM, no screens (design spec, 'How it is built').",
+      severity: "error",
+      from: { path: "^packages/app/src/model/" },
+      to: {
+        path: [
+          "^packages/app/src/(state|scene|tools|ui|viewport)/",
+          "(^|/)node_modules/(react|react-dom|three|@react-three)(/|$)",
+          "^(react|react-dom|three|@react-three/.+)$",
+        ],
+      },
+    },
+    {
+      name: "app-state-reaches-only-the-model",
+      comment: "state/ hands the model's store to the screens; it never imports a screen.",
+      severity: "error",
+      from: { path: "^packages/app/src/state/" },
+      to: { path: "^packages/app/src/(scene|tools|ui|viewport)/" },
+    },
+    {
+      name: "app-scene-is-plain-arithmetic",
+      comment:
+        "scene/ turns project frames into scene numbers and back; tools and the view share it.",
+      severity: "error",
+      from: { path: "^packages/app/src/scene/" },
+      to: {
+        path: [
+          "^packages/app/src/(state|tools|ui|viewport)/",
+          "(^|/)node_modules/(react|react-dom|three|@react-three)(/|$)",
+          "^(react|react-dom|three|@react-three/.+)$",
+        ],
+      },
+    },
+    {
+      name: "app-tools-are-handlers-not-screens",
+      comment:
+        "tools/ holds what each tool does to the model; its panels live in ui/ and the canvas in viewport/, so the folders depend one way.",
+      severity: "error",
+      from: { path: "^packages/app/src/tools/" },
+      to: {
+        path: [
+          "^packages/app/src/(state|ui|viewport)/",
+          "(^|/)node_modules/(react|react-dom|three|@react-three)(/|$)",
+          "^(react|react-dom|three|@react-three/.+)$",
+        ],
+      },
+    },
+    {
+      name: "app-viewport-does-not-reach-into-ui",
+      comment: "ui/ shows the view's results (meshes); the view never imports a panel.",
+      severity: "error",
+      from: { path: "^packages/app/src/viewport/" },
+      to: { path: "^packages/app/src/ui/" },
+    },
+    {
       name: "no-circular",
       severity: "error",
       from: {},

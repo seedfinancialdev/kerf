@@ -11,8 +11,8 @@ import { describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
+import { fromScene } from "../scene/frames";
 import { memoryStorage } from "../testing/memory-storage";
-import { fromScene } from "../viewport/frames";
 import { axisOf, dispatchDrag, dispatchPointer } from "./dispatch";
 
 describe("axisOf()", () => {

@@ -7,9 +7,9 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import type { ToolId } from "../model/store";
-import { useKerf, useKerfStore } from "../ui/useKerf";
-import { keptByField } from "../ui/useShortcuts";
-import { handlerFor } from "./pointer";
+import { useKerf, useKerfStore } from "../state/useKerf";
+import { handlerFor } from "../tools/pointer";
+import { keptByField } from "./useShortcuts";
 
 /** The keys a typed size starts with: a digit, a minus sign, a point, a fraction bar, feet or inches. */
 const SIZE_START = /^[0-9\-./'"]$/;

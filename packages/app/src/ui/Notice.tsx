@@ -5,7 +5,7 @@
 // A short message about what just happened (Interaction spec, "Tweak": "with a notice ... and full
 // undo"), or about something the app could not do (ADR 015, rule 11).
 
-import { useKerf } from "./useKerf";
+import { useKerf } from "../state/useKerf";
 
 export function Notice() {
   const notice = useKerf((s) => s.notice);

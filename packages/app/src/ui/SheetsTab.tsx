@@ -5,8 +5,8 @@
 // Sheet layouts (Cut list & nesting, "Outputs"): each sheet drawn to scale with its parts named.
 
 import { shownProject } from "../model/store";
+import { useKerf } from "../state/useKerf";
 import { NothingToShow } from "./NothingToShow";
-import { useKerf } from "./useKerf";
 
 const WIDTH_PX = 240;
 

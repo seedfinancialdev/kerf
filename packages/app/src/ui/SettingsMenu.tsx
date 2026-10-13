@@ -10,7 +10,7 @@ import type { Project } from "@kerf/core";
 import { useEffect, useState } from "react";
 import { switchUnits } from "../model/commands";
 import { shownProject } from "../model/store";
-import { useKerf, useKerfStore } from "./useKerf";
+import { useKerf, useKerfStore } from "../state/useKerf";
 
 const UNITS_NAME = { imperial: "inches", metric: "millimetres" } as const;
 

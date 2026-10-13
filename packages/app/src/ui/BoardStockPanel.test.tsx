@@ -11,9 +11,9 @@ import { startProject } from "../model/commands";
 import { STOCK_IDS } from "../model/starter";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
+import { KerfProvider } from "../state/useKerf";
 import { memoryStorage } from "../testing/memory-storage";
-import { Inspector } from "../ui/Inspector";
-import { KerfProvider } from "../ui/useKerf";
+import { Inspector } from "./Inspector";
 
 function setup(tool: "board" | "select" = "board") {
   const store = createKerfStore({ storage: createStorage(memoryStorage()) });

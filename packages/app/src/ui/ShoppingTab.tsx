@@ -7,8 +7,8 @@
 
 import { totalsText } from "../model/plan-text";
 import { shownProject } from "../model/store";
+import { useKerf } from "../state/useKerf";
 import { NothingToShow } from "./NothingToShow";
-import { useKerf } from "./useKerf";
 
 export function ShoppingTab() {
   const project = useKerf((s) => shownProject(s));

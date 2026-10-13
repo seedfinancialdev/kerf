@@ -6,9 +6,9 @@
 
 import { formatLength } from "@kerf/core";
 import { shownProject } from "../model/store";
-import { Section } from "../ui/Section";
-import { useKerf, useKerfStore } from "../ui/useKerf";
-import { measureBetween } from "./tape";
+import { useKerf, useKerfStore } from "../state/useKerf";
+import { measureBetween } from "../tools/tape";
+import { Section } from "./Section";
 
 export function TapePanel() {
   const store = useKerfStore();

@@ -6,8 +6,8 @@
 
 import { canRedo, canUndo, currentProject } from "../model/history";
 import { STEPS } from "../model/steps";
+import { useKerf } from "../state/useKerf";
 import { SettingsMenu } from "./SettingsMenu";
-import { useKerf } from "./useKerf";
 
 export function TopBar() {
   const step = useKerf((s) => s.step);

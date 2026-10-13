@@ -11,12 +11,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
+import { KerfProvider } from "../state/useKerf";
 import { bookcaseWithShelf } from "../testing/bookcase-with-shelf";
 import { memoryStorage } from "../testing/memory-storage";
-import { KerfProvider } from "../ui/useKerf";
-import { drawBoard } from "./board";
+import { drawBoard } from "../tools/board";
+import { propose } from "../tools/join";
 import { JoinPanel } from "./JoinPanel";
-import { propose } from "./join";
 
 afterEach(cleanup);
 

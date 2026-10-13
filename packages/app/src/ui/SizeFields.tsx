@@ -12,8 +12,8 @@ import type { History } from "../model/history";
 import { type SizeKey, sizeLabel, sizeOrder } from "../model/labels";
 import { lengthOf, literalFor } from "../model/size";
 import { shownProject } from "../model/store";
+import { useKerf, useKerfStore } from "../state/useKerf";
 import { NumberField } from "./NumberField";
-import { useKerf, useKerfStore } from "./useKerf";
 
 /** The overall-size fields of one structure, in the order a woodworker reads them. */
 export function SizeFields({ structure }: { structure: Id }) {

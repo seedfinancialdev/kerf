@@ -16,10 +16,10 @@ import {
 } from "../model/commands";
 import { readCount, readLength } from "../model/size";
 import { shownProject } from "../model/store";
+import { useKerf, useKerfStore } from "../state/useKerf";
 import { Choice } from "./Choice";
 import { NumberField } from "./NumberField";
 import { Section } from "./Section";
-import { useKerf, useKerfStore } from "./useKerf";
 
 type Mode = "shelves" | "partition" | "bays" | null;
 

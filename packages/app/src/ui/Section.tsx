@@ -6,7 +6,7 @@
 // nothing inside it, so hidden fields can never be found or typed into by mistake.
 
 import type { ReactNode } from "react";
-import { useKerf } from "./useKerf";
+import { useKerf } from "../state/useKerf";
 
 export function Section({
   title,

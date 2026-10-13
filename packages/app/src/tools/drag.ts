@@ -9,7 +9,7 @@
 
 import { INCH, type Len, MAX_LENGTH, type Vec3 } from "@kerf/core";
 import type { Ray } from "../model/pending";
-import { fromScene, toScene } from "../viewport/frames";
+import { fromScene, toScene } from "../scene/frames";
 
 type Triple = readonly [number, number, number];
 type Axis = 0 | 1 | 2;

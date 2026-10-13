@@ -8,9 +8,9 @@
 import { type EdgeRef, formatLength, type PlacedPart } from "@kerf/core";
 import { useId, useState } from "react";
 import { shownProject } from "../model/store";
-import { Section } from "../ui/Section";
-import { useKerf, useKerfStore } from "../ui/useKerf";
-import { BOTH_FRONT_EDGES, edgeName, roundEdges } from "./edge";
+import { useKerf, useKerfStore } from "../state/useKerf";
+import { BOTH_FRONT_EDGES, edgeName, roundEdges } from "../tools/edge";
+import { Section } from "./Section";
 
 const ALL_EDGES: EdgeRef[] = [
   "edge1/face1",

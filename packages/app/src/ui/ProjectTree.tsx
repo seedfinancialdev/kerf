@@ -8,7 +8,7 @@
 import type { KeyboardEvent } from "react";
 import { shownProject } from "../model/store";
 import { type TreeRow, treeRows } from "../model/tree";
-import { useKerf, useKerfStore } from "./useKerf";
+import { useKerf, useKerfStore } from "../state/useKerf";
 
 export function ProjectTree() {
   const store = useKerfStore();

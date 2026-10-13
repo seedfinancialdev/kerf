@@ -10,9 +10,9 @@ import { describe, expect, it } from "vitest";
 import { STARTER_SHOP } from "../model/starter";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
+import { KerfProvider } from "../state/useKerf";
 import { memoryStorage } from "../testing/memory-storage";
 import { ShopCard } from "./ShopCard";
-import { KerfProvider } from "./useKerf";
 
 function setup() {
   const store = createKerfStore({ storage: createStorage(memoryStorage()) });

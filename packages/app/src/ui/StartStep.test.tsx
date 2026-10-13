@@ -9,9 +9,9 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
+import { KerfProvider } from "../state/useKerf";
 import { memoryStorage } from "../testing/memory-storage";
 import { Inspector } from "./Inspector";
-import { KerfProvider } from "./useKerf";
 
 function setup() {
   const store = createKerfStore({ storage: createStorage(memoryStorage()) });

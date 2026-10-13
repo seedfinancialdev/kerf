@@ -8,11 +8,11 @@
 import { useState } from "react";
 import { startProject, type TemplateName } from "../model/commands";
 import { shownProject } from "../model/store";
+import { useKerf, useKerfStore } from "../state/useKerf";
 import { FileSection } from "./FileSection";
 import { Section } from "./Section";
 import { ShopCard } from "./ShopCard";
 import { SizeFields } from "./SizeFields";
-import { useKerf, useKerfStore } from "./useKerf";
 
 const TEMPLATE_NAMES: TemplateName[] = ["Bookcase", "Keepsake box", "Blank case", "Blank box"];
 

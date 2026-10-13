@@ -6,7 +6,7 @@
 
 import { hintFor } from "../model/steps";
 import { shownProject } from "../model/store";
-import { useKerf } from "./useKerf";
+import { useKerf } from "../state/useKerf";
 
 export function HintLine() {
   const step = useKerf((s) => s.step);

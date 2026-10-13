@@ -8,12 +8,12 @@
 import { formatLength, type Id, type PartShape, type PlacedPart, type Project } from "@kerf/core";
 import { handBack } from "../model/commands";
 import { shownProject } from "../model/store";
-import { EdgePanel } from "../tools/EdgePanel";
+import { useKerf, useKerfStore } from "../state/useKerf";
 import { meshFor } from "../viewport/meshes";
 import { useGeometry } from "../viewport/useGeometry";
+import { EdgePanel } from "./EdgePanel";
 import { Problems } from "./Problems";
 import { Section } from "./Section";
-import { useKerf, useKerfStore } from "./useKerf";
 
 /** `34-9/16" · cut 35-1/16"` when the cut differs from the visible size (Domain model, decision 3). */
 function sized(visible: number, cut: number, units: Project["units"]): string {

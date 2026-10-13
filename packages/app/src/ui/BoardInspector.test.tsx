@@ -13,9 +13,9 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { addRoundover, detachForEdit, startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
+import { KerfProvider } from "../state/useKerf";
 import { memoryStorage } from "../testing/memory-storage";
 import { Inspector } from "./Inspector";
-import { KerfProvider } from "./useKerf";
 
 type Store = ReturnType<typeof createKerfStore>;
 

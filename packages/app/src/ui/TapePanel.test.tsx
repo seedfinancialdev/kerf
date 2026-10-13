@@ -9,8 +9,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
+import { KerfProvider } from "../state/useKerf";
 import { memoryStorage } from "../testing/memory-storage";
-import { KerfProvider } from "../ui/useKerf";
 import { TapePanel } from "./TapePanel";
 
 const IN = 203_200;

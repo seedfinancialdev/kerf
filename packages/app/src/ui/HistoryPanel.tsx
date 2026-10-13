@@ -6,7 +6,7 @@
 // to step back to it. Entries are list options, not buttons, so no entry's words ("New bookcase")
 // can be mistaken for a command.
 
-import { useKerf } from "./useKerf";
+import { useKerf } from "../state/useKerf";
 
 export function HistoryPanel() {
   const history = useKerf((s) => s.history);
