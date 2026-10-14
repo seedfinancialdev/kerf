@@ -432,5 +432,54 @@
     "find": "if (pending === null || pending.tool === get().tool) set({ pending });",
     "replace": "set({ pending });",
     "why": "A half-done action set for a tool the user has left is kept."
+  },
+  {
+    "id": "window-reports-handled",
+    "file": "packages/app/src/ui/WindowGuard.tsx",
+    "find": "      if (handledByBoundary(e.error)) return;\n",
+    "replace": "",
+    "why": "A fault a boundary already said is reported again as a failed action, dropping the tool's action and preview."
+  },
+  {
+    "id": "window-repeats-every-time",
+    "file": "packages/app/src/ui/WindowGuard.tsx",
+    "find": "if (seen.has(words)) return false;",
+    "replace": "",
+    "why": "A fault that repeats every frame is said and logged every frame."
+  },
+  {
+    "id": "newer-by-field-only",
+    "file": "packages/app/src/model/files.ts",
+    "find": "error.path === \"$.schemaVersion\" &&\n    /newer version of Kerf/.test(error.message)",
+    "replace": "error.path === \"$.schemaVersion\"",
+    "why": "A damaged schema version is called newer and the user is told to update Kerf."
+  },
+  {
+    "id": "abandon-always-solves",
+    "file": "packages/app/src/model/store.ts",
+    "find": "const dropped = { pending: null, proposal: null };\n        if (get().previewed) show({ ...dropped, previewed: null });\n        else set(dropped);",
+    "replace": "const dropped = { pending: null, proposal: null };\n        show({ ...dropped, previewed: null });",
+    "why": "Dropping a failed action solves the project again even with nothing previewed."
+  },
+  {
+    "id": "field-reason-outlives-drag",
+    "file": "packages/app/src/ui/NumberField.tsx",
+    "find": "keepReason.current = display !== d.shown;",
+    "replace": "keepReason.current = true;",
+    "why": "A refused drag's reason stays under a value changed later by something else."
+  },
+  {
+    "id": "save-silent-without-project",
+    "file": "packages/app/src/ui/save.ts",
+    "find": "    s.say(NOTHING_TO_SAVE);\n",
+    "replace": "",
+    "why": "Save with no project open does nothing and says nothing."
+  },
+  {
+    "id": "proposal-keeps-scratch-joint",
+    "file": "packages/app/src/tools/join.ts",
+    "find": "result: { ...offered, type: joint.type, taken: taken.taken },",
+    "replace": "result: { ...r, type: joint.type, taken: taken.taken },",
+    "why": "A Join proposal carries the engine's joint with the take-over's scratch ids."
   }
 ]
