@@ -23,8 +23,8 @@
   {
     "id": "store-keeps-stale-proposal",
     "file": "packages/app/src/model/store.ts",
-    "find": "...(moved ? { proposal: null } : {})",
-    "replace": "...{}",
+    "find": "...(moved ? { proposal: null, notDrawn: [] } : {})",
+    "replace": "...(moved ? { notDrawn: [] } : {})",
     "why": "A joint proposed for the project as it was stays on offer after Undo or Redo."
   },
   {
@@ -324,8 +324,8 @@
   {
     "id": "notice-warn-replaces",
     "file": "packages/app/src/model/notices.ts",
-    "find": "return line.notice === null ? warningsFirst(waiting) : { notice: line.notice, waiting };",
-    "replace": "return warningsFirst(waiting);",
+    "find": "    : { notice: line.notice, waiting, held: line.held };",
+    "replace": "    : { ...warningsFirst(waiting), held: line.held };",
     "why": "A new warning replaces the notice on screen, an Undo offer included."
   },
   {
@@ -338,15 +338,15 @@
   {
     "id": "notice-history-drops-warning",
     "file": "packages/app/src/model/notices.ts",
-    "find": "return line.notice?.kind === \"undo\" ? dismiss(line) : line;",
-    "replace": "return line.notice?.kind !== \"said\" ? dismiss(line) : line;",
+    "find": "return line.notice?.kind === \"undo\" ? dismiss(unheld) : unheld;",
+    "replace": "return line.notice?.kind !== \"said\" ? dismiss(unheld) : unheld;",
     "why": "Moving through History takes a warning away before it is dismissed."
   },
   {
     "id": "notice-history-keeps-undo",
     "file": "packages/app/src/model/notices.ts",
-    "find": "return line.notice?.kind === \"undo\" ? dismiss(line) : line;",
-    "replace": "return line;",
+    "find": "return line.notice?.kind === \"undo\" ? dismiss(unheld) : unheld;",
+    "replace": "return unheld;",
     "why": "An Undo offer stays after History moves, for a change that is no longer the latest."
   },
   {
@@ -376,5 +376,54 @@
     "find": "num > 0n && num < den",
     "replace": "num >= 0n && num < den",
     "why": "A partition at the opening's left face (0) is accepted."
+  },
+  {
+    "id": "store-undo-at-start-moves",
+    "file": "packages/app/src/model/store.ts",
+    "find": "if (h && canUndo(h)) moveHistory(undo(h));",
+    "replace": "if (h) moveHistory(undo(h));",
+    "why": "Undo with nothing to undo still drops the tool's action, the Join proposal and the notice."
+  },
+  {
+    "id": "notice-answer-drops-offer",
+    "file": "packages/app/src/model/notices.ts",
+    "find": "const held = line.notice?.kind === \"undo\" ? line.notice : line.held;",
+    "replace": "const held = line.held;",
+    "why": "An answer replaces an Undo offer for good, losing the words that name a problem the change brought."
+  },
+  {
+    "id": "storage-writes-unread",
+    "file": "packages/app/src/model/storage.ts",
+    "find": "      !unread.has(key) &&\n",
+    "replace": "",
+    "why": "A key the browser would not let be read is written over, losing the work it held."
+  },
+  {
+    "id": "hand-row-not-refused",
+    "file": "packages/app/src/model/commands.ts",
+    "find": "if (placed.pattern && !formMade) throw inHandMadeRow(placed);",
+    "replace": "",
+    "why": "One board of a row saved by hand is blamed on a stale click instead of being refused for what it is."
+  },
+  {
+    "id": "edge-radius-stale",
+    "file": "packages/app/src/ui/EdgePanel.tsx",
+    "find": "chosen !== null && bits.includes(chosen)",
+    "replace": "chosen !== null",
+    "why": "A roundover bit taken out of the shop is still applied."
+  },
+  {
+    "id": "field-records-refused-release",
+    "file": "packages/app/src/ui/NumberField.tsx",
+    "find": "if (d.refused === null) {",
+    "replace": "if (d.refused !== undefined) {",
+    "why": "A size field let go on a refused value records the last accepted value and drops the reason."
+  },
+  {
+    "id": "looks-red-by-part",
+    "file": "packages/app/src/viewport/board-looks.ts",
+    "find": "const tone = failing.has(placed.instance) ? \"error\" : wood;",
+    "replace": "const tone = failing.has(placed.part) ? \"error\" : wood;",
+    "why": "Every copy of a board is red when the error is about one of them."
   }
 ]
