@@ -13,6 +13,10 @@ test("saves the bookcase and opens it again", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "New" }).click();
   await page.getByRole("button", { name: "Bookcase" }).click();
+  // Save takes the view's picture for the thumbnail; wait until the view has drawn it.
+  await expect(
+    page.getByRole("region", { name: "Model" }).getByText("Drawing the model…"),
+  ).toBeHidden();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Save" }).click();
   const file = await download;

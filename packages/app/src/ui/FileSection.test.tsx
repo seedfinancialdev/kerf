@@ -178,6 +178,22 @@ describe("Save", () => {
     expect(logged).toHaveBeenCalledWith(expect.any(KerfFormatError));
   });
 
+  it("saves without a picture when the view takes longer than a second to give one", async () => {
+    stubDownload();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const store = setup();
+    vi.useFakeTimers();
+    act(() => store.getState().setThumbnailSource(() => new Promise<Uint8Array>(() => undefined)));
+    press();
+    await act(() => vi.advanceTimersByTimeAsync(999));
+    expect(saved.blobs).toHaveLength(0);
+    await act(() => vi.advanceTimersByTimeAsync(1));
+    vi.useRealTimers();
+    expect(saved.blobs).toHaveLength(1);
+    expect(readKerf(await savedBytes()).thumbnail).toBeUndefined();
+    expect(logged).toHaveBeenCalledWith(expect.any(Error));
+  });
+
   it("says it is Kerf's fault, in shop words, and logs it when saving fails for no reason in the file", async () => {
     stubDownload();
     const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);

@@ -50,6 +50,10 @@ test("a project with no boards does not keep saying it is drawing", async ({ pag
   await page.goto("/");
   await page.getByRole("button", { name: "New" }).click();
   await page.getByRole("button", { name: "Bookcase" }).click();
+  // Save takes the view's picture for the thumbnail; wait until the view has drawn it.
+  await expect(
+    page.getByRole("region", { name: "Model" }).getByText("Drawing the model…"),
+  ).toBeHidden();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Save" }).click();
   const saved = readKerf(await readFile(await (await download).path()));
