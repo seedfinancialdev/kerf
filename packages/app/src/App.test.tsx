@@ -106,7 +106,7 @@ describe("<App>", () => {
     expect(store.getState().history?.at).toBe(1);
   });
 
-  describe("after a choice in a select, checkbox or radio (final branch review I4)", () => {
+  describe("after a choice in a select, checkbox or radio", () => {
     /** A control of the kind given, in the page and focused, as after the user picked in it. */
     const focused = (make: () => HTMLElement) => {
       const control = make();
@@ -197,7 +197,7 @@ describe("<App>", () => {
     expect(document.documentElement.dataset.theme).toBe("dark");
   });
 
-  describe("when the 3D view fails (silent-failure review C1)", () => {
+  describe("when the 3D view fails", () => {
     /** A model view that throws while drawing, as r3f's Canvas does when WebGL cannot start. */
     function Broken(): never {
       throw new Error("Error creating WebGL context.");
@@ -220,7 +220,7 @@ describe("<App>", () => {
       expect(screen.getByRole("status").textContent).toContain(told);
     });
 
-    it("does not give WebGL advice for a fault that is not WebGL's (second-pass review M3)", () => {
+    it("does not give WebGL advice for a fault that is not WebGL's", () => {
       const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
       function Faulty(): never {
         throw new TypeError("x is undefined");
@@ -234,7 +234,7 @@ describe("<App>", () => {
       );
     });
 
-    it("tries the view again after Undo, so a one-off fault does not end it (re-review N5)", () => {
+    it("tries the view again after Undo, so a one-off fault does not end it", () => {
       const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
       let broken = true;
       function Flaky() {

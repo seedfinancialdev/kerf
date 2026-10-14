@@ -27,7 +27,7 @@ interface Drag {
  * Listens on `el` (and the window, for moves) for view drags and the wheel; returns a function that
  * stops listening. The canvas captures the dragging pointer, and a drag ends on release, on a
  * cancelled or lost pointer, or when the window loses focus, so a button let go outside the
- * browser never leaves the view turning with plain moves (silent-failure review M6).
+ * browser never leaves the view turning with plain moves.
  */
 export function listenForViewDrags(
   el: HTMLElement,

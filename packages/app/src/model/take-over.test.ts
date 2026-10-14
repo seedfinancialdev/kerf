@@ -3,8 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Interaction spec, "Tweak": "Editing a board that a form generated detaches only that board, with
-// a notice ('Shelf 3 is now custom; the form won't change it')". One wording for every tool (code
-// review I4).
+// a notice ('Shelf 3 is now custom; the form won't change it')". One wording for every tool.
 
 import { solve } from "@kerf/core";
 import { loadShopProfile } from "@kerf/fixtures";

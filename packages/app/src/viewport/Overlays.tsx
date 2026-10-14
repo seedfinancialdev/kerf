@@ -36,7 +36,7 @@ export function GrainLine({ placed, color }: { placed: PlacedPart; color: string
   );
 }
 
-/** The Tape's guide lines, dashed, kept for the session (ADR 015, D6). */
+/** The Tape's guide lines, dashed, kept for the session and never saved (ADR 015, rule 11). */
 export function Guides({ color }: { color: string }) {
   const guides = useKerf((s) => s.guides);
   const geometry = useMemo(() => {

@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// ADR 015, rule 11: a warning is said once and never lost; ruling R13: an Undo offer goes when
-// History moves. Silent-failure review I2 and I9: one notice line must not drop a warning.
+// ADR 015, rule 11: a warning is said once and never lost, and one notice line must not drop a warning;
+// ADR 015, ruling A: an Undo offer goes when History moves.
 
 import { describe, expect, it } from "vitest";
 import { afterHistoryMoved, dismiss, tell, warn, warningsFirst } from "./notices";
@@ -38,7 +38,7 @@ describe("the notice line", () => {
     expect(line.waiting).toEqual(["second"]);
   });
 
-  it("queues a warning behind an Undo offer, which may be the only words naming a new problem (re-review N3)", () => {
+  it("queues a warning behind an Undo offer, which may be the only words naming a new problem", () => {
     const offer = { text: "Shelf 2 now overlaps Back; Undo puts it back.", kind: "undo" } as const;
     const line = warn(tell(empty, offer), "not kept");
     expect(line.notice).toEqual(offer);

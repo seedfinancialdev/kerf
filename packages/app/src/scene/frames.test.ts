@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Each board is drawn where the engine places it. The right side of the 36 × 72 × 12 bookcase
-// stands at x 0 to 23/32, y 0 to 12 (back to front), z 0 to 72 (Interaction spec; Task 2's test).
+// stands at x 0 to 23/32, y 0 to 12 (back to front), z 0 to 72 (Interaction spec).
 
 import { INCH, solve } from "@kerf/core";
 import { loadShopProfile } from "@kerf/fixtures";

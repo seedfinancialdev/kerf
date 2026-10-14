@@ -18,7 +18,7 @@ export function FileSection({ now = () => new Date() }: { now?: () => Date }) {
   /**
    * Reading the file can fail for reasons outside Kerf (the file was moved, the disk is gone); a
    * damaged file is refused by `openKerfBytes` in plain words. Anything else is a fault in Kerf,
-   * logged for a bug report and not blamed on the file (silent-failure review I8).
+   * logged for a bug report and not blamed on the file.
    */
   const open = async (file: File): Promise<void> => {
     let bytes: Uint8Array;

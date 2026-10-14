@@ -16,7 +16,7 @@ const DRAG_PIXELS = 3;
 /**
  * True when a press on a board began something to drag: a Push/Pull or a Move, while the left
  * button picks. Join, Tape and Board wait for a second click, which a cancelled pointer must not
- * clear (silent-failure review M7); after O or H the left button drags the view (review I5).
+ * clear; after O or H the left button drags the view.
  */
 export function followsDrag(state: KerfState): boolean {
   const tool = state.pending?.tool;
@@ -35,7 +35,7 @@ function abandoned(now: KerfState, before: KerfState): boolean {
  * Follows `down`'s pointer on `canvas` until it is released or taken away. A release goes to the
  * tool; a cancelled pointer (the browser took it) records nothing and drops the preview. A drag
  * whose action the store ends (the tool changes, History moves, O or H) stops at once, so its
- * release cannot record on top of the change (final branch review I1). A pointer that is already
+ * release cannot record on top of the change. A pointer that is already
  * gone is not followed: the press stays a click.
  */
 export function followDrag(

@@ -2,10 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Silent-failure review C1 and its re-review (N1, N5, N6): a failure of the 3D view or the geometry
-// engine stays where it happened; the user is told once, in shop words, what still works and what
-// to try for that cause; the raw error goes to the console only; and a one-off fault does not take
-// the view away for the rest of the session.
+// A failure of the 3D view or the geometry engine stays where it happened; the user is told once,
+// in shop words, what still works and what to try for that cause; the raw error goes to the
+// console only; and a one-off fault does not take the view away for the rest of the session.
 
 import { act, render, screen } from "@testing-library/react";
 import { useState } from "react";

@@ -54,7 +54,7 @@ function SizeField({ structure, sizeKey }: { structure: Id; sizeKey: SizeKey }) 
       onSubmit={(text) => {
         const r = setSize(recorded(), structure, sizeKey, text);
         if (!r.ok) return r.message;
-        // A size equal to the current one is not a change (ADR 015, rule 2 / R16).
+        // Typing 36in over 36" changes the text, not the size, so nothing is recorded.
         if (sizeIn(r.edit.project) === sizeIn(recorded())) return null;
         store.getState().apply(r.edit);
         return null;
@@ -69,7 +69,7 @@ function SizeField({ structure, sizeKey }: { structure: Id; sizeKey: SizeKey }) 
                 const { history } = store.getState();
                 drag.current ??= { from: history, last: null };
                 // Undo or a jump in History mid-drag ends the drag: its later steps would be
-                // measured from another entry and replace the redo (final branch review M7).
+                // measured from another entry and replace the redo.
                 if (drag.current.from !== history) {
                   drag.current.last = null;
                   return null;

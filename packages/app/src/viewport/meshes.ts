@@ -37,8 +37,7 @@ const faults = new Map<string, unknown>();
  * refuses gives its reason, kept like any result. One the engine fails on (it throws) gives a
  * reason in shop words and its error is logged; that failure is kept only while `attempt` (the
  * recorded History entry) stays the same, so the preview frames of a drag do not ask again, and
- * the next recorded change does: a passing fault is not remembered for the session (second-pass
- * review M3 and its re-review). Call after initGeometry().
+ * the next recorded change does: a passing fault is not remembered for the session. Call after initGeometry().
  */
 export function meshFor(shape: PartShape, attempt: unknown): MeshResult {
   const key = JSON.stringify([shape.length, shape.width, shape.thickness, shape.removals]);

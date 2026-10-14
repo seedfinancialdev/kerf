@@ -177,8 +177,8 @@ export function Viewport() {
         );
         // A fault drawing one board leaves that board plain with the badge, the rest drawn, and
         // the inspector says so (ADR 015, rule 10). It is tried again when History changes, not
-        // on every preview of a drag (second-pass review M3); a failure of the geometry engine
-        // itself is a result of meshFor, with the badge, not a throw.
+        // on every preview of a drag; a failure of the geometry engine itself is a result of
+        // meshFor, with the badge, not a throw.
         return (
           <ThreeDGuard
             key={look.placed.instance}

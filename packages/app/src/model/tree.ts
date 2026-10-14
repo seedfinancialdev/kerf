@@ -3,15 +3,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // The project tree (Interaction spec, "Project tree (left)"): structures, their openings, then the
-// boards with counts, each with how many problems the engine reported on it.
+// boards with counts. Board groups carry how many problems the engine reported on them; forms and
+// openings carry 0, because diagnostics name boards, not openings.
 
 import type { Id, Opening, PlacedPart, Project, SolveResult, Structure } from "@kerf/core";
 import { readCount } from "./size";
 import { followsForm } from "./take-over";
 
 /**
- * One row of the project tree: a form, an opening of it, or a group of boards, with how many
- * problems the engine reported on it.
+ * One row of the project tree: a form, an opening of it, or a group of boards. `problems` counts
+ * what the engine reported on a group's boards; a form's or an opening's is always 0.
  */
 export type TreeRow =
   | { kind: "structure"; key: string; depth: 0; label: string; structure: Id; problems: number }

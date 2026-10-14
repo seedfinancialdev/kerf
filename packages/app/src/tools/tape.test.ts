@@ -107,7 +107,7 @@ describe("tapeTool", () => {
     expect(s.getState().tape).toBeNull();
   });
 
-  it("measures nothing from a click on the sky, and says where to click (silent-failure review M11)", () => {
+  it("measures nothing from a click on the sky, and says where to click", () => {
     const s = started();
     tapeTool.pointer?.({ ...click(null), ray: { origin: [0, 10, 0], dir: [0, 1, 0] } }, s);
     expect(s.getState().pending).toBeNull();

@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// What the model view tells a tool: which board was hit, where (project units, on the grid) and
-// which way the surface faces (a project axis). Each tool turns this into named changes.
+// Which handler each tool uses for what the model view reports (`ModelPointer`, in handler.ts), and
+// Select's own handler, which picks boards.
 
 import type { ModelHit } from "../model/pending";
 import type { ToolId } from "../model/store-types";
@@ -31,7 +31,7 @@ const select: ToolHandler = {
 
 /**
  * Every tool's handler, written out so the wiring is visible. The Edge tool works from
- * the inspector (Task 26), so clicking boards while it is active picks them.
+ * the inspector, so clicking boards while it is active picks them.
  */
 const HANDLERS: Record<ToolId, ToolHandler> = {
   select,

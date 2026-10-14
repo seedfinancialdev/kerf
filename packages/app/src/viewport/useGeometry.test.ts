@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Silent-failure review M8: the view and every inspector share one load of the geometry engine,
+// The view and every inspector share one load of the geometry engine,
 // and a failed load is not tried again in silence by each screen that mounts later.
 
 import { describe, expect, it } from "vitest";

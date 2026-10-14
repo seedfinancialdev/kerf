@@ -148,7 +148,7 @@ describe("<SizeFields>", () => {
     expect(store.getState().previewed).toBeNull();
   });
 
-  describe("a drag that cannot go on (silent-failure review M9)", () => {
+  describe("a drag that cannot go on", () => {
     it("says why under the field when it reaches a size that is refused", () => {
       setup();
       const label = screen.getByText("Width");

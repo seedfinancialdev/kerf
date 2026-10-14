@@ -4,7 +4,7 @@
 
 // Loads the geometry engine for screens that draw or report on display meshes. The load is shared:
 // the view and every inspector wait on the same one, and a screen that mounts later finds it
-// finished, or failed, without starting another (silent-failure review M8).
+// finished, or failed, without starting another.
 
 import { initGeometry } from "@kerf/geometry";
 import { useEffect, useState } from "react";

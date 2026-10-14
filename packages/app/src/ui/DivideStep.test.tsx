@@ -138,7 +138,7 @@ describe("the Divide step", () => {
     expect(undersides).toEqual([2_438_400, 4_876_800]);
   });
 
-  describe("Spacing (branch deferred row 18, silent-failure review M1)", () => {
+  describe("Spacing", () => {
     const entries = (s: ReturnType<typeof setup>) => s.getState().history?.entries.length;
 
     it("shows the heights box for At set heights and records nothing until heights are typed", () => {

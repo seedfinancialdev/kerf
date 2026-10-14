@@ -4,9 +4,9 @@
 
 // What a tool's change did that the user must be told: the boards it took over from the form and
 // the first error it brought, from a full solve (assembly checks such as two boards in the same
-// space only run there). Board and Join, which add, refuse a change that brings an error (ruling
-// R36); Push/Pull, Move and Edge, which reshape or arrange, record it and say what it caused, in
-// the ruling's words: "Shelf 2 now overlaps Back; Undo puts it back." (ruling R45).
+// space only run there). Board and Join, which add, refuse a change that brings an error;
+// Push/Pull, Move and Edge, which reshape or arrange, record it and say what it caused, in
+// shop words: "Shelf 2 now overlaps Back; Undo puts it back." (ADR 015, rule 13).
 
 import {
   type Diagnostic,
@@ -45,18 +45,19 @@ type Solved = Pick<SolveResult, "diagnostics" | "placements">;
 /**
  * The first error in `after` that `before` did not have, or null. Errors are told apart by rule,
  * board and words, and counted, because the engine folds repeats of one message into one line
- * with a count: the same words a second time are still a new error (silent-failure review M12).
+ * with a count: the same words a second time are still a new error.
  * An error on a board the change took over and `renamed` is said in new words, so it is compared
  * board by board instead: it is new unless that same board had an error of its rule before
- * (re-review N4; second-pass review M4).
+ * (the take-over renames the board, so its old problem would otherwise look new).
  */
 export function firstNewError(
   before: Solved,
   after: Solved,
   renamed: readonly Renamed[],
 ): Diagnostic | null {
-  // A per-rule summary's words carry how many problems are hidden, so they change whenever that
-  // number does; it is left out and a change is judged by the problems listed (ADR 015, limit 20).
+  // A summary's words (per rule or per joint) carry how many problems are hidden, so they change
+  // whenever that number does; it is left out and a change is judged by the problems listed (ADR
+  // 015, limit 20).
   const errors = (list: readonly Diagnostic[]) =>
     list.filter((d) => d.severity === "error").filter((d) => !d.summary);
   const key = (d: Diagnostic): string => JSON.stringify([d.rule, d.part, d.message]);
@@ -95,7 +96,7 @@ export function newProblem(before: Project, after: Project, shop: ShopProfile): 
 }
 
 /**
- * What an error says the change caused, starting "<board> now …" (ruling R45). The board named is
+ * What an error says the change caused, starting "<board> now …" (ADR 015, rule 13). The board named is
  * the one the change edited (`edited`, instances as they are now) when the error is about it.
  * Two boards in one space are both named; a joint's error names the board in the joint and the
  * one holding it, and says only that the joint has a problem unless the engine says which.
@@ -120,7 +121,7 @@ function causedBy(error: Diagnostic, now: SolveResult, edited: readonly Id[]): s
 }
 
 /**
- * The notice for a change that reshapes or arranges boards (ruling R45): the boards it took over
+ * The notice for a change that reshapes or arranges boards (ADR 015, rule 13): the boards it took over
  * from the form, then what the change caused and that Undo puts it back. `edited` are the boards
  * the tool acted on, as instances in `after`, so the notice names them. Undefined when there is
  * nothing to tell.

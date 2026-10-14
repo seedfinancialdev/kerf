@@ -4,7 +4,7 @@
 
 // Tape (Interaction spec, "3D tools": "Measure, add guide lines"). Distances along each direction
 // are exact; the straight distance is the integer square root, snapped once to the grid. Guide
-// lines live for the session and are never saved (ADR 015, D6).
+// lines live for the session and are never saved (ADR 015, rule 11).
 
 import { gridSize, type Len, type Project, type Vec3 } from "@kerf/core";
 import { floorPoint, OFF_THE_FLOOR } from "./drag";

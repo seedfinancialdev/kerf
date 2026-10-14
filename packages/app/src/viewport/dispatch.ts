@@ -63,7 +63,7 @@ export function dispatchPointer(
 /**
  * Sends a pointer event of a drag that has begun to the active tool: wherever the pointer is, even
  * off every board, with only its line of sight to measure by. While O or H has the left button,
- * the drag moves the view, never the model (silent-failure review I5).
+ * the drag moves the view, never the model.
  */
 export function dispatchDrag(
   store: KerfStore,

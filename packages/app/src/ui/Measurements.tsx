@@ -58,8 +58,8 @@ export function Measurements() {
     setRefusal(refused ? { tool, text: refused } : null);
     if (refused) return;
     setText("");
-    // The size is in: the keyboard goes back to the window so tool keys and Ctrl/⌘+Z work again
-    // (final fix re-review N1); a refusal keeps it here so the size can be corrected.
+    // The size is in: the keyboard goes back to the window so tool keys and Ctrl/⌘+Z work again;
+    // a refusal keeps it here so the size can be corrected.
     box.current?.blur();
   };
   return (

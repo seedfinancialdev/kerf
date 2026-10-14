@@ -5,8 +5,9 @@ because the spec is silent; the maintainer approved the design on 2026-10-12 and
 rule at the M4 review. Rule 6's thickness clause was confirmed on 2026-10-13. Reviews before the
 M4 PR (2026-10-13): code quality, silent failures, tests and a whole-branch review found
 2 critical, 26 important and 41 minor issues; all were fixed or are listed under Known limits,
-and a second pass over the fixes found 1 important and 9 minor issues, all fixed.
-`pnpm mutate`: 88 mutants, 87 killed, 1 equivalent.
+and a second pass over the fixes found 1 important and 9 minor issues, all fixed. The review of
+the pull request (5 reviewers: 5 important and 40 minor issues) was fixed in full, apart from the
+gaps listed under Known limits. `pnpm mutate`: 96 mutants, 95 killed, 1 equivalent.
 
 ## Context
 
@@ -32,15 +33,26 @@ through `@kerf/core`. Design: `docs/superpowers/specs/2026-10-12-m4-app-3d-view-
 1. **History** is a list of whole projects, one per named change, kept for the session only and capped at the last 200 changes (the oldest is dropped). Clicking an entry steps back to it; a new change from there drops the later entries. Saving writes the project, not the history.
 2. **Dragging a field** previews every step and records one history entry on release. One step per 4 pixels: 1/16" (1 mm); with Shift 1" (10 mm); with Alt the grid, 1/64" (0.01 mm).
 3. **A field's text** is kept as the user typed it (an expression), after checking it evaluates to the right kind. A field whose form value names a parameter (`width`) edits that parameter.
-4. **Units follow the stock** (ruling R23; maintainer to confirm). A project's `units` field sets its snap grid, and a stock thickness that is not a whole number of grid steps (3/4 plywood, 23/32" = 146050 units, is 50 units off the 0.01 mm grid) leaves joints that do not seat. So a metric project starts on a metric starter stock, where "18 mm plywood" (144000 units) replaces the 3/4 plywood and the 1/4 plywood and walnut, which sit on both grids, are kept. Settings sets the units new projects use (`kerf.units`), kept in store state and written through to storage; opening or restoring a project does not change it. An open project switches, as a named, undoable change, only when every stock its boards and forms use sits on the new grid; otherwise it stays as it is and the user is told, in the project's own units, which stock is in the way. A project is never rounded to fit.
+4. **Units follow the stock** (maintainer to confirm). A project's `units` field sets its snap grid, and a stock thickness that is not a whole number of grid steps (3/4 plywood, 23/32" = 146050 units, is 50 units off the 0.01 mm grid) leaves joints that do not seat. So a metric project starts on a metric starter stock, where "18 mm plywood" (144000 units) replaces the 3/4 plywood and the 1/4 plywood and walnut, which sit on both grids, are kept. Settings sets the units new projects use (`kerf.units`), kept in store state and written through to storage; opening or restoring a project does not change it. An open project switches, as a named, undoable change, only when every stock its boards and forms use sits on the new grid; otherwise it stays as it is and the user is told, in the project's own units, which stock is in the way. A project is never rounded to fit.
 5. **Assembly order wording.** Case: (1) "Dry-fit the case without glue and check that every joint closes." (2) "Glue {list} into the sides." where {list} names the case's other glued boards in order of first appearance, "N × Name" when there are several, joined "A, B and C". (3) "Square the case: the two diagonals must match. Adjust before the glue sets." (4) when it has a back: "Fit the {Back} last." Box: (1) "Dry-fit the box without glue and check that every corner closes." (2) with a bottom "Glue the corners with the {Bottom} in its groove, not glued, so it can move.", without "Glue the corners." (3) "Square the box: the two diagonals must match. Adjust before the glue sets." With several structures each step starts "Case 2: " (or "Box 2: ") from the second on.
-6. **Join proposals.** Two touching boards: the one touched on its broad face is the host. The guest's thickness lying against an end or edge of the host proposes a rabbet; lying in the middle of the face it proposes a dado (ADR 013, D4). The user may ask for another type, and it is offered only if it seats. A joint is never cut into a board thinner than the one that sits in it: such a pair is refused with the reason (glue or nail it), whichever type is asked for (confirmed by the maintainer 2026-10-13). Boards meeting face to face or end to end have no joint, and the reason is said. Boards overlapping at both their ends propose a through dovetail with the first board picked as the pin board. Parameters are left to the spec's defaults. The proposal is tried on a copy of the project; any error that joint causes, tagged to it or not, is returned as the reason instead. A joint id already in the project is refused.
-7. **Gap binding** writes the gap as an ordinary expression built from the two boards' position and size expressions (stock thickness where a part takes its thickness from its stock), along the one axis on which they face each other. A member of a row (a pattern) cannot be bound; the user is told to detach it first. Boards a form makes cannot be bound yet either, because the engine binds only boards saved in the project: the Board tool refuses them with "Boards the form made can't be measured between yet; use Divide to add shelves, or take a side over first." (the maintainer's decision, 2026-10-13; listed as not done in M4). The board lies flat at the height of the first click and sits flush with the two boards' front edges, reaching back to the nearest board crossing the gap at that height (ruling R35).
+6. **Join proposals.** Two touching boards: the one touched on its broad face is the host. The guest's thickness lying against an end or edge of the host proposes a rabbet; lying in the middle of the face it proposes a dado (ADR 013, D4 says when each is seated). The user may ask for another type, and it is offered only if it seats. A joint is never cut into a board thinner than the one that sits in it: such a pair is refused with the reason (glue or nail it), whichever type is asked for (confirmed by the maintainer 2026-10-13). Boards meeting face to face or end to end have no joint, and the reason is said. Boards overlapping at both their ends propose a through dovetail with the first board picked as the pin board. Parameters are left to the spec's defaults. The proposal is tried on a copy of the project; any error that joint causes, tagged to it or not, is returned as the reason instead. A joint id already in the project is refused.
+7. **Gap binding** writes the gap as an ordinary expression built from the two boards' position and size expressions (stock thickness where a part takes its thickness from its stock), along the one axis on which they face each other. A member of a row (a pattern) cannot be bound; the user is told to detach it first. Boards a form makes cannot be bound yet either, because the engine binds only boards saved in the project: the Board tool refuses them with "Boards the form made can't be measured between yet; use Divide to add shelves, or take a side over first." (the maintainer's decision, 2026-10-13; listed as not done in M4). The board lies flat at the height of the first click and sits flush with the two boards' front edges, reaching back to the nearest board crossing the gap at that height, or across the full shared span when none crosses.
 8. **Placements** are reported even when an assembly error withholds the shapes, so the viewport can draw every board as a plain blank and colour the broken one.
 9. **Joint summaries** use an empty shop when the shop is invalid (every cut then shows its tool as missing); the `invalid-shop` error is reported beside them.
 10. **A shape that cannot be made into a display mesh** is drawn as its blank with a warning badge; the reason is shown in the inspector.
-11. **Browser storage** holds the shop, the units chosen for new projects (never taken from an open or restored project), the theme, section open state and the current project. If storage is unavailable the app says so once and works without it. A stored project the engine rejects, or one Kerf itself fails on while opening it, is set aside with a notice; the app starts empty. A stored project or shop the browser cannot read is left as it was, never written over, and the user is told. The shop card shows inches; a metric shop display is a later setting. Any other fault in Kerf is logged for a bug report and never ends the session silently: one during an action (a click, a key, a typed size) drops the action's half-done state and says so on the notice line; one while the window is drawn replaces the window with what to do and Save.
+11. **Browser storage** holds the shop, the units chosen for new projects (never taken from an open or restored project), the theme, section open state and the current project. The Tape's guide lines and reading are never stored: they last for the session and are cleared when another project is started or opened. If storage is unavailable the app says so once and works without it. A stored project the engine rejects, or one Kerf itself fails on while opening it, is set aside with a notice; the app starts empty. A stored project or shop the browser cannot read is left as it was, never written over, and the user is told. The shop card shows inches; a metric shop display is a later setting. Any other fault in Kerf is logged for a bug report and never ends the session silently: one during an action (a click, a key, a typed size) drops the action's half-done state and says so on the notice line; one while the window is drawn replaces the window with what to do and Save.
 12. **New tokens** extend `tokens.css` (both themes); nothing in M0's tokens changes.
+13. **A change that brings a problem.** A tool's change is judged by a full solve of the project before and after it: an error counts as new unless the same board already had it. Board and Join, which add a board or a joint, refuse a change that brings a new error and say what the engine said. Push/Pull, Move and Edge, which reshape or arrange boards, record the change and the notice names the first new problem in shop words, with Undo ("Shelf 2 now overlaps Back; Undo puts it back."). A warning that arrives while an Undo offer is on the line waits behind it, since the offer may be the only words naming the problem.
+
+## Rulings
+
+Calls made while building M4 that the code relies on and the spec does not give. Each is in force.
+
+- **Ruling A (notices).** A notice that offers Undo goes when History moves (an apply, commit, undo, redo or jump); a notice without Undo stays until it is dismissed.
+- **Ruling B (picked boards).** A board selection is pruned only when History moves, never while a drag previews, so a cancelled drag leaves its boards picked. A tool that changes a picked board's instance id (taking a copy out of a row) picks the new one.
+- **Ruling C (half-done joins).** Any change to the shown project through History clears the Join tool's proposal and its first pick, since both describe the project as it was. Another tool's half-done action is not cleared by it.
+- **Ruling D (a size that does not change).** A typed size equal in value to the current one records nothing, and the box shows the current size again. A drag that returns to its start records nothing. A cancelled pointer drops the preview.
+- **Ruling E (Join asks on a copy).** Join asks the engine about the two boards as they will be once taken over from their forms, which is what Accept does, so a form's shelf gets a real proposal. Every reason and description uses the names the user clicked; Accept's label and notice use the names after the take-over. The panel says before Accept which boards will become custom.
 
 ## Consequences
 
@@ -67,7 +79,7 @@ maintainer decides which become work.
 8. Edge profile: the radius choice ignores the board's current roundover, and "None" on a mixed
    pick changes only the hand-made boards. A roundover that conflicts on a taken-over shelf has no
    message of its own in the Edge panel.
-9. The app's store (`model/store.ts`) still has several jobs (final branch review M5). Moved out
+9. The app's store (`model/store.ts`) still has several jobs. Moved out
    without changing behaviour: browser persistence to `model/persist.ts` (`restoreProject`,
    `writeProject`, `readSections`, `storageNotice`, `NOT_KEPT`, `UNITS_NOT_KEPT`), the types to
    `model/store-types.ts`, the actions that only set view state to `model/view-actions.ts`, and the
@@ -82,8 +94,7 @@ maintainer decides which become work.
 10. A stored project the engine rejects is kept in browser storage (`kerf.project.setAside`, then
     `.2`, `.3`, … so none is overwritten), but nothing in the app offers it back yet; recovering it
     means reading browser storage by hand. A project that cannot be set aside is left where it was,
-    and the notice comes back on each reload. A download of the set-aside copy is a later feature
-    (silent-failure review M5).
+    and the notice comes back on each reload. A download of the set-aside copy is a later feature.
 11. Files: Open stamps the project's start time afresh, and `kerf.created` is kept apart from the
     project. The app version in `meta.json` is bumped by hand. The "newer file" message is picked by
     its wording until `@kerf/io` raises a typed error. `begin` and `apply` repeat one shape.
@@ -105,7 +116,7 @@ maintainer decides which become work.
     are clipped.
 20. Two full solves run for each Board attempt (the figure is reported by the timing test), and the
     row-shelf height is read off the solve. Push/Pull, Move and Edge also solve the project before
-    and after each recorded change to word its notice (`editNotice`, ruling R45), on top of the
+    and after each recorded change to word its notice (`editNotice`, rule 13), on top of the
     store's own solve: three solves per recorded change, none per preview frame. Past the 25
     problems listed for one rule, a further problem a change brings is not named in its notice
     (the summary line is left out of the comparison, since its words carry a changing count).
@@ -125,7 +136,18 @@ maintainer decides which become work.
 25. One board of a row saved by hand (a pattern no form makes, as in the canonical bookcase) cannot
     be moved, resized, rounded or joined on its own: the engine takes a copy out only of a form's
     row. Each tool says so ("Shelf 1 is one of a row made by hand, and Kerf can't change one board
-    of that row on its own yet."); taking a copy out of a hand-made row needs the engine first.
+    of that row on its own yet."); taking a copy out of a hand-made row needs the engine first. The engine's own words for a
+    row member (`gapBetween`, `proposeJoint`) still say "detach it first", which the app cannot do
+    for such a row.
 26. The theme, the sections' open state and the project's start date (`kerf.created`) are not kept,
     without a word, when the browser cannot read or write them; only the project, the shop and the
     units for new projects have notices. A lost start date makes the next save stamp the save time.
+27. The app's results say `message` for a refusal (`EditResult`, `Accepted`, `MoveResult`,
+    `BetweenResult`, `Reading`) where the engine's say `reason` (`Gap`, `JointProposal`), and the
+    app translates between them at the edge. One name would be tidier; renaming it touches about a
+    hundred sites and every test that reads it, for no change in behaviour.
+28. The project tree counts a group's problems by the part a diagnostic names, so one failing copy
+    of a row counts against every board of that row.
+29. `Diagnostic.count` means "times it happened" on an ordinary entry and "how many are not
+    listed" on a `summary` entry; the doc says so, and readers must check `summary` first. A
+    separate field would be clearer and changes the type every consumer reads.

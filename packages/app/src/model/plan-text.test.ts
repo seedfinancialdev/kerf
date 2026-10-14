@@ -63,12 +63,12 @@ describe("totalsText() for solid stock", () => {
     );
   });
 
-  it("leaves out a zero linear-feet amount (branch deferred row 21)", () => {
+  it("leaves out a zero linear-feet amount", () => {
     const totals = { stock: walnut, boards: 2, linearFeet: { num: 0n, den: 1n } };
     expect(totalsText(totals, project)).toBe("4/4 walnut: 2 boards");
   });
 
-  it("names a stock the project does not have as unknown, never as a blank (silent-failure review M10)", () => {
+  it("names a stock the project does not have as unknown, never as a blank", () => {
     expect(totalsText({ stock: "01J9ZZZZZZZZZZZZZZZZZZZZZZ", boards: 1 }, project)).toBe(
       "unknown stock: 1 board",
     );

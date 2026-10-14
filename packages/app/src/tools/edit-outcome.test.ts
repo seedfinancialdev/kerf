@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// ADR 015, rule 6 (ruling R36): a tool's change is refused only for an error the project did not
+// ADR 015, rule 13: a tool's change is refused only for an error the project did not
 // already have. The hand-made bookcase's right side holds the floor point (0, 0, 0).
 
 import { type Id, type Project, solve } from "@kerf/core";
@@ -76,7 +76,7 @@ describe("newProblem()", () => {
     expect(newProblem(already, worse, shop)).toMatch(/Board 2/);
   });
 
-  it("names an error that comes again with the same words (silent-failure review M12)", () => {
+  it("names an error that comes again with the same words", () => {
     // A second copy of Board 1, 6" further back, still runs into the Right side (which is 12"
     // deep): the engine reports the same overlap twice, condensed into one line counted 2.
     const once = withBoard(clean, insideRightSide);
@@ -93,7 +93,7 @@ describe("newProblem()", () => {
     );
   });
 
-  it("does not count an error a board already had as new when a take-over renames it (re-review N4)", () => {
+  it("does not count an error a board already had as new when a take-over renames it", () => {
     // A 1" shelf roundover is too large for a 23/32" shelf, so every shelf already has an error.
     // Moving Shelf 2 up 1" takes it out of the row as "Shelf copy 2" and brings nothing new.
     const form = startProject("Bookcase", "imperial").project;
@@ -109,7 +109,7 @@ describe("newProblem()", () => {
   });
 });
 
-describe("editNotice() names what the change caused (ruling R45; second-pass review I1, M4)", () => {
+describe("editNotice() names what the change caused", () => {
   const placedIn = (p: Project, name: string) => {
     const found = solve(p, shop).placements.find((x) => x.name === name);
     if (!found) throw new Error(`no ${name}`);
@@ -167,7 +167,7 @@ describe("editNotice() names what the change caused (ruling R45; second-pass rev
   });
 });
 
-describe("firstNewError() on a board a take-over renamed (second-pass review M4)", () => {
+describe("firstNewError() on a board a take-over renamed", () => {
   // The template bookcase; Shelf 3 is taken out of its row as "Shelf copy 3" by a 1" move up.
   const form = startProject("Bookcase", "imperial").project;
   const was = solve(form, shop);
@@ -234,7 +234,7 @@ describe("firstNewError() on a board a take-over renamed (second-pass review M4)
     ).toBeNull();
   });
 
-  it("does not take a per-rule summary whose number fell for a new error (second-pass re-review, minor 1)", () => {
+  it("does not take a per-rule summary whose number fell for a new error", () => {
     // 30 problems of one rule: 25 listed and "5 more …" summed up. A change that removes one leaves
     // "4 more …": fewer problems, so nothing new.
     const summary = (n: number) => ({

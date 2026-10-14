@@ -105,7 +105,7 @@ describe("<Drawer>", () => {
     expect(selected()).toBe("Shopping");
   });
 
-  describe("a tab with nothing in it (branch deferred row 21)", () => {
+  describe("a tab with nothing in it", () => {
     /** A project of one hand-drawn board: nothing to machine or glue, and no error. */
     function oneBoard() {
       const store = createKerfStore({ storage: createStorage(memoryStorage()) });
@@ -138,7 +138,7 @@ describe("<Drawer>", () => {
     });
   });
 
-  it("describes each sheet's parts in words for a screen reader (branch deferred row 21)", () => {
+  it("describes each sheet's parts in words for a screen reader", () => {
     setup();
     fireEvent.click(screen.getByRole("tab", { name: "Sheets" }));
     const [first] = screen.getAllByRole("img");

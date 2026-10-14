@@ -4,7 +4,8 @@
 
 // Push/Pull (Interaction spec, "3D tools"): change a board's length or width from one end or edge;
 // thickness belongs to the stock. A board the form made is taken over first, with a notice; a
-// change that brings an error is recorded and the error named with Undo (ruling R45).
+// change that brings an assembly or joint error is recorded and the error named with Undo (ADR
+// 015, rule 13).
 
 import {
   formatLength,
@@ -54,7 +55,8 @@ const THICKNESS_LOCKED = "A board's thickness is set by its stock. Pick an end o
  * Moves one end or edge outward by `distance` (inward when negative), in project units. The far
  * end or edge stays where it was. A board the form made is taken over first, using the project's
  * real `shop`. Comes back `ok: false`, saying why, for a distance of zero (nothing to record), when
- * the board would be left with no size, or when it cannot be found or taken over.
+ * the solver reports an error on the board itself (it would be left with no size, say), or when it
+ * cannot be found or taken over.
  */
 export function pushPull(
   project: Project,

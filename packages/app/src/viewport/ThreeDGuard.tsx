@@ -2,12 +2,12 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Keeps a failure of the 3D view inside the 3D view (silent-failure review C1). WebGL refusing to
-// start, or the geometry engine failing while it draws a board, is thrown during rendering; without
-// a boundary React would take the whole window down, with the cut list, the plans and Save. The
-// project never depends on the picture (ADR 013, D9), so everything else keeps working. Each cause
-// has its own advice in shop words; the browser's or the engine's own text goes to the console
-// only, for a bug report (final fix re-review N1, N6).
+// Keeps a failure of the 3D view inside the 3D view. WebGL refusing to start, or a three.js or React
+// fault while a board is drawn, is thrown during rendering; without a boundary React would take
+// the whole window down, with the cut list, the plans and Save. (A failure of the geometry engine
+// on one board is not thrown: `meshFor` returns it, and the board is drawn plain.) The project
+// never depends on the picture (ADR 013, D9), so everything else keeps working. Each cause has
+// its own advice in shop words; the browser's own text goes to the console only, for a bug report.
 
 import type { ReactNode } from "react";
 import { Boundary } from "../state/Boundary";

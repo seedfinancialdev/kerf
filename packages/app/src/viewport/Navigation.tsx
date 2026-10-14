@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// SketchUp navigation for the view (Interaction spec, "Navigation"): puts the camera where the view
+// SketchUp navigation for the view (Interaction spec, "3D tools"): puts the camera where the view
 // says and turns drags and the wheel into changes of it.
 
 import { useThree } from "@react-three/fiber";

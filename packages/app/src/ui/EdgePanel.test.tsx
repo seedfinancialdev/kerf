@@ -48,7 +48,7 @@ describe("<EdgePanel>", () => {
     expect(shownProject(store.getState())?.structures[0]?.options.shelfRoundover).toBe("3.175mm");
   });
 
-  it("tells the user, with Undo, that the Top it rounded is now custom (final branch review I2)", () => {
+  it("tells the user, with Undo, that the Top it rounded is now custom", () => {
     const store = setup("Top");
     fireEvent.click(screen.getByRole("button", { name: "Both front edges" }));
     expect(store.getState().notice).toEqual({
@@ -57,7 +57,7 @@ describe("<EdgePanel>", () => {
     });
   });
 
-  it("tells the user before they press it that Both front edges changes every shelf the form makes (branch deferred row 26)", () => {
+  it("tells the user before they press it that Both front edges changes every shelf the form makes", () => {
     const store = setup();
     const { selection } = store.getState();
     if (selection.kind !== "boards") throw new Error("no shelves picked");

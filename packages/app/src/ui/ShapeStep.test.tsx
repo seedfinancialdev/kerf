@@ -80,7 +80,7 @@ describe("the Shape step", () => {
     expect(store.getState().history?.entries.length).toBe(before);
   });
 
-  it("puts a depth back to Default once, and records nothing when it is cleared again (branch deferred row 17)", () => {
+  it("puts a depth back to Default once, and records nothing when it is cleared again", () => {
     // The bookcase's form sets a 1/4" dado depth; clearing the field hands it back to the rule.
     const store = setup();
     fireEvent.click(screen.getByRole("button", { name: "More" }));

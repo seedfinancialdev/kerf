@@ -162,17 +162,17 @@ export function createKerfStore(deps: {
     /**
      * Sets new state and re-solves what is shown. Selected boards that are gone are dropped only
      * when History moved: a drag's preview may lack a board for a moment, and the board must
-     * still be picked when the drag is cancelled (ruling R19).
+     * still be picked when the drag is cancelled (ADR 015, ruling B).
      */
     const show = (patch: Partial<KerfState>): void => {
       const next = { ...get(), ...patch };
       const solved = solveFor(shownProject(next), next.shop);
       const selection =
         patch.history !== undefined ? stillThere(next.selection, solved) : next.selection;
-      // A joint proposed for the project as it was is stale once History moves (ruling R37).
+      // A joint proposed for the project as it was is stale once History moves (ADR 015, ruling C).
       const moved = patch.history !== undefined;
       const pending = moved && next.pending?.tool === "join" ? null : next.pending;
-      // An edit's own Undo offer comes in `patch`; otherwise the last change's offer goes (R13).
+      // An edit's own Undo offer comes in `patch`; otherwise the last change's offer goes (ADR 015, ruling A).
       const notices = moved && patch.notice === undefined ? afterHistoryMoved(line()) : {};
       set({
         ...patch,
@@ -189,7 +189,7 @@ export function createKerfStore(deps: {
     /**
      * Moves History to `history` when the user steps through it or starts afresh. Whatever a tool
      * had started was measured on the project that is no longer shown, so it is dropped with the
-     * preview (final branch review I1, M1); a tool that records its own change keeps its action.
+     * preview; a tool that records its own change keeps its action.
      */
     const moveHistory = (history: History, patch: Partial<KerfState> = {}): void =>
       show({ history, previewed: null, pending: null, ...patch });
@@ -223,7 +223,7 @@ export function createKerfStore(deps: {
         // Unlike `apply`, a project equal to the shown one is still recorded: the user opened a
         // file.
         const h = get().history;
-        // A measurement belongs to the project it was taken on (ruling R42).
+        // A measurement belongs to the project it was taken on (ADR 015, rule 11).
         moveHistory(h ? record(h, edit) : startHistory(edit), { tape: null, guides: [] });
       },
 
@@ -235,7 +235,7 @@ export function createKerfStore(deps: {
         show({
           history: h ? record(h, edit) : startHistory(edit),
           previewed: null,
-          // The Undo offer replaces the one History's move just cleared (ruling R13).
+          // The Undo offer replaces the one History's move just cleared (ADR 015, ruling A).
           ...(notice ? tell(afterHistoryMoved(line()), { text: notice, kind: "undo" }) : {}),
         });
       },
@@ -271,7 +271,7 @@ export function createKerfStore(deps: {
       setTool: (tool) => {
         const dropped = { tool, pending: null, proposal: null };
         // A preview belongs to the tool that drew it; leaving it would show (and Save) a change
-        // that is not in History (final branch review I1).
+        // that is not in History.
         if (get().previewed) show({ ...dropped, previewed: null });
         else set(dropped);
       },

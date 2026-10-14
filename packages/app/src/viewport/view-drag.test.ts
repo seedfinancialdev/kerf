@@ -4,7 +4,7 @@
 
 // SketchUp navigation (Interaction spec, "3D tools"): middle-drag orbits, Shift+middle-drag pans,
 // and after O or H the left button does. A drag the window loses must not keep turning the view
-// (silent-failure review M6). Orbit turns 0.01 radian per pixel (camera.ts), so 10 px = 0.1 rad.
+// Orbit turns 0.01 radian per pixel (camera.ts), so 10 px = 0.1 rad.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { View } from "./camera";

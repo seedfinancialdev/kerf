@@ -17,7 +17,7 @@ const TOOL = { dadoStack: "Dado stack", router: "Router", handTools: "Hand tools
 
 /**
  * A stock's name. The engine only lists stock the project has, so "unknown stock" would mean a
- * fault; it is shown rather than a blank so the line still reads (silent-failure review M10).
+ * fault; it is shown rather than a blank so the line still reads.
  */
 export function stockName(project: Project, stock: string): string {
   return project.stock.find((st) => st.id === stock)?.name ?? "unknown stock";

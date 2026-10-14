@@ -71,7 +71,7 @@ describe("the File section", () => {
     expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("says it is Kerf's fault and logs it when opening fails after the file was read (silent-failure review I8)", async () => {
+  it("says it is Kerf's fault and logs it when opening fails after the file was read", async () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const store = setup();
     const fault = new TypeError("x is undefined");
@@ -164,7 +164,7 @@ describe("Save", () => {
     expect(logged).toHaveBeenCalledWith(failure);
   });
 
-  it("saves without a picture when the picture is not a usable PNG, and logs why (silent-failure review M4)", async () => {
+  it("saves without a picture when the picture is not a usable PNG, and logs why", async () => {
     stubDownload();
     const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const store = setup();

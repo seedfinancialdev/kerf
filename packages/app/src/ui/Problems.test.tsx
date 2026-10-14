@@ -4,7 +4,7 @@
 
 // Interaction spec, "Feedback & errors": the inspector explains each problem. A problem said
 // several times shows how many; the summary of problems past the per-rule limit already says its
-// number in words, so it is not counted again (second-pass review M5).
+// number in words, so it is not counted again.
 
 import type { Diagnostic } from "@kerf/core";
 import { act, render, screen } from "@testing-library/react";

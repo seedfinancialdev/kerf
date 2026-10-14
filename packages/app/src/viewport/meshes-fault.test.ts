@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// ADR 015, rule 10 and the second-pass review M3: a board whose cuts the geometry engine fails on
+// ADR 015, rule 10: a board whose cuts the geometry engine fails on
 // (it throws, rather than refusing the shape) is still drawn as its blank with a warning badge and
 // its reason in the inspector, and the engine is not asked again for that shape on every frame.
 // The engine is not loaded in this file, so every call into it fails the way a broken engine does.
@@ -27,7 +27,7 @@ describe("a geometry engine that fails on a shape", () => {
     const [shape] = result.shapes;
     if (!shape) throw new Error("no shape");
     // Two renders of one History entry (a drag's preview frames) ask once; a new entry asks again,
-    // so a passing fault is not remembered for the session (second-pass re-review, minor 3).
+    // so a passing fault is not remembered for the session.
     const entry = {};
     expect(meshFor(shape, entry)).toEqual({ ok: false, reason: FAULT });
     expect(meshFor(shape, entry)).toEqual({ ok: false, reason: FAULT });

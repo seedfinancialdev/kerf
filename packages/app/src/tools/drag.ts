@@ -40,8 +40,8 @@ const sceneAxis = (axis: Axis): Triple =>
 /**
  * The point on the line through `from` along a project axis that lies closest to the line of sight,
  * snapped to the grid. A line of sight parallel to the axis gives no answer, so `from` stays.
- * Example: from the origin along z (up), a line of sight through scene (3, 7, 20) heading straight
- * down the scene's −z passes the line at height 7", so the point is 7" up.
+ * Example: from the origin along z (up), a line of sight through scene (3, 7, 20) heading along
+ * the scene's −z passes the line at height 7", so the point is 7" up.
  */
 export function pointOnAxis(ray: Ray, from: Vec3, axis: Axis, grid: Len): Vec3 {
   const a = sceneAxis(axis);

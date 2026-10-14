@@ -82,7 +82,7 @@ describe("a click on empty space with a line of sight", () => {
   });
 });
 
-describe("dispatchDrag() after O or H (silent-failure review I5)", () => {
+describe("dispatchDrag() after O or H", () => {
   it("leaves a waiting Push/Pull alone, so orbiting the view records nothing", () => {
     const store = createKerfStore({ storage: createStorage(memoryStorage()) });
     store.getState().apply(startProject("Bookcase", "imperial"));

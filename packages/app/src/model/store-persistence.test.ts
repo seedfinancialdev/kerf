@@ -136,7 +136,7 @@ describe("a browser store that cannot be written", () => {
     expect(s.getState().history?.entries).toHaveLength(2);
   });
 
-  it("keeps an Undo offer and shows the warning after it (re-review N3)", () => {
+  it("keeps an Undo offer and shows the warning after it", () => {
     const s = createKerfStore({ storage: full() });
     const offer = "Shelf 2 now overlaps Back; Undo puts it back.";
     s.getState().apply(startProject("Bookcase", "imperial"), offer);
@@ -257,7 +257,7 @@ describe("warnings that must not be lost (ADR 015, rule 11: the app says so once
   });
 });
 
-describe("a shop change the browser cannot keep (silent-failure review I3)", () => {
+describe("a shop change the browser cannot keep", () => {
   it("is used until the page closes, and the user is told once", () => {
     const s = createKerfStore({ storage: createStorage(memoryStorage(true)) });
     // Blade kerf 1/8" = 203200 / 8 = 25400.
@@ -274,7 +274,7 @@ describe("a shop change the browser cannot keep (silent-failure review I3)", () 
   });
 });
 
-describe("a stored project the engine rejects (code review I1, silent-failure review M5)", () => {
+describe("a stored project the engine rejects", () => {
   /** The hand-made bookcase as stored, its first board naming a part the project does not have. */
   const brokenText = (): string => {
     const stored = JSON.parse(serializeProject(handMadeBookcase()));

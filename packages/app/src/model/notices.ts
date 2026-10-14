@@ -52,7 +52,7 @@ export function tell(line: NoticeLine, notice: Notice): NoticeLine {
 /**
  * Adds a warning: shown now when the line is empty, otherwise queued behind what is shown. An
  * Undo offer is not replaced either: it may be the only words naming a problem the change brought
- * (ruling R45; re-review N3). A warning already shown or waiting is not added twice.
+ * (ADR 015, rule 13). A warning already shown or waiting is not added twice.
  */
 export function warn(line: NoticeLine, text: string): NoticeLine {
   if (line.notice?.text === text || line.waiting.includes(text)) return line;
@@ -70,7 +70,7 @@ export function dismiss(line: NoticeLine): NoticeLine {
 
 /**
  * The line once History has moved: an Undo offer describes a change that is no longer the latest,
- * so it goes (ruling R13), held or shown, and the next waiting warning shows; anything else stays.
+ * so it goes (ADR 015, ruling A), held or shown, and the next waiting warning shows; anything else stays.
  */
 export function afterHistoryMoved(line: NoticeLine): NoticeLine {
   const unheld = { ...line, held: null };

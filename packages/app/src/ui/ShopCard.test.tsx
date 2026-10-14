@@ -67,7 +67,7 @@ describe("<ShopCard>", () => {
     expect(screen.getByText(/kerf/i, { selector: ".field-problem" })).toBeTruthy();
   });
 
-  it("says why a tick is refused instead of flipping it back in silence (silent-failure review M1)", () => {
+  it("says why a tick is refused instead of flipping it back in silence", () => {
     const store = setup();
     // A shop whose router holds a bit of no size: any change to it is refused by the engine.
     const broken = {

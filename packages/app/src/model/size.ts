@@ -72,7 +72,7 @@ export function readLength(text: string, project: Project, self?: string, label?
 /**
  * A whole number typed by the user (a count of shelves or bays), from 0 to `MAX_COUNT`, the most
  * boards of one kind the engine's forms make. A larger count is refused here, before the app builds
- * one opening per bay (final tests review I2).
+ * one opening per bay.
  */
 export function readCount(text: string, project: Project, self?: string): CountReading {
   const r = evaluate(text, project, self);
