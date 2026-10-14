@@ -4,7 +4,7 @@
 
 // Keyboard shortcuts for the whole window. Typing in a field is left alone, so Ctrl+Z there undoes
 // the typing, not the project. A select, checkbox or radio keeps only the keys it uses itself, so
-// Ctrl/⌘+Z and the tool keys still work after a choice in one (final branch review I4).
+// Ctrl/⌘+Z and the tool keys still work after a choice in one.
 
 import { useEffect } from "react";
 import { useKerfStore } from "../state/useKerf";
@@ -78,15 +78,7 @@ export function useShortcuts(): void {
         const pending = s.pending?.tool === "move" ? s.pending : null;
         // The same arrow again lets the direction go.
         const locked = pending?.axis === axis ? null : axis;
-        s.setPending({
-          tool: "move",
-          from: [0, 0, 0],
-          ray: null,
-          placed: [],
-          last: null,
-          ...pending,
-          axis: locked,
-        });
+        s.setPending({ tool: "move", ...pending, axis: locked });
         return;
       }
       const key = e.key.toLowerCase();

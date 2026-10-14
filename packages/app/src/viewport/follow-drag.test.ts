@@ -57,9 +57,7 @@ function begin(x = 100, y = 100, el = canvas(), resized = false) {
   const { store, top } = started(resized);
   const cam = camera();
   const down = pointer("pointerdown", x, y);
-  store
-    .getState()
-    .setPending({ tool: "move", from: [0, 0, 0], ray: null, placed: [], axis: 2, last: null });
+  store.getState().setPending({ tool: "move", axis: 2 });
   moveTool.pointer?.(
     {
       kind: "down",
@@ -140,7 +138,7 @@ describe("followDrag()", () => {
   );
 });
 
-describe("a drag the store cancels (final branch review I1, silent-failure review I5)", () => {
+describe("a drag the store cancels", () => {
   const dragged = (resized = false) => {
     const { store, el } = begin(100, 100, canvas(), resized);
     el.dispatchEvent(pointer("pointermove", 100, 80));
@@ -185,7 +183,7 @@ describe("a drag the store cancels (final branch review I1, silent-failure revie
   });
 });
 
-describe("a press whose pointer is already gone (silent-failure review M7)", () => {
+describe("a press whose pointer is already gone", () => {
   it("is not followed, does not throw, and keeps the click's pending move", () => {
     const el = canvas();
     el.setPointerCapture = vi.fn(() => {
@@ -208,7 +206,7 @@ describe("followsDrag()", () => {
 
   it.each<[string, Pending]>([
     ["Push/Pull", { tool: "pushPull", hit, dragged: null, ray: null }],
-    ["Move", { tool: "move", from: [0, 0, 0], ray: null, placed: [], axis: null, last: null }],
+    ["Move", { tool: "move", axis: null }],
   ])("follows a press of %s, the tools that drag", (_, pending) => {
     expect(followsDrag(state(pending))).toBe(true);
   });
@@ -223,14 +221,7 @@ describe("followsDrag()", () => {
   });
 
   it("follows nothing while left-drag orbits or pans the view", () => {
-    const move: Pending = {
-      tool: "move",
-      from: [0, 0, 0],
-      ray: null,
-      placed: [],
-      axis: null,
-      last: null,
-    };
+    const move: Pending = { tool: "move", axis: null };
     expect(followsDrag(state(move, "orbit"))).toBe(false);
     expect(followsDrag(state(move, "pan"))).toBe(false);
   });

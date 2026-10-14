@@ -35,7 +35,7 @@ describe("<ToolRow>", () => {
     expect(store.getState().selection).toEqual({ kind: "none" });
   });
 
-  it("drops a drag's preview on Escape, so nothing unrecorded stays on screen (final branch review I1)", () => {
+  it("drops a drag's preview on Escape, so nothing unrecorded stays on screen", () => {
     const store = setup();
     act(() => store.getState().apply(startProject("Bookcase", "imperial")));
     const recorded = store.getState().solved;
@@ -138,7 +138,7 @@ describe("<Measurements>", () => {
   });
 });
 
-describe("a size typed anywhere (Interaction spec, Measurements; final branch review I5)", () => {
+describe("a size typed anywhere (Interaction spec, Measurements)", () => {
   /**
    * The bookcase, Push/Pull picked, and the Top's right end clicked: the tool waits for a distance.
    */
@@ -172,7 +172,7 @@ describe("a size typed anywhere (Interaction spec, Measurements; final branch re
     ).toBe(7_429_500);
   });
 
-  it('gives the keyboard back after 2" Enter, so a tool letter picks the tool (re-review N1)', async () => {
+  it('gives the keyboard back after 2" Enter, so a tool letter picks the tool', async () => {
     const { store } = waiting();
     await userEvent.keyboard('2"{Enter}m');
     expect(document.activeElement).not.toBe(box());
@@ -180,7 +180,7 @@ describe("a size typed anywhere (Interaction spec, Measurements; final branch re
     expect(store.getState().tool).toBe("move");
   });
 
-  it('gives the keyboard back after 2" Enter, so Ctrl+Z undoes the change (re-review N1)', async () => {
+  it('gives the keyboard back after 2" Enter, so Ctrl+Z undoes the change', async () => {
     const { store } = waiting();
     await userEvent.keyboard('2"{Enter}{Control>}z{/Control}');
     // Undone: the Top is back to 34-9/16" (7023100), and the redo entry is the change.
@@ -269,21 +269,15 @@ describe("the arrow keys while moving", () => {
     act(() =>
       store.getState().setPending({
         tool: "move",
-        from: [1, 2, 3],
-        placed: [],
         axis: null,
-        last: "a",
-        ray: null,
+        drag: { from: [1, 2, 3], placed: [], last: "a", ray: null },
       }),
     );
     fireEvent.keyDown(window, { key: "ArrowUp" });
     expect(store.getState().pending).toEqual({
       tool: "move",
-      from: [1, 2, 3],
-      placed: [],
       axis: 2,
-      last: "a",
-      ray: null,
+      drag: { from: [1, 2, 3], placed: [], last: "a", ray: null },
     });
   });
 

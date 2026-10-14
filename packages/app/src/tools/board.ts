@@ -15,12 +15,13 @@ import {
   type Len,
   orientationFor,
   type Project,
+  ProjectFormatError,
   type ShopProfile,
   type SolvedInstance,
   solveModel,
   type Vec3,
 } from "@kerf/core";
-import type { Edit } from "../model/commands";
+import { type Edit, UNPLACEABLE } from "../model/commands";
 import { newId } from "../model/ids";
 import { literalFor, readLength } from "../model/size";
 import type { KerfStore } from "../model/store-types";
@@ -108,7 +109,7 @@ export function drawBoard(
 /**
  * Where a board can sit across the gap between boards `a` and `b` (`along` is the gap's axis,
  * `across` the one the board's width runs on): the front edge it lines up with, and the room back
- * from there. The front is the far end of the span the two share (ruling R35). The room stops at
+ * from there. The front is the far end of the span the two share (ADR 015, rule 7). The room stops at
  * the nearest other board that crosses the gap at the new board's height behind that front (the
  * back panel), or at the boards' own near edge.
  */
@@ -146,14 +147,15 @@ function freeRoomAcross(
 
 /**
  * A board spanning the gap between boards `a` and `b`, lying flat with its low face `height` up
- * (the height of the first click, so a board is fitted where the user pointed; ADR 015, rule 7,
- * and ruling R35). It sits flush with the front edges of the two boards (the far end of the span
- * they share). `widthSize` is measured back from there; null reaches back to the nearest other
- * board crossing the gap at that height (the back panel), or the full shared span. Its length is
- * the engine's gap expression, so it follows every resize. Comes back `ok: false`, saying why, when
- * either board is one the form makes (the engine binds only saved boards), the stock is not in the
- * project, the boards have no gap (the engine's reason), are one above the other, there is no free
- * room, the width is zero or less, or the full solve finds a new error.
+ * (the height of the first click, so a board is fitted where the user pointed; ADR 015, rule 7).
+ * It sits flush with the front edges of the two boards (the far end of the span they share).
+ * `widthSize` is measured back from there; null reaches back to the nearest other board crossing
+ * the gap at that height (the back panel), or the full shared span. Its length is the engine's gap
+ * expression, so it follows every resize. Comes back `ok: false`, saying why, when the project's
+ * boards cannot be placed, either board is one the form makes (the engine binds only saved
+ * boards), the stock is not in the project, the boards have no gap (the engine's reason), are one
+ * above the other, there is no free room, the width is zero or less, or the full solve finds a
+ * new error.
  */
 export function boardBetween(
   project: Project,
@@ -164,7 +166,14 @@ export function boardBetween(
   widthSize: Len | null,
   shop: ShopProfile,
 ): BetweenResult {
-  if (anyFormMade(project, shop, [a, b])) return { ok: false, message: FORM_MADE };
+  let formMade: boolean;
+  try {
+    formMade = anyFormMade(project, shop, [a, b]);
+  } catch (error) {
+    if (!(error instanceof ProjectFormatError)) throw error;
+    return { ok: false, message: UNPLACEABLE };
+  }
+  if (formMade) return { ok: false, message: FORM_MADE };
   const thickness = project.stock.find((s) => s.id === stock)?.thickness;
   if (thickness === undefined) return { ok: false, message: NO_STOCK };
   const gap = gapBetween(project, a, b);
@@ -234,7 +243,7 @@ export function boardStockFor(project: Project, chosen: Id | null): Id | undefin
   );
 }
 
-/** Picks the new board, so its details are at hand (ruling R19). */
+/** Picks the new board, so its details are at hand (ADR 015, ruling B). */
 const pick = (store: KerfStore, instance: Id): void =>
   store.getState().select({ kind: "boards", instances: [instance] });
 

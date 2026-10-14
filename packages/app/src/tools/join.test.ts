@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Interaction spec, "Join: Click two touching parts; the joint is proposed from the contact and the
-// shop profile". Default dado depth for 23/32" stock: 15/64" (Task 6's hand calculation).
+// shop profile". Default dado depth for 23/32" stock: 15/64" (a hand calculation).
 
 import { type Project, solve } from "@kerf/core";
 import { loadProject, loadShopProfile } from "@kerf/fixtures";
@@ -35,7 +35,7 @@ describe("Join", () => {
   it("proposes a dado for the new shelf in the right side", () => {
     const p = bookcaseWithShelf();
     const r = propose(p, shop, placed(p, "Right side"), placed(p, "Board 1"));
-    expect(r.result).toMatchObject({ ok: true, joint: { type: "dado" } });
+    expect(r.result).toMatchObject({ ok: true, type: "dado" });
   });
 
   it('accepting adds the joint: a 15/64"-deep dado setup appears', () => {
@@ -63,7 +63,7 @@ describe("Join", () => {
     // with no joint. A dado in the 23/32" Right side is 15/64" deep (146050 / 3 = 48683, snapped
     // down to 15 x 3175 = 47625), and the guest's cut length grows by it (ADR 004): 7023100 +
     // 47625 = 7070725 = 34-51/64", which no longer fits the sheet. proposeJoint does not nest, so
-    // only the full solve after it sees the error (final tests review I1).
+    // only the full solve after it sees the error.
     const p = bookcaseWithShelf();
     const ply = p.stock.find((st) => st.name === "3/4 plywood");
     if (!ply) throw new Error("no 3/4 plywood");
@@ -140,13 +140,12 @@ describe("taking over form boards", () => {
     const r = acceptProposal(p, shop, placed(p, "Right side"), placed(p, "Board 1"), "dado");
     if (!r.ok) throw new Error(r.message);
     expect(r.edit.label).toBe("Joined Board 1 to Right side with a dado");
-    // The two sides are one board in two places, so taking the right one takes both (code review
-    // I4).
+    // The two sides are one board in two places, so taking the right one takes both.
     expect(r.notice).toBe("Right side and Left side are now custom; the form won't change them.");
     const after = solve(r.edit.project, shop).placements;
-    expect(after.find((x) => x.name === "Right side")?.detached).toBe(true);
-    expect(after.find((x) => x.name === "Left side")?.detached).toBe(true);
-    expect(after.find((x) => x.name === "Board 1")?.detached).toBe(false);
+    expect(after.find((x) => x.name === "Right side")?.source?.detached).toBe(true);
+    expect(after.find((x) => x.name === "Left side")?.source?.detached).toBe(true);
+    expect(after.find((x) => x.name === "Board 1")?.source).toBeUndefined();
   });
 
   it("joins a hand-drawn divider to a row shelf: the copy is taken out, detached and joined", () => {
@@ -169,7 +168,7 @@ describe("taking over form boards", () => {
     expect(r.notice).toBe("Shelf 2 becomes Shelf copy 2, custom; the form won't change it.");
     const after = solve(r.edit.project, shop).placements;
     const copy = after.find((x) => x.name === "Shelf copy 2");
-    expect(copy?.detached).toBe(true);
+    expect(copy?.source?.detached).toBe(true);
     expect(r.edit.project.joints).toContainEqual(
       expect.objectContaining({ type: "dado", host: copy?.instance }),
     );
@@ -192,12 +191,19 @@ describe("taking over form boards", () => {
   });
 
   it("lists the boards Accept will take over, with the name each will have", () => {
+    const p = withDrawnBoard(form());
+    const r = propose(p, shop, placed(p, "Right side"), placed(p, "Board 1"));
+    expect(r.result.ok && r.result.taken).toEqual([
+      { from: "Right side", to: "Right side" },
+      { from: "Left side", to: "Left side" },
+    ]);
+  });
+
+  it("keeps no list of boards to take over for a pair it refuses", () => {
     const p = form();
     const r = propose(p, shop, placed(p, "Shelf 2"), placed(p, "Back"));
-    expect(r.taken).toEqual([
-      { from: "Shelf 2", to: "Shelf copy 2" },
-      { from: "Back", to: "Back" },
-    ]);
+    expect(r.result.ok).toBe(false);
+    expect(r.result).not.toHaveProperty("taken");
   });
 
   it("refuses a form shelf and a board it does not touch, with the engine's reason", () => {

@@ -112,8 +112,7 @@ describe("<JoinPanel>", () => {
           .setProposal(propose(now, loadShopProfile(), named("Right side"), named("Board 1"))),
       );
       fireEvent.click(screen.getByRole("button", { name: "Accept" }));
-      // The two sides are one board in two places: taking the right one takes both (code review
-      // I4).
+      // The two sides are one board in two places: taking the right one takes both.
       expect(store.getState().notice?.text).toBe(
         "Right side and Left side are now custom; the form won't change them.",
       );
@@ -127,15 +126,15 @@ describe("<JoinPanel>", () => {
           ...proposed,
           result: {
             ok: true,
-            joint: { id: "j", type: "dado", host: "h", guest: "g", params: {} },
+            type: "dado",
             tool: "dadoStack",
             missing: false,
             description: "Shelf copy 2 in a dado in Back",
+            taken: [
+              { from: "Shelf 2", to: "Shelf copy 2" },
+              { from: "Back", to: "Back" },
+            ],
           },
-          taken: [
-            { from: "Shelf 2", to: "Shelf copy 2" },
-            { from: "Back", to: "Back" },
-          ],
         }),
       );
       expect(
@@ -178,7 +177,7 @@ describe("<JoinPanel>", () => {
       act(() =>
         store.getState().setProposal({
           ...proposed,
-          result: { ...result, joint: { ...result.joint, type: "throughDovetail" } },
+          result: { ...result, type: "throughDovetail" },
         }),
       );
       const entries = store.getState().history?.entries.length;

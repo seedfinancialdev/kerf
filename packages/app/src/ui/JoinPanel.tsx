@@ -26,7 +26,7 @@ export function JoinPanel() {
       </p>
     );
   }
-  const { joint, missing, description } = proposal.result;
+  const { type, missing, description, taken } = proposal.result;
   /**
    * The shown project and the two boards in its solve, so both come from one state (`solved` is
    * the solve of `shownProject`). When a board is gone, says so and drops the stale proposal.
@@ -46,7 +46,7 @@ export function JoinPanel() {
     const now = current();
     if (!now) return;
     const { s, project, a, b } = now;
-    const r = acceptProposal(project, s.shop, a, b, joint.type);
+    const r = acceptProposal(project, s.shop, a, b, type);
     if (!r.ok) {
       s.say(r.message);
       return;
@@ -54,7 +54,7 @@ export function JoinPanel() {
     s.apply(r.edit, r.notice);
     s.setProposal(null);
   };
-  const other = OTHER[joint.type];
+  const other = OTHER[type];
   const tryOther = (): void => {
     const now = current();
     if (now && other) now.s.setProposal(propose(now.project, now.s.shop, now.a, now.b, other));
@@ -65,9 +65,7 @@ export function JoinPanel() {
       <p className="muted">
         {missing ? "Your shop has no tool for this cut yet." : "Your tools can cut this."}
       </p>
-      {proposal.taken.length > 0 && (
-        <p className="muted">Accepting makes {namesTaken(proposal.taken)} custom.</p>
-      )}
+      {taken.length > 0 && <p className="muted">Accepting makes {namesTaken(taken)} custom.</p>}
       <div className="button-row">
         <button type="button" className="primary" onClick={accept}>
           Accept

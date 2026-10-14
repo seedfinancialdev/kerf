@@ -11,7 +11,7 @@ import { type Id, type PlacedPart, type Project, solve } from "@kerf/core";
 import { loadShopProfile, withParam } from "@kerf/fixtures";
 import { handMadeBookcase } from "@kerf/fixtures/builders";
 import { describe, expect, it } from "vitest";
-import { startProject } from "../model/commands";
+import { startProject, UNPLACEABLE } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { memoryStorage } from "../testing/memory-storage";
@@ -137,7 +137,7 @@ describe("boardBetween()", () => {
     const r = between(base());
     if (!r.ok) throw new Error(r.message);
     expect(r.edit.label).toBe("Added Board 1 between Right side and Left side");
-    // Flush with the sides' fronts (R35): the sides are 12" deep (2438400), so 11" wide starts 1"
+    // Flush with the sides' fronts (ADR 015, rule 7): the sides are 12" deep (2438400), so 11" wide starts 1"
     // in.
     expect(placed(r.edit.project, "Board 1").box.min[1]).toBe(203_200);
   });
@@ -152,7 +152,7 @@ describe("boardBetween()", () => {
     expect(box.max[0]).toBe(7_169_150);
   });
 
-  // Hand calculation (R35): the inset back is 1/4" (50800) thick against the rear edges and spans
+  // Hand calculation (ADR 015, rule 7): the inset back is 1/4" (50800) thick against the rear edges and spans
   // the gap, so a board with no typed width reaches back to it. Its front is the sides' front,
   // 12" = 2438400. Depth = 2438400 - 50800 = 2387600.
   it("reaches back to the back panel and forward to the sides' fronts when no width is given", () => {
@@ -191,7 +191,7 @@ describe("boardBetween()", () => {
     });
   });
 
-  it("refuses the form's two sides, in shop words, saying what to do instead (branch review C1)", () => {
+  it("refuses the form's two sides, in shop words, saying what to do instead", () => {
     // The user's decision (fix plan, 2026-10-13): no binding to boards a form made yet.
     const p = startProject("Bookcase", "imperial").project;
     const side = (name: string) => placed(p, name).instance;
@@ -204,7 +204,18 @@ describe("boardBetween()", () => {
     });
   });
 
-  it("refuses a stock the project does not have instead of measuring with no thickness (branch deferred row 29)", () => {
+  it("says the boards cannot be placed, without throwing, when the engine rejects the project", () => {
+    const p = startProject("Bookcase", "imperial").project;
+    const [first, ...others] = p.stock;
+    // A stock thinner than nothing is not a project the engine accepts (Domain model, "Stock").
+    const broken = { ...p, stock: [{ ...first, thickness: -1 }, ...others] } as Project;
+    expect(boardBetween(broken, plywood(p), "a", "b", 36 * IN, null, shop)).toEqual({
+      ok: false,
+      message: UNPLACEABLE,
+    });
+  });
+
+  it("refuses a stock the project does not have instead of measuring with no thickness", () => {
     const p = base();
     const r = boardBetween(
       p,
@@ -283,7 +294,7 @@ describe("the Board tool", () => {
     });
   });
 
-  it("starts nothing when the sight line looks above the floor, and says where to click (silent-failure review M11)", () => {
+  it("starts nothing when the sight line looks above the floor, and says where to click", () => {
     const s = started();
     down(s, null, { origin: [3, 10, 4], dir: [0, 1, 0] });
     expect(s.getState().pending).toBeNull();
@@ -403,7 +414,7 @@ describe("the Board tool", () => {
     expect(s.getState().pending).toBeNull();
   });
 
-  it("tells the user, and records nothing, when both clicks are on the template's sides (branch review C1)", () => {
+  it("tells the user, and records nothing, when both clicks are on the template's sides", () => {
     const s = started(startProject("Bookcase", "imperial").project);
     down(s, onSide(s, "Right side"));
     const before = entries(s);

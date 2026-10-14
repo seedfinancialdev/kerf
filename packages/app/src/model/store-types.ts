@@ -54,10 +54,13 @@ export interface KerfState {
   tool: ToolId;
   /**
    * What the active tool has started and not finished; cleared when the tool changes or History is
-   * stepped through.
+   * stepped through. Only the active tool's own action can be set.
    */
   pending: Pending | null;
-  /** The Join tool's suggestion for the two boards clicked; cleared when the tool changes. */
+  /**
+   * The Join tool's suggestion for the two boards clicked; cleared when the tool changes or
+   * History moves (an apply, commit, undo, redo or jump).
+   */
   proposal: Proposal | null;
   /** The last two points the Tape measured; session only, cleared when a project begins. */
   tape: { from: Vec3; to: Vec3 } | null;
@@ -142,7 +145,7 @@ export interface KerfActions {
   setShop(shop: ShopProfile): void;
   /** Picks the active tool, dropping the last one's action and any preview it drew. */
   setTool(tool: ToolId): void;
-  /** Sets or clears the active tool's half-finished action. */
+  /** Sets or clears the active tool's half-finished action; another tool's action is dropped. */
   setPending(pending: Pending | null): void;
   /**
    * Drops whatever the active tool had started, its Join proposal and any preview, after a fault

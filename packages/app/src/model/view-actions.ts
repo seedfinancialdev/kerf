@@ -45,7 +45,11 @@ export function viewActions(
     setTape: (tape) => set({ tape }),
     addGuide: (from, to) => set({ guides: [...get().guides, [from, to]] }),
     clearGuides: () => set({ guides: [] }),
-    setPending: (pending) => set({ pending }),
+    // A half-finished action belongs to the tool that began it: one set after the user has
+    // moved on (from a callback that finished late) is dropped, not kept for a tool that is gone.
+    setPending: (pending) => {
+      if (pending === null || pending.tool === get().tool) set({ pending });
+    },
     setBoardStock: (boardStock) => set({ boardStock }),
     setDrawerTab: (drawerTab) => set({ drawerTab }),
   };

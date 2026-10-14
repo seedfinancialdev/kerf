@@ -187,6 +187,7 @@ describe("the Push/Pull tool", () => {
   const started = () => {
     const s = createKerfStore({ storage: createStorage(memoryStorage()) });
     s.getState().apply(startProject("Bookcase", "imperial"));
+    s.getState().setTool("pushPull");
     return s;
   };
   const endOf = (placed: PlacedPart): ModelHit => ({
@@ -216,7 +217,7 @@ describe("the Push/Pull tool", () => {
     expect(s.getState().pending).toBeNull();
   });
 
-  it("drops an end clicked earlier when a broad face is pressed next, so a typed distance changes nothing (final branch review, Task 28)", () => {
+  it("drops an end clicked earlier when a broad face is pressed next, so a typed distance changes nothing", () => {
     const s = started();
     pushPullTool.pointer?.(event("down", endOf(top())), s);
     pushPullTool.pointer?.(event("up", endOf(top())), s);
@@ -237,7 +238,7 @@ describe("the Push/Pull tool", () => {
     expect(pushPullTool.measure?.('1"', s)).toBeNull();
     expect(lengthOfTop(s)).toBe(7_023_100 + IN);
     // A top 1" longer runs into the Left side; the change is recorded and what it caused is
-    // named, as ruling R45 words it ("Shelf 2 now overlaps Back; Undo puts it back.").
+    // named, as ADR 015, rule 13 words it ("Shelf 2 now overlaps Back; Undo puts it back.").
     expect(s.getState().notice).toEqual({
       text:
         "Top is now custom; the form won't change it. Top now overlaps Left side; " +

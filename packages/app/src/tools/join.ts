@@ -11,7 +11,6 @@ import {
   type Instance,
   JOINT_WORD,
   type Joint,
-  type JointProposal,
   type PlacedPart,
   type Project,
   ProjectFormatError,
@@ -40,7 +39,7 @@ type TakeOver =
       ok: true;
       project: Project;
       /**
-       * `project` with the two boards named as clicked, for the engine's reasons (ruling R41);
+       * `project` with the two boards named as clicked, for the engine's reasons (ADR 015, ruling E);
        * never applied.
        */
       scratch: Project;
@@ -56,7 +55,7 @@ type TakeOver =
  * `project` with boards `a` and `b` taken over, as an edit would leave them, and their instances
  * there. Shared by `propose` and `acceptProposal` so the engine is asked about the boards Accept
  * will cut. Says why when a board cannot be taken over, is no longer in the project, or is already
- * joined to the other (by a joint of the form too), naming the boards as clicked (ruling R41).
+ * joined to the other (by a joint of the form too), naming the boards as clicked (ADR 015, ruling E).
  */
 function takeOver(project: Project, shop: ShopProfile, a: PlacedPart, b: PlacedPart): TakeOver {
   let next: Project;
@@ -95,7 +94,7 @@ function takeOver(project: Project, shop: ShopProfile, a: PlacedPart, b: PlacedP
 
 /**
  * What the engine suggests for boards `a` and `b` from where they touch and what the shop can cut,
- * or why it cannot, asked of the boards as they will be once taken over (ruling R38). The proposal
+ * or why it cannot, asked of the boards as they will be once taken over (ADR 015, ruling E). The proposal
  * names the boards as clicked. `prefer` asks for one type of joint instead of the engine's first
  * choice.
  */
@@ -107,10 +106,11 @@ export function propose(
   prefer?: Joint["type"],
 ): Proposal {
   const taken = takeOver(project, shop, a, b);
-  const result: JointProposal = taken.ok
-    ? proposeJoint(taken.scratch, shop, taken.a.id, taken.b.id, newId(), prefer)
-    : { ok: false, reason: taken.message };
-  return { a: a.instance, b: b.instance, result, taken: taken.ok ? taken.taken : [] };
+  if (!taken.ok)
+    return { a: a.instance, b: b.instance, result: { ok: false, reason: taken.message } };
+  const r = proposeJoint(taken.scratch, shop, taken.a.id, taken.b.id, newId(), prefer);
+  const result: Proposal["result"] = r.ok ? { ...r, type: r.joint.type, taken: taken.taken } : r;
+  return { a: a.instance, b: b.instance, result };
 }
 
 /** What Accept does: the edit, and the notice about boards it took over (if any). */

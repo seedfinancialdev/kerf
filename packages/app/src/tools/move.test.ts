@@ -197,6 +197,7 @@ describe("the Move tool", () => {
   const started = () => {
     const s = createKerfStore({ storage: createStorage(memoryStorage()) });
     s.getState().apply(startProject("Bookcase", "imperial"));
+    s.getState().setTool("move");
     return s;
   };
   type Store = ReturnType<typeof started>;
@@ -227,10 +228,6 @@ describe("the Move tool", () => {
   const lock = (s: Store, axis: 0 | 1 | 2, was: Pending | null = null) =>
     s.getState().setPending({
       tool: "move",
-      from: [0, 0, 0],
-      placed: [],
-      last: null,
-      ray: null,
       ...(was?.tool === "move" ? was : {}),
       axis,
     });
@@ -252,7 +249,7 @@ describe("the Move tool", () => {
     expect(topOf(s).box.min[2]).toBe(top.box.min[2] + IN);
     expect(s.getState().history?.entries.at(-1)?.label).toBe('Moved Top 1"');
     // Raised 1" the Top leaves its rabbet in the Right side: the move is recorded and what it
-    // caused is named, in ruling R45's words.
+    // caused is named, in shop words (ADR 015, rule 13).
     expect(s.getState().notice?.text).toBe(
       "Top is now custom; the form won't change it. Top now misses its rabbet in Right side; " +
         "Undo puts it back.",
@@ -272,13 +269,13 @@ describe("the Move tool", () => {
     );
   });
 
-  it("records a move that brings a problem, and names it with Undo (ruling R45)", () => {
+  it("records a move that brings a problem, and names it with Undo", () => {
     const s = started();
     const shelf2 = s.getState().solved?.result.placements.find((p) => p.name === "Shelf 2");
     if (!shelf2) throw new Error("no Shelf 2");
     pick(s, shelf2);
     // Moved 1" to the right it leaves its dado in the Right side and runs into the Left side; the
-    // first thing it caused is named, in ruling R45's words.
+    // first thing it caused is named, in shop words (ADR 015, rule 13).
     expect(moveTool.measure?.('1"', s)).toBeNull();
     expect(s.getState().history?.entries.at(-1)?.label).toBe('Moved Shelf 2 1"');
     expect(s.getState().notice).toEqual({
@@ -466,7 +463,7 @@ describe("the Move tool", () => {
       expect(s.getState().pending).toBeNull();
     });
 
-    it("keeps an arrow lock pressed before the click, so the typed distance follows it (final branch review M2)", () => {
+    it("keeps an arrow lock pressed before the click, so the typed distance follows it", () => {
       const s = started();
       const top = topOf(s);
       lock(s, 2);
@@ -493,6 +490,7 @@ describe("the Move tool", () => {
       // 50 mm x 8000 units per mm = 400000 (Domain model, "Units & precision").
       const s = createKerfStore({ storage: createStorage(memoryStorage()) });
       s.getState().apply(startProject("Bookcase", "metric"));
+      s.getState().setTool("move");
       const top = topOf(s);
       pick(s, top);
       lock(s, 2);

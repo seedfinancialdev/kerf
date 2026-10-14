@@ -109,7 +109,7 @@ describe("createKerfStore()", () => {
     });
   });
 
-  describe("notices (ruling R13)", () => {
+  describe("notices", () => {
     const custom = "Shelf 3 is now custom; the form won't change it";
     const withNotice = () => {
       const s = fresh();
@@ -312,7 +312,7 @@ describe("selected boards", () => {
   });
 });
 
-describe("selected boards while dragging (ruling R19)", () => {
+describe("selected boards while dragging", () => {
   it("are kept by a preview that lacks them, and by cancelling it", () => {
     const s = fresh();
     s.getState().apply(startProject("Bookcase", "imperial"));
@@ -343,13 +343,26 @@ describe("pending tool state", () => {
   it("starts empty, holds a half-finished action, and is cleared by picking a tool", () => {
     const s = fresh();
     expect(s.getState().pending).toBeNull();
+    s.getState().setTool("tape");
     s.getState().setPending({ tool: "tape", from: [0, 0, 0] });
     expect(s.getState().pending).toEqual({ tool: "tape", from: [0, 0, 0] });
     s.getState().setTool("move");
     expect(s.getState().pending).toBeNull();
   });
 
-  describe("the Join tool's half-finished work (ruling R37)", () => {
+  it("drops an action that a tool the user has left tries to set, and still clears on request", () => {
+    const s = fresh();
+    s.getState().setTool("move");
+    s.getState().setPending({ tool: "tape", from: [0, 0, 0] });
+    expect(s.getState().pending).toBeNull();
+    s.getState().setPending({ tool: "move", axis: 2 });
+    s.getState().setPending({ tool: "join", first: "a" });
+    expect(s.getState().pending).toEqual({ tool: "move", axis: 2 });
+    s.getState().setPending(null);
+    expect(s.getState().pending).toBeNull();
+  });
+
+  describe("the Join tool's half-finished work", () => {
     const withProposal = () => {
       const s = fresh();
       s.getState().apply(startProject("Bookcase", "imperial"));
@@ -364,7 +377,7 @@ describe("pending tool state", () => {
       const start = () => {
         s.getState().setTool("join");
         s.getState().setPending({ tool: "join", first: a });
-        s.getState().setProposal({ a, b: a, result: { ok: false, reason: "No." }, taken: [] });
+        s.getState().setProposal({ a, b: a, result: { ok: false, reason: "No." } });
       };
       start();
       return { s, start, sizeEdit };
@@ -374,7 +387,7 @@ describe("pending tool state", () => {
       const { s, sizeEdit } = withProposal();
       s.getState().apply(sizeEdit());
       s.getState().setPending({ tool: "join", first: "x" });
-      s.getState().setProposal({ a: "x", b: "y", result: { ok: false, reason: "No." }, taken: [] });
+      s.getState().setProposal({ a: "x", b: "y", result: { ok: false, reason: "No." } });
       s.getState().undo();
       expect(s.getState().proposal).toBeNull();
       expect(s.getState().pending).toBeNull();
@@ -426,7 +439,7 @@ describe("pending tool state", () => {
   });
 });
 
-describe("a tool action under way (final branch review I1 and M1)", () => {
+describe("a tool action under way", () => {
   /** The bookcase recorded, then Width 30" recorded, so there is an entry to undo. */
   const resized = () => {
     const s = fresh();
@@ -480,7 +493,7 @@ describe("Undo and Redo with nothing to step to", () => {
     s.getState().apply(startProject("Bookcase", "imperial"));
     s.getState().setTool("join");
     s.getState().setPending({ tool: "join", first: "a" });
-    s.getState().setProposal({ a: "a", b: "b", result: { ok: false, reason: "No." }, taken: [] });
+    s.getState().setProposal({ a: "a", b: "b", result: { ok: false, reason: "No." } });
     s.getState().say("Shelf 2 now overlaps Back; Undo puts it back.", true);
     return s;
   };

@@ -4,8 +4,8 @@
 
 // Move / copy (Interaction spec, "3D tools": Ctrl copies, Shift makes a mirrored copy; axis locks
 // and typed distances). A board the form made is taken over first, with a notice (Interaction
-// spec, "Tweak"); a move that brings an error is recorded and the error named with Undo (ruling
-// R45). Domain model: "Mirroring never changes a part's cut list line", so a mirrored copy shares
+// spec, "Tweak"); a move that brings an error is recorded and the error named with Undo (ADR
+// 015, rule 13). Domain model: "Mirroring never changes a part's cut list line", so a mirrored copy shares
 // its part with the board it came from.
 
 import {
@@ -20,7 +20,7 @@ import {
 } from "@kerf/core";
 import { detachForEdit, type Edit, instanceOf, TakeOverError } from "../model/commands";
 import { newId } from "../model/ids";
-import type { Pending } from "../model/pending";
+import type { MoveDrag } from "../model/pending";
 import { literalFor, readLength } from "../model/size";
 import type { KerfState, KerfStore } from "../model/store-types";
 import { followsForm } from "../model/take-over";
@@ -165,15 +165,17 @@ export function moveBoards(
   };
 }
 
-type MovePending = Extract<Pending, { tool: "move" }>;
-
 /**
  * How far the pointer has dragged, measured against what was fixed when the drag began: the locked
  * line, or else the plane facing the viewer. Without a line of sight (a test, a plain pointer) the
  * point under the pointer is used. Null when there is nothing to measure by.
  */
-function dragDelta(e: ModelPointer, pending: MovePending, project: Project): Vec3 | null {
-  const { from, ray: began, axis } = pending;
+function dragDelta(
+  e: ModelPointer,
+  { from, ray: began }: MoveDrag,
+  axis: 0 | 1 | 2 | null,
+  project: Project,
+): Vec3 | null {
   if (e.ray && began) {
     const grid = gridSize(project.units);
     if (axis !== null) {
@@ -237,16 +239,14 @@ export const moveTool: ToolHandler = {
       s.select({ kind: "boards", instances: dragged.map((p) => p.instance) });
       s.setPending({
         tool: "move",
-        from: e.hit.point,
-        ray: e.ray,
-        placed: dragged,
         axis: pending?.axis ?? null,
-        last: null,
+        drag: { from: e.hit.point, ray: e.ray, placed: dragged, last: null },
       });
       return;
     }
-    if (!pending || pending.placed.length === 0) return;
-    const delta = dragDelta(e, pending, project);
+    const drag = pending?.drag;
+    if (!pending || !drag) return;
+    const delta = dragDelta(e, drag, pending.axis, project);
     if (!delta) {
       if (e.kind === "up") {
         s.cancelPreview();
@@ -255,12 +255,12 @@ export const moveTool: ToolHandler = {
       return;
     }
     const mode = modeOf(e);
-    const r = moveBoards(project, pending.placed, delta, mode, s.shop);
+    const r = moveBoards(project, drag.placed, delta, mode, s.shop);
     if (e.kind === "move") {
       const key = previewKey(delta, mode);
-      if (r.ok && (key !== pending.last || s.previewed === null)) {
+      if (r.ok && (key !== drag.last || s.previewed === null)) {
         s.preview(r.edit.project);
-        s.setPending({ ...pending, last: key });
+        s.setPending({ ...pending, drag: { ...drag, last: key } });
       } else if (isZero(delta) && s.previewed !== null) {
         // Back at the start: the boards are as they were, so there is nothing to show.
         s.cancelPreview();
@@ -268,14 +268,14 @@ export const moveTool: ToolHandler = {
       return;
     }
     // Only a drag that showed a preview is recorded; a click never is.
-    if (r.ok && pending.last !== null) return finish(store, project, r);
+    if (r.ok && drag.last !== null) return finish(store, project, r);
     // Nothing is recorded. A click that has not moved keeps its pick and its arrow lock so a
-    // distance can be typed (final branch review M2); a drag that ended with nothing to record,
+    // distance can be typed; a drag that ended with nothing to record,
     // or was refused, is over.
     s.cancelPreview();
     const refused = !r.ok && !isZero(delta);
     if (refused) s.say(r.message);
-    if (pending.last !== null || refused) s.setPending(null);
+    if (drag.last !== null || refused) s.setPending(null);
   },
   prompt(s) {
     if (selectedBoards(s).length === 0) return "Select boards first";
