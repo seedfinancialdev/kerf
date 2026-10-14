@@ -65,7 +65,7 @@
   {
     "id": "edge-form-shelf",
     "file": "packages/app/src/tools/edge.ts",
-    "find": "p.source?.role === \"shelf\" && !p.detached",
+    "find": "p.source?.role === \"shelf\" && !p.source.detached",
     "replace": "p.source?.role === \"shelf\"",
     "why": "A detached shelf's roundover goes to the form instead of the board."
   },
@@ -128,7 +128,7 @@
   {
     "id": "move-click-records",
     "file": "packages/app/src/tools/move.ts",
-    "find": "if (r.ok && pending.last !== null) return finish(store, project, r);",
+    "find": "if (r.ok && drag.last !== null) return finish(store, project, r);",
     "replace": "if (r.ok) return finish(store, project, r);",
     "why": "A click with no drag records a move."
   },
@@ -425,5 +425,12 @@
     "find": "const tone = failing.has(placed.instance) ? \"error\" : wood;",
     "replace": "const tone = failing.has(placed.part) ? \"error\" : wood;",
     "why": "Every copy of a board is red when the error is about one of them."
+  },
+  {
+    "id": "pending-of-another-tool",
+    "file": "packages/app/src/model/view-actions.ts",
+    "find": "if (pending === null || pending.tool === get().tool) set({ pending });",
+    "replace": "set({ pending });",
+    "why": "A half-done action set for a tool the user has left is kept."
   }
 ]

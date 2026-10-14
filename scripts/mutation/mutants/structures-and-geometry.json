@@ -51,7 +51,7 @@
   {
     "id": "placement-never-detached",
     "file": "packages/core/src/pipeline.ts",
-    "find": "detached: def?.detached === true,",
+    "find": "detached: def.detached === true,",
     "replace": "detached: false,",
     "why": "A board taken over from the form still reads as the form's."
   },
