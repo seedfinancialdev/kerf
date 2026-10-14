@@ -5,7 +5,7 @@
 // Boards the form makes, and the one notice every tool gives when it takes one over (Interaction
 // spec, "Tweak": "Editing a board that a form generated detaches only that board, with a notice
 // ('Shelf 3 is now custom; the form won't change it')"). One wording for Push/Pull, Move, Join and
-// Edge, so a board is named the same way whichever tool took it (code review I4).
+// Edge, so a board is named the same way whichever tool took it.
 
 import type { PlacedPart, Project } from "@kerf/core";
 import { instanceOf } from "./commands";
@@ -13,7 +13,7 @@ import type { TakenOver } from "./pending";
 
 /** True for a board the form still makes; editing it by hand takes it over first. */
 export function followsForm(placed: PlacedPart): boolean {
-  return placed.source !== undefined && !placed.detached;
+  return placed.source !== undefined && !placed.source.detached;
 }
 
 /**

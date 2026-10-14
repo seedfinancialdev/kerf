@@ -25,11 +25,11 @@ function sized(visible: number, cut: number, units: Project["units"]): string {
 }
 
 function originOf(placed: PlacedPart[]): string {
-  const madeBy = (p: PlacedPart) => (p.source ? (p.detached ? "custom" : "form") : "hand");
+  const madeBy = (p: PlacedPart) => (p.source ? (p.source.detached ? "custom" : "form") : "hand");
   if (new Set(placed.map(madeBy)).size > 1) return "Some made by the form, some by hand.";
   const [first] = placed;
   if (first && !first.source) return "Made by hand.";
-  return first?.detached
+  return first?.source?.detached
     ? "Custom: the form won't change it."
     : "Made by the form. Editing one by hand takes it over.";
 }
@@ -43,8 +43,8 @@ function listOf(placed: PlacedPart[]): string {
 
 /**
  * Why the 3D view draws each picked board as a plain blank, when it does (ADR 015, rule 10). It
- * asks the geometry engine, so it is drawn inside ThreeDGuard: an engine failure must not take the
- * inspector with it.
+ * asks the geometry engine, so it is drawn inside ThreeDGuard: a fault while it works (the engine
+ * failing to load, say) must not take the inspector with it.
  */
 function UndrawnNotes({ placed, result }: { placed: PlacedPart[]; result: SolveResult }) {
   const { ready } = useGeometry();
@@ -126,7 +126,7 @@ export function BoardInspector({ instances }: { instances: Id[] }) {
           <p className="origin">{listOf(placed)}</p>
         )}
         <p className="origin">{originOf(placed)}</p>
-        {placed.length === 1 && first.detached && (
+        {placed.length === 1 && first.source?.detached && (
           <button type="button" onClick={handBackToForm}>
             Follow the form again
           </button>

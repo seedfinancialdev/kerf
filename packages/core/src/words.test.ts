@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Interaction spec, "Shop language": the engine's keys never reach the screen (code review I2:
-// "end0 face1" and "throughDovetail" were shown as they are).
+// Interaction spec, "Shop language": the engine's keys never reach the screen
+// ("end0 face1" and "throughDovetail" are not shown as they are).
 
 import { describe, expect, it } from "vitest";
 import type { EdgeRef, Joint } from "./types";

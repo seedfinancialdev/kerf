@@ -121,7 +121,7 @@ export function detachPart(project: Project, part: Id): PartDef {
   return detachedPart(project, part);
 }
 
-// Build plan (M4). Each is documented where it is defined.
+// Added in M4 (Build plan tab). Each is documented where it is defined.
 export { type JointProposal, proposeJoint } from "./joints/propose";
 export { assemblyOrder } from "./outputs/assembly-order";
 export { type Gap, gapBetween } from "./solve/gap";

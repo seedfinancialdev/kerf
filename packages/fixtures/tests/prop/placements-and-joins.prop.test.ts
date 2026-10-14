@@ -72,7 +72,7 @@ describe("assembly order", () => {
       fc.property(resizedFixture, (fixture) => {
         const placed = new Set(solve(fixture, shop).placements.map((p) => p.instance));
         for (const step of assemblyOrder(fixture, shop))
-          for (const part of step.parts) expect(placed.has(part)).toBe(true);
+          for (const id of step.instances) expect(placed.has(id)).toBe(true);
       }),
       { numRuns: RUNS },
     );

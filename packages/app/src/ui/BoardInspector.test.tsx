@@ -87,7 +87,7 @@ describe("<BoardInspector>", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Follow the form again" }));
     expect(store.getState().history?.entries.at(-1)?.label).toBe("Top follows the form again");
-    expect(placements(store).find((x) => x.name === "Top")?.detached).toBe(false);
+    expect(placements(store).find((x) => x.name === "Top")?.source?.detached).toBe(false);
   });
 
   it("tells the user what to remove first when a board cannot go back to the form", () => {
@@ -139,7 +139,7 @@ describe("<BoardInspector>", () => {
     expect(document.querySelector(".problem.error")?.textContent).toMatch(/roundover/i);
   });
 
-  it("names a problem's kind in words, not by colour alone, in a labelled list (branch deferred row 20)", () => {
+  it("names a problem's kind in words, not by colour alone, in a labelled list", () => {
     const store = setup(topOf);
     const p = shownProject(store.getState());
     const top = placements(store).find((x) => x.name === "Top");
@@ -198,7 +198,7 @@ describe("<BoardInspector>", () => {
       expect(await screen.findByText(/^The 3D view shows Top without its cuts: /)).toBeTruthy();
     });
 
-    it("names every picked board drawn without its cuts, not only the first (silent-failure review I7)", async () => {
+    it("names every picked board drawn without its cuts, not only the first", async () => {
       // Shelf 1 comes first in the pick; only the Top's cuts cannot be drawn.
       withCuts([{ kind: "nonsense" }], (st) => [...shelves(st).slice(0, 1), ...topOf(st)]);
       expect(await screen.findByText(/^The 3D view shows Top without its cuts: /)).toBeTruthy();

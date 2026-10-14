@@ -18,11 +18,12 @@ export interface Diagnostic {
   part?: Id;
   joint?: Id;
   /**
-   * The placed boards a problem is about, by instance id, when it is about particular boards: the
-   * two boards in one space, or a joint's guest and then its host (the guests, for guests that
-   * meet nothing). An entry that stands for several repeats (`count`) names every board of them,
-   * each once, in the order first named. It lets an editor tell which board it changed, and tell
-   * one copy of a row from another, which `part` cannot.
+   * The placed boards a problem is about, by instance id, when it is about particular boards. The
+   * order depends on the rule: `overlap` names the two boards in one space; a joint's rules name
+   * its guest and then its host (only the guests, for guests that meet nothing). An entry that
+   * stands for several repeats (`count`) names every board of them, each once, in the order first
+   * named, so the order then means nothing. It lets an editor tell which board it changed, and
+   * tell one copy of a row from another, which `part` cannot.
    */
   instances?: readonly Id[];
   /**
@@ -30,11 +31,16 @@ export interface Diagnostic {
    * ("the number of bays"), or a field of a part ("Side length").
    */
   field?: string;
-  /** How many times this same problem occurred, when it was reported once for all of them. */
+  /**
+   * How many times this same problem occurred, when it was reported once for all of them. On a
+   * `summary` entry it means something else: how many problems are not listed. Read `summary`
+   * first, and never add the two kinds of `count` together.
+   */
   count?: number;
   /**
-   * True for the one entry that sums up a rule's problems past the per-rule limit: its message
-   * already says how many (`count`) are not listed, so it is not counted again on screen.
+   * True for an entry that stands for problems not listed: the per-rule limit in `condense`, or
+   * the per-joint limit in joint derivation. Its message already says how many (`count`), so it
+   * is not counted again on screen.
    */
   summary?: true;
 }
@@ -295,23 +301,32 @@ export interface PlacedPart {
    * origin + u·x + v·y + w·z. A mirrored copy has its x reversed and its origin at the other end.
    */
   frame: { origin: Vec3; x: Vec3; y: Vec3; z: Vec3 };
-  /** The structure and role that made it; absent for a board made by hand. */
-  source?: { structure: Id; role: string };
-  /** True when a board a form made was taken over by hand. */
-  detached: boolean;
+  /**
+   * The form and role that made it, and whether it was taken over by hand since; absent for a
+   * board made by hand. The three states of a board are therefore: no `source` (by hand), a
+   * `source` that is not `detached` (follows its form), and a `source` that is `detached`.
+   */
+  source?: GeneratedFrom & { detached: boolean };
   /** For a member of a row: the row and its index. */
   pattern?: { id: Id; index: number };
+}
+
+/** The kinds of cut a joint makes in a board. */
+export type CutKind = "dado" | "groove" | "rabbet" | "dovetail";
+
+/** The tool a cut needs, and whether the shop profile lacks it (the tool named is the one needed). */
+export interface ToolNeed {
+  tool: MachiningSetup["tool"];
+  missing: boolean;
 }
 
 /**
  * One kind of cut a joint needs, how many, and the tool that makes it (or the one the shop lacks).
  */
-export interface JointCut {
-  kind: "dado" | "groove" | "rabbet" | "dovetail";
+export interface JointCut extends ToolNeed {
+  kind: CutKind;
   width: Len;
   depth: Len;
-  tool: MachiningSetup["tool"];
-  missing: boolean;
   count: number;
 }
 
@@ -319,7 +334,7 @@ export interface JointCut {
 export interface JointSummary {
   joint: Id;
   type: Joint["type"];
-  /** Shop names of the host and guest boards ("Right side", "Shelf 1"). */
+  /** Shop names of the host and guest boards ("Right side", "Shelf"; a row is named for its part). */
   host: string;
   guest: string;
   /** Host/guest pairs it makes: a row of 4 shelves in one side is 4. */
@@ -354,7 +369,8 @@ export interface SolveResult {
 /** One step of putting the piece together, and the placed boards it names. */
 export interface AssemblyStep {
   text: string;
-  parts: Id[];
+  /** The boards by placement id, as `PlacedPart.instance` (not part-definition ids). */
+  instances: Id[];
 }
 
 export interface BuildPlan {

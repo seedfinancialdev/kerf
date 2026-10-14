@@ -87,7 +87,7 @@ describe("solve().placements", () => {
   it("names the form and role that made a board", () => {
     const shelf = solve(form, shop).placements.find((p) => p.source?.role === "shelf");
     expect(shelf?.source?.role).toBe("shelf");
-    expect(shelf?.detached).toBe(false);
+    expect(shelf?.source?.detached).toBe(false);
     expect(shelf?.pattern?.index).toBeTypeOf("number");
   });
 
@@ -107,14 +107,13 @@ describe("solve().placements", () => {
     if (!top) throw new Error("no top");
     // The parts a form makes are written into the project first, as the app's take-over does.
     const after = solve(detachPartIn(generateStructures(form, shop), top.part), shop).placements;
-    expect(after.find((p) => p.name === "Top")?.detached).toBe(true);
-    expect(after.find((p) => p.name === "Bottom")?.detached).toBe(false);
+    expect(after.find((p) => p.name === "Top")?.source?.detached).toBe(true);
+    expect(after.find((p) => p.name === "Bottom")?.source?.detached).toBe(false);
   });
 
-  it("gives a board made by hand no source, and never calls it detached", () => {
+  it("gives a board made by hand no source, so it cannot be called detached", () => {
     for (const p of solve(handMadeBookcase(), shop).placements) {
       expect(p.source).toBeUndefined();
-      expect(p.detached).toBe(false);
     }
   });
 

@@ -7,7 +7,7 @@
 import { ExpressionError } from "../expr/errors";
 import { evaluateQuantity, type Quantity } from "../expr/evaluate";
 import { gridSize, LengthRangeError, snapToGrid, type UnitSystem } from "../length";
-import type { Diagnostic, RemovalPrimitive } from "../outputs";
+import type { CutKind, Diagnostic, RemovalPrimitive } from "../outputs";
 import { div, floor, type Rational, rational, toSafeInteger } from "../rational";
 import type { RuleId } from "../rules";
 import type { Frame } from "../solve/assembly";
@@ -26,7 +26,7 @@ export const NO_ADD: Readonly<CutAdd> = Object.freeze({ length: 0, width: 0 });
 /** One cut a shop makes, for machining setups (Cut list & nesting, "Machining by setup"). */
 export interface MachinedCut {
   host: Id;
-  kind: "dado" | "groove" | "rabbet" | "dovetail";
+  kind: CutKind;
   /** Cut width across the host face. */
   width: Len;
   /** Cut depth into the host. */
@@ -84,6 +84,7 @@ export interface DeriveContext {
   ): void;
   /**
    * Adds one "and N more" entry for each rule that hit the per-joint limit. Call once, at the end.
+   * The entry is a `summary`: its message and its `count` both give the number not listed.
    */
   flush(): void;
   /** How many problems have been raised so far, counting those too many to show. */
@@ -188,6 +189,7 @@ export function makeContext(
           ...sample,
           message: `${sample.message} (and ${hidden} more like it)`,
           count: hidden,
+          summary: true,
         });
       }
     },

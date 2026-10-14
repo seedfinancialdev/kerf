@@ -35,17 +35,17 @@ function caseSteps(boards: Board[]): AssemblyStep[] {
   const glued = boards.filter((b) => b.role !== "side" && b.role !== "back");
   const back = boards.find((b) => b.role === "back");
   const steps: AssemblyStep[] = [
-    { text: "Dry-fit the case without glue and check that every joint closes.", parts: all },
+    { text: "Dry-fit the case without glue and check that every joint closes.", instances: all },
     {
       text: `Glue ${counted(glued)} into the sides.`,
-      parts: [...glued, ...sides].map((b) => b.id),
+      instances: [...glued, ...sides].map((b) => b.id),
     },
     {
       text: "Square the case: the two diagonals must match. Adjust before the glue sets.",
-      parts: all,
+      instances: all,
     },
   ];
-  if (back) steps.push({ text: `Fit the ${back.name} last.`, parts: [back.id] });
+  if (back) steps.push({ text: `Fit the ${back.name} last.`, instances: [back.id] });
   return steps;
 }
 
@@ -53,16 +53,16 @@ function boxSteps(boards: Board[]): AssemblyStep[] {
   const all = boards.map((b) => b.id);
   const bottom = boards.find((b) => b.role === "bottom");
   return [
-    { text: "Dry-fit the box without glue and check that every corner closes.", parts: all },
+    { text: "Dry-fit the box without glue and check that every corner closes.", instances: all },
     bottom
       ? {
           text: `Glue the corners with the ${bottom.name} in its groove, not glued, so it can move.`,
-          parts: all,
+          instances: all,
         }
-      : { text: "Glue the corners.", parts: all },
+      : { text: "Glue the corners.", instances: all },
     {
       text: "Square the box: the two diagonals must match. Adjust before the glue sets.",
-      parts: all,
+      instances: all,
     },
   ];
 }

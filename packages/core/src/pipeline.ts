@@ -179,9 +179,14 @@ function placementsOf(p: Pipeline): PlacedPart[] {
         y: minus(toParent(frame, [0, 1, 0]), origin),
         z: minus(toParent(frame, [0, 0, 1]), origin),
       },
-      detached: def?.detached === true,
     };
-    if (def?.source) placed.source = { structure: def.source.structure, role: def.source.role };
+    if (def?.source) {
+      placed.source = {
+        structure: def.source.structure,
+        role: def.source.role,
+        detached: def.detached === true,
+      };
+    }
     if (instance.pattern)
       placed.pattern = { id: instance.pattern.id, index: instance.pattern.index };
     return placed;
@@ -189,9 +194,8 @@ function placementsOf(p: Pipeline): PlacedPart[] {
 }
 
 /**
- * The shop profile when none is given: it owns no tool, so every cut is reported as needing the
- * tool that makes it (`toolFor`'s `missing`), which is what the Joinery step shows before a shop
- * is known.
+ * The shop profile used when the given one is invalid (ADR 015, rule 9): it owns no tool, so every
+ * cut reports the tool it needs as missing (`toolFor`'s `missing`), beside the invalid-shop error.
  */
 const NO_TOOLS: ShopProfile = { kerf: 0, tools: [] };
 

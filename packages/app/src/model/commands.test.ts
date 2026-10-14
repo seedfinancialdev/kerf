@@ -532,7 +532,9 @@ describe("handBack()", () => {
   it("puts a shelf taken out of its row back in the row", () => {
     const p = start().project;
     const taken = detachForEdit(p, shelfMember(p, 1), shop).project;
-    const own = solve(taken, shop).placements.find((x) => x.source?.role === "shelf" && x.detached);
+    const own = solve(taken, shop).placements.find(
+      (x) => x.source?.role === "shelf" && x.source.detached,
+    );
     if (!own) throw new Error("no detached shelf");
     const { project } = handed(taken, own);
     expect(project.instances).toEqual([]);
@@ -562,7 +564,9 @@ describe("handBack()", () => {
       IN / 8,
       shop,
     ).project;
-    const own = solve(both, shop).placements.find((x) => x.source?.role === "shelf" && x.detached);
+    const own = solve(both, shop).placements.find(
+      (x) => x.source?.role === "shelf" && x.source.detached,
+    );
     const top = solve(both, shop).placements.find((x) => x.name === "Top");
     if (!own || !top) throw new Error("no detached boards");
     const { generatedBy: _, ...byHand } = {

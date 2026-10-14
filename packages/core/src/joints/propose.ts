@@ -7,32 +7,31 @@
 // so a joint the engine would reject is never offered.
 
 import { formatLength } from "../length";
-import type { Diagnostic, MachiningSetup } from "../outputs";
+import type { Diagnostic, ToolNeed } from "../outputs";
 import { toolFor } from "../outputs/machining";
 import { runPipeline } from "../pipeline";
 import { type Box, boxOf, boxToLocal, contactOf, type Frame, faceAt } from "../solve/assembly";
 import type { Id, Joint, Project, ShopProfile } from "../types";
+import { JOINT_WORD } from "../words";
 
 /**
  * The Join tool's answer for two boards (ADR 015, rule 6): the joint to cut, the tool that cuts it
  * and whether the shop lacks that tool, or the reason there is no joint to offer.
  */
 export type JointProposal =
-  | { ok: true; joint: Joint; tool: MachiningSetup["tool"]; missing: boolean; description: string }
+  | ({ ok: true; joint: Joint; description: string } & ToolNeed)
   | { ok: false; reason: string };
 
-/**
- * What the user calls a board in a reason: its name, or its part's name when it has none, as the
- * solve names it.
- */
-const nameOf = (f: Frame): string => f.instance.name ?? f.part.name;
+/** What the user calls a board in a reason: the name the solve gives it ("Shelf 2"). */
+const nameOf = (f: Frame): string => f.instance.name;
 
 const refuse = (reason: string): JointProposal => ({ ok: false, reason });
 
 /**
  * A guest standing on a host face is cut as a rabbet when its thickness lies against an end or an
  * edge of the host (a step), and as a dado when that thickness lies in the middle (a channel).
- * The guest's other dimension may run to the host's far side either way (ADR 013, D4).
+ * The guest's other dimension may run to the host's far side either way; a guest counts as seated
+ * for each type as ADR 013, D4 defines, and ADR 015, rule 6 picks the type from where it sits.
  */
 function sitsInStep(host: Frame, guest: Frame, patch: Box): boolean {
   // A wrong guess here shows up as the trial solve's error, so the proposal is never offered.
@@ -48,7 +47,11 @@ const isError = (d: Diagnostic): boolean => d.severity === "error";
  */
 const errorKey = (d: Diagnostic): string => [d.rule, d.part, d.joint, d.message].join("|");
 
-/** Host is the board touched on its broad face; null when neither or both are. */
+/**
+ * Host is the board touched on its broad face; guest is the other. When neither or both are
+ * touched on a broad face, or they do not sit flat, comes back the reason there is no joint, in
+ * shop words.
+ */
 function hostAndGuest(a: Frame, b: Frame, axis: 0 | 1 | 2, at: number): [Frame, Frame] | string {
   const fa = faceAt(a, axis, at);
   const fb = faceAt(b, axis, at);
@@ -130,13 +133,12 @@ export function proposeJoint(
   const cut = trial.derived.pairs.find((pair) => pair.joint === jointId)?.machined[0];
   if (!cut) return refuse(`Kerf could not work out the cuts for ${nameOf(guest)}.`);
   const { tool, missing } = toolFor(cut, shop);
-  const what = type === "dado" ? "a dado" : type === "rabbet" ? "a rabbet" : "through dovetails";
   const size = `${formatLength(cut.width, project.units)} wide and ${formatLength(cut.depth, project.units)} deep`;
   return {
     ok: true,
     joint,
     tool,
     missing,
-    description: `${nameOf(guest)} in ${what} in ${nameOf(host)}, ${size}`,
+    description: `${nameOf(guest)} in ${JOINT_WORD[type]} in ${nameOf(host)}, ${size}`,
   };
 }

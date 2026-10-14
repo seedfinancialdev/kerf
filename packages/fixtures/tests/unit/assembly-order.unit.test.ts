@@ -45,6 +45,6 @@ describe("assemblyOrder()", () => {
   it("names the four shelves among the boards the glue step uses", () => {
     const glue = assemblyOrder(loadProject("bookcase", "structure"), shop)[1];
     // Top + Bottom + 4 shelves + 2 sides = 8 placed boards.
-    expect(glue?.parts).toHaveLength(8);
+    expect(glue?.instances).toHaveLength(8);
   });
 });

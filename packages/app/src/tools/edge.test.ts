@@ -64,7 +64,7 @@ describe("roundEdges()", () => {
     expect(profile?.cuts).toBe(8);
   });
 
-  it("says why, without throwing, when a picked copy is no longer in its row (silent-failure review M3)", () => {
+  it("says why, without throwing, when a picked copy is no longer in its row", () => {
     // Shelf 4 is picked, then the row drops to two shelves: there is no copy 4 to take over.
     const shelf4 = named("Shelf")[3];
     const p = bookcase();
@@ -120,7 +120,7 @@ describe("roundEdges()", () => {
     const [shelf] = named("Shelf");
     if (!shelf) throw new Error("no shelf");
     const taken = detachForEdit(bookcase(), shelf, shop).project;
-    const own = solve(taken, shop).placements.find((p) => p.detached);
+    const own = solve(taken, shop).placements.find((p) => p.source?.detached);
     if (!own) throw new Error("the taken shelf is not detached");
     const before = taken.structures[0]?.options.shelfRoundover;
     const { project } = roundEdges(taken, [own], BOTH_FRONT_EDGES, IN / 4, shop);
@@ -160,7 +160,7 @@ describe("roundEdges()", () => {
     expect(project.structures[0]?.options.shelfRoundover).toBeUndefined();
   });
 
-  it("asks for a board when none is picked (branch deferred row 26)", () => {
+  it("asks for a board when none is picked", () => {
     expect(tryRoundEdges(bookcase(), [], BOTH_FRONT_EDGES, IN / 8, shop)).toEqual({
       ok: false,
       message: "Pick a board first.",

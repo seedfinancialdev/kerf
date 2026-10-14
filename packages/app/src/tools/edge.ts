@@ -46,7 +46,7 @@ function boardsToTakeOver(placed: PlacedPart[]): PlacedPart[] {
   return distinct.sort((a, b) => (b.pattern?.index ?? 0) - (a.pattern?.index ?? 0));
 }
 
-const isFormShelf = (p: PlacedPart): boolean => p.source?.role === "shelf" && !p.detached;
+const isFormShelf = (p: PlacedPart): boolean => p.source?.role === "shelf" && !p.source.detached;
 
 /**
  * True when Both front edges on this pick sets the form's own shelf roundover, which rounds every
@@ -58,7 +58,7 @@ export function roundsEveryShelf(placed: PlacedPart[]): boolean {
 const sameEdges = (a: EdgeRef[], b: EdgeRef[]): boolean =>
   a.length === b.length && a.every((x) => b.includes(x));
 
-/** "Top" for one board, "3 boards" for several; copies of one board are named by the board. */
+/** "Top" (the part's name) for one board, "3 boards" for several. */
 function boardsIn(placed: PlacedPart[], first: PlacedPart): string {
   return placed.length === 1 ? first.partName : `${placed.length} boards`;
 }

@@ -324,7 +324,7 @@ export function withoutRoundoverOn(ops: UserOp[], edges: EdgeRef[]): UserOp[] {
 
 /**
  * Why a board could not be taken over from its form, in shop words, for the user. Tools catch this
- * and nothing wider, so a fault in Kerf is never shown as a reason (silent-failure review M3).
+ * and nothing wider, so a fault in Kerf is never shown as a reason.
  */
 export class TakeOverError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -367,7 +367,7 @@ export function detachForEdit(
   placed: PlacedPart,
   shop: ShopProfile,
 ): { project: Project; detached: boolean } {
-  const formMade = placed.source !== undefined && !placed.detached;
+  const formMade = placed.source !== undefined && !placed.source.detached;
   if (placed.pattern && !formMade) throw inHandMadeRow(placed);
   if (!formMade) return { project, detached: false };
   let generated: Project;
