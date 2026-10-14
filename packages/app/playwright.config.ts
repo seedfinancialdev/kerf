@@ -6,6 +6,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "e2e",
+  // Playwright files are .spec.ts; Vitest files are .test.ts and live in src (UNIT_TEST_STANDARD
+  // §2).
+  testMatch: "**/*.spec.ts",
   timeout: 15_000,
   expect: { timeout: 2_000 },
   fullyParallel: true,

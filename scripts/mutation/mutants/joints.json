@@ -97,5 +97,12 @@
     "find": "runEnd -= stop;",
     "replace": "runEnd -= 0;",
     "why": "a dado's stop is ignored"
+  },
+  {
+    "id": "joint-flush-not-summary",
+    "file": "packages/core/src/joints/types.ts",
+    "find": "count: hidden,\n          summary: true,",
+    "replace": "count: hidden,",
+    "why": "the 'and N more' entry for a joint is counted again as a problem"
   }
 ]

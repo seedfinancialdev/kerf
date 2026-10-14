@@ -1,0 +1,485 @@
+[
+  {
+    "id": "history-keeps-after",
+    "file": "packages/app/src/model/history.ts",
+    "find": "history.entries.slice(0, history.at + 1)",
+    "replace": "history.entries.slice(0, history.at + 2)",
+    "why": "A change after stepping back keeps an entry it should drop."
+  },
+  {
+    "id": "history-limit",
+    "file": "packages/app/src/model/history.ts",
+    "find": "kept.length - HISTORY_LIMIT",
+    "replace": "kept.length - HISTORY_LIMIT - 1",
+    "why": "History keeps one change too few."
+  },
+  {
+    "id": "store-records-no-op",
+    "file": "packages/app/src/model/store.ts",
+    "find": "=== serializeProject(edit.project)) return;",
+    "replace": "!== serializeProject(edit.project)) return;",
+    "why": "Unchanged fields record History entries and real changes are dropped."
+  },
+  {
+    "id": "store-keeps-stale-proposal",
+    "file": "packages/app/src/model/store.ts",
+    "find": "...(moved ? { proposal: null, notDrawn: [] } : {})",
+    "replace": "...(moved ? { notDrawn: [] } : {})",
+    "why": "A joint proposed for the project as it was stays on offer after Undo or Redo."
+  },
+  {
+    "id": "store-keeps-stale-join-pending",
+    "file": "packages/app/src/model/store.ts",
+    "find": "moved && next.pending?.tool === \"join\" ? null : next.pending",
+    "replace": "next.pending",
+    "why": "A half-made Join pick survives a change to the boards it names."
+  },
+  {
+    "id": "position-fraction-of-one",
+    "file": "packages/app/src/model/size.ts",
+    "find": "num > 0n && num < den",
+    "replace": "num > 0n && num <= den",
+    "why": "A partition at the opening's right face (1/1) is accepted."
+  },
+  {
+    "id": "exact-literal-scale",
+    "file": "packages/app/src/model/size.ts",
+    "find": "(units % 8000) * 125",
+    "replace": "(units % 8000) * 120",
+    "why": "Millimetre literals lose exactness."
+  },
+  {
+    "id": "scrub-rounding",
+    "file": "packages/app/src/ui/NumberField.tsx",
+    "find": "Math.trunc((e.clientX - d.x) / PIXELS_PER_STEP)",
+    "replace": "Math.round((e.clientX - d.x) / PIXELS_PER_STEP)",
+    "why": "A drag moves a step early."
+  },
+  {
+    "id": "accept-flag",
+    "file": "packages/app/src/model/commands.ts",
+    "find": "options: { ...s.options, joineryReviewed: true }",
+    "replace": "options: { ...s.options, joineryReviewed: false }",
+    "why": "Accept all records nothing."
+  },
+  {
+    "id": "edge-form-shelf",
+    "file": "packages/app/src/tools/edge.ts",
+    "find": "p.source?.role === \"shelf\" && !p.source.detached",
+    "replace": "p.source?.role === \"shelf\"",
+    "why": "A detached shelf's roundover goes to the form instead of the board."
+  },
+  {
+    "id": "push-pull-low-end",
+    "file": "packages/app/src/tools/push-pull.ts",
+    "find": "< 0 === face.endsWith(\"1\")",
+    "replace": "< 0 === face.endsWith(\"0\")",
+    "why": "Pulling one end moves the other."
+  },
+  {
+    "id": "tape-half-even",
+    "file": "packages/app/src/tools/tape.ts",
+    "find": "(lower % 2n === 0n ? lower : lower + 1n) * grid",
+    "replace": "(lower + 1n) * grid",
+    "why": "Ties round up instead of to even."
+  },
+  {
+    "id": "join-thin-host-equal",
+    "file": "packages/core/src/joints/propose.ts",
+    "find": "host.part.thickness < guest.part.thickness",
+    "replace": "host.part.thickness <= guest.part.thickness",
+    "why": "Boards of equal thickness are refused a joint."
+  },
+  {
+    "id": "join-thin-host-allowed",
+    "file": "packages/core/src/joints/propose.ts",
+    "find": "host.part.thickness < guest.part.thickness",
+    "replace": "host.part.thickness > guest.part.thickness",
+    "why": "A joint is cut into the thinner board."
+  },
+  {
+    "id": "board-between-not-flush",
+    "file": "packages/app/src/tools/board.ts",
+    "find": "position[AXES[widthAxis]] = literalFor(front - width, project.units);",
+    "replace": "position[AXES[widthAxis]] = literalFor(front - room, project.units);",
+    "why": "A board of a chosen width starts at the back instead of sitting flush with the front."
+  },
+  {
+    "id": "new-problem-any-error",
+    "file": "packages/app/src/tools/edit-outcome.ts",
+    "find": "(d.count ?? 1) > (known.get(key(d)) ?? 0)",
+    "replace": "true",
+    "why": "An error the project already had refuses a harmless new board."
+  },
+  {
+    "id": "new-problem-known-only",
+    "file": "packages/app/src/tools/edit-outcome.ts",
+    "find": "(d.count ?? 1) > (known.get(key(d)) ?? 0)",
+    "replace": "(d.count ?? 1) <= (known.get(key(d)) ?? 0)",
+    "why": "Only errors the project already had are reported; a new one slips through."
+  },
+  {
+    "id": "move-sign",
+    "file": "packages/app/src/tools/move.ts",
+    "find": "d > 0 ? \"+\" : \"-\"",
+    "replace": "d >= 0 ? \"-\" : \"+\"",
+    "why": "A move goes the opposite way to the drag or the typed distance."
+  },
+  {
+    "id": "move-click-records",
+    "file": "packages/app/src/tools/move.ts",
+    "find": "if (r.ok && drag.last !== null) return finish(store, project, r);",
+    "replace": "if (r.ok) return finish(store, project, r);",
+    "why": "A click with no drag records a move."
+  },
+  {
+    "id": "move-mode-keys",
+    "file": "packages/app/src/tools/move.ts",
+    "find": "e.ctrl ? \"copy\" : e.shift ? \"mirror\" : \"move\"",
+    "replace": "e.ctrl ? \"mirror\" : e.shift ? \"copy\" : \"move\"",
+    "why": "Ctrl makes a mirrored copy and Shift a plain one, the wrong way round."
+  },
+  {
+    "id": "move-lock-largest",
+    "file": "packages/app/src/tools/move.ts",
+    "find": "sizes.indexOf(Math.max(...sizes))",
+    "replace": "sizes.indexOf(Math.min(...sizes))",
+    "why": "An unlocked drag follows its smallest direction instead of its largest."
+  },
+  {
+    "id": "move-zero-refused",
+    "file": "packages/app/src/tools/move.ts",
+    "find": "if (isZero(delta)) return { ok: false, message: NO_DISTANCE };",
+    "replace": "",
+    "why": "A distance of zero records a move that changes nothing."
+  },
+  {
+    "id": "move-mirror-flips",
+    "file": "packages/app/src/tools/move.ts",
+    "find": "mirrored: mirror ? !inst.mirrored : inst.mirrored,",
+    "replace": "mirrored: inst.mirrored,",
+    "why": "A mirrored copy is not mirrored."
+  },
+  {
+    "id": "move-copy-keeps-original",
+    "file": "packages/app/src/tools/move.ts",
+    "find": "return copyOf(inst, name, shifted(inst, delta, project.units), mode === \"mirror\");",
+    "replace": "return copyOf(inst, name, inst.position, mode === \"mirror\");",
+    "why": "A copy lands on top of the board it came from instead of the distance away."
+  },
+  {
+    "id": "join-accept-new-problem",
+    "file": "packages/app/src/tools/join.ts",
+    "find": "if (problem) return { ok: false, message: problem };",
+    "replace": "",
+    "why": "Accept records a joint that the full solve finds brings a new error."
+  },
+  {
+    "id": "join-host-guest-label",
+    "file": "packages/app/src/tools/join.ts",
+    "find": "r.joint.host === taken.a.id ? taken.names",
+    "replace": "r.joint.host !== taken.a.id ? taken.names",
+    "why": "The History label swaps the board that sits in the joint and the one that holds it."
+  },
+  {
+    "id": "join-already-joined",
+    "file": "packages/app/src/tools/join.ts",
+    "find": "if (joined) return { ok: false, message: `${a.name} and ${b.name} are already joined.` };",
+    "replace": "",
+    "why": "Two boards a joint already holds are offered a second joint."
+  },
+  {
+    "id": "bays-minimum",
+    "file": "packages/app/src/model/commands.ts",
+    "find": "if (read.value < 2) return",
+    "replace": "if (read.value < 1) return",
+    "why": "One bay is accepted as a division."
+  },
+  {
+    "id": "count-negative",
+    "file": "packages/app/src/model/size.ts",
+    "find": " || value.num < 0n",
+    "replace": "",
+    "why": "A negative count of shelves or bays reaches the engine."
+  },
+  {
+    "id": "count-maximum",
+    "file": "packages/app/src/model/size.ts",
+    "find": "value.num > BigInt(MAX_COUNT)",
+    "replace": "value.num > BigInt(MAX_COUNT) + 1n",
+    "why": "One more shelf or bay than the engine allows is accepted."
+  },
+  {
+    "id": "exact-literal-sign",
+    "file": "packages/app/src/model/size.ts",
+    "find": "len < 0 ? \"-\" : \"\"",
+    "replace": "\"\"",
+    "why": "A negative millimetre length loses its sign."
+  },
+  {
+    "id": "tenths-half-up",
+    "file": "packages/app/src/model/plan-text.ts",
+    "find": " + value.den / 2n",
+    "replace": "",
+    "why": "Board and linear feet are cut down to the tenth instead of rounded."
+  },
+  {
+    "id": "tool-change-keeps-preview",
+    "file": "packages/app/src/model/store.ts",
+    "find": "// that is not in History.\n        if (get().previewed) show({ ...dropped, previewed: null });",
+    "replace": "// that is not in History.\n        if (get().previewed) show({ ...dropped });",
+    "why": "A tool change leaves the last tool's preview on screen and in Save."
+  },
+  {
+    "id": "tool-change-keeps-pending",
+    "file": "packages/app/src/model/store.ts",
+    "find": "const dropped = { tool, pending: null, proposal: null };",
+    "replace": "const dropped = { tool, proposal: null };",
+    "why": "A tool change keeps the last tool's half-finished action."
+  },
+  {
+    "id": "history-move-keeps-pending",
+    "file": "packages/app/src/model/store.ts",
+    "find": "show({ history, previewed: null, pending: null, ...patch });",
+    "replace": "show({ history, previewed: null, ...patch });",
+    "why": "Undo, Redo or a History jump keeps an action measured on the project no longer shown."
+  },
+  {
+    "id": "history-move-keeps-preview",
+    "file": "packages/app/src/model/store.ts",
+    "find": "show({ history, previewed: null, pending: null, ...patch });",
+    "replace": "show({ history, pending: null, ...patch });",
+    "why": "Undo, Redo or a History jump leaves a drag's preview on screen."
+  },
+  {
+    "id": "type-anywhere-letters",
+    "file": "packages/app/src/ui/Measurements.tsx",
+    "find": "const SIZE_START = /^[0-9\\-./'\"]$/;",
+    "replace": "const SIZE_START = /^[0-9a-z\\-./'\"]$/;",
+    "why": "A tool letter typed while a tool waits goes to Measurements instead of picking the tool."
+  },
+  {
+    "id": "type-anywhere-no-wait",
+    "file": "packages/app/src/ui/Measurements.tsx",
+    "find": "if (s.pending === null || !handlerFor(s.tool).measure) return;",
+    "replace": "if (!handlerFor(s.tool).measure) return;",
+    "why": "A digit typed when no tool is waiting for a size is taken by Measurements."
+  },
+  {
+    "id": "type-anywhere-any-tool",
+    "file": "packages/app/src/ui/Measurements.tsx",
+    "find": "if (s.pending === null || !handlerFor(s.tool).measure) return;",
+    "replace": "if (s.pending === null) return;",
+    "why": "A digit is taken for a tool, such as Join, that has no typed size."
+  },
+  {
+    "id": "type-anywhere-in-field",
+    "file": "packages/app/src/ui/Measurements.tsx",
+    "find": " || keptByField(e)) return;",
+    "replace": ") return;",
+    "why": "A digit typed in another field is taken away to Measurements."
+  },
+  {
+    "id": "type-anywhere-modifier",
+    "file": "packages/app/src/ui/Measurements.tsx",
+    "find": "if (e.ctrlKey || e.metaKey || e.altKey || !SIZE_START",
+    "replace": "if (!SIZE_START",
+    "why": "A shortcut such as Ctrl+1 is typed into Measurements."
+  },
+  {
+    "id": "new-error-renamed-any",
+    "file": "packages/app/src/tools/edit-outcome.ts",
+    "find": "if (moved.length > 0) return moved.some((r) => !hadOn(d.rule, r.was));",
+    "replace": "if (moved.length > 0) return true;",
+    "why": "An error a taken-over board already had is reported as new because its name changed."
+  },
+  {
+    "id": "new-error-renamed-ignored",
+    "file": "packages/app/src/tools/edit-outcome.ts",
+    "find": "if (moved.length > 0) return moved.some((r) => !hadOn(d.rule, r.was));",
+    "replace": "",
+    "why": "A taken-over board is compared by its new words, so an error it already had is new."
+  },
+  {
+    "id": "new-error-count-ignored",
+    "file": "packages/app/src/tools/edit-outcome.ts",
+    "find": "(known.get(key(d)) ?? 0) + (d.count ?? 1)",
+    "replace": "(known.get(key(d)) ?? 0) + 1",
+    "why": "An error folded with a count is known as one, so fewer repeats look new."
+  },
+  {
+    "id": "new-error-warnings",
+    "file": "packages/app/src/tools/edit-outcome.ts",
+    "find": "list.filter((d) => d.severity === \"error\")",
+    "replace": "list.filter((d) => d.severity !== \"info\")",
+    "why": "A new warning is treated as an error and refuses or flags a change."
+  },
+  {
+    "id": "notice-tell-drops-warning",
+    "file": "packages/app/src/model/notices.ts",
+    "find": "const covered = line.notice?.kind === \"warning\" ? [line.notice.text] : [];",
+    "replace": "const covered: string[] = [];",
+    "why": "A warning on screen is lost when an answer is shown over it."
+  },
+  {
+    "id": "notice-warn-replaces",
+    "file": "packages/app/src/model/notices.ts",
+    "find": "    : { notice: line.notice, waiting, held: line.held };",
+    "replace": "    : { ...warningsFirst(waiting), held: line.held };",
+    "why": "A new warning replaces the notice on screen, an Undo offer included."
+  },
+  {
+    "id": "notice-warn-twice",
+    "file": "packages/app/src/model/notices.ts",
+    "find": "if (line.notice?.text === text || line.waiting.includes(text)) return line;",
+    "replace": "",
+    "why": "The same warning is queued again and shown twice."
+  },
+  {
+    "id": "notice-history-drops-warning",
+    "file": "packages/app/src/model/notices.ts",
+    "find": "return line.notice?.kind === \"undo\" ? dismiss(unheld) : unheld;",
+    "replace": "return line.notice?.kind !== \"said\" ? dismiss(unheld) : unheld;",
+    "why": "Moving through History takes a warning away before it is dismissed."
+  },
+  {
+    "id": "notice-history-keeps-undo",
+    "file": "packages/app/src/model/notices.ts",
+    "find": "return line.notice?.kind === \"undo\" ? dismiss(unheld) : unheld;",
+    "replace": "return unheld;",
+    "why": "An Undo offer stays after History moves, for a change that is no longer the latest."
+  },
+  {
+    "id": "notice-queue-order",
+    "file": "packages/app/src/model/notices.ts",
+    "find": "const waiting = [...line.waiting, text];",
+    "replace": "const waiting = [text, ...line.waiting];",
+    "why": "A new warning jumps ahead of older ones."
+  },
+  {
+    "id": "history-jump-past-end",
+    "file": "packages/app/src/model/history.ts",
+    "find": "index >= h.entries.length",
+    "replace": "index > h.entries.length",
+    "why": "A jump one past the last entry is accepted."
+  },
+  {
+    "id": "history-at-before-trim",
+    "file": "packages/app/src/model/history.ts",
+    "find": "return { entries, at: entries.length - 1 };",
+    "replace": "return { entries, at: kept.length - 1 };",
+    "why": "Once the oldest change is dropped, History points past its last entry."
+  },
+  {
+    "id": "position-fraction-of-zero",
+    "file": "packages/app/src/model/size.ts",
+    "find": "num > 0n && num < den",
+    "replace": "num >= 0n && num < den",
+    "why": "A partition at the opening's left face (0) is accepted."
+  },
+  {
+    "id": "store-undo-at-start-moves",
+    "file": "packages/app/src/model/store.ts",
+    "find": "if (h && canUndo(h)) moveHistory(undo(h));",
+    "replace": "if (h) moveHistory(undo(h));",
+    "why": "Undo with nothing to undo still drops the tool's action, the Join proposal and the notice."
+  },
+  {
+    "id": "notice-answer-drops-offer",
+    "file": "packages/app/src/model/notices.ts",
+    "find": "const held = line.notice?.kind === \"undo\" ? line.notice : line.held;",
+    "replace": "const held = line.held;",
+    "why": "An answer replaces an Undo offer for good, losing the words that name a problem the change brought."
+  },
+  {
+    "id": "storage-writes-unread",
+    "file": "packages/app/src/model/storage.ts",
+    "find": "      !unread.has(key) &&\n",
+    "replace": "",
+    "why": "A key the browser would not let be read is written over, losing the work it held."
+  },
+  {
+    "id": "hand-row-not-refused",
+    "file": "packages/app/src/model/commands.ts",
+    "find": "if (placed.pattern && !formMade) throw inRowKerfCannotSplit(placed);",
+    "replace": "",
+    "why": "One board of a row saved by hand is blamed on a stale click instead of being refused for what it is."
+  },
+  {
+    "id": "edge-radius-stale",
+    "file": "packages/app/src/ui/EdgePanel.tsx",
+    "find": "chosen !== null && bits.includes(chosen)",
+    "replace": "chosen !== null",
+    "why": "A roundover bit taken out of the shop is still applied."
+  },
+  {
+    "id": "field-records-refused-release",
+    "file": "packages/app/src/ui/NumberField.tsx",
+    "find": "if (d.refused === null) {",
+    "replace": "if (d.refused !== undefined) {",
+    "why": "A size field let go on a refused value records the last accepted value and drops the reason."
+  },
+  {
+    "id": "looks-red-by-part",
+    "file": "packages/app/src/viewport/board-looks.ts",
+    "find": "const tone = failing.has(placed.instance) ? \"error\" : wood;",
+    "replace": "const tone = failing.has(placed.part) ? \"error\" : wood;",
+    "why": "Every copy of a board is red when the error is about one of them."
+  },
+  {
+    "id": "pending-of-another-tool",
+    "file": "packages/app/src/model/view-actions.ts",
+    "find": "if (pending === null || pending.tool === get().tool) set({ pending });",
+    "replace": "set({ pending });",
+    "why": "A half-done action set for a tool the user has left is kept."
+  },
+  {
+    "id": "window-reports-handled",
+    "file": "packages/app/src/ui/WindowGuard.tsx",
+    "find": "      if (handledByBoundary(e.error)) return;\n",
+    "replace": "",
+    "why": "A fault a boundary already said is reported again as a failed action, dropping the tool's action and preview."
+  },
+  {
+    "id": "window-repeats-every-time",
+    "file": "packages/app/src/ui/WindowGuard.tsx",
+    "find": "if (seen.has(words)) return false;",
+    "replace": "",
+    "why": "A fault that repeats every frame is said and logged every frame."
+  },
+  {
+    "id": "newer-by-field-only",
+    "file": "packages/app/src/model/files.ts",
+    "find": "error.path === \"$.schemaVersion\" &&\n    /newer version of Kerf/.test(error.message)",
+    "replace": "error.path === \"$.schemaVersion\"",
+    "why": "A damaged schema version is called newer and the user is told to update Kerf."
+  },
+  {
+    "id": "abandon-always-solves",
+    "file": "packages/app/src/model/store.ts",
+    "find": "const dropped = { pending: null, proposal: null };\n        if (get().previewed) show({ ...dropped, previewed: null });\n        else set(dropped);",
+    "replace": "const dropped = { pending: null, proposal: null };\n        show({ ...dropped, previewed: null });",
+    "why": "Dropping a failed action solves the project again even with nothing previewed."
+  },
+  {
+    "id": "field-reason-outlives-drag",
+    "file": "packages/app/src/ui/NumberField.tsx",
+    "find": "keepReason.current = display !== d.shown;",
+    "replace": "keepReason.current = true;",
+    "why": "A refused drag's reason stays under a value changed later by something else."
+  },
+  {
+    "id": "save-silent-without-project",
+    "file": "packages/app/src/ui/save.ts",
+    "find": "    s.say(NOTHING_TO_SAVE);\n",
+    "replace": "",
+    "why": "Save with no project open does nothing and says nothing."
+  },
+  {
+    "id": "proposal-keeps-scratch-joint",
+    "file": "packages/app/src/tools/join.ts",
+    "find": "result: { ...offered, type: joint.type, taken: taken.taken },",
+    "replace": "result: { ...r, type: joint.type, taken: taken.taken },",
+    "why": "A Join proposal carries the engine's joint with the take-over's scratch ids."
+  }
+]

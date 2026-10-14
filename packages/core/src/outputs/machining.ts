@@ -11,16 +11,14 @@
 
 import type { Derived } from "../joints/derive";
 import type { MachinedCut } from "../joints/types";
-import type { MachiningSetup } from "../outputs";
+import type { MachiningSetup, ToolNeed } from "../outputs";
 import type { CutPart } from "../outputs/cutlist";
 import type { Id, Len, Project, ShopProfile } from "../types";
 
 type Tool = ShopProfile["tools"][number];
 
-function toolFor(
-  cut: Pick<MachinedCut, "kind" | "width">,
-  shop: ShopProfile,
-): { tool: MachiningSetup["tool"]; missing: boolean } {
+/** The tool that makes a cut in this shop, or the one it would need (`missing`). */
+export function toolFor(cut: Pick<MachinedCut, "kind" | "width">, shop: ShopProfile): ToolNeed {
   const of = <T extends Tool["type"]>(type: T): Array<Extract<Tool, { type: T }>> =>
     shop.tools.filter((t): t is Extract<Tool, { type: T }> => t.type === type);
 

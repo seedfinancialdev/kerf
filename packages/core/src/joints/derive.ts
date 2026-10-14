@@ -10,6 +10,7 @@ import type { Diagnostic, RemovalPrimitive } from "../outputs";
 import { type Box, boxOf, contactOf, type Frame } from "../solve/assembly";
 import type { SolvedModel } from "../solve/model";
 import type { EdgeRef, Id, Joint, Len, Project } from "../types";
+import { JOINT_NAME, JOINT_WORD } from "../words";
 import { deriveDado } from "./dado";
 import { deriveDovetail } from "./dovetail";
 import { deriveRabbet } from "./rabbet";
@@ -31,7 +32,10 @@ export interface InstanceCuts {
 
 export interface Derived {
   pairs: PairCut[];
-  /** Host/guest pairs a joint tried to join and reported on (or suppressed reports on) when it failed. */
+  /**
+   * Host/guest pairs a joint tried to join and reported on (or suppressed reports on) when it
+   * failed.
+   */
   attempted: Array<[Id, Id]>;
   instances: Map<Id, InstanceCuts>;
   /** The definition each instance belongs to; differs from its def when cuts forced a split. */
@@ -167,7 +171,7 @@ export function deriveJoints(project: Project, model: SolvedModel): Derived {
       diagnostics.push({
         severity: "error",
         rule: "duplicate-joint",
-        message: `${duplicates === 1 ? "A" : `${duplicates}`} ${joint.type} joint${duplicates === 1 ? " repeats" : "s repeat"} one already made between the same two parts; the second would cut the same part twice.`,
+        message: `${duplicates === 1 ? "A" : `${duplicates}`} ${JOINT_NAME[joint.type]} joint${duplicates === 1 ? " repeats" : "s repeat"} one already made between the same two parts; the second would cut the same part twice.`,
         joint: joint.id,
         field: `${joint.type} joint`,
         ...(duplicates > 1 ? { count: duplicates } : {}),
@@ -185,10 +189,11 @@ export function deriveJoints(project: Project, model: SolvedModel): Derived {
         rule: "joint-no-contact",
         message:
           lost.length === 1
-            ? `${first.instance.name} does not meet ${hosts.length === 1 ? (hosts[0] as Frame).instance.name : "any of the parts it should be joined to"} the way a ${joint.type} needs, so there is nothing to join.`
-            : `${lost.length} parts (starting with ${first.instance.name}) do not meet any of the parts they should be joined to the way a ${joint.type} needs.`,
+            ? `${first.instance.name} does not meet ${hosts.length === 1 ? (hosts[0] as Frame).instance.name : "any of the parts it should be joined to"} for ${JOINT_WORD[joint.type]}, so there is nothing to join.`
+            : `${lost.length} parts (starting with ${first.instance.name}) do not meet any of the parts they should be joined to for ${JOINT_WORD[joint.type]}.`,
         joint: joint.id,
         part: first.part.id,
+        instances: lost.map((guest) => guest.instance.id),
         field: `${first.instance.name} ${joint.type}`,
         ...(lost.length > 1 ? { count: lost.length } : {}),
       });

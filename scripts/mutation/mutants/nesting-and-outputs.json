@@ -68,5 +68,12 @@
     "find": "[cut.part.stock, cut.length, cut.width, cut.thickness].join(\"/\")",
     "replace": "[cut.part.stock, cut.length, cut.width].join(\"/\")",
     "why": "boards of different thickness merge into one cut list line"
+  },
+  {
+    "id": "condense-keeps-first-boards",
+    "file": "packages/core/src/diagnostics.ts",
+    "find": "if (boards.length > 0) found.instances = boards;",
+    "replace": "",
+    "why": "One line for repeated problems names only the first repeat's boards, so the others are not shown."
   }
 ]

@@ -77,6 +77,23 @@ export function orientationOf(index: number): Orientation {
   return found;
 }
 
+/**
+ * The orientation index (0-23, ADR 003) whose length axis is `length` and whose width axis is
+ * `width`: both signed unit axes of the parent frame, two different axes at right angles. Throws
+ * RangeError for anything else.
+ */
+export function orientationFor(length: Axis, width: Axis): number {
+  const found = TABLE.findIndex(
+    (o) => o.x.every((n, k) => n === length[k]) && o.y.every((n, k) => n === width[k]),
+  );
+  if (found < 0) {
+    throw new RangeError(
+      "A board's length and width must lie along two different axes, at right angles.",
+    );
+  }
+  return found;
+}
+
 export interface Dimensions {
   length: Len;
   width: Len;

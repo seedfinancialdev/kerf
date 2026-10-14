@@ -7,12 +7,13 @@
 import { ExpressionError } from "../expr/errors";
 import { evaluateQuantity, type Quantity } from "../expr/evaluate";
 import { gridSize, LengthRangeError, snapToGrid, type UnitSystem } from "../length";
-import type { Diagnostic, RemovalPrimitive } from "../outputs";
+import type { CutKind, Diagnostic, RemovalPrimitive } from "../outputs";
 import { div, floor, type Rational, rational, toSafeInteger } from "../rational";
 import type { RuleId } from "../rules";
 import type { Frame } from "../solve/assembly";
 import type { SolvedModel } from "../solve/model";
 import type { Id, Joint, Len } from "../types";
+import { type JointParam, jointSetting } from "../words";
 
 /** How much a joint adds to a part's cut size, at the end(s) it touches. */
 export interface CutAdd {
@@ -25,7 +26,7 @@ export const NO_ADD: Readonly<CutAdd> = Object.freeze({ length: 0, width: 0 });
 /** One cut a shop makes, for machining setups (Cut list & nesting, "Machining by setup"). */
 export interface MachinedCut {
   host: Id;
-  kind: "dado" | "groove" | "rabbet" | "dovetail";
+  kind: CutKind;
   /** Cut width across the host face. */
   width: Len;
   /** Cut depth into the host. */
@@ -69,8 +70,8 @@ export interface DeriveContext {
   units: UnitSystem;
   frame(instance: Id): Frame | undefined;
   /** Evaluates a joint parameter; reports on failure and returns undefined. */
-  length(joint: Joint, key: string, fallback?: Len): Len | undefined;
-  expression(joint: Joint, key: string): Quantity | undefined;
+  length(joint: Joint, key: JointParam, fallback?: Len): Len | undefined;
+  expression(joint: Joint, key: JointParam): Quantity | undefined;
   error(
     rule: RuleId,
     message: string,
@@ -81,7 +82,10 @@ export interface DeriveContext {
     message: string,
     extra?: Partial<Omit<Diagnostic, "severity" | "rule" | "message">>,
   ): void;
-  /** Adds one "and N more" entry for each rule that hit the per-joint limit. Call once, at the end. */
+  /**
+   * Adds one "and N more" entry for each rule that hit the per-joint limit. Call once, at the end.
+   * The entry is a `summary`: its message and its `count` both give the number not listed.
+   */
   flush(): void;
   /** How many problems have been raised so far, counting those too many to show. */
   reported(): number;
@@ -122,7 +126,7 @@ export function makeContext(
     }
   };
 
-  const evaluate = (joint: Joint, key: string): Quantity | undefined => {
+  const evaluate = (joint: Joint, key: JointParam): Quantity | undefined => {
     const source = joint.params[key];
     if (source === undefined) return undefined;
     try {
@@ -132,7 +136,7 @@ export function makeContext(
         report({
           severity: "error",
           rule: error.reason === "limit" ? "limit-exceeded" : "expression-syntax",
-          message: `${joint.type} ${key}: ${error.message}.`,
+          message: `${jointSetting(joint.type, key)} can't be worked out: ${error.message}.`,
           joint: joint.id,
           field: `joint ${key}`,
         });
@@ -154,7 +158,7 @@ export function makeContext(
         report({
           severity: "error",
           rule: "type-mismatch",
-          message: `${joint.type} ${key} must be a length.`,
+          message: `${jointSetting(joint.type, key)} must be a length.`,
           joint: joint.id,
           field: `joint ${key}`,
         });
@@ -167,7 +171,7 @@ export function makeContext(
         report({
           severity: "error",
           rule: "out-of-range",
-          message: `${joint.type} ${key} is too large: the limit is 100,000 inches.`,
+          message: `${jointSetting(joint.type, key)} is too large: the limit is 100,000 inches.`,
           joint: joint.id,
           field: `joint ${key}`,
         });
@@ -185,6 +189,7 @@ export function makeContext(
           ...sample,
           message: `${sample.message} (and ${hidden} more like it)`,
           count: hidden,
+          summary: true,
         });
       }
     },

@@ -34,11 +34,12 @@ describe("validate", () => {
       .diagnostics.filter((d) => d.rule === "groove-outside-bottom-half-pin")
       .map((d) => (d.field ?? "").replace(" groove", ""))
       .sort();
-  // Hand calculation (Operation specs, keepsake box): W = 4-1/64", 3 tails of 1/4" pins -> the bottom
-  // half-pin is 16/64 + 1/64 = 17/64". The groove is 1/4" wide, 1/4" deep in 1/2" stock and the
-  // tails' slope offset is 1/16" (1:8 over 1/2"). Allowed far edge of the groove from the bottom
-  // edge: 17/64 + (1/16 x shallowest depth 1/4") / (1/2") = 17/64 + 2/64 = 19/64". The groove's far
-  // edge is z + 1/4" = z + 16/64, so a groove with its bottom at z <= 3/64 is inside, 4/64 is not.
+  // Hand calculation (Operation specs, keepsake box): W = 4-1/64", 3 tails of 1/4" pins -> the
+  // bottom half-pin is 16/64 + 1/64 = 17/64". The groove is 1/4" wide, 1/4" deep in 1/2" stock and
+  // the tails' slope offset is 1/16" (1:8 over 1/2"). Allowed far edge of the groove from the
+  // bottom edge: 17/64 + (1/16 x shallowest depth 1/4") / (1/2") = 17/64 + 2/64 = 19/64". The
+  // groove's far edge is z + 1/4" = z + 16/64, so a groove with its bottom at z <= 3/64 is inside,
+  // 4/64 is not.
   it("a groove exactly on the limit (z = 3/64) does not warn for Front and Back", () => {
     expect(warned("3/64in")).toEqual(["Side A", "Side B"]);
   });
@@ -54,6 +55,20 @@ describe("validate", () => {
     );
     expect(d).toHaveLength(4);
     for (const x of d) expect(x.count).toBeUndefined();
+  });
+  it("an overlap names the two boards it lies between by instance, in the order the message names them", () => {
+    const p = boards(
+      [ply("P", "4in", "4in")],
+      ["A", "B"].map((name) => ({
+        name,
+        part: "P",
+        at: ["0in", "0in", "0in"] as [string, string, string],
+      })),
+    );
+    const overlap = solve(p, shop).diagnostics.find((d) => d.rule === "overlap");
+    const id = (name: string) => p.instances.find((i) => i.name === name)?.id;
+    expect(overlap?.message).toMatch(/^This part can't be built: A and B occupy/);
+    expect(overlap?.instances).toEqual([id("A"), id("B")]);
   });
   it("exactly 10 overlapping pairs name all ten; 15 pairs name ten and count fifteen", () => {
     const blocks = (n: number): Project =>
@@ -91,6 +106,10 @@ describe("validate", () => {
       [{ type: "rabbet", host: "Host", guest: "Guest" }],
     );
     expect(rules(p)).toContain("warning:roundover-hidden");
+    // The edge is named as the Edge tool names it, not by its key "edge0/face1".
+    expect(solve(p, shop).diagnostics.find((d) => d.rule === "roundover-hidden")?.message).toBe(
+      "The roundover on Host (Back edge, show face) is hidden by a joint.",
+    );
   });
   it("roundovers on end1 and edge1 are found hidden where a joint covers them", () => {
     const end: PartSpec = {

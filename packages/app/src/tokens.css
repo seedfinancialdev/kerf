@@ -20,6 +20,12 @@
   --color-accent: #e0a458;
   --color-focus: #6cb4ff;
   --color-error: #ff6b6b;
+  --color-viewport: #1a1b1d;
+  --color-hover: #3a3220;
+  --color-warning: #e6c069;
+  --color-step-active-text: #1d1e20;
+  --color-wood-sheet: #d9b48a;
+  --color-wood-solid: #8a5a3c;
 }
 
 :root[data-theme="light"] {
@@ -34,6 +40,12 @@
   --color-accent: #a8641a;
   --color-focus: #1f6fd0;
   --color-error: #c62828;
+  --color-viewport: #e9e9e6;
+  --color-hover: #f3e3cc;
+  --color-warning: #7a5600;
+  --color-step-active-text: #ffffff;
+  --color-wood-sheet: #c9a27a;
+  --color-wood-solid: #6b4430;
 }
 
 :root {
@@ -51,6 +63,15 @@
   --font-numeric: tabular-nums;
 
   --radius-1: 4px;
+  --radius-2: 6px;
+  --panel-left-width: 232px;
+  --panel-right-width: 300px;
+  --drawer-height: 210px;
+  --drawer-height-tall: 420px;
+  --hint-height: 32px;
   --border-width: 1px;
   --topbar-height: 44px;
+  --template-card-min-height: 56px;
+  --sheet-diagram-width: 240px;
+  --font-size-diagram: 9px;
 }

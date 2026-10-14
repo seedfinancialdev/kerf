@@ -25,11 +25,12 @@ test('bookcase in 6 steps, then resize to 30"', async ({ page }) => {
   await page.getByLabel("Height").fill('72"');
   await page.getByLabel("Depth").fill('12"');
 
-  // 2. Shape: carcase 3/4" plywood, top and bottom between the sides, back inset in rabbets, 1/4" plywood.
+  // 2. Shape: carcase 3/4" plywood, top and bottom between the sides, back inset in rabbets, 1/4"
+  //    plywood.
   await page.getByRole("button", { name: "Shape" }).click();
   await page.getByLabel("Carcase stock").selectOption("3/4 plywood");
   await page.getByLabel("Top and bottom").selectOption("Between the sides");
-  await page.getByLabel("Back").selectOption("Inset in rabbets");
+  await page.getByLabel("Back", { exact: true }).selectOption("Inset in rabbets");
   await page.getByLabel("Back stock").selectOption("1/4 plywood");
 
   // 3. Divide: click the opening → Add shelves → 4, evenly spaced.

@@ -191,4 +191,22 @@ describe("outputs", () => {
     const d = solve(p, shop).diagnostics.filter((x) => x.rule === "dado-too-deep");
     expect(d.reduce((n, x) => n + (x.count ?? 1), 0)).toBe(7);
   });
+  it("the entry standing for failures past the per-joint limit is a summary of the 2 not listed", () => {
+    const p = boards(
+      [host, guest],
+      [hostAt, { name: "Guest", part: "Guest", at: ["0in", "1/2in", "3/4in"], orientation: 17 }],
+      [{ type: "dado", host: "Host", guest: "Guest", params: { depth: "3/4in" } }],
+      {
+        patterns: [
+          { source: "Guest", count: "7", axis: "x", spacing: { mode: "fixed", step: "1.5in" } },
+        ],
+      },
+    );
+    const d = solve(p, shop).diagnostics.filter((x) => x.rule === "dado-too-deep");
+    const unlisted = d.filter((x) => x.message.includes("(and 2 more like it)"));
+    expect(unlisted).toHaveLength(1);
+    expect(unlisted[0]?.summary).toBe(true);
+    expect(unlisted[0]?.count).toBe(2);
+    expect(d.filter((x) => x.summary)).toHaveLength(1);
+  });
 });

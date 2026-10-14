@@ -9,6 +9,7 @@
 import type { RemovalPrimitive } from "../outputs";
 import { rational } from "../rational";
 import type { Joint } from "../types";
+import { type JointParam, jointSetting } from "../words";
 import { dimsOf, faceName, type Seat } from "./seat";
 import { type DeriveContext, NO_ADD, type PairCut } from "./types";
 
@@ -17,7 +18,12 @@ export function deriveDado(ctx: DeriveContext, joint: Joint, seat: Seat): PairCu
   const [L, W, T] = dimsOf(host);
   const hostName = host.instance.name;
   const guestName = guest.instance.name;
-  const where = { joint: joint.id, part: host.part.id, field: `${hostName} dado` };
+  const where = {
+    joint: joint.id,
+    part: host.part.id,
+    instances: [guest.instance.id, host.instance.id],
+    field: `${hostName} dado`,
+  };
 
   if (hostFace.axis !== 2) {
     ctx.error(
@@ -62,8 +68,8 @@ export function deriveDado(ctx: DeriveContext, joint: Joint, seat: Seat): PairCu
   if (depth === undefined || fit === undefined) return undefined;
   if (joint.params.stop !== undefined && stop === undefined) return undefined;
 
-  const bad = (key: string, why: string): undefined => {
-    ctx.error("invalid-parameter", `The dado ${key} in ${hostName} ${why}.`, {
+  const bad = (key: JointParam, why: string): undefined => {
+    ctx.error("invalid-parameter", `${jointSetting(joint.type, key)} in ${hostName} ${why}.`, {
       ...where,
       field: `joint ${key}`,
     });

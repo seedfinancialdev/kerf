@@ -15,6 +15,7 @@ import { wrap } from "./lengths";
 import { Divider } from "./openings";
 import { FACING_FRONT, STANDING_ACROSS, STANDING_ACROSS_MIRRORED } from "./orientations";
 
+// joineryReviewed: the user accepted the proposed joinery (ADR 015, D2); it changes no board.
 /** The options a case reads: each stock and how a woodworker names it, and the plain settings. */
 export const CASE_SPEC = {
   stockLabels: { carcaseStock: "the sides, top and bottom", backStock: "the back" },
@@ -26,7 +27,7 @@ export const CASE_SPEC = {
     "backRabbetDepth",
     "shelfRoundover",
   ],
-  flags: [],
+  flags: ["joineryReviewed"],
 } as const satisfies FormSpec;
 
 /** The case form's choices, read and checked once. */

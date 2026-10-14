@@ -31,11 +31,14 @@ export {
   detachCopyIn,
   detachPartIn,
   detachReferencedBoards,
+  MAX_COUNT,
   projectFromTemplate,
   removeStructureIn,
+  STOCK_FIELDS,
   STOCK_OPTIONS,
   TEMPLATES,
   withoutGenerated,
 } from "./structures";
 export * from "./types";
 export * from "./units";
+export { edgeName, JOINT_NAME, JOINT_WORD } from "./words";

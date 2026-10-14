@@ -7,5 +7,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react()],
+  // manifold-3d loads its .wasm next to its own script, so it must not be pre-bundled.
+  optimizeDeps: { exclude: ["manifold-3d"] },
   server: { port: 5173, strictPort: true },
 });

@@ -15,6 +15,7 @@ import {
   type Project,
   parseProject,
   projectFromTemplate,
+  STOCK_FIELDS,
   serializeProject,
   solve,
   TEMPLATES,
@@ -173,8 +174,8 @@ describe("divisions of an opening", () => {
 
   it("sizes the partition and the shelves beside it from the interior, by hand", () => {
     // Interior 36 - 2 x 23/32 = 34-9/16. Partition: 72 - 2 x 23/32 = 70-9/16 visible, +2 x 1/4 in
-    // the top and bottom dados = 71-1/16 cut. Left shelves: 12 visible (the partition's left face is
-    // 12 in from the side), 12-1/2 cut. Right shelves: 34-9/16 - 12 - 23/32 = 21-27/32 visible,
+    // the top and bottom dados = 71-1/16 cut. Left shelves: 12 visible (the partition's left face
+    // is 12 in from the side), 12-1/2 cut. Right shelves: 34-9/16 - 12 - 23/32 = 21-27/32 visible,
     // 22-11/32 cut.
     const lines = buildCutList(partitioned()).lines;
     const lengths = lines.flatMap((l) => l.parts.map((p) => [p.name, l.length] as const));
@@ -306,6 +307,35 @@ describe("templates", () => {
     expect(lines.map((l) => [l.length, l.quantity])).toEqual(
       expected.lines.map((l) => [l.length, l.quantity]),
     );
+  });
+
+  it("writes only the stock fields of the template's own structure type", () => {
+    if (!ply || !back) throw new Error("fixture stock missing");
+    const everyField = {
+      carcaseStock: ply.id,
+      backStock: back.id,
+      wallStock: ply.id,
+      bottomStock: back.id,
+    };
+    const optionsOf = (name: string) => {
+      const template = TEMPLATES.find((t) => t.name === name);
+      if (!template) throw new Error(`no template ${name}`);
+      return Object.keys(
+        projectFromTemplate(template, { stock, stockFor: everyField }).structures[0]?.options ?? {},
+      );
+    };
+    expect(STOCK_FIELDS).toEqual({
+      case: ["carcaseStock", "backStock"],
+      box: ["wallStock", "bottomStock"],
+    });
+    const bookcase = optionsOf("Bookcase");
+    expect(bookcase).toEqual(expect.arrayContaining(["carcaseStock", "backStock"]));
+    expect(bookcase).not.toContain("wallStock");
+    expect(bookcase).not.toContain("bottomStock");
+    const keepsake = optionsOf("Keepsake box");
+    expect(keepsake).toEqual(expect.arrayContaining(["wallStock", "bottomStock"]));
+    expect(keepsake).not.toContain("carcaseStock");
+    expect(keepsake).not.toContain("backStock");
   });
 
   it("starts a blank case that solves without errors once stock is chosen", () => {

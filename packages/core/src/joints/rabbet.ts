@@ -10,6 +10,7 @@ import type { RemovalPrimitive } from "../outputs";
 import { rational } from "../rational";
 import { boxOf, boxToLocal } from "../solve/assembly";
 import type { Joint } from "../types";
+import { type JointParam, jointSetting } from "../words";
 import { dimsOf, faceName, type Seat } from "./seat";
 import { type DeriveContext, NO_ADD, type PairCut } from "./types";
 
@@ -21,7 +22,12 @@ export function deriveRabbet(ctx: DeriveContext, joint: Joint, seat: Seat): Pair
   const [L, W, T] = dimsOf(host);
   const hostName = host.instance.name;
   const guestName = guest.instance.name;
-  const where = { joint: joint.id, part: host.part.id, field: `${hostName} rabbet` };
+  const where = {
+    joint: joint.id,
+    part: host.part.id,
+    instances: [guest.instance.id, host.instance.id],
+    field: `${hostName} rabbet`,
+  };
   const notSeated = (why: string): undefined => {
     ctx.error(
       "rabbet-not-seated",
@@ -67,8 +73,8 @@ export function deriveRabbet(ctx: DeriveContext, joint: Joint, seat: Seat): Pair
   const depth = ctx.length(joint, "depth", ctx.floorToGrid(rational(BigInt(T), 2n)));
   if (width === undefined || depth === undefined) return undefined;
 
-  const bad = (key: string, why: string): undefined => {
-    ctx.error("invalid-parameter", `The rabbet ${key} in ${hostName} ${why}.`, {
+  const bad = (key: JointParam, why: string): undefined => {
+    ctx.error("invalid-parameter", `${jointSetting(joint.type, key)} in ${hostName} ${why}.`, {
       ...where,
       field: `joint ${key}`,
     });

@@ -20,16 +20,21 @@ import { nestProject } from "./nest";
 import type {
   CutList,
   Diagnostic,
+  JointCut,
+  JointSummary,
   MachiningSetup,
   NestingResult,
   PartShape,
+  PlacedPart,
   RemovalPrimitive,
   SolveResult,
+  Vec3,
 } from "./outputs";
 import { buildCutListFrom, type CutPart, cutParts } from "./outputs/cutlist";
-import { buildSetups } from "./outputs/machining";
+import { buildSetups, toolFor } from "./outputs/machining";
 import { validateAssembly } from "./outputs/validate";
 import { shopProblem } from "./shop";
+import { boxOf, toParent } from "./solve/assembly";
 import { invalidProjectModel, type SolvedModel, solveValidatedModel } from "./solve/model";
 import { generateFrom } from "./structures";
 import type { Id, Project, ShopProfile } from "./types";
@@ -57,7 +62,9 @@ export interface Pipeline {
   stopped: boolean;
 }
 
-/** What a fault in Kerf itself looks like to the user: said plainly, with a request to report it. */
+/**
+ * What a fault in Kerf itself looks like to the user: said plainly, with a request to report it.
+ */
 function internalError(error: unknown): Diagnostic {
   const reason = error instanceof Error ? `${error.name}: ${error.message}` : "an unexpected value";
   return {
@@ -144,6 +151,100 @@ function shapesOf(p: Pipeline): PartShape[] {
   return [...shapes.values()];
 }
 
+const minus = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+
+/**
+ * Where every placed copy sits; from the solved model, so it exists even when cuts are withheld.
+ */
+function placementsOf(p: Pipeline): PlacedPart[] {
+  const defs = new Map((p.project?.parts ?? []).map((d) => [d.id, d]));
+  return p.parts.map(({ instance, part, length, width, thickness }) => {
+    const frame = { instance, part };
+    const origin = toParent(frame, [0, 0, 0]);
+    const def = defs.get(part.id);
+    const { min, max } = boxOf(instance);
+    const placed: PlacedPart = {
+      instance: instance.id,
+      shape: p.derived.definitionOf.get(instance.id) ?? part.id,
+      part: part.id,
+      name: instance.name,
+      partName: part.name,
+      stock: part.stock,
+      size: { length: part.length, width: part.width, thickness: part.thickness },
+      cut: { length, width, thickness },
+      box: { min, max },
+      frame: {
+        origin,
+        x: minus(toParent(frame, [1, 0, 0]), origin),
+        y: minus(toParent(frame, [0, 1, 0]), origin),
+        z: minus(toParent(frame, [0, 0, 1]), origin),
+      },
+    };
+    if (def?.source) {
+      placed.source = {
+        structure: def.source.structure,
+        role: def.source.role,
+        detached: def.detached === true,
+      };
+    }
+    if (instance.pattern)
+      placed.pattern = { id: instance.pattern.id, index: instance.pattern.index };
+    return placed;
+  });
+}
+
+/**
+ * The shop profile used when the given one is invalid (ADR 015, rule 9): it owns no tool, so every
+ * cut reports the tool it needs as missing (`toolFor`'s `missing`), beside the invalid-shop error.
+ */
+const NO_TOOLS: ShopProfile = { kerf: 0, tools: [] };
+
+/** A board's name when the project gives it none at all (validation makes this unreachable). */
+const UNNAMED = "an unnamed board";
+
+/** Each joint with its cuts grouped by kind and size (ADR 015, rule 9). */
+function jointSummariesOf(p: Pipeline, shop: ShopProfile | undefined): JointSummary[] {
+  if (!p.project) return [];
+  // The Joinery step shows these names, so a board is never named by its id: one with no name of
+  // its own takes its part's name, as the cut list does.
+  const names = new Map<Id, string>();
+  const defNames = new Map(p.project.parts.map((d) => [d.id, d.name]));
+  const partName = (def: Id | undefined): string =>
+    (def !== undefined ? defNames.get(def) : undefined) ?? UNNAMED;
+  for (const i of p.project.instances) names.set(i.id, i.name ?? partName(i.def));
+  // A row is named for its part ("Shelf"), not for the copy it repeats ("Shelf 1").
+  for (const row of p.project.patterns) {
+    names.set(row.id, partName(p.project.instances.find((i) => i.id === row.source)?.def));
+  }
+  return p.project.joints.map((joint) => {
+    const pairs = p.derived.pairs.filter((pair) => pair.joint === joint.id);
+    const cuts = new Map<string, JointCut>();
+    for (const cut of pairs.flatMap((pair) => pair.machined)) {
+      const key = `${cut.kind}|${cut.width}|${cut.depth}`;
+      const found = cuts.get(key);
+      if (found) found.count += 1;
+      else
+        cuts.set(key, {
+          kind: cut.kind,
+          width: cut.width,
+          depth: cut.depth,
+          ...toolFor(cut, shop ?? NO_TOOLS),
+          count: 1,
+        });
+    }
+    const summary: JointSummary = {
+      joint: joint.id,
+      type: joint.type,
+      host: names.get(joint.host) ?? UNNAMED,
+      guest: names.get(joint.guest) ?? UNNAMED,
+      pairs: pairs.length,
+      cuts: [...cuts.values()],
+    };
+    if (joint.generatedBy) summary.source = joint.generatedBy;
+    return summary;
+  });
+}
+
 /**
  * Reads the shop profile once, into a plain copy that is then validated and used, so a profile
  * whose answers change between reads (or that throws when read) cannot be valid and then not.
@@ -195,6 +296,8 @@ export function solveProject(project: Project, shop: ShopProfile): SolveResult {
     nesting,
     setups,
     shapes: p.stopped ? [] : shapesOf(p),
+    placements: placementsOf(p),
+    joints: jointSummariesOf(p, copy),
     blocked,
   };
 }

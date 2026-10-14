@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+// Node's own URL: under jsdom the global URL is jsdom's, which fileURLToPath rejects.
+import { fileURLToPath, URL as NodeURL } from "node:url";
 import type { Project, ShopProfile } from "@kerf/core";
 
 export { isMilestoneActive, type MilestoneId } from "./milestones";
@@ -12,7 +13,7 @@ export const REFERENCE_PROJECTS = ["bookcase", "box"] as const;
 export type ReferenceProject = (typeof REFERENCE_PROJECTS)[number];
 export type ProjectVariant = "project" | "structure";
 
-export const FIXTURES_ROOT = fileURLToPath(new URL("..", import.meta.url));
+export const FIXTURES_ROOT = fileURLToPath(new NodeURL("..", import.meta.url));
 
 export function fixturePath(rel: string): string {
   return `${FIXTURES_ROOT}${rel}`;

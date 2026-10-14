@@ -120,3 +120,9 @@ export function generateStructuresChecked(
 export function detachPart(project: Project, part: Id): PartDef {
   return detachedPart(project, part);
 }
+
+// Added in M4 (Build plan tab). Each is documented where it is defined.
+export { type JointProposal, proposeJoint } from "./joints/propose";
+export { assemblyOrder } from "./outputs/assembly-order";
+export { type Gap, gapBetween } from "./solve/gap";
+export { orientationFor } from "./solve/orientation";

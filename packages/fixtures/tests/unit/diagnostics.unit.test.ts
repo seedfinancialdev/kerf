@@ -17,8 +17,11 @@ describe("condense", () => {
     list.push(d({ field: "x1", count: 3 }), d({ field: "x2", count: 3 }));
     const out = condense(list);
     expect(out).toHaveLength(26);
-    expect(out[25]).toMatchObject({ severity: "error", rule: "overlap", count: 6 });
-    expect(out[25]?.message).toContain("6 more");
+    expect(out[25]).toMatchObject({ severity: "error", rule: "overlap", count: 6, summary: true });
+    // The words say how many are not listed and give one as an example, with no rule id.
+    expect(out[25]?.message).toBe(
+      `6 more problems like this one are not listed, such as: ${list[25]?.message}`,
+    );
   });
   it("26 entries leave exactly one in the summary", () => {
     const out = condense(Array.from({ length: 26 }, (_, i) => d({ field: `f${i}` })));
@@ -28,6 +31,23 @@ describe("condense", () => {
   it("repeats merge by adding their counts", () => {
     const out = condense([d({}), d({}), d({ count: 3 })]);
     expect(out).toEqual([d({ count: 5 })]);
+  });
+  it("repeats on different boards keep every board they name, each once, in order", () => {
+    // Four shelves in one side's too-deep dados: one line, count 4, naming all four and the side.
+    const out = condense([
+      d({ instances: ["s1", "side"] }),
+      d({ instances: ["s2", "side"] }),
+      d({ instances: ["s3", "side"], count: 2 }),
+    ]);
+    expect(out).toEqual([d({ instances: ["s1", "side", "s2", "s3"], count: 4 })]);
+  });
+  it("a repeat that names no boards leaves the boards the others name", () => {
+    expect(condense([d({ instances: ["a", "b"] }), d({})])).toEqual([
+      d({ instances: ["a", "b"], count: 2 }),
+    ]);
+    expect(condense([d({}), d({ instances: ["a", "b"] })])).toEqual([
+      d({ instances: ["a", "b"], count: 2 }),
+    ]);
   });
   it("same rule and field but a different message stay separate", () => {
     expect(condense([d({ message: "a" }), d({ message: "b" })])).toHaveLength(2);

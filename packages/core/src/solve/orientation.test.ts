@@ -9,6 +9,7 @@ import {
   extentOf,
   isOrientationIndex,
   ORIENTATION_COUNT,
+  orientationFor,
   orientationOf,
 } from "./orientation";
 
@@ -111,5 +112,31 @@ describe("extentOf", () => {
       const e = extentOf(i, side);
       expect([e.x, e.y, e.z].sort((a, b) => a - b)).toEqual(sorted);
     }
+  });
+});
+
+// ADR 003 (addendum): index 0 is the identity: length along +x, width along +y.
+describe("orientationFor()", () => {
+  it("gives 0 for length along +x and width along +y", () => {
+    expect(orientationFor([1, 0, 0], [0, 1, 0])).toBe(0);
+  });
+
+  it("gives 17 for a side stood up: length up (+z), width along +y (ADR table row 17)", () => {
+    expect(orientationFor([0, 0, 1], [0, 1, 0])).toBe(17);
+  });
+
+  it("gives back every orientation from its own axes", () => {
+    for (let i = 0; i < ORIENTATION_COUNT; i += 1) {
+      const o = orientationOf(i);
+      expect(orientationFor(o.x, o.y)).toBe(i);
+    }
+  });
+
+  it("refuses axes that are not at right angles", () => {
+    expect(() => orientationFor([1, 0, 0], [1, 0, 0])).toThrow(RangeError);
+  });
+
+  it("refuses a direction that is not a unit axis", () => {
+    expect(() => orientationFor([2, 0, 0], [0, 1, 0])).toThrow(RangeError);
   });
 });

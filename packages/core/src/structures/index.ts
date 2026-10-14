@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
+export { MAX_COUNT } from "./builder";
 export {
   attachCopyIn,
   attachPartIn,
@@ -14,4 +15,4 @@ export {
 export { generate, generateFrom } from "./generate";
 export { generatedId } from "./ids";
 export { strandedReferences, withoutGenerated } from "./strip";
-export { projectFromTemplate, STOCK_OPTIONS, TEMPLATES } from "./templates";
+export { projectFromTemplate, STOCK_FIELDS, STOCK_OPTIONS, TEMPLATES } from "./templates";

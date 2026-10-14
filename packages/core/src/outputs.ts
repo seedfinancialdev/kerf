@@ -8,7 +8,7 @@
 
 import type { Rational } from "./rational";
 import type { RuleId } from "./rules";
-import type { EdgeRef, Id, Len } from "./types";
+import type { EdgeRef, GeneratedFrom, Id, Joint, Len } from "./types";
 
 export interface Diagnostic {
   severity: "error" | "warning" | "info";
@@ -18,12 +18,31 @@ export interface Diagnostic {
   part?: Id;
   joint?: Id;
   /**
+   * The placed boards a problem is about, by instance id, when it is about particular boards. The
+   * order depends on the rule: `overlap` names the two boards in one space; a joint's rules name
+   * its guest and then its host (only the guests, for guests that meet nothing). An entry that
+   * stands for several repeats (`count`) names every board of them, each once, in the order first
+   * named, so the order then means nothing. It lets an editor tell which board it changed, and
+   * tell one copy of a row from another, which `part` cannot.
+   */
+  instances?: readonly Id[];
+  /**
    * What the problem is on, in the user's words: a board or stock name ("Shelf"), a setting
    * ("the number of bays"), or a field of a part ("Side length").
    */
   field?: string;
-  /** How many times this same problem occurred, when it was reported once for all of them. */
+  /**
+   * How many times this same problem occurred, when it was reported once for all of them. On a
+   * `summary` entry it means something else: how many problems are not listed. Read `summary`
+   * first, and never add the two kinds of `count` together.
+   */
   count?: number;
+  /**
+   * True for an entry that stands for problems not listed: the per-rule limit in `condense`, or
+   * the per-joint limit in joint derivation. Its message already says how many (`count`), so it
+   * is not counted again on screen.
+   */
+  summary?: true;
 }
 
 export type Vec3 = readonly [Len, Len, Len];
@@ -60,7 +79,9 @@ export interface CutListLine {
   thickness: Len;
   /** Visible size between joints, shown beside the cut size. */
   visible: { length: Len; width: Len };
-  /** Set when parts merged into this line have different visible sizes; `visible` is the first's. */
+  /**
+   * Set when parts merged into this line have different visible sizes; `visible` is the first's.
+   */
   visibleVaries?: boolean;
   quantity: number;
   parts: CutListPart[];
@@ -135,7 +156,9 @@ export interface SheetLayout {
   efficiency: Rational;
 }
 
-/** What every board bought has: its stock, the standard length it is cut from, and what it holds. */
+/**
+ * What every board bought has: its stock, the standard length it is cut from, and what it holds.
+ */
 interface BoardLayoutBase {
   stock: Id;
   /** The standard length of the board the parts are cut from. */
@@ -204,7 +227,10 @@ interface SetupBase {
   cuts: number;
   /** The parts this setup cuts, and how many cuts each takes. */
   parts: Array<{ name: string; cuts: number }>;
-  /** True when the shop profile has no tool that can make these cuts (the tool named is the one needed). */
+  /**
+   * True when the shop profile has no tool that can make these cuts (the tool named is the one
+   * needed).
+   */
   missing?: boolean;
 }
 
@@ -246,6 +272,78 @@ export interface PartShape {
   removals: RemovalPrimitive[];
 }
 
+/**
+ * Where one placed copy of a board sits (ADR 015, rule 8). Reported whenever the boards can be
+ * placed, even when an assembly error withholds the shapes, so a viewer can still draw them.
+ */
+export interface PlacedPart {
+  /** The placed copy: an instance id, or `<patternId>:<index>` for a member of a row. */
+  instance: Id;
+  /** The shape it is drawn with: a `PartShape.definition`. */
+  shape: Id;
+  /** The part definition it is a copy of. */
+  part: Id;
+  /** This copy's name ("Shelf 2"). */
+  name: string;
+  /** The part definition's name ("Shelf"). */
+  partName: string;
+  /** The stock the board is cut from. */
+  stock: Id;
+  /** The finished (visible) size, before any cut. */
+  size: { length: Len; width: Len; thickness: Len };
+  /** The size to cut: the finished size plus what joints add (Domain model, decision 3). */
+  cut: { length: Len; width: Len; thickness: Len };
+  /** Its bounding box in the project frame. */
+  box: { min: Vec3; max: Vec3 };
+  /**
+   * Where the shape's local origin lands and where its length (x), width (y) and thickness (z)
+   * point in the project frame, each a signed unit axis: the point (u, v, w) of the shape sits at
+   * origin + u·x + v·y + w·z. A mirrored copy has its x reversed and its origin at the other end.
+   */
+  frame: { origin: Vec3; x: Vec3; y: Vec3; z: Vec3 };
+  /**
+   * The form and role that made it, and whether it was taken over by hand since; absent for a
+   * board made by hand. The three states of a board are therefore: no `source` (by hand), a
+   * `source` that is not `detached` (follows its form), and a `source` that is `detached`.
+   */
+  source?: GeneratedFrom & { detached: boolean };
+  /** For a member of a row: the row and its index. */
+  pattern?: { id: Id; index: number };
+}
+
+/** The kinds of cut a joint makes in a board. */
+export type CutKind = "dado" | "groove" | "rabbet" | "dovetail";
+
+/** The tool a cut needs, and whether the shop profile lacks it (the tool named is the one needed). */
+export interface ToolNeed {
+  tool: MachiningSetup["tool"];
+  missing: boolean;
+}
+
+/**
+ * One kind of cut a joint needs, how many, and the tool that makes it (or the one the shop lacks).
+ */
+export interface JointCut extends ToolNeed {
+  kind: CutKind;
+  width: Len;
+  depth: Len;
+  count: number;
+}
+
+/** A joint in shop words (ADR 015, rule 9): the two boards, how many pairs, and its cuts. */
+export interface JointSummary {
+  joint: Id;
+  type: Joint["type"];
+  /** Shop names of the host and guest boards ("Right side", "Shelf"; a row is named for its part). */
+  host: string;
+  guest: string;
+  /** Host/guest pairs it makes: a row of 4 shelves in one side is 4. */
+  pairs: number;
+  cuts: JointCut[];
+  /** The structure and role that made it; absent for a joint made by hand. */
+  source?: GeneratedFrom;
+}
+
 export interface SolveResult {
   diagnostics: Diagnostic[];
   cutList: CutList;
@@ -256,12 +354,23 @@ export interface SolveResult {
    * the parts cannot be built; a layout or shop-profile error does not empty it.
    */
   shapes: PartShape[];
+  /** Every placed copy (ADR 015, rule 8). Empty only when the project itself is invalid. */
+  placements: PlacedPart[];
+  /** Every joint, in project order, with the tools its cuts need (ADR 015, rule 9). */
+  joints: JointSummary[];
   /**
    * True when any error exists (Operation specs: "Error blocks the solve"; Interaction spec: the
    * build plan cannot be exported). An error in the assembly also withholds the cut list, layouts
    * and setups; a layout or shop error leaves the cut list in place. Warnings and info never block.
    */
   blocked: boolean;
+}
+
+/** One step of putting the piece together, and the placed boards it names. */
+export interface AssemblyStep {
+  text: string;
+  /** The boards by placement id, as `PlacedPart.instance` (not part-definition ids). */
+  instances: Id[];
 }
 
 export interface BuildPlan {

@@ -129,7 +129,12 @@ export function deriveDovetail(
   guest: Frame,
   quiet = false,
 ): PairCut | undefined {
-  const where = { joint: joint.id, part: host.part.id, field: `${host.instance.name} dovetail` };
+  const where = {
+    joint: joint.id,
+    part: host.part.id,
+    instances: [guest.instance.id, host.instance.id],
+    field: `${host.instance.name} dovetail`,
+  };
   const hostName = host.instance.name;
   const guestName = guest.instance.name;
   const notCorner = (): undefined => {
@@ -204,7 +209,7 @@ export function deriveDovetail(
   const proud = ctx.length(joint, "proud", 0);
   if (pin === undefined || proud === undefined) return undefined;
   if (proud < 0) {
-    ctx.error("invalid-parameter", 'The dovetail "proud" cannot be negative.', {
+    ctx.error("invalid-parameter", "The proud amount of the through dovetail cannot be negative.", {
       ...where,
       field: "joint proud",
     });

@@ -47,5 +47,26 @@
     "find": "if (out.length > limit) return out;\n    }\n    active.push(item);",
     "replace": "}\n    active.push(item);",
     "why": "the pair search never stops on a pile of parts"
+  },
+  {
+    "id": "placement-never-detached",
+    "file": "packages/core/src/pipeline.ts",
+    "find": "detached: def.detached === true,",
+    "replace": "detached: false,",
+    "why": "A board taken over from the form still reads as the form's."
+  },
+  {
+    "id": "placement-axis-not-relative",
+    "file": "packages/core/src/pipeline.ts",
+    "find": "x: minus(toParent(frame, [1, 0, 0]), origin),",
+    "replace": "x: toParent(frame, [1, 0, 0]),",
+    "why": "A board's length direction is given as a point, not a direction, so the view draws it in the wrong place."
+  },
+  {
+    "id": "placement-origin-at-box-corner",
+    "file": "packages/core/src/pipeline.ts",
+    "find": "const origin = toParent(frame, [0, 0, 0]);",
+    "replace": "const origin = boxOf(instance).min;",
+    "why": "A turned or mirrored board's frame starts at its box's low corner instead of the shape's own origin."
   }
 ]
