@@ -4,7 +4,7 @@
 
 // Interaction spec, "Viewport (center): … click a part to see its joints". At the default view the
 // middle of the bookcase falls between shelves 2 and 3 (gap 29-15/64" to 42-25/32"), so the first
-// board under the centre is the back (hand calculation in the plan, Task 24).
+// board under the centre is the back (worked by hand from the default camera).
 
 import { readFile } from "node:fs/promises";
 

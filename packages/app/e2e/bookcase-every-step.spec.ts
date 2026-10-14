@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The companion to bookcase.spec.ts (final branch review I3). The acceptance test starts from the
+// The companion to bookcase.spec.ts. The acceptance test starts from the
 // Bookcase template, which already has the choices steps 2 to 5 make, so those clicks change
 // nothing and would pass even if broken. This flow builds the same bookcase from the Blank case
 // (30" x 36" x 12", no shelves, no depths, no roundover), so each step must do its work, and

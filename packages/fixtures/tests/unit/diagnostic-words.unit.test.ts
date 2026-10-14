@@ -4,7 +4,7 @@
 
 // Interaction spec, "Shop language", and CLAUDE.md's banned words: a problem the engine reports is
 // shown as it is written, so it names joints and their settings in shop words, never by the
-// engine's keys ("throughDovetail", "pin", a rule id). Code review I2 and its re-review.
+// engine's keys ("throughDovetail", "pin", a rule id).
 
 import { condense, type Diagnostic, type Project, RULE_LIMIT, solve } from "@kerf/core";
 import { describe, expect, it } from "vitest";

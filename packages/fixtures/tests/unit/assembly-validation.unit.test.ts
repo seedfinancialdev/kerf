@@ -106,7 +106,7 @@ describe("validate", () => {
       [{ type: "rabbet", host: "Host", guest: "Guest" }],
     );
     expect(rules(p)).toContain("warning:roundover-hidden");
-    // The edge is named as the Edge tool names it, not by its key "edge0/face1" (code review I2).
+    // The edge is named as the Edge tool names it, not by its key "edge0/face1".
     expect(solve(p, shop).diagnostics.find((d) => d.rule === "roundover-hidden")?.message).toBe(
       "The roundover on Host (Back edge, show face) is hidden by a joint.",
     );

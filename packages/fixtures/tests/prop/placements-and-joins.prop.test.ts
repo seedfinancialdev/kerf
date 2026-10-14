@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The invariants the 3D view and the Join tool rest on (final branch review I6), over every
+// The invariants the 3D view and the Join tool rest on, over every
 // reference project resized at random:
 //   - ADR 015, rule 8: each placement's frame carries the shape's corner box exactly onto its box;
 //   - ADR 015, rule 5: every assembly step names only boards the solve placed;

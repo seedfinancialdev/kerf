@@ -202,10 +202,10 @@ describe("joints", () => {
     const d = solve(p, shop).diagnostics.filter((x) => x.rule === "joint-no-contact");
     expect(d).toHaveLength(1);
     expect(d[0]?.count).toBeUndefined();
-    // The joint is named in shop words, not by its key (code review I2: "throughDovetail").
+    // The joint is named in shop words, not by its key ("throughDovetail").
     expect(d[0]?.message).toBe("Guest does not meet Host for a dado, so there is nothing to join.");
     // It names the guest it is about by instance, so an editor can tell one board's joint error
-    // from another's of the same row (second-pass re-review, minor 2).
+    // from another's of the same row.
     expect(d[0]?.instances).toEqual([p.instances.find((i) => i.name === "Guest")?.id]);
   });
   it("a dado error names the guest and the host it lies between, by instance", () => {
