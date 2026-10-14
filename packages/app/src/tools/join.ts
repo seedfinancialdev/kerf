@@ -109,8 +109,15 @@ export function propose(
   if (!taken.ok)
     return { a: a.instance, b: b.instance, result: { ok: false, reason: taken.message } };
   const r = proposeJoint(taken.scratch, shop, taken.a.id, taken.b.id, newId(), prefer);
-  const result: Proposal["result"] = r.ok ? { ...r, type: r.joint.type, taken: taken.taken } : r;
-  return { a: a.instance, b: b.instance, result };
+  if (!r.ok) return { a: a.instance, b: b.instance, result: r };
+  // The engine's joint names the take-over's scratch ids; only its type is kept (Accept proposes
+  // again from the boards as clicked).
+  const { joint, ...offered } = r;
+  return {
+    a: a.instance,
+    b: b.instance,
+    result: { ...offered, type: joint.type, taken: taken.taken },
+  };
 }
 
 /** What Accept does: the edit, and the notice about boards it took over (if any). */

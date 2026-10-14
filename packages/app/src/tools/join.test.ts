@@ -38,6 +38,13 @@ describe("Join", () => {
     expect(r.result).toMatchObject({ ok: true, type: "dado" });
   });
 
+  it("keeps no joint with scratch ids in the proposal, only its type", () => {
+    const p = bookcaseWithShelf();
+    const r = propose(p, shop, placed(p, "Right side"), placed(p, "Board 1"));
+    expect(r.result).toMatchObject({ ok: true, type: "dado" });
+    expect("joint" in r.result).toBe(false);
+  });
+
   it('accepting adds the joint: a 15/64"-deep dado setup appears', () => {
     const p = bookcaseWithShelf();
     const r = acceptProposal(p, shop, placed(p, "Right side"), placed(p, "Board 1"), "dado");
@@ -266,7 +273,7 @@ describe("the Join tool", () => {
     const s = started();
     click(s, "Right side");
     click(s, "Board 1");
-    expect(s.getState().proposal?.result).toMatchObject({ ok: true, joint: { type: "dado" } });
+    expect(s.getState().proposal?.result).toMatchObject({ ok: true, type: "dado" });
     expect(s.getState().pending).toBeNull();
     expect(s.getState().history?.entries).toHaveLength(1);
   });
