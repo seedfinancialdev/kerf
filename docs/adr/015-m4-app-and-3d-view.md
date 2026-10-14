@@ -7,7 +7,7 @@ M4 PR (2026-10-13): code quality, silent failures, tests and a whole-branch revi
 2 critical, 26 important and 41 minor issues; all were fixed or are listed under Known limits,
 and a second pass over the fixes found 1 important and 9 minor issues, all fixed. The review of
 the pull request (5 reviewers: 5 important and 40 minor issues) was fixed in full, apart from the
-gaps listed under Known limits. `pnpm mutate`: 98 mutants, 97 killed, 1 equivalent.
+gaps listed under Known limits. `pnpm mutate`: 105 mutants, 104 killed, 1 equivalent.
 
 ## Context
 

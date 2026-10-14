@@ -226,8 +226,8 @@
   {
     "id": "tool-change-keeps-preview",
     "file": "packages/app/src/model/store.ts",
-    "find": "if (get().previewed) show({ ...dropped, previewed: null });",
-    "replace": "if (get().previewed) show({ ...dropped });",
+    "find": "// that is not in History.\n        if (get().previewed) show({ ...dropped, previewed: null });",
+    "replace": "// that is not in History.\n        if (get().previewed) show({ ...dropped });",
     "why": "A tool change leaves the last tool's preview on screen and in Save."
   },
   {
