@@ -342,13 +342,16 @@ const gone = (placed: PlacedPart): TakeOverError =>
   new TakeOverError(`${placed.name} is no longer in the project; click it again.`);
 
 /**
- * Said for a member of a row saved by hand: the engine takes one copy out only of a row a form
- * makes (`detachCopyIn`), so no tool can edit it on its own (ADR 015, known limit 25).
+ * Said for a member of a row the form no longer makes: one saved by hand, or a form's row whose
+ * board was taken over whole. The engine takes one copy out only of a row a form makes
+ * (`detachCopyIn`), so no tool can edit it on its own (ADR 015, known limit 25).
  */
-const inHandMadeRow = (placed: PlacedPart): TakeOverError =>
-  new TakeOverError(
-    `${placed.name} is one of a row made by hand, and Kerf can't change one board of that row on its own yet.`,
+const inRowKerfCannotSplit = (placed: PlacedPart): TakeOverError => {
+  const row = placed.source ? "a row taken over from the form" : "a row made by hand";
+  return new TakeOverError(
+    `${placed.name} is one of ${row}, and Kerf can't change one board of that row on its own yet.`,
   );
+};
 
 /**
  * Takes over a board the form made so it can be edited by hand (Interaction spec, "Tweak":
@@ -360,7 +363,7 @@ const inHandMadeRow = (placed: PlacedPart): TakeOverError =>
  * Callers pass the project's real shop: it only matters to an "auto" roundover, which takes the
  * largest bit the shop owns.
  * Throws TakeOverError, saying why, when the project's boards cannot be placed, the board is gone
- * or cannot be detached, or it is one of a row saved by hand.
+ * or cannot be detached, or it is one of a row the form no longer makes.
  */
 export function detachForEdit(
   project: Project,
@@ -368,7 +371,7 @@ export function detachForEdit(
   shop: ShopProfile,
 ): { project: Project; detached: boolean } {
   const formMade = placed.source !== undefined && !placed.source.detached;
-  if (placed.pattern && !formMade) throw inHandMadeRow(placed);
+  if (placed.pattern && !formMade) throw inRowKerfCannotSplit(placed);
   if (!formMade) return { project, detached: false };
   let generated: Project;
   try {

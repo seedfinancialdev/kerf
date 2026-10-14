@@ -401,7 +401,7 @@
   {
     "id": "hand-row-not-refused",
     "file": "packages/app/src/model/commands.ts",
-    "find": "if (placed.pattern && !formMade) throw inHandMadeRow(placed);",
+    "find": "if (placed.pattern && !formMade) throw inRowKerfCannotSplit(placed);",
     "replace": "",
     "why": "One board of a row saved by hand is blamed on a stale click instead of being refused for what it is."
   },

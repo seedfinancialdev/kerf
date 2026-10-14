@@ -437,6 +437,19 @@ describe("detachForEdit()", () => {
     expect(again.patterns.some((x) => x.skip?.includes(1))).toBe(true);
   });
 
+  it("says a row the form made but whose board was taken over whole is one Kerf can't split, not one made by hand", () => {
+    const p = start().project;
+    const member = shelfMember(p, 1);
+    if (!member.source) throw new Error("the shelf is not the form's");
+    const takenWhole: PlacedPart = { ...member, source: { ...member.source, detached: true } };
+    expect(() => detachForEdit(p, takenWhole, shop)).toThrow(
+      expect.objectContaining({
+        name: "TakeOverError",
+        message: `${member.name} is one of a row taken over from the form, and Kerf can't change one board of that row on its own yet.`,
+      }),
+    );
+  });
+
   it("does nothing to a board that is already detached", () => {
     const p = start().project;
     const once = detachForEdit(p, placementNamed(p, "Top"), shop).project;
