@@ -529,6 +529,19 @@ describe("boards the 3D view could not draw", () => {
   });
 });
 
+describe("abandonAction()", () => {
+  it("drops the tool's action without solving again when nothing is previewed", () => {
+    const s = fresh();
+    s.getState().apply(startProject("Bookcase", "imperial"));
+    s.getState().setTool("tape");
+    s.getState().setPending({ tool: "tape", from: [0, 0, 0] });
+    const solved = s.getState().solved;
+    s.getState().abandonAction();
+    expect(s.getState().pending).toBeNull();
+    expect(s.getState().solved).toBe(solved);
+  });
+});
+
 describe("the tape and guide lines", () => {
   const measured = () => {
     const s = fresh();

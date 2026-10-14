@@ -26,11 +26,39 @@ export const WINDOW_FAULT =
   "Kerf hit a problem and can't show its window. Save a copy of your project, then reload the " +
   "page. Please report the problem.";
 
-/** Logs `error`, drops the action it stopped and tells the user. */
+/**
+ * Tells the user, logs `error` and drops the action it stopped. Telling comes first: dropping the
+ * action can fail in turn (it may solve the project again), and that is logged too.
+ */
 function actionFailed(store: KerfStore, error: unknown): void {
-  console.error(error);
-  store.getState().abandonAction();
   store.getState().say(ACTION_FAULT);
+  console.error(error);
+  try {
+    store.getState().abandonAction();
+  } catch (dropping) {
+    console.error(dropping);
+  }
+}
+
+/**
+ * True the first time a fault with these words is seen for the History entry on screen: a fault
+ * that repeats (one in every frame of the 3D view) is said and logged once, as `warnOnce` does,
+ * and again after the next change.
+ */
+function firstSeen(): (store: KerfStore, error: unknown) => boolean {
+  let entry: unknown = null;
+  let seen = new Set<string>();
+  return (store, error) => {
+    const { history } = store.getState();
+    if (history !== entry) {
+      entry = history;
+      seen = new Set();
+    }
+    const words = String(error);
+    if (seen.has(words)) return false;
+    seen.add(words);
+    return true;
+  };
 }
 
 /**
@@ -41,16 +69,20 @@ function actionFailed(store: KerfStore, error: unknown): void {
  */
 function useActionFaults(store: KerfStore): void {
   useEffect(() => {
+    const isNew = firstSeen();
+    const failed = (error: unknown): void => {
+      if (isNew(store, error)) actionFailed(store, error);
+    };
     const onError = (e: ErrorEvent): void => {
       if (e.error === undefined || e.error === null) return;
       e.preventDefault();
       // A fault a boundary caught has been said and logged there (state/Boundary.tsx).
       if (handledByBoundary(e.error)) return;
-      actionFailed(store, e.error);
+      failed(e.error);
     };
     const onRejection = (e: PromiseRejectionEvent): void => {
       e.preventDefault();
-      actionFailed(store, e.reason);
+      failed(e.reason);
     };
     window.addEventListener("error", onError);
     window.addEventListener("unhandledrejection", onRejection);
@@ -59,6 +91,19 @@ function useActionFaults(store: KerfStore): void {
       window.removeEventListener("unhandledrejection", onRejection);
     };
   }, [store]);
+}
+
+/**
+ * Logs a fault that took the window down and drops what was half done, the preview included, so
+ * Save writes the recorded project: the preview is not in History, and may be what broke.
+ */
+function windowFailed(store: KerfStore, error: unknown): void {
+  console.error(error);
+  try {
+    store.getState().abandonAction();
+  } catch (dropping) {
+    console.error(dropping);
+  }
 }
 
 /** What the window becomes after a fault while drawing it: what to do, Save, and the notice. */
@@ -79,7 +124,10 @@ export function WindowGuard({ children }: { children: ReactNode }) {
   const store = useKerfStore();
   useActionFaults(store);
   return (
-    <Boundary fallback={() => <WindowLost store={store} />} onFailure={(e) => console.error(e)}>
+    <Boundary
+      fallback={() => <WindowLost store={store} />}
+      onFailure={(e) => windowFailed(store, e)}
+    >
       {children}
     </Boundary>
   );

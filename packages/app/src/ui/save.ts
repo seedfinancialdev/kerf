@@ -23,6 +23,9 @@ function download(bytes: Uint8Array, name: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
+/** Said when Save is asked for with no project open (the File section's Save is off then). */
+const NOTHING_TO_SAVE = "There is no project to save yet.";
+
 /**
  * Downloads the shown project as a .kerf file stamped `now` (its modified time, and its created
  * time when the session has none). A failure is said on the notice line: in plain words when the
@@ -31,7 +34,10 @@ function download(bytes: Uint8Array, name: string): void {
 export async function saveShownProject(store: KerfStore, now: Date): Promise<void> {
   const s = store.getState();
   const project = shownProject(s);
-  if (!project) return;
+  if (!project) {
+    s.say(NOTHING_TO_SAVE);
+    return;
+  }
   const stamp = now.toISOString();
   // A view that cannot draw its picture must not stop the save: the file just has no thumbnail.
   // The failure is still a fault in Kerf, logged so that files saved without pictures are noticed.

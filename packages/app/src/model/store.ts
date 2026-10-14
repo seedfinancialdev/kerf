@@ -247,7 +247,12 @@ export function createKerfStore(deps: {
         show({ history: history ? record(history, edit) : startHistory(edit), previewed: null });
       },
       cancelPreview: () => show({ previewed: null }),
-      abandonAction: () => show({ previewed: null, pending: null, proposal: null }),
+      // Only a preview needs the recorded project solved again; a fault may come from solving.
+      abandonAction: () => {
+        const dropped = { pending: null, proposal: null };
+        if (get().previewed) show({ ...dropped, previewed: null });
+        else set(dropped);
+      },
       // With nothing to step to, History has not moved, so nothing it clears is cleared.
       undo: () => {
         const h = get().history;
