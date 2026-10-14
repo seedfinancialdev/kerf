@@ -21,6 +21,7 @@ import {
 import type { Camera } from "three";
 import { shownProject } from "../model/store";
 import { inches, toScene } from "../scene/frames";
+import { HandOn } from "../state/Boundary";
 import { useKerf, useKerfStore } from "../state/useKerf";
 import { Board } from "./Board";
 import { boardLooks } from "./board-looks";
@@ -87,9 +88,13 @@ function ModelCanvas({ framed, missed, children }: ModelCanvasProps) {
         gl={{ preserveDrawingBuffer: true }}
         onPointerMissed={(e) => missed(e, camera.current ?? undefined)}
       >
-        <CameraKeeper into={camera} />
-        {children}
-        {framed && !drawn && <FirstPicture drawn={markDrawn} />}
+        {/* R3F reports every fault its boundary catches to the page; HandOn marks it as the
+            3D view's, which the ThreeDGuard around the canvas says (state/Boundary.tsx). */}
+        <HandOn>
+          <CameraKeeper into={camera} />
+          {children}
+          {framed && !drawn && <FirstPicture drawn={markDrawn} />}
+        </HandOn>
       </Canvas>
       {/* No live region: Notice owns role="status", and announcing a line that lasts a few frames helps no one. */}
       {!drawn && <p className="model-drawing">Drawing the model…</p>}

@@ -277,6 +277,37 @@ describe("<App>", () => {
       return store;
     }
 
+    it("leaves a fault the 3D view's guard handled to that guard: one notice, and the tool's action and preview kept", () => {
+      // The 3D view's renderer (R3F) hands every fault a boundary caught to the page's error event
+      // as well (its root's onCaughtError is reportError); here that event is sent by hand.
+      const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+      store.getState().apply(startProject("Bookcase", "imperial"));
+      store.getState().setTool("board");
+      store.getState().setPending({ tool: "board", from: { placed: null, point: [0, 0, 0] } });
+      store.getState().preview(startProject("Blank case", "imperial").project);
+      // Its own fault: one a boundary caught stays marked as handled.
+      const drawing = new TypeError("y is undefined");
+      function Broken(): never {
+        throw drawing;
+      }
+      render(<App store={store} model={<Broken />} />);
+      act(() => {
+        window.dispatchEvent(new ErrorEvent("error", { error: drawing, cancelable: true }));
+      });
+      expect(store.getState().notice).toEqual({
+        text:
+          "The 3D view hit a problem and stopped. The cut list, plans and Save still work; " +
+          "reload the page to see the model again.",
+        kind: "warning",
+      });
+      expect(store.getState().waiting).toEqual([]);
+      expect(store.getState().pending).toEqual({
+        tool: "board",
+        from: { placed: null, point: [0, 0, 0] },
+      });
+      expect(store.getState().previewed).not.toBeNull();
+    });
+
     it("says so when a tool fails on a typed size, logs it, and drops the tool's action and preview", () => {
       const store = midAction();
       vi.spyOn(boardTool, "measure").mockImplementation(() => {

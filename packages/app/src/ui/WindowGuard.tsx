@@ -12,7 +12,7 @@
 
 import { type ReactNode, useEffect } from "react";
 import type { KerfStore } from "../model/store-types";
-import { Boundary } from "../state/Boundary";
+import { Boundary, handledByBoundary } from "../state/Boundary";
 import { useKerfStore } from "../state/useKerf";
 import { Notice } from "./Notice";
 import { saveShownProject } from "./save";
@@ -36,13 +36,16 @@ function actionFailed(store: KerfStore, error: unknown): void {
 /**
  * While mounted, every fault no handler caught is taken from the page's events: logged once here
  * (the browser's own report is stopped) and said on the notice line. An `error` event without an
- * error object comes from a script Kerf cannot see into, so it is left to the browser.
+ * error object comes from a script Kerf cannot see into, so it is left to the browser; one for a
+ * fault a boundary already caught is left to that boundary.
  */
 function useActionFaults(store: KerfStore): void {
   useEffect(() => {
     const onError = (e: ErrorEvent): void => {
       if (e.error === undefined || e.error === null) return;
       e.preventDefault();
+      // A fault a boundary caught has been said and logged there (state/Boundary.tsx).
+      if (handledByBoundary(e.error)) return;
       actionFailed(store, e.error);
     };
     const onRejection = (e: PromiseRejectionEvent): void => {
