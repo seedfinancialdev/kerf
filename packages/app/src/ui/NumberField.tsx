@@ -60,10 +60,16 @@ export function NumberField({ label, display, onSubmit, scrub }: Props) {
   const [typed, setTyped] = useState<string | null>(null);
   const text = typed ?? display;
   const [problem, setProblem] = useState<string | null>(null);
-  const drag = useRef<{ x: number; start: Len; moved: boolean; refused: string | null } | null>(
-    null,
-  );
-  // A reason kept after a drag let go on a refused value, through the value going back.
+  // `shown`: the value shown when the drag began, which a cancelled drag shows again.
+  const drag = useRef<{
+    x: number;
+    start: Len;
+    shown: string;
+    moved: boolean;
+    refused: string | null;
+  } | null>(null);
+  // A reason kept after a drag let go on a refused value, through the value going back; armed only
+  // when the value will go back, so it never outlives that release.
   const keepReason = useRef(false);
   // The latest scrub, for the clean-up below, which runs only when the field goes away.
   const latestScrub = useRef(scrub);
@@ -98,7 +104,13 @@ export function NumberField({ label, display, onSubmit, scrub }: Props) {
   const onPointerDown = (e: PointerEvent<HTMLLabelElement>): void => {
     if (!scrub || e.button !== 0) return;
     e.currentTarget.setPointerCapture?.(e.pointerId);
-    drag.current = { x: e.clientX, start: scrub.value, moved: false, refused: null };
+    drag.current = {
+      x: e.clientX,
+      start: scrub.value,
+      shown: display,
+      moved: false,
+      refused: null,
+    };
   };
   const onPointerMove = (e: PointerEvent<HTMLLabelElement>): void => {
     const d = drag.current;
@@ -120,7 +132,7 @@ export function NumberField({ label, display, onSubmit, scrub }: Props) {
       scrub.onScrubEnd();
       return;
     }
-    keepReason.current = true;
+    keepReason.current = display !== d.shown;
     scrub.onScrubCancel();
   };
   const onPointerCancel = (): void => {

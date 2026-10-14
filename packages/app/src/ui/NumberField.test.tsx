@@ -164,4 +164,24 @@ describe("<NumberField>", () => {
     fireEvent.keyDown(input, { key: "Enter" });
     expect(input.value).toBe('36"');
   });
+
+  it("forgets a refused drag's reason once the value changes later, when the drag never moved it", () => {
+    const scrub = {
+      value: 7_315_200,
+      units: "imperial" as const,
+      onScrub: vi.fn(() => "Width must be more than zero."),
+      onScrubEnd: vi.fn(),
+      onScrubCancel: vi.fn(),
+    };
+    const props = { label: "Width", display: '36"', onSubmit: vi.fn(() => null), scrub };
+    const view = render(<NumberField {...props} />);
+    // Every step refused, so no preview ever changed the value shown.
+    drag(screen.getByText("Width"), -40);
+    expect(document.querySelector(".field-problem")?.textContent).toBe(
+      "Width must be more than zero.",
+    );
+    // Later an Undo of another change shows a new width.
+    view.rerender(<NumberField {...props} display={'30"'} />);
+    expect(document.querySelector(".field-problem")).toBeNull();
+  });
 });
