@@ -45,6 +45,19 @@ describe("files", () => {
     expect(openKerfBytes(bytes)).toEqual({ ok: false, message: NEWER_FILE });
   });
 
+  it.each([
+    ["0", '"schemaVersion": 0'],
+    ["text", '"schemaVersion": "1"'],
+  ])("calls a file with a schema version of %s damaged, not newer", (_, written) => {
+    const text = serializeProject(project).replace('"schemaVersion": 1', written);
+    const meta = JSON.stringify({ schemaVersion: 1, appVersion: "0.4.0", ...times });
+    const bytes = zipSync({ "project.json": strToU8(text), "meta.json": strToU8(meta) });
+    expect(openKerfBytes(bytes)).toEqual({
+      ok: false,
+      message: "This file could not be opened: its contents are damaged or do not make sense.",
+    });
+  });
+
   it("names the file after the project", () => {
     expect(fileNameFor(project)).toBe("Bookcase.kerf");
   });

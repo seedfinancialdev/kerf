@@ -151,6 +151,19 @@ describe("a browser store that cannot be written", () => {
     expect(storage.read("kerf.units")).toBeUndefined();
   });
 
+  it("calls a stored project with schema version 0 damaged, not newer", () => {
+    const storage = memory();
+    const text = serializeProject(startProject("Bookcase", "imperial").project).replace(
+      '"schemaVersion": 1',
+      '"schemaVersion": 0',
+    );
+    storage.write("kerf.project", text);
+    expect(createKerfStore({ storage }).getState().notice?.text).toBe(
+      "Your last project could not be opened: its contents are damaged or do not make sense. " +
+        "It was set aside in this browser.",
+    );
+  });
+
   it("says a stored project from a newer Kerf is newer, not damaged, and sets it aside", () => {
     const storage = memory();
     const text = serializeProject(startProject("Bookcase", "imperial").project).replace(

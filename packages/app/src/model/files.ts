@@ -16,10 +16,15 @@ export const DAMAGED_CONTENTS = "its contents are damaged or do not make sense";
 
 /**
  * True for the engine's refusal of a project from a newer Kerf (its schema version is past this
- * one's), which only updating Kerf can open: told apart from damage by the field it names.
+ * one's), which only updating Kerf can open. The engine refuses a missing, malformed or older
+ * schema version on the same field, so its words are checked too; it has no typed error for it.
  */
 export function isFromNewerKerf(error: unknown): boolean {
-  return error instanceof ProjectFormatError && error.path === "$.schemaVersion";
+  return (
+    error instanceof ProjectFormatError &&
+    error.path === "$.schemaVersion" &&
+    /newer version of Kerf/.test(error.message)
+  );
 }
 
 /** Said for a file from a newer Kerf, with what to do. */
