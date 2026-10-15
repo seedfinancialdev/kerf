@@ -6,16 +6,23 @@
 
 import { describe, expect, it } from "vitest";
 import { hintFor, STEPS } from "../model/steps";
-import { TIPS } from "./tips";
+import { stepTip } from "./tips";
 
-describe("TIPS for the steps", () => {
+describe("stepTip", () => {
   it.each(STEPS)("%s says what its hint line says", (step) => {
     // The hint reads "Name — what it is for." (model/steps.ts); the tip keeps the second half.
-    const forWhat = hintFor(step, undefined).split(" — ")[1] ?? "";
-    expect(TIPS[step].text.toLowerCase()).toBe(forWhat.toLowerCase());
+    const forWhat = hintFor(step, "box").split(" — ")[1] ?? "";
+    expect(stepTip(step, "box").text.toLowerCase()).toBe(forWhat.toLowerCase());
   });
 
   it("starts Joinery's tip with a capital, as the spec words it", () => {
-    expect(TIPS.Joinery.text).toBe("Check the joints your tools can cut, then accept them.");
+    expect(stepTip("Joinery", undefined).text).toBe(
+      "Check the joints your tools can cut, then accept them.",
+    );
+  });
+
+  it("follows the kind of project", () => {
+    expect(stepTip("Shape", "box").text).toContain("how the box is built");
+    expect(stepTip("Shape", "case").text).toContain("how the case is built");
   });
 });

@@ -5,19 +5,15 @@
 // What every tool, step, tab and top-bar control says when you rest on it (design spec, "Tooltips").
 // Tool keys are those of `TOOLS` in tools/tools.ts; a step's line is its hint line from model/steps.ts.
 
-import { hintFor, STEPS, type Step } from "../model/steps";
+import type { Structure } from "@kerf/core";
+import { hintFor, type Step } from "../model/steps";
 import type { TipText } from "./Tip";
 
-/** A step's tip: its hint line without the "Name — " lead, which the tip's heading already says. */
-function stepTip(step: Step): TipText {
-  const forWhat = hintFor(step, undefined).slice(`${step} — `.length);
+/** A step's tip: its hint line for this kind of project, without the "Name — " lead the tip's heading already says. */
+export function stepTip(step: Step, type: Structure["type"] | undefined): TipText {
+  const forWhat = hintFor(step, type).slice(`${step} — `.length);
   return { name: step, text: forWhat.charAt(0).toUpperCase() + forWhat.slice(1) };
 }
-
-const STEP_TIPS = Object.fromEntries(STEPS.map((step) => [step, stepTip(step)])) as Record<
-  Step,
-  TipText
->;
 
 /** Every tip, by the control it belongs to. */
 export const TIPS = {
@@ -40,8 +36,6 @@ export const TIPS = {
   },
   edge: { name: "Edge profile", key: "F", text: "Round over or chamfer the edge of a board." },
   tape: { name: "Tape", key: "T", text: "Measure the distance between two points on the model." },
-
-  ...STEP_TIPS,
 
   Shopping: {
     name: "Shopping",

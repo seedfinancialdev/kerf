@@ -7,9 +7,16 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
+import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { memoryStorage } from "../testing/memory-storage";
+
+function openApp() {
+  const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+  render(<App store={store} model={null} />);
+  return store;
+}
 
 describe("<TopBar> tips", () => {
   beforeEach(() => vi.useFakeTimers());
@@ -25,5 +32,28 @@ describe("<TopBar> tips", () => {
     fireEvent.pointerEnter(undo.parentElement as HTMLElement);
     act(() => vi.advanceTimersByTime(500));
     expect(screen.getByRole("tooltip").textContent).toContain("Take back your last change.");
+  });
+
+  it("shows Redo's tip when Tab reaches it", () => {
+    const store = openApp();
+    act(() => {
+      store.getState().apply(startProject("Bookcase", "imperial"));
+      store.getState().apply(startProject("Blank case", "imperial"));
+      store.getState().undo();
+    });
+    fireEvent.keyDown(document.body, { key: "Tab" });
+    act(() => screen.getByRole("button", { name: "Redo" }).focus());
+    expect(screen.getByRole("tooltip").textContent).toContain("Put back the change");
+  });
+
+  it("describes Shape for the kind of project that is open", () => {
+    const store = openApp();
+    act(() => {
+      store.getState().apply(startProject("Blank box", "imperial"));
+      store.getState().setStep("Divide");
+    });
+    fireEvent.pointerEnter(screen.getByRole("button", { name: "Shape" }));
+    act(() => vi.advanceTimersByTime(500));
+    expect(screen.getByRole("tooltip").textContent).toContain("how the box is built");
   });
 });

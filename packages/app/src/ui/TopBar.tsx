@@ -7,16 +7,18 @@
 
 import { canRedo, canUndo, currentProject } from "../model/history";
 import { STEPS } from "../model/steps";
+import { shownProject } from "../model/store";
 import { useKerf } from "../state/useKerf";
 import { SettingsMenu } from "./SettingsMenu";
 import { Tip } from "./Tip";
-import { TIPS } from "./tips";
+import { stepTip, TIPS } from "./tips";
 
 /** The five steps, Settings, Undo and Redo. */
 export function TopBar() {
   const step = useKerf((s) => s.step);
   const setStep = useKerf((s) => s.setStep);
   const name = useKerf((s) => (s.history ? currentProject(s.history).name : null));
+  const type = useKerf((s) => shownProject(s)?.structures[0]?.type);
   const undoable = useKerf((s) => s.history !== null && canUndo(s.history));
   const redoable = useKerf((s) => s.history !== null && canRedo(s.history));
   const undo = useKerf((s) => s.undo);
@@ -31,7 +33,7 @@ export function TopBar() {
         <ol className="steps">
           {STEPS.map((s) => (
             <li key={s}>
-              <Tip tip={TIPS[s]}>
+              <Tip tip={stepTip(s, type)}>
                 <button
                   type="button"
                   className="step"

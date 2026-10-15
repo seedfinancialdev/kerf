@@ -134,8 +134,9 @@ export function Tip({ tip, children }: { tip: TipText; children: Trigger }) {
       children.props.onPointerLeave?.(e);
     },
     onFocus: (e) => {
-      // Mouse focus follows a press, and the tip would sit over what was just pressed.
-      if (e.currentTarget.matches(":focus-visible")) show();
+      // Mouse focus follows a press, and the tip would sit over what was just pressed. `target` is the
+      // focused element: a wrapper around a control has the focus inside it, not on itself.
+      if (e.target instanceof Element && e.target.matches(":focus-visible")) show();
       children.props.onFocus?.(e);
     },
     onBlur: (e) => {

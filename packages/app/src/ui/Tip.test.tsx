@@ -14,7 +14,7 @@ const pushPull = {
   key: "P",
   text: "Stretch or shrink a board by dragging one of its ends.",
 };
-/** Focus as Tab gives it: after a key press, a browser treats focus as keyboard focus. */
+/** Focus as Tab gives it: a key press first, so the focus counts as keyboard focus. */
 function tabTo(element: HTMLElement) {
   fireEvent.keyDown(document.body, { key: "Tab" });
   act(() => element.focus());
@@ -24,7 +24,10 @@ const move = { name: "Move", key: "M", text: "Move or copy the boards you picked
 
 describe("Tip", () => {
   beforeEach(() => vi.useFakeTimers());
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
 
   it("shows after half a second of hover, with name, key and what it does", () => {
     render(
@@ -74,6 +77,18 @@ describe("Tip", () => {
     expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
+  it("shows for keyboard focus on a control inside the wrapped element", () => {
+    render(
+      <Tip tip={pushPull}>
+        <span>
+          <button type="button">Push/Pull</button>
+        </span>
+      </Tip>,
+    );
+    tabTo(screen.getByRole("button"));
+    expect(screen.getByRole("tooltip")).toBeTruthy();
+  });
+
   it("hides when focus leaves the control", () => {
     render(
       <Tip tip={pushPull}>
@@ -91,8 +106,15 @@ describe("Tip", () => {
         <button type="button">Push/Pull</button>
       </Tip>,
     );
-    fireEvent.pointerDown(screen.getByRole("button"), { pointerType: "mouse" });
-    fireEvent.focus(screen.getByRole("button"));
+    // jsdom reports every focus() as keyboard focus, so say what a browser says after a mouse press.
+    const matches = Element.prototype.matches;
+    vi.spyOn(Element.prototype, "matches").mockImplementation(function (
+      this: Element,
+      selector: string,
+    ) {
+      return selector === ":focus-visible" ? false : matches.call(this, selector);
+    });
+    act(() => screen.getByRole("button").focus());
     expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
