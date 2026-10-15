@@ -2,19 +2,102 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The top bar (design spec, "Layout"): the five steps as one switcher, then Settings, Undo and
-// Redo.
+// The top bar (design spec, "Layout"): the Kerf button (Home), the project's name and menu, the
+// steps as one switcher, then Settings, Undo and Redo.
 
+import { useEffect, useRef, useState } from "react";
 import { canRedo, canUndo, currentProject } from "../model/history";
 import { STEPS } from "../model/steps";
 import { shownProject } from "../model/store";
-import { useKerf } from "../state/useKerf";
+import { useKerf, useKerfStore } from "../state/useKerf";
+import { NameField } from "./home/NameField";
+import { ProjectMenu, type ProjectMenuActions } from "./home/ProjectMenu";
 import { SettingsMenu } from "./SettingsMenu";
+import { saveShownProject } from "./save";
 import { Tip } from "./Tip";
 import { stepTip, TIPS } from "./tips";
 
-/** The five steps, Settings, Undo and Redo. */
+/**
+ * The open project's name, which is a button opening its menu: Rename (in place), Duplicate,
+ * Download .kerf file and Back to Home.
+ */
+function ProjectNameMenu({ name }: { name: string }) {
+  const store = useKerfStore();
+  const [renaming, setRenaming] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+
+  // Set while the field is open, so the keyboard goes back to the name button once it is shown again.
+  const returnFocus = useRef(false);
+  useEffect(() => {
+    if (!renaming && returnFocus.current) button.current?.focus();
+    returnFocus.current = renaming;
+  }, [renaming]);
+
+  const stopRenaming = (): void => setRenaming(false);
+  /** Renames the project to `wanted`; false when the store refused it as blank (and said so). */
+  const keepName = (wanted: string): boolean => {
+    const { projectId, renameProject } = store.getState();
+    // The same name again is no change, so Undo is not given an empty step.
+    if (projectId && wanted.trim() !== name) void renameProject(projectId, wanted);
+    if (wanted.trim() === "") return false;
+    stopRenaming();
+    return true;
+  };
+  /** Makes a copy on Home and says so; the copy is not opened. */
+  const duplicate = async (): Promise<void> => {
+    const { projectId, duplicateProject, projects } = store.getState();
+    if (!projectId) return;
+    const before = new Set(projects.map((p) => p.id));
+    await duplicateProject(projectId);
+    const made = store.getState().projects.find((p) => !before.has(p.id));
+    // A copy that could not be made has already been explained on the notice line.
+    if (made) store.getState().say(`Made "${made.name}" on Home.`);
+  };
+  const actions: ProjectMenuActions = {
+    close: (refocus) => {
+      setMenuOpen(false);
+      if (refocus) button.current?.focus();
+    },
+    rename: () => {
+      setMenuOpen(false);
+      setRenaming(true);
+    },
+    duplicate: () => {
+      actions.close(true);
+      void duplicate();
+    },
+    download: () => {
+      actions.close(true);
+      void saveShownProject(store, new Date());
+    },
+    home: () => {
+      setMenuOpen(false);
+      store.getState().setScreen("home");
+    },
+  };
+
+  if (renaming) return <NameField name={name} keep={keepName} cancel={stopRenaming} />;
+  return (
+    <div className="project-menu-holder">
+      <button
+        ref={button}
+        type="button"
+        className="project-name"
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        onClick={() => setMenuOpen(!menuOpen)}
+      >
+        {name}
+      </button>
+      {menuOpen && <ProjectMenu name={name} actions={actions} />}
+    </div>
+  );
+}
+
+/** The Kerf button, the project's name, the steps, Settings, Undo and Redo. */
 export function TopBar() {
+  const setScreen = useKerf((s) => s.setScreen);
   const step = useKerf((s) => s.step);
   const setStep = useKerf((s) => s.setStep);
   const name = useKerf((s) => (s.history ? currentProject(s.history).name : null));
@@ -26,9 +109,11 @@ export function TopBar() {
   return (
     <header className="topbar">
       <Tip tip={TIPS.home}>
-        <span className="brand">Kerf</span>
+        <button type="button" className="brand" aria-label="Home" onClick={() => setScreen("home")}>
+          Kerf
+        </button>
       </Tip>
-      {name && <span className="project-name">{name}</span>}
+      {name && <ProjectNameMenu name={name} />}
       <nav aria-label="Workflow" className="steps-nav">
         <ol className="steps">
           {STEPS.map((s) => (

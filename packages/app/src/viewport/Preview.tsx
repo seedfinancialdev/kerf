@@ -4,7 +4,7 @@
 
 // New project's preview (design spec §3: "a live 3D preview of the real model, drawn by the engine"):
 // the solved piece in a small canvas of its own, turning slowly so its depth reads, and still while the
-// pointer is over it. It is only a picture: no navigation, no picking, no thumbnail for Save, and it
+// pointer is over it. It is only a picture: no navigation, no picking, no thumbnail for the download, and it
 // never changes the store. If it cannot be drawn it says so in its place, and the piece can still be
 // created.
 

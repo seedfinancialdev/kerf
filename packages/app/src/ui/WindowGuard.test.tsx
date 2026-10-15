@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // ADR 015, rule 11: a fault in Kerf never ends the session silently. When the window cannot be
-// drawn, Save still writes the recorded project; a fault in an action is said once and logged.
+// drawn, the download still writes the recorded project; a fault in an action is said once and logged.
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
@@ -52,20 +52,20 @@ describe("<WindowGuard>", () => {
       store.getState().apply(recorded);
       store.getState().preview(startProject("Blank case", "imperial").project);
       guarded(store);
-      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      fireEvent.click(screen.getByRole("button", { name: "Download a .kerf file" }));
       await waitFor(() => expect(downloads).toHaveLength(1));
       const opened = openKerfBytes(new Uint8Array(await (downloads[0] as Blob).arrayBuffer()));
       expect(opened.ok && opened.project).toEqual(recorded.project);
       expect(store.getState().previewed).toBeNull();
     });
 
-    it("says there is nothing to save when no project is open", async () => {
+    it("says there is nothing to download when no project is open", async () => {
       const store = fresh();
       guarded(store);
-      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      fireEvent.click(screen.getByRole("button", { name: "Download a .kerf file" }));
       await waitFor(() =>
         expect(store.getState().notice).toEqual({
-          text: "There is no project to save yet.",
+          text: "There is no project to download yet.",
           kind: "said",
         }),
       );

@@ -40,12 +40,11 @@ body {
 }
 
 .brand {
+  padding: 0;
+  border: 0;
+  background: none;
   font-weight: var(--font-weight-strong);
   color: var(--color-accent);
-}
-
-.project-name {
-  color: var(--color-text-muted);
 }
 
 .steps-nav {
@@ -1593,6 +1592,32 @@ button.project-open {
 .card-menu [role="menuitem"]:hover,
 .card-menu [role="menuitem"]:focus {
   background: var(--color-hover);
+}
+
+/* The workshop's top bar holds the open project's name and its menu (ui/TopBar.tsx). */
+.project-menu-holder {
+  position: relative;
+}
+
+.project-menu-holder .project-name {
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+}
+
+.project-menu-holder .project-name:hover,
+.project-menu-holder .project-name[aria-expanded="true"] {
+  color: var(--color-text);
+}
+
+.topbar > .project-rename {
+  width: 14em;
+}
+
+.project-menu-holder .card-menu {
+  right: auto;
+  left: 0;
 }
 
 .card-ask {

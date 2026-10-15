@@ -349,7 +349,7 @@ export function createKerfStore(deps: {
       },
       setTool: (tool) => {
         const dropped = { tool, pending: null, proposal: null };
-        // A preview belongs to the tool that drew it; leaving it would show (and Save) a change
+        // A preview belongs to the tool that drew it; leaving it would show (and in the downloaded file) a change
         // that is not in History.
         if (get().previewed) show({ ...dropped, previewed: null });
         else set(dropped);

@@ -2,22 +2,25 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// A project card's menu (design spec §2, "Project card menu (⋯)"): Rename, Duplicate, Download .kerf
-// file and Delete. Delete asks first; the store then offers Undo for a few seconds.
+// A project's menu (design spec §2, "Project card menu (⋯)"): Rename, Duplicate, Download .kerf
+// file and, on its Home card, Delete (which asks first; the store then offers Undo for a few
+// seconds). In the workshop's top bar the menu ends with Back to Home instead of Delete.
 
 import { type KeyboardEvent, type RefObject, useEffect, useId, useRef, useState } from "react";
 
-/** What the menu's items do; `close` shuts the menu, giving focus back to its button when asked. */
+/**
+ * What the menu's items do; `close` shuts the menu, giving focus back to its button when asked.
+ * An item whose action is left out is not listed: `remove` belongs to a Home card, `home` to the
+ * workshop.
+ */
 export interface ProjectMenuActions {
   rename(): void;
   duplicate(): void;
   download(): void;
-  remove(): void;
+  remove?(): void;
+  home?(): void;
   close(refocus: boolean): void;
 }
-
-/** The items, in the order the menu lists them. */
-const ITEMS = ["Rename", "Duplicate", "Download .kerf file", "Delete"] as const;
 
 /** Moves focus among `items` from the focused one by `step`, wrapping round at either end. */
 function focusNext(items: HTMLElement[], step: number): void {
@@ -65,7 +68,15 @@ function usePopup(
 }
 
 /** "Delete …? You can undo this for a few seconds." with Cancel, focused first, and Delete. */
-function DeleteQuestion({ name, actions }: { name: string; actions: ProjectMenuActions }) {
+function DeleteQuestion({
+  name,
+  remove,
+  actions,
+}: {
+  name: string;
+  remove: () => void;
+  actions: ProjectMenuActions;
+}) {
   const box = useRef<HTMLDivElement>(null);
   const question = useId();
   const onKeyDown = usePopup(box, actions.close);
@@ -82,7 +93,7 @@ function DeleteQuestion({ name, actions }: { name: string; actions: ProjectMenuA
         <button type="button" className="quiet" onClick={() => actions.close(true)}>
           Cancel
         </button>
-        <button type="button" className="danger" onClick={actions.remove}>
+        <button type="button" className="danger" onClick={remove}>
           Delete
         </button>
       </div>
@@ -95,14 +106,17 @@ export function ProjectMenu({ name, actions }: { name: string; actions: ProjectM
   const [asking, setAsking] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const onKeyDown = usePopup(box, actions.close);
-  if (asking) return <DeleteQuestion name={name} actions={actions} />;
+  if (asking && actions.remove) {
+    return <DeleteQuestion name={name} remove={actions.remove} actions={actions} />;
+  }
 
-  const chosen: Record<(typeof ITEMS)[number], () => void> = {
-    Rename: actions.rename,
-    Duplicate: actions.duplicate,
-    "Download .kerf file": actions.download,
-    Delete: () => setAsking(true),
-  };
+  const items: [string, () => void][] = [
+    ["Rename", actions.rename],
+    ["Duplicate", actions.duplicate],
+    ["Download .kerf file", actions.download],
+  ];
+  if (actions.remove) items.push(["Delete", () => setAsking(true)]);
+  if (actions.home) items.push(["Back to Home", actions.home]);
   return (
     <div
       ref={box}
@@ -111,9 +125,9 @@ export function ProjectMenu({ name, actions }: { name: string; actions: ProjectM
       className="card-menu"
       onKeyDown={onKeyDown}
     >
-      {ITEMS.map((item) => (
-        <button key={item} type="button" role="menuitem" tabIndex={-1} onClick={chosen[item]}>
-          {item}
+      {items.map(([label, choose]) => (
+        <button key={label} type="button" role="menuitem" tabIndex={-1} onClick={choose}>
+          {label}
         </button>
       ))}
     </div>

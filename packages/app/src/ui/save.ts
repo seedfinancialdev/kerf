@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Saving a project as a .kerf download (design spec, "Saving"): the shown project, used by the
-// window's fallback after a fault (WindowGuard) so Save works even when the window cannot, and any
-// kept project, from its card on Home (design spec §2, "Download .kerf file").
+// window's fallback after a fault (WindowGuard), so a download works even when the window cannot, and
+// the project menus' Download .kerf file, for the open project and, from Home, any kept project, from its card on Home (design spec §2, "Download .kerf file").
 
 import type { Id } from "@kerf/core";
 import { fileNameFor, SAVE_FAULT, saveFailureReason, saveKerfBytes } from "../model/files";
@@ -26,8 +26,8 @@ function download(bytes: Uint8Array, name: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-/** Said when Save is asked for with no project open (the window's fallback offers it regardless). */
-const NOTHING_TO_SAVE = "There is no project to save yet.";
+/** Said when a download is asked for with no project open (the window's fallback offers it regardless). */
+const NOTHING_TO_SAVE = "There is no project to download yet.";
 
 /**
  * Downloads the shown project as a .kerf file stamped `now` (its modified time, and its created

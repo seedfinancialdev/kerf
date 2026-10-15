@@ -75,7 +75,7 @@ describe("saveShownProject()", () => {
     await vi.waitFor(() => expect(saved.revoked).toEqual(["blob:kerf-test"]));
   });
 
-  it("says there is nothing to save when no project is open", async () => {
+  it("says there is nothing to download when no project is open", async () => {
     stubDownload();
     const store = createKerfStore({
       storage: createStorage(memoryStorage()),
@@ -83,7 +83,7 @@ describe("saveShownProject()", () => {
     });
     await saveShownProject(store, NOW);
     expect(saved.blobs).toEqual([]);
-    expect(store.getState().notice?.text).toBe("There is no project to save yet.");
+    expect(store.getState().notice?.text).toBe("There is no project to download yet.");
   });
 
   it("saves without a picture when the thumbnail source fails, and logs why", async () => {

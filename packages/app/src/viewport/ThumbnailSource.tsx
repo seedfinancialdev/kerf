@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The view's picture, offered to Save as the file's thumbnail (design spec, "Saving").
+// The view's picture, offered to the download as the file's thumbnail (design spec, "Saving").
 
 import { useThree } from "@react-three/fiber";
 import { useEffect } from "react";

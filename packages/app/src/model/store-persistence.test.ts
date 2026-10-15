@@ -185,7 +185,7 @@ describe("warnings that must not be lost (ADR 015, rule 11: the app says so once
   it("says once that work will not survive a reload when the browser has no storage", () => {
     const s = createKerfStore({ storage: createStorage(undefined), library: memoryLibrary() });
     expect(s.getState().notice?.text).toBe(
-      "This browser won't keep your work between visits. Use Save to keep a copy.",
+      "This browser won't keep your work between visits. Download a .kerf file from the project menu to keep a copy.",
     );
   });
 

@@ -275,7 +275,7 @@ describe("<App>", () => {
       expect(screen.getByRole("complementary", { name: "Inspector" })).toBeTruthy();
       expect(screen.getByRole("region", { name: "Drawer" }).textContent).toMatch(/Cut list/);
       const told =
-        "The 3D view could not start in this browser. The cut list, plans and Save still work; " +
+        "The 3D view could not start in this browser. The cut list, plans and downloading a .kerf file still work; " +
         "to see the model, turn on hardware acceleration or try another browser.";
       expect(screen.getByRole("region", { name: "Model" }).textContent).toBe(told);
       expect(screen.getByRole("status").textContent).toContain(told);
@@ -290,7 +290,7 @@ describe("<App>", () => {
       render(<App store={store} model={<Faulty />} />);
       quiet.mockRestore();
       expect(screen.getByRole("region", { name: "Model" }).textContent).toBe(
-        "The 3D view hit a problem and stopped. The cut list, plans and Save still work; " +
+        "The 3D view hit a problem and stopped. The cut list, plans and downloading a .kerf file still work; " +
           "reload the page to see the model again.",
       );
     });
@@ -316,8 +316,8 @@ describe("<App>", () => {
     const ACTION_FAULT =
       "Kerf hit a problem and could not finish what you just did. Please report it.";
     const WINDOW_FAULT =
-      "Kerf hit a problem and can't show its window. Save a copy of your project, then reload " +
-      "the page. Please report the problem.";
+      "Kerf hit a problem and can't show its window. Download a .kerf file of your project with the button below, " +
+      "then reload the page. Please report the problem.";
     const fault = new TypeError("x is undefined");
     let logged: MockInstance;
     beforeEach(() => {
@@ -355,7 +355,7 @@ describe("<App>", () => {
       });
       expect(store.getState().notice).toEqual({
         text:
-          "The 3D view hit a problem and stopped. The cut list, plans and Save still work; " +
+          "The 3D view hit a problem and stopped. The cut list, plans and downloading a .kerf file still work; " +
           "reload the page to see the model again.",
         kind: "warning",
       });
@@ -405,7 +405,7 @@ describe("<App>", () => {
       expect(logged).toHaveBeenCalledWith(fault);
     });
 
-    it("keeps Save and says what to do when a panel fails while it is drawn", async () => {
+    it("keeps the download and says what to do when a panel fails while it is drawn", async () => {
       const store = await renderApp();
       change(() => store.getState().apply(startProject("Bookcase", "imperial")));
       const solved = store.getState().solved;
@@ -417,7 +417,9 @@ describe("<App>", () => {
         }),
       );
       expect(screen.getByText(WINDOW_FAULT)).toBeTruthy();
-      const save = screen.getByRole("button", { name: "Save" }) as HTMLButtonElement;
+      const save = screen.getByRole("button", {
+        name: "Download a .kerf file",
+      }) as HTMLButtonElement;
       expect(save.disabled).toBe(false);
       expect(shownProject(store.getState())).not.toBeNull();
       expect(logged).toHaveBeenCalled();

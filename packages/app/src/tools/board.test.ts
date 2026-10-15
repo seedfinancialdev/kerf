@@ -381,7 +381,7 @@ describe("the Board tool", () => {
       storage: createStorage(memoryStorage()),
       library: memoryLibrary(),
     });
-    expect(boardTool.measure?.('24", 6"', s)).toBe("Start a project first.");
+    expect(boardTool.measure?.('24", 6"', s)).toBe("Open a project from Home first.");
   });
 
   it("refuses a length beyond what a project allows (100000 inches)", async () => {

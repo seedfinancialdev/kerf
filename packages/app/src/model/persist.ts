@@ -21,7 +21,7 @@ export const UNITS_NOT_KEPT =
 export function storageNotice(storage: AppStorage): string | undefined {
   return storage.available
     ? undefined
-    : "This browser won't keep your work between visits. Use Save to keep a copy.";
+    : "This browser won't keep your work between visits. Download a .kerf file from the project menu to keep a copy.";
 }
 
 /**
@@ -36,7 +36,7 @@ const OPEN_STORED_FAULT = "Kerf hit a problem opening your last project; please 
  */
 const PROJECT_UNREADABLE =
   "Your last project could not be read from this browser, so Kerf started without it. It is " +
-  "left as it was; use Save to keep a copy of new work.";
+  "left as it was; download a .kerf file from the project menu to keep new work.";
 
 /**
  * The stored project as the first History entry, or why it could not be opened. A stored project

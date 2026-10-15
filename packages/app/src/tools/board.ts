@@ -304,7 +304,7 @@ export const boardTool: ToolHandler = {
   measure(text, store) {
     const s = store.getState();
     const project = recordedProject(store);
-    if (!project) return "Start a project first.";
+    if (!project) return "Open a project from Home first.";
     const pending = s.pending?.tool === "board" ? s.pending : null;
     if (!pending) return "Click where the board starts first.";
     const stock = boardStockFor(project, s.boardStock);

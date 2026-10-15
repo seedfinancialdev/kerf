@@ -55,7 +55,7 @@ describe("<ThreeDGuard>", () => {
 
   it("gives each cause its own advice in shop words", () => {
     expect(VIEW_NOT_STARTED).toBe(
-      "The 3D view could not start in this browser. The cut list, plans and Save still work; " +
+      "The 3D view could not start in this browser. The cut list, plans and downloading a .kerf file still work; " +
         "to see the model, turn on hardware acceleration or try another browser.",
     );
     expect(BOARD_FAULT).toBe(
