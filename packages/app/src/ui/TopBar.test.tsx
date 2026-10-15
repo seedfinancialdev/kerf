@@ -10,8 +10,8 @@ import { App } from "../App";
 import { startProject } from "../model/commands";
 import { workshopStore } from "../testing/workshop-store";
 
-function openApp() {
-  const store = workshopStore();
+async function openApp() {
+  const store = await workshopStore();
   render(<App store={store} model={null} />);
   return store;
 }
@@ -20,8 +20,8 @@ describe("<TopBar> tips", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it("names Undo while it is disabled, since a disabled button gets no pointer events", () => {
-    render(<App store={workshopStore()} model={null} />);
+  it("names Undo while it is disabled, since a disabled button gets no pointer events", async () => {
+    render(<App store={await workshopStore()} model={null} />);
     const undo = screen.getByRole("button", { name: "Undo" });
     expect(undo.hasAttribute("disabled")).toBe(true);
     // The pointer enters the wrapper around the button, which is what a browser reports.
@@ -30,8 +30,8 @@ describe("<TopBar> tips", () => {
     expect(screen.getByRole("tooltip").textContent).toContain("Take back your last change.");
   });
 
-  it("shows Redo's tip when Tab reaches it", () => {
-    const store = openApp();
+  it("shows Redo's tip when Tab reaches it", async () => {
+    const store = await openApp();
     act(() => {
       store.getState().apply(startProject("Bookcase", "imperial"));
       store.getState().apply(startProject("Blank case", "imperial"));
@@ -42,8 +42,8 @@ describe("<TopBar> tips", () => {
     expect(screen.getByRole("tooltip").textContent).toContain("Put back the change");
   });
 
-  it("describes Shape for the kind of project that is open", () => {
-    const store = openApp();
+  it("describes Shape for the kind of project that is open", async () => {
+    const store = await openApp();
     act(() => {
       store.getState().apply(startProject("Blank box", "imperial"));
       store.getState().setStep("Divide");

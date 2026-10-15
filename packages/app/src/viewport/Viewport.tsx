@@ -152,7 +152,8 @@ export function Viewport() {
     if (boards.length > 0) setView(fitView(...sceneBounds(boards)));
   }, [hasBoards, fitRequest, created, store]);
 
-  if (!project || !result) return <p className="model-empty">Start a project to see it here.</p>;
+  // The Workshop shows only with a project open (App.tsx), so there is nothing to show without one.
+  if (!project || !result) return null;
   const looks = boardLooks(result, project);
   const selected = new Set(selection.kind === "boards" ? selection.instances : []);
   const hoveredBoard = placements.find((p) => p.instance === hovered);

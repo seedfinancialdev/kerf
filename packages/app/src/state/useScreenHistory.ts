@@ -21,7 +21,8 @@ function screenIn(state: unknown): Screen {
 
 /**
  * While mounted, a screen change made in the app adds a browser history entry, and Back or
- * Forward sets the screen its entry names without adding one. The page's own entry is named for
+ * Forward sets the screen its entry names without adding one; an entry naming a screen that cannot
+ * be shown is renamed for the one shown instead. The page's own entry is named for
  * the screen it opened on, so Back to it lands there again.
  */
 export function useScreenHistory(): void {
@@ -36,12 +37,16 @@ export function useScreenHistory(): void {
       }
     });
     const onPopState = (event: PopStateEvent): void => {
+      const asked = screenIn(event.state);
       following = true;
       try {
-        store.getState().setScreen(screenIn(event.state));
+        store.getState().setScreen(asked);
       } finally {
         following = false;
       }
+      // The Workshop with no project open gives Home; the entry says where Back really landed.
+      const landed = store.getState().screen;
+      if (landed !== asked) window.history.replaceState({ screen: landed }, "");
     };
     window.addEventListener("popstate", onPopState);
     return () => {

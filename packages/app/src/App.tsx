@@ -41,6 +41,10 @@ export function App({ store, model }: { store: KerfStore; model: ReactNode }) {
 function Screens({ model }: { model: ReactNode }) {
   useScreenHistory();
   const screen = useKerf((s) => s.screen);
+  const theme = useKerf((s) => s.theme);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
   return screen === "workshop" ? <Window model={model} /> : <ScreenToCome screen={screen} />;
 }
 
@@ -56,12 +60,8 @@ function ScreenToCome({ screen }: { screen: "shop" | "home" }) {
 
 function Window({ model }: { model: ReactNode }) {
   useShortcuts();
-  const theme = useKerf((s) => s.theme);
   // After Undo or any change the view is tried again, so a one-off fault does not end it.
   const history = useKerf((s) => s.history);
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-  }, [theme]);
   return (
     <div className="window">
       <TopBar />

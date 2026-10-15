@@ -8,6 +8,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { App } from "./App";
 import { startProject } from "./model/commands";
+import { STARTER_RECORD } from "./model/shop-record";
 import { createStorage } from "./model/storage";
 import { createKerfStore, shownProject } from "./model/store";
 import { memoryLibrary } from "./testing/memory-library";
@@ -21,8 +22,8 @@ function change(run: () => void): void {
 }
 
 /** The Workshop with the bookcase open, as one History entry. */
-function renderApp() {
-  const store = workshopStore();
+async function renderApp() {
+  const store = await workshopStore();
   render(<App store={store} model={null} />);
   return store;
 }
@@ -38,8 +39,18 @@ describe("<App>", () => {
     expect(screen.getByRole("heading", { name: "Your shop" })).toBeTruthy();
   });
 
-  it("shows the four steps, Shape first and pressed", () => {
-    renderApp();
+  it("puts the theme on the page on Home too", () => {
+    const backing = memoryStorage();
+    backing.setItem("kerf.shop", JSON.stringify(STARTER_RECORD));
+    backing.setItem("kerf.theme", "light");
+    const store = createKerfStore({ storage: createStorage(backing), library: memoryLibrary() });
+    render(<App store={store} model={null} />);
+    expect(store.getState().screen).toBe("home");
+    expect(document.documentElement.dataset.theme).toBe("light");
+  });
+
+  it("shows the four steps, Shape first and pressed", async () => {
+    await renderApp();
     const steps = screen.getByRole("navigation", { name: "Workflow" }).querySelectorAll("button");
     expect([...steps].map((b) => b.textContent)).toEqual([
       "Shape",
@@ -51,8 +62,8 @@ describe("<App>", () => {
     expect(screen.getByText(/^Shape — choose how the case is built/)).toBeTruthy();
   });
 
-  it("moves to Divide and shows what Divide is for", () => {
-    renderApp();
+  it("moves to Divide and shows what Divide is for", async () => {
+    await renderApp();
     fireEvent.click(screen.getByRole("button", { name: "Divide" }));
     expect(screen.getByRole("button", { name: "Divide" }).getAttribute("aria-pressed")).toBe(
       "true",
@@ -60,15 +71,15 @@ describe("<App>", () => {
     expect(screen.getByText(/^Divide — click an opening/)).toBeTruthy();
   });
 
-  it("has the project, model and inspector regions", () => {
-    renderApp();
+  it("has the project, model and inspector regions", async () => {
+    await renderApp();
     expect(screen.getByRole("complementary", { name: "Project" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "Model" })).toBeTruthy();
     expect(screen.getByRole("complementary", { name: "Inspector" })).toBeTruthy();
   });
 
-  it("offers Undo only once there is something to undo", () => {
-    const store = renderApp();
+  it("offers Undo only once there is something to undo", async () => {
+    const store = await renderApp();
     expect((screen.getByRole("button", { name: "Undo" }) as HTMLButtonElement).disabled).toBe(true);
     change(() => {
       store.getState().apply(startProject("Bookcase", "imperial"));
@@ -79,8 +90,8 @@ describe("<App>", () => {
     );
   });
 
-  it("undoes with Ctrl+Z and redoes with Ctrl+Shift+Z", () => {
-    const store = renderApp();
+  it("undoes with Ctrl+Z and redoes with Ctrl+Shift+Z", async () => {
+    const store = await renderApp();
     change(() => {
       store.getState().apply(startProject("Bookcase", "imperial"));
       store.getState().apply(startProject("Blank case", "imperial"));
@@ -109,8 +120,8 @@ describe("<App>", () => {
     expect(store.getState().history?.entries).toHaveLength(1);
   });
 
-  it("shows a notice with an Undo this button that undoes the change", () => {
-    const store = renderApp();
+  it("shows a notice with an Undo this button that undoes the change", async () => {
+    const store = await renderApp();
     change(() => {
       store.getState().apply(startProject("Bookcase", "imperial"));
       store
@@ -126,8 +137,8 @@ describe("<App>", () => {
     expect(screen.getByRole("status").textContent).toBe("");
   });
 
-  it("leaves Ctrl+Z alone while typing in a field", () => {
-    const store = renderApp();
+  it("leaves Ctrl+Z alone while typing in a field", async () => {
+    const store = await renderApp();
     change(() => {
       store.getState().apply(startProject("Bookcase", "imperial"));
       store.getState().apply(startProject("Blank case", "imperial"));
@@ -153,8 +164,8 @@ describe("<App>", () => {
       ["select", () => document.createElement("select")],
       ["checkbox", input("checkbox")],
       ["radio", input("radio")],
-    ])("undoes with Ctrl+Z from a %s", (_, make) => {
-      const store = renderApp();
+    ])("undoes with Ctrl+Z from a %s", async (_, make) => {
+      const store = await renderApp();
       change(() => {
         store.getState().apply(startProject("Bookcase", "imperial"));
         store.getState().apply(startProject("Blank case", "imperial"));
@@ -168,8 +179,8 @@ describe("<App>", () => {
     it.each([
       ["checkbox", input("checkbox")],
       ["radio", input("radio")],
-    ])("picks a tool from its key on a %s, but leaves Space to it", (_, make) => {
-      const store = renderApp();
+    ])("picks a tool from its key on a %s, but leaves Space to it", async (_, make) => {
+      const store = await renderApp();
       const control = focused(make);
       fireEvent.keyDown(control, { key: "p" });
       expect(store.getState().tool).toBe("pushPull");
@@ -178,8 +189,8 @@ describe("<App>", () => {
       expect(store.getState().tool).toBe("pushPull");
     });
 
-    it("leaves letters and Space to a select, which picks its options by them", () => {
-      const store = renderApp();
+    it("leaves letters and Space to a select, which picks its options by them", async () => {
+      const store = await renderApp();
       const control = focused(() => document.createElement("select"));
       fireEvent.keyDown(control, { key: "p" });
       fireEvent.keyDown(control, { key: " " });
@@ -187,8 +198,8 @@ describe("<App>", () => {
       expect(store.getState().tool).toBe("select");
     });
 
-    it("leaves the arrows to a radio, which moves between its choices by them", () => {
-      const store = renderApp();
+    it("leaves the arrows to a radio, which moves between its choices by them", async () => {
+      const store = await renderApp();
       fireEvent.keyDown(window, { key: "m" });
       const control = focused(input("radio"));
       fireEvent.keyDown(control, { key: "ArrowUp" });
@@ -197,8 +208,8 @@ describe("<App>", () => {
     });
   });
 
-  it("undoes with Cmd+Z", () => {
-    const store = renderApp();
+  it("undoes with Cmd+Z", async () => {
+    const store = await renderApp();
     change(() => {
       store.getState().apply(startProject("Bookcase", "imperial"));
       store.getState().apply(startProject("Blank case", "imperial"));
@@ -207,8 +218,8 @@ describe("<App>", () => {
     expect(store.getState().history?.at).toBe(0);
   });
 
-  it("turns left-drag into orbit with O, pan with H, and back to picking with Escape", () => {
-    const store = renderApp();
+  it("turns left-drag into orbit with O, pan with H, and back to picking with Escape", async () => {
+    const store = await renderApp();
     fireEvent.keyDown(window, { key: "o" });
     expect(store.getState().navigation).toBe("orbit");
     fireEvent.keyDown(window, { key: "h" });
@@ -217,16 +228,16 @@ describe("<App>", () => {
     expect(store.getState().navigation).toBeNull();
   });
 
-  it("asks the view to fit the model with Shift+Z, but not Ctrl+Shift+Z", () => {
-    const store = renderApp();
+  it("asks the view to fit the model with Shift+Z, but not Ctrl+Shift+Z", async () => {
+    const store = await renderApp();
     fireEvent.keyDown(window, { key: "Z", shiftKey: true });
     expect(store.getState().fitRequest).toBe(1);
     fireEvent.keyDown(window, { key: "z", shiftKey: true, ctrlKey: true });
     expect(store.getState().fitRequest).toBe(1);
   });
 
-  it("puts the theme on the page", () => {
-    renderApp();
+  it("puts the theme on the page", async () => {
+    await renderApp();
     expect(document.documentElement.dataset.theme).toBe("dark");
   });
 
@@ -236,10 +247,10 @@ describe("<App>", () => {
       throw new Error("Error creating WebGL context.");
     }
 
-    it("keeps the panels, the drawer and the cut list working, and says what to do", () => {
+    it("keeps the panels, the drawer and the cut list working, and says what to do", async () => {
       // React reports the caught error on the console; the test is about what the user sees.
       const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
-      const store = workshopStore();
+      const store = await workshopStore();
       render(<App store={store} model={<Broken />} />);
       quiet.mockRestore();
       expect(screen.getByRole("complementary", { name: "Project" })).toBeTruthy();
@@ -252,12 +263,12 @@ describe("<App>", () => {
       expect(screen.getByRole("status").textContent).toContain(told);
     });
 
-    it("does not give WebGL advice for a fault that is not WebGL's", () => {
+    it("does not give WebGL advice for a fault that is not WebGL's", async () => {
       const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
       function Faulty(): never {
         throw new TypeError("x is undefined");
       }
-      const store = workshopStore();
+      const store = await workshopStore();
       render(<App store={store} model={<Faulty />} />);
       quiet.mockRestore();
       expect(screen.getByRole("region", { name: "Model" }).textContent).toBe(
@@ -266,14 +277,14 @@ describe("<App>", () => {
       );
     });
 
-    it("tries the view again after Undo, so a one-off fault does not end it", () => {
+    it("tries the view again after Undo, so a one-off fault does not end it", async () => {
       const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
       let broken = true;
       function Flaky() {
         if (broken) throw new Error("Error creating WebGL context.");
         return <p>the model</p>;
       }
-      const store = workshopStore();
+      const store = await workshopStore();
       store.getState().apply(startProject("Blank case", "imperial"));
       render(<App store={store} model={<Flaky />} />);
       broken = false;
@@ -297,8 +308,8 @@ describe("<App>", () => {
     afterEach(() => vi.restoreAllMocks());
 
     /** The bookcase with Board's first click made and a drag previewed, as a tool leaves it. */
-    function midAction() {
-      const store = renderApp();
+    async function midAction() {
+      const store = await renderApp();
       change(() => {
         store.getState().apply(startProject("Bookcase", "imperial"));
         store.getState().setTool("board");
@@ -308,10 +319,10 @@ describe("<App>", () => {
       return store;
     }
 
-    it("leaves a fault the 3D view's guard handled to that guard: one notice, and the tool's action and preview kept", () => {
+    it("leaves a fault the 3D view's guard handled to that guard: one notice, and the tool's action and preview kept", async () => {
       // The 3D view's renderer (R3F) hands every fault a boundary caught to the page's error event
       // as well (its root's onCaughtError is reportError); here that event is sent by hand.
-      const store = workshopStore();
+      const store = await workshopStore();
       store.getState().setTool("board");
       store.getState().setPending({ tool: "board", from: { placed: null, point: [0, 0, 0] } });
       store.getState().preview(startProject("Blank case", "imperial").project);
@@ -338,8 +349,8 @@ describe("<App>", () => {
       expect(store.getState().previewed).not.toBeNull();
     });
 
-    it("says so when a tool fails on a typed size, logs it, and drops the tool's action and preview", () => {
-      const store = midAction();
+    it("says so when a tool fails on a typed size, logs it, and drops the tool's action and preview", async () => {
+      const store = await midAction();
       vi.spyOn(boardTool, "measure").mockImplementation(() => {
         throw fault;
       });
@@ -352,8 +363,8 @@ describe("<App>", () => {
       expect(store.getState().previewed).toBeNull();
     });
 
-    it("says so when a panel's button fails, and logs it", () => {
-      const store = workshopStore();
+    it("says so when a panel's button fails, and logs it", async () => {
+      const store = await workshopStore();
       // The drawer takes the action when it is drawn, so it fails from the first click.
       vi.spyOn(store.getState(), "setDrawerTab").mockImplementation(() => {
         throw fault;
@@ -364,8 +375,8 @@ describe("<App>", () => {
       expect(logged).toHaveBeenCalledWith(fault);
     });
 
-    it("says so when a promise fails with nothing to catch it, and logs it", () => {
-      const store = renderApp();
+    it("says so when a promise fails with nothing to catch it, and logs it", async () => {
+      const store = await renderApp();
       const event = Object.assign(new Event("unhandledrejection", { cancelable: true }), {
         reason: fault,
       });
@@ -376,8 +387,8 @@ describe("<App>", () => {
       expect(logged).toHaveBeenCalledWith(fault);
     });
 
-    it("keeps Save and says what to do when a panel fails while it is drawn", () => {
-      const store = renderApp();
+    it("keeps Save and says what to do when a panel fails while it is drawn", async () => {
+      const store = await renderApp();
       change(() => store.getState().apply(startProject("Bookcase", "imperial")));
       const solved = store.getState().solved;
       if (!solved) throw new Error("not solved");

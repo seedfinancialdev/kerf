@@ -16,7 +16,8 @@ export function ProjectTree() {
   const project = useKerf((s) => shownProject(s));
   const result = useKerf((s) => s.solved?.result);
   const selection = useKerf((s) => s.selection);
-  if (!project || !result) return <p className="empty">No project yet. Click New in Start.</p>;
+  // The Workshop shows only with a project open (App.tsx), so there is nothing to show without one.
+  if (!project || !result) return null;
   const rows = treeRows(project, result);
 
   const pick = (row: TreeRow): void => {

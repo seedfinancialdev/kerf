@@ -73,19 +73,20 @@ function stillThere(selection: Selection, solved: Solved | null): Selection {
 }
 
 /**
- * The state a session starts in: on `screen`, with no project open, the shop from `shopRecord`,
- * the stored preferences, and the start-up notices (`startup`). Projects are opened from Home.
+ * The state a session starts in: on `start.screen`, with no project open, the shop from
+ * `start.shopRecord`, the stored preferences, and the start-up `warnings` shown in turn. Projects
+ * are opened from Home.
  */
 function startingState(
   storage: AppStorage,
-  screen: Screen,
-  shopRecord: ShopRecord,
-  startup: NoticeLine,
+  start: { screen: Screen; shopRecord: ShopRecord; projectsKept: boolean; warnings: string[] },
 ): KerfState {
+  const { screen, shopRecord, projectsKept, warnings } = start;
   return {
     screen,
     projectId: null,
     projects: [],
+    projectsKept,
     history: null,
     previewed: null,
     solved: null,
@@ -94,7 +95,7 @@ function startingState(
     shopRecord,
     shop: shopProfileFor(shopRecord),
     toured: storage.read("kerf.toured") === "yes",
-    ...startup,
+    ...warningsFirst(warnings),
     tool: "select",
     pending: null,
     proposal: null,
@@ -154,7 +155,7 @@ export function createKerfStore(deps: {
   const epochMs = (): number => deps.clockDate?.() ?? Date.now();
   const now = (): string => new Date(epochMs()).toISOString();
   const loaded = loadShop(deps.storage);
-  const startup = warningsFirst(startupWarnings(deps.storage, loaded.problem, deps.migration));
+  const warnings = startupWarnings(deps.storage, loaded.problem, deps.migration);
 
   const solveFor = (project: Project | null, shop: ShopProfile): Solved | null =>
     solveShown(project, shop, clock);
@@ -163,7 +164,8 @@ export function createKerfStore(deps: {
   // Without storage at all the start-up warning has already said so for the shop.
   let toldShopNotKept = !deps.storage.available;
   let toldUnitsNotKept = false;
-  const warnedOnce = new Set<string>();
+  // A warning said at start-up is not said again by `warnOnce`.
+  const warnedOnce = new Set<string>(warnings);
 
   return createStore<KerfState & KerfActions>()((set, get) => {
     /**
@@ -208,18 +210,25 @@ export function createKerfStore(deps: {
     });
 
     /**
-     * Shows `edit`'s project with a History of its own, so Undo never reaches into another
-     * project. A measurement belongs to the project it was taken on (ADR 015, rule 11).
+     * Shows `edit`'s project in the Workshop on Shape with a History of its own, so Undo never
+     * reaches into another project. A measurement belongs to the project it was taken on (ADR 015,
+     * rule 11).
      */
-    const showAfresh = (edit: Edit, patch: Partial<KerfState>): void =>
-      moveHistory(startHistory(edit), { tape: null, guides: [], ...patch });
-
-    /** As `showAfresh`, in the Workshop on Shape: how a kept project is opened. */
     const openAfresh = (edit: Edit, patch: Partial<KerfState>): void =>
-      showAfresh(edit, { screen: "workshop", step: "Shape", ...patch });
+      moveHistory(startHistory(edit), {
+        tape: null,
+        guides: [],
+        screen: "workshop",
+        step: "Shape",
+        ...patch,
+      });
 
-    /** Drops whatever was started or picked in the Workshop: it belongs to the project shown. */
+    /**
+     * Drops whatever was started or picked in the Workshop: it belongs to the project shown. The
+     * view's picture is started first, while the view still shows the project (Ruling R17).
+     */
     const leaveWorkshop = (screen: Screen): void => {
+      projects.keep(true);
       const dropped = { screen, pending: null, proposal: null, selection: NOTHING };
       if (get().previewed) show({ ...dropped, previewed: null });
       else set(dropped);
@@ -261,7 +270,12 @@ export function createKerfStore(deps: {
     });
 
     return {
-      ...startingState(deps.storage, loaded.firstLaunch ? "shop" : "home", loaded.record, startup),
+      ...startingState(deps.storage, {
+        screen: loaded.firstLaunch ? "shop" : "home",
+        shopRecord: loaded.record,
+        projectsKept: deps.library.available,
+        warnings,
+      }),
 
       ...viewActions(set, get),
 
@@ -273,7 +287,6 @@ export function createKerfStore(deps: {
       deleteProject: projects.deleteProject,
       refreshProjects: projects.refreshProjects,
 
-      begin: (edit) => showAfresh(edit, { projectId: null, created: now() }),
       setScreen: (screen) => {
         if (screen === "workshop" && !get().history) set({ screen: "home" });
         else if (screen !== "workshop" && get().screen === "workshop") leaveWorkshop(screen);

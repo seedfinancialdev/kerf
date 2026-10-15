@@ -49,8 +49,12 @@ type LibraryAction =
   | "deleteProject"
   | "refreshProjects";
 
-/** Said when a project Home listed is no longer in the library (another tab deleted it). */
-const GONE = "This project is no longer in this browser.";
+/**
+ * Said when a project Home listed cannot be had from the library. `Library.read` gives nothing
+ * both for a project that is gone (another tab deleted it) and for one that could not be read, so
+ * the words fit either.
+ */
+const NOT_FOUND = "This project could not be found in this browser.";
 
 /** Said when a kept project's text no longer reads as a project. */
 const damaged = (done: "opened" | "renamed" | "copied"): string =>
@@ -75,13 +79,15 @@ const renamedText = (project: Project, name: string): string =>
 
 /**
  * Builds the library's actions over `ctx`, with `keep`, which the store calls whenever History
- * moves. `keep` writes the open project to its entry with the view's picture; an entry whose
- * project is unchanged (it was only opened) keeps its time, so Home never says a project was
- * edited when it was only looked at. A refused write is said once (`LIBRARY_NOT_KEPT`).
+ * moves and as the Workshop is left. `keep` writes a changed project to its entry with the view's
+ * picture; a project only opened is not written, so Home never says it was edited when it was only
+ * looked at. With `pictureNow`, the view's picture is started at once, before the view goes, and
+ * written even for an unchanged project (Ruling R17). A picture is never replaced with none. A
+ * refused write is said once (`LIBRARY_NOT_KEPT`).
  */
 export function libraryActions(
   ctx: LibraryContext,
-): Pick<KerfActions, LibraryAction> & { keep(): void } {
+): Pick<KerfActions, LibraryAction> & { keep(pictureNow?: boolean): void } {
   const { library, get, set, now } = ctx;
   // The library call last asked for; each new one waits for it, whether it worked or not.
   let queue: Promise<unknown> = Promise.resolve();
@@ -94,34 +100,41 @@ export function libraryActions(
   const write = async (entry: LibraryEntry): Promise<void> => {
     if (!(await library.write(entry))) get().warnOnce(LIBRARY_NOT_KEPT);
   };
-  /** The entry `id`, or undefined having said that it is gone and listed what is left. */
+  // The open project's idea, as last read or typed: a change written while its entry cannot be
+  // read back still carries it.
+  let openNote = "";
+  /** The entry `id`, or undefined having said it cannot be found and listed what is left. */
   const entryFor = async (id: Id): Promise<LibraryEntry | undefined> => {
     const entry = await library.read(id);
     if (entry) return entry;
-    get().say(GONE);
+    get().say(NOT_FOUND);
     await list();
     return undefined;
   };
 
-  const keep = (): void => {
+  const keep = (pictureNow = false): void => {
     // Taken now, so the project written is the one this change made, whenever the write happens.
     const { projectId, history, created, thumbnail } = get();
     if (!projectId || !history) return;
     const project = currentProject(history);
     const text = serializeProject(project);
     const changed = now();
+    const note = openNote;
+    const started = pictureNow ? pictureInTime(thumbnail) : undefined;
     void inTurn(async () => {
       const before = await library.read(projectId);
       const unchanged = before?.project === text;
-      if (unchanged && before.thumbnail) return;
+      if (unchanged && !started) return;
+      const picture = await (started ?? pictureInTime(thumbnail));
+      if (unchanged && picture === null) return;
       await write({
         id: projectId,
         name: project.name,
         project: text,
-        thumbnail: await pictureInTime(thumbnail),
+        thumbnail: picture ?? before?.thumbnail ?? null,
         created: before?.created ?? created ?? changed,
         modified: unchanged ? before.modified : changed,
-        note: before?.note ?? "",
+        note: before?.note ?? note,
       });
       await list();
     });
@@ -156,6 +169,7 @@ export function libraryActions(
         }),
       );
       const form = project.structures[0];
+      openNote = note;
       ctx.openAfresh(edit, {
         projectId,
         created,
@@ -175,6 +189,7 @@ export function libraryActions(
         if (entry) get().say(damaged("opened"));
         return false;
       }
+      openNote = entry.note;
       ctx.openAfresh(
         { label: `Opened ${entry.name}`, project },
         { projectId: id, created: entry.created, selection: NOTHING },

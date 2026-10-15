@@ -18,9 +18,8 @@ export function JoineryStep() {
   const store = useKerfStore();
   const project = useKerf((s) => shownProject(s));
   const joints = useKerf((s) => s.solved?.result.joints);
-  if (!project || !joints) {
-    return <p className="empty">Start a project first: go to Start and click New.</p>;
-  }
+  // The Workshop shows only with a project open (App.tsx), so there is nothing to show without one.
+  if (!project || !joints) return null;
   const rows = joineryRows(joints, project.units);
   const reviewed =
     project.structures.length > 0 &&

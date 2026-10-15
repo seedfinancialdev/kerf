@@ -468,7 +468,7 @@ describe("a tool action under way", () => {
   /** The bookcase recorded, then Width 30" recorded, so there is an entry to undo. */
   const resized = () => {
     const s = fresh();
-    s.getState().begin(startProject("Bookcase", "imperial"));
+    s.getState().apply(startProject("Bookcase", "imperial"));
     const p = shownProject(s.getState());
     if (!p) throw new Error("no project");
     const r = setSize(p, p.structures[0]?.id ?? "", "w", '30"');
@@ -499,14 +499,15 @@ describe("a tool action under way", () => {
     ],
     ["jumpTo", (s: ReturnType<typeof fresh>) => s.getState().jumpTo(0)],
     [
-      "begin",
-      (s: ReturnType<typeof fresh>) => s.getState().begin(startProject("Bookcase", "imperial")),
+      "opening another project",
+      (s: ReturnType<typeof fresh>) =>
+        s.getState().createProject(startProject("Bookcase", "imperial"), ""),
     ],
-  ])("is dropped for every tool when History moves by %s", (_, move) => {
+  ])("is dropped for every tool when History moves by %s", async (_, move) => {
     const { s } = resized();
     s.getState().setTool("board");
     s.getState().setPending({ tool: "board", from: { placed: null, point: [0, 0, 0] } });
-    move(s);
+    await move(s);
     expect(s.getState().pending).toBeNull();
   });
 });
@@ -570,7 +571,7 @@ describe("abandonAction()", () => {
 describe("the tape and guide lines", () => {
   const measured = () => {
     const s = fresh();
-    s.getState().begin(startProject("Bookcase", "imperial"));
+    s.getState().apply(startProject("Bookcase", "imperial"));
     s.getState().setTape({ from: [0, 0, 0], to: [203_200, 0, 0] });
     s.getState().addGuide([0, 0, 0], [203_200, 0, 0]);
     return s;
@@ -584,10 +585,10 @@ describe("the tape and guide lines", () => {
     expect(s.getState().guides).toEqual([]);
   });
 
-  it("are gone when another project is started or opened", () => {
+  it("are gone when another project is started or opened", async () => {
     const s = measured();
     s.getState().setPending({ tool: "tape", from: [0, 0, 0] });
-    s.getState().begin(startProject("Blank case", "imperial"));
+    await s.getState().createProject(startProject("Blank case", "imperial"), "");
     expect(s.getState().guides).toEqual([]);
     expect(s.getState().tape).toBeNull();
     expect(s.getState().pending).toBeNull();
@@ -597,7 +598,7 @@ describe("the tape and guide lines", () => {
     const times = { created: "2026-10-12T10:00:00.000Z", modified: "2026-10-12T11:00:00.000Z" };
     const withGuides = measured();
     const without = fresh();
-    without.getState().begin(startProject("Bookcase", "imperial"));
+    without.getState().apply(startProject("Bookcase", "imperial"));
     const save = (s: typeof fresh extends () => infer S ? S : never) => {
       const project = shownProject(s.getState());
       if (!project) throw new Error("no project");
@@ -609,7 +610,7 @@ describe("the tape and guide lines", () => {
   it("are not written to browser storage", () => {
     const storage = createStorage(memoryStorage());
     const s = createKerfStore({ storage, library: memoryLibrary() });
-    s.getState().begin(startProject("Bookcase", "imperial"));
+    s.getState().apply(startProject("Bookcase", "imperial"));
     s.getState().addGuide([0, 0, 0], [203_200, 0, 0]);
     expect(createKerfStore({ storage, library: memoryLibrary() }).getState().guides).toEqual([]);
   });

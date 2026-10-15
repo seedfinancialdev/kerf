@@ -338,14 +338,14 @@
   {
     "id": "notice-history-drops-warning",
     "file": "packages/app/src/model/notices.ts",
-    "find": "return line.notice?.kind === \"undo\" ? dismiss(unheld) : unheld;",
+    "find": "return stale(line.notice) ? dismiss(unheld) : unheld;",
     "replace": "return line.notice?.kind !== \"said\" ? dismiss(unheld) : unheld;",
     "why": "Moving through History takes a warning away before it is dismissed."
   },
   {
     "id": "notice-history-keeps-undo",
     "file": "packages/app/src/model/notices.ts",
-    "find": "return line.notice?.kind === \"undo\" ? dismiss(unheld) : unheld;",
+    "find": "return stale(line.notice) ? dismiss(unheld) : unheld;",
     "replace": "return unheld;",
     "why": "An Undo offer stays after History moves, for a change that is no longer the latest."
   },

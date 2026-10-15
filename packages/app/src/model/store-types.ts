@@ -45,6 +45,8 @@ export interface KerfState {
   projectId: Id | null;
   /** Every kept project, newest change first, as Home lists them; see `refreshProjects`. */
   projects: ProjectSummary[];
+  /** False when this browser has no library to keep projects in (design spec §2). */
+  projectsKept: boolean;
   history: History | null;
   previewed: Project | null;
   solved: Solved | null;
@@ -119,11 +121,6 @@ export interface KerfActions {
    * notice stays.
    */
   apply(edit: Edit, notice?: string): void;
-  /**
-   * Shows `edit`'s project afresh, as a History of its own that is not kept in the library, noting
-   * when it began; drops the active tool's action, the Tape's reading and the guides.
-   */
-  begin(edit: Edit): void;
   /**
    * Moves to `screen`. The Workshop with no project open goes Home instead. Leaving the Workshop
    * keeps the open project (it is in the library) and drops the pick, a drag's preview and

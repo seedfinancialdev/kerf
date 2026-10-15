@@ -20,8 +20,10 @@ import { SizeFields } from "./SizeFields";
 export function ShapeStep() {
   const project = useKerf((s) => shownProject(s));
   const structure = project?.structures[0];
-  if (!project || !structure)
-    return <p className="empty">Start a project first: go to Start and click New.</p>;
+  // The Workshop shows only with a project open (App.tsx), so there is nothing to show without one.
+  if (!project) return null;
+  // A project opened from a file may have only boards drawn by hand.
+  if (!structure) return <p className="empty">This project has no case or box to shape.</p>;
   return (
     <div className="step-panel">
       <Section title="Size">

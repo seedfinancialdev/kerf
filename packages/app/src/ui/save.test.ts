@@ -14,21 +14,15 @@ import { createKerfStore, shownProject } from "../model/store";
 import { bannedWordsIn } from "../testing/banned-words";
 import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
+import { workshopStore } from "../testing/workshop-store";
 import { saveShownProject } from "./save";
 
 const CREATED = "2026-10-12T10:00:00.000Z";
 const NOW = new Date("2026-10-13T08:30:00.000Z");
 
 /** A store showing the bookcase, begun at `CREATED`. */
-function bookcaseStore() {
-  const store = createKerfStore({
-    storage: createStorage(memoryStorage()),
-    library: memoryLibrary(),
-    clockDate: () => Date.parse(CREATED),
-  });
-  store.getState().begin(startProject("Bookcase", "imperial"));
-  return store;
-}
+const bookcaseStore = () =>
+  workshopStore(startProject("Bookcase", "imperial"), () => Date.parse(CREATED));
 
 const saved: { blobs: Blob[]; names: string[]; revoked: string[] } = {
   blobs: [],
@@ -69,7 +63,7 @@ describe("saveShownProject()", () => {
 
   it("downloads Bookcase.kerf that opens back to the same project, created when it began", async () => {
     stubDownload();
-    const store = bookcaseStore();
+    const store = await bookcaseStore();
     await saveShownProject(store, NOW);
     expect(saved.names).toEqual(["Bookcase.kerf"]);
     const bytes = await savedBytes();
@@ -95,7 +89,7 @@ describe("saveShownProject()", () => {
   it("saves without a picture when the thumbnail source fails, and logs why", async () => {
     stubDownload();
     const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const store = bookcaseStore();
+    const store = await bookcaseStore();
     const failure = new Error("no canvas");
     store.getState().setThumbnailSource(() => Promise.reject(failure));
     await saveShownProject(store, NOW);
@@ -106,7 +100,7 @@ describe("saveShownProject()", () => {
   it("saves without a picture when the picture is not a usable PNG, and logs why", async () => {
     stubDownload();
     const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const store = bookcaseStore();
+    const store = await bookcaseStore();
     store.getState().setThumbnailSource(async () => new Uint8Array([1, 2, 3]));
     await saveShownProject(store, NOW);
     const opened = readKerf(await savedBytes());
@@ -119,7 +113,7 @@ describe("saveShownProject()", () => {
   it("saves without a picture when the view takes longer than a second to give one", async () => {
     stubDownload();
     const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const store = bookcaseStore();
+    const store = await bookcaseStore();
     vi.useFakeTimers();
     store.getState().setThumbnailSource(() => new Promise<Uint8Array>(() => undefined));
     const saving = saveShownProject(store, NOW);
@@ -136,7 +130,7 @@ describe("saveShownProject()", () => {
   it("says it is Kerf's fault, in shop words, and logs it when saving fails for no reason in the file", async () => {
     stubDownload();
     const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const store = bookcaseStore();
+    const store = await bookcaseStore();
     const fault = new TypeError("x is undefined");
     URL.createObjectURL = () => {
       throw fault;

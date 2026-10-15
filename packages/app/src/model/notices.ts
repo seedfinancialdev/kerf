@@ -74,10 +74,13 @@ export function dismiss(line: NoticeLine): NoticeLine {
 }
 
 /**
- * The line once History has moved: an Undo offer describes a change that is no longer the latest,
- * so it goes (ADR 015, ruling A), held or shown, and the next waiting warning shows; anything else stays.
+ * The line once History has moved: an Undo offer for a History step describes a change that is no
+ * longer the latest, so it goes (ADR 015, ruling A), held or shown, and the next waiting warning
+ * shows; anything else stays. An offer with its own `undo` (a deleted project) is not a History
+ * step, so it stays.
  */
 export function afterHistoryMoved(line: NoticeLine): NoticeLine {
-  const unheld = { ...line, held: null };
-  return line.notice?.kind === "undo" ? dismiss(unheld) : unheld;
+  const stale = (notice: Notice | null): boolean => notice?.kind === "undo" && !notice.undo;
+  const unheld = { ...line, held: stale(line.held) ? null : line.held };
+  return stale(line.notice) ? dismiss(unheld) : unheld;
 }

@@ -64,6 +64,13 @@ describe("useScreenHistory()", () => {
     expect(window.history.length).toBe(before);
   });
 
+  it("names the screen it landed on when the entry's screen cannot be shown", () => {
+    const store = setup();
+    goBack({ screen: "workshop" });
+    expect(store.getState().screen).toBe("home");
+    expect(window.history.state).toEqual({ screen: "home" });
+  });
+
   it("goes Home from an entry that names no screen", () => {
     const store = setup();
     goBack(null);

@@ -160,19 +160,6 @@ describe("when a project began", () => {
     const id = s.getState().projectId as string;
     expect((await library.read(id))?.created).toBe("2026-10-12T00:00:00.000Z");
   });
-
-  it("is noted by begin, which starts a History of its own, so Undo never reaches the last project", () => {
-    const s = createKerfStore({
-      storage: memory(),
-      library: memoryLibrary(),
-      clockDate: () => Date.UTC(2026, 9, 12),
-    });
-    s.getState().begin(bookcase());
-    const box = startProject("Blank box", "imperial").project;
-    s.getState().begin({ label: "Opened Box.kerf", project: box });
-    expect(s.getState().history?.entries.map((e) => e.label)).toEqual(["Opened Box.kerf"]);
-    expect(s.getState().created).toBe("2026-10-12T00:00:00.000Z");
-  });
 });
 
 describe("warnings that must not be lost (ADR 015, rule 11: the app says so once)", () => {
@@ -227,6 +214,17 @@ describe("warnings that must not be lost (ADR 015, rule 11: the app says so once
       migration: { outcome: "kept" },
     });
     expect(s.getState().notice).toEqual({ text: LIBRARY_NOT_KEPT, kind: "warning" });
+  });
+
+  it("does not say again that projects are not kept after start-up said so", async () => {
+    const s = createKerfStore({
+      storage: memory(),
+      library: memoryLibrary({ failWrites: true }),
+      migration: { outcome: "kept" },
+    });
+    s.getState().dismissNotice();
+    await s.getState().createProject(bookcase(), "");
+    expect(s.getState().notice).toBeNull();
   });
 
   it("says only why when the old project stayed because the browser would not let it be read", () => {

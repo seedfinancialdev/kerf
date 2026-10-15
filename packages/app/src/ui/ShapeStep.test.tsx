@@ -37,6 +37,21 @@ const select = (label: string) =>
 const optionText = (s: HTMLSelectElement) => s.options[s.selectedIndex]?.textContent;
 
 describe("the Shape step", () => {
+  it("says there is nothing to shape for a project of boards drawn by hand", () => {
+    const store = createKerfStore({
+      storage: createStorage(memoryStorage()),
+      library: memoryLibrary(),
+    });
+    const bookcase = startProject("Bookcase", "imperial").project;
+    store.getState().apply({ label: "Boards only", project: { ...bookcase, structures: [] } });
+    render(
+      <KerfProvider store={store}>
+        <Inspector />
+      </KerfProvider>,
+    );
+    expect(screen.getByText("This project has no case or box to shape.")).toBeTruthy();
+  });
+
   it("shows the bookcase's form as the template set it", () => {
     setup();
     expect(optionText(select("Carcase stock"))).toBe("3/4 plywood");

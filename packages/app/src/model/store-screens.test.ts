@@ -32,6 +32,46 @@ const storeWith = (library: Library = memoryLibrary(), backing: Storage = memory
 
 const bookcase = () => startProject("Bookcase", "imperial");
 
+/** A library whose next write, once held, lands only when `release` lets it. */
+const holdingLibrary = () => {
+  const inner = memoryLibrary();
+  let holdNext = false;
+  const held: (() => void)[] = [];
+  return {
+    ...inner,
+    write: (entry: LibraryEntry): Promise<boolean> => {
+      if (!holdNext) return inner.write(entry);
+      holdNext = false;
+      return new Promise<boolean>((resolve) => {
+        held.push(() => void inner.write(entry).then(resolve));
+      });
+    },
+    holdNext: () => {
+      holdNext = true;
+    },
+    held: () => held.length,
+    release: () => {
+      for (const land of held.splice(0)) land();
+    },
+  };
+};
+
+/** A library that counts its writes. */
+const countingLibrary = () => {
+  const inner = memoryLibrary();
+  let writes = 0;
+  return {
+    ...inner,
+    write: (entry: LibraryEntry) => {
+      writes += 1;
+      return inner.write(entry);
+    },
+    writes: () => writes,
+  };
+};
+
+const PICTURE = new Uint8Array([137, 80, 78, 71]);
+
 /** A library whose writes can be refused from a point on, as a disk that fills up does. */
 const fillingLibrary = (): Library & { fill(): void } => {
   const inner = memoryLibrary();
@@ -132,15 +172,66 @@ describe("the library", () => {
     expect(await library.list()).toHaveLength(1);
   });
 
-  it("keeps the view's picture with the project", async () => {
+  it("takes the project's picture as the workshop is left, before the view goes (R17)", async () => {
     const library = memoryLibrary();
     const store = storeWith(library);
-    const picture = new Uint8Array([137, 80, 78, 71]);
-    store.getState().setThumbnailSource(async () => picture);
     await store.getState().createProject(bookcase(), "");
     const id = store.getState().projectId as string;
+    let takenOn: string | undefined;
+    store.getState().setThumbnailSource(async () => {
+      takenOn = store.getState().screen;
+      return PICTURE;
+    });
+    store.getState().setScreen("home");
+    store.getState().setThumbnailSource(null);
+    await store.getState().refreshProjects();
+    expect(takenOn).toBe("workshop");
     // Compared as numbers: the library hands back a copy, as the browser's database does.
-    expect([...((await library.read(id))?.thumbnail ?? [])]).toEqual([137, 80, 78, 71]);
+    expect([...((await library.read(id))?.thumbnail ?? [])]).toEqual([...PICTURE]);
+  });
+
+  it("never replaces a kept picture with none: renaming on Home keeps it", async () => {
+    const library = memoryLibrary();
+    const store = storeWith(library);
+    await store.getState().createProject(bookcase(), "");
+    const id = store.getState().projectId as string;
+    store.getState().setThumbnailSource(async () => PICTURE);
+    store.getState().setScreen("home");
+    store.getState().setThumbnailSource(null);
+    await store.getState().renameProject(id, "Alcove bookcase");
+    const kept = await library.read(id);
+    expect(kept?.name).toBe("Alcove bookcase");
+    expect([...(kept?.thumbnail ?? [])]).toEqual([...PICTURE]);
+  });
+
+  it("writes nothing when a project is only opened", async () => {
+    const library = countingLibrary();
+    const store = storeWith(library);
+    await store.getState().createProject(bookcase(), "");
+    const id = store.getState().projectId as string;
+    await store.getState().createProject(startProject("Blank box", "imperial"), "");
+    const before = library.writes();
+    await store.getState().openProject(id);
+    await store.getState().refreshProjects();
+    expect(library.writes()).toBe(before);
+  });
+
+  it("keeps the idea when the entry could not be read back before a change is written", async () => {
+    const inner = memoryLibrary();
+    let blind = false;
+    const library: Library = {
+      ...inner,
+      read: (id) => (blind ? Promise.resolve(undefined) : inner.read(id)),
+    };
+    const store = storeWith(library);
+    await store.getState().createProject(bookcase(), "for the alcove");
+    const id = store.getState().projectId as string;
+    blind = true;
+    const p = shownProject(store.getState()) as Project;
+    store.getState().apply({ label: "Renamed", project: { ...p, name: "Alcove" } });
+    await store.getState().refreshProjects();
+    blind = false;
+    expect((await library.read(id))?.note).toBe("for the alcove");
   });
 
   it("says once that projects are not kept when the library refuses a write", async () => {
@@ -305,22 +396,81 @@ describe("the library", () => {
   });
 });
 
-describe("start-up after the old project moved", () => {
-  it("says what was wrong with the old project, then that projects are not kept", () => {
-    const store = createKerfStore({
-      storage: createStorage(memoryStorage()),
-      library: memoryLibrary({ failWrites: true }),
-      migration: { outcome: "none", problem: "Your last project could not be opened." },
-    });
-    expect(store.getState().notice?.text).toBe("Your last project could not be opened.");
-    store.getState().dismissNotice();
-    expect(store.getState().notice).toBeNull();
-    const kept = createKerfStore({
-      storage: createStorage(memoryStorage()),
-      library: memoryLibrary({ failWrites: true }),
-      migration: { outcome: "kept" },
-    });
-    expect(kept.getState().notice?.text).toBe(LIBRARY_NOT_KEPT);
+describe("library calls, one at a time in the order asked", () => {
+  /** Lets every library call not held run as far as it can, so one out of turn would land now. */
+  const everythingElse = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  /** The bookcase open in a store over `library`, with its id and a way to rename it. */
+  async function opened(library: Library) {
+    const store = storeWith(library);
+    await store.getState().createProject(bookcase(), "");
+    const id = store.getState().projectId as string;
+    const rename = (name: string) => {
+      const p = shownProject(store.getState()) as Project;
+      store.getState().apply({ label: `Name ${name}`, project: { ...p, name } });
+    };
+    return { store, id, rename };
+  }
+
+  it("ends with the later change stored when an earlier write is slow", async () => {
+    const library = holdingLibrary();
+    const { store, id, rename } = await opened(library);
+    library.holdNext();
+    rename("First");
+    await vi.waitFor(() => expect(library.held()).toBe(1));
+    rename("Second");
+    await everythingElse();
+    library.release();
+    await store.getState().refreshProjects();
+    expect((await library.read(id))?.name).toBe("Second");
+  });
+
+  it("opens a project with the change still being written to it", async () => {
+    const library = holdingLibrary();
+    const { store, id, rename } = await opened(library);
+    library.holdNext();
+    rename("Alcove");
+    await vi.waitFor(() => expect(library.held()).toBe(1));
+    const other = store.getState().createProject(startProject("Blank box", "imperial"), "");
+    const opening = store.getState().openProject(id);
+    library.release();
+    await other;
+    expect(await opening).toBe(true);
+    expect(shownProject(store.getState())?.name).toBe("Alcove");
+  });
+
+  it("ends with a deleted project gone when a change to it was still being written", async () => {
+    const library = holdingLibrary();
+    const { store, id, rename } = await opened(library);
+    library.holdNext();
+    rename("Alcove");
+    await vi.waitFor(() => expect(library.held()).toBe(1));
+    const deleting = store.getState().deleteProject(id);
+    await everythingElse();
+    library.release();
+    await deleting;
+    await store.getState().refreshProjects();
+    expect(await library.read(id)).toBeUndefined();
+  });
+});
+
+describe("the Undo for a deleted project", () => {
+  it("is still offered after a change to the open project", async () => {
+    const store = storeWith();
+    await store.getState().createProject(startProject("Blank box", "imperial"), "");
+    const box = store.getState().projectId as string;
+    await store.getState().createProject(bookcase(), "");
+    await store.getState().deleteProject(box);
+    await store.getState().renameProject(store.getState().projectId as string, "Alcove");
+    expect(store.getState().notice?.text).toBe('Deleted "Blank box".');
+    expect(store.getState().notice?.undo).toBeTypeOf("function");
+  });
+});
+
+describe("whether projects are kept", () => {
+  it("is false when the browser has no library, and true when it has one", () => {
+    expect(storeWith(memoryLibrary({ available: false })).getState().projectsKept).toBe(false);
+    expect(storeWith().getState().projectsKept).toBe(true);
   });
 });
 
