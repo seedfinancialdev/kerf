@@ -47,6 +47,7 @@ type LibraryAction =
   | "renameProject"
   | "duplicateProject"
   | "deleteProject"
+  | "readKeptProject"
   | "refreshProjects";
 
 /**
@@ -57,7 +58,7 @@ type LibraryAction =
 const NOT_FOUND = "This project could not be found in this browser.";
 
 /** Said when a kept project's text no longer reads as a project. */
-const damaged = (done: "opened" | "renamed" | "copied"): string =>
+const damaged = (done: "opened" | "renamed" | "copied" | "downloaded"): string =>
   `This project could not be ${done}: it is damaged.`;
 
 /**
@@ -255,6 +256,18 @@ export function libraryActions(
           modified: time,
         });
         await list();
+      }),
+
+    readKeptProject: (id) =>
+      inTurn(async () => {
+        const entry = await entryFor(id);
+        const project = entry && projectIn(entry);
+        if (!entry || !project) {
+          if (entry) get().say(damaged("downloaded"));
+          return undefined;
+        }
+        const { created, modified, thumbnail } = entry;
+        return { project, created, modified, thumbnail };
       }),
 
     deleteProject: (id) =>

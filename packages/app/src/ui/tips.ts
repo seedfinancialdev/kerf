@@ -59,6 +59,9 @@ export const TIPS = {
     text: "Change your shop, choose dark or light, and inches or millimetres.",
   },
   home: { name: "Home", text: "Your projects, and somewhere to start a new one." },
+  table: { name: "Table", text: "Tables are coming later." },
+  dresser: { name: "Dresser", text: "Dressers are coming later." },
+  learn: { name: "Learn", text: "The tour is coming soon." },
   tableSaw: {
     name: "Table saw",
     text: "Lets Kerf plan every cut to your blade's width.",

@@ -49,6 +49,19 @@ describe("<App>", () => {
     expect(document.documentElement.dataset.theme).toBe("light");
   });
 
+  it("shows Home on a later launch, where a template starts its piece in the Workshop", async () => {
+    const backing = memoryStorage();
+    backing.setItem("kerf.shop", JSON.stringify(STARTER_RECORD));
+    const store = createKerfStore({ storage: createStorage(backing), library: memoryLibrary() });
+    render(<App store={store} model={null} />);
+    expect(screen.getByRole("heading", { name: "What's on the bench?" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^Box/ }));
+    await waitFor(() => expect(store.getState().screen).toBe("workshop"));
+    // New project's box (model/new-project.ts): a box structure, kept in the library.
+    expect(shownProject(store.getState())?.structures[0]?.type).toBe("box");
+    expect(store.getState().projects).toHaveLength(1);
+  });
+
   it("shows the four steps, Shape first and pressed", async () => {
     await renderApp();
     const steps = screen.getByRole("navigation", { name: "Workflow" }).querySelectorAll("button");

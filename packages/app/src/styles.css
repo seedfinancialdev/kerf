@@ -1101,3 +1101,466 @@ button[aria-pressed="true"] {
 .shop-count b {
   color: var(--color-accent);
 }
+
+/* Home (design spec, §2; the look is 2026-10-14-first-run-and-home/2-home.png). */
+.home-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.home-screen .topbar {
+  flex: 0 0 var(--topbar-height);
+}
+
+.home-actions {
+  margin-left: auto;
+}
+
+.home-actions button {
+  padding: 6px var(--space-3);
+}
+
+.home {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: var(--panel-left-width) minmax(0, 1fr);
+}
+
+.home-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px var(--space-3);
+  background: var(--color-surface);
+  border-right: var(--border-width) solid var(--color-border);
+}
+
+.home-new {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+}
+
+.home-search {
+  width: 100%;
+  margin: var(--space-3) 0 10px;
+  padding: 6px 10px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-1);
+  font: inherit;
+}
+
+.home-nav,
+.home-recent ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The sidebar's entries read as links: plain until pointed at, raised for the view shown. */
+.home-link {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-1);
+  background: none;
+  color: var(--color-text-muted);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.home-link:hover:not(:disabled),
+.home-link[aria-current="page"] {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+}
+
+.home-link:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.home-label {
+  margin: var(--space-4) 10px var(--space-1);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: var(--font-weight-normal);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.home-label-empty {
+  margin: 0 10px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.home-learn {
+  display: flex;
+  margin-top: var(--space-3);
+}
+
+/* Your shop at the sidebar's foot: the hung tools drawn small, then what is hung. */
+.home-shop {
+  margin-top: auto;
+  padding: 10px var(--space-3);
+  background: var(--color-bg);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-panel);
+}
+
+.home-shop h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: inherit;
+  font-weight: var(--font-weight-strong);
+}
+
+.home-shop-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 6px 0;
+  color: var(--color-accent);
+}
+
+.home-shop-tools .drawing {
+  width: 30px;
+  height: 24px;
+}
+
+.home-shop p {
+  margin: 0;
+}
+
+.home-shop button {
+  margin-top: 6px;
+  padding: 2px var(--space-2);
+}
+
+.home-banner {
+  background: var(--color-surface-raised);
+}
+
+.home-main {
+  min-height: 0;
+  overflow: auto;
+  padding: 28px 36px 60px;
+}
+
+.home-title {
+  margin: 0 0 2px;
+  font-size: 26px;
+  font-weight: 650;
+}
+
+.home-lede,
+.home-empty {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.bench-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 28px 0 var(--space-3);
+}
+
+.bench-heading h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: var(--font-weight-strong);
+}
+
+.bench-heading button {
+  padding: var(--space-1) 10px;
+}
+
+.template-tiles {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.template-tiles > .tip-anchor {
+  display: flex;
+}
+
+.template-tile {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.template-tile:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+
+/* A piece that is coming later is dimmed as a whole, as in the mockup, not greyed word by word. */
+.template-tile:disabled {
+  color: var(--color-text);
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* The drawing sits in a warm glow rising from the tile's foot. */
+.tile-picture {
+  display: grid;
+  place-items: center;
+  height: 140px;
+  background: radial-gradient(
+    120% 90% at 50% 100%,
+    var(--color-hover) 0%,
+    var(--color-surface-raised) 62%
+  );
+  color: var(--color-wood-sheet);
+}
+
+.tile-picture .drawing {
+  height: 100px;
+}
+
+.tile-text {
+  display: block;
+  padding: 10px var(--space-3) var(--space-3);
+}
+
+.tile-name {
+  display: block;
+  font-weight: var(--font-weight-strong);
+}
+
+.tile-blurb {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+/* The mark on what Kerf cannot do yet. */
+.later-badge {
+  margin-left: 2px;
+  padding: 0 6px;
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: 999px;
+  color: var(--color-accent);
+  font-size: 10px;
+  font-weight: var(--font-weight-strong);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: 2px;
+}
+
+.inspiration {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+  padding: 14px var(--space-4);
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: var(--radius-2);
+  color: var(--color-text-muted);
+}
+
+.inspiration-art {
+  flex: none;
+  width: 54px;
+  height: 40px;
+  color: var(--color-accent);
+}
+
+.inspiration p {
+  margin: 0;
+}
+
+.inspiration b {
+  display: block;
+  color: var(--color-text);
+  font-weight: var(--font-weight-strong);
+}
+
+.project-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-card {
+  position: relative;
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+}
+
+.project-card:hover {
+  border-color: color-mix(in srgb, var(--color-text-muted) 45%, var(--color-border));
+}
+
+.project-open {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-2);
+  background: none;
+  color: var(--color-text);
+  text-align: left;
+}
+
+button.project-open {
+  cursor: pointer;
+}
+
+.project-art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 120px;
+  overflow: hidden;
+  background: var(--color-viewport);
+  color: var(--color-text);
+}
+
+.project-drawing {
+  height: 84px;
+}
+
+.project-picture {
+  width: 100%;
+  height: 120px;
+  object-fit: contain;
+}
+
+.project-meta {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3) 10px;
+}
+
+.project-name {
+  display: block;
+  overflow: hidden;
+  font-weight: var(--font-weight-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-edited {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.project-rename {
+  width: 100%;
+  padding: 0 var(--space-1);
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: var(--border-width) solid var(--color-focus);
+  border-radius: var(--radius-1);
+  font: inherit;
+  font-weight: var(--font-weight-strong);
+}
+
+/* The ⋯ button shows where a pointer or the keyboard is on the card, and always on touch screens. */
+.card-more {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.project-more {
+  padding: 0 var(--space-2);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.project-more:hover,
+.project-more[aria-expanded="true"] {
+  color: var(--color-text);
+}
+
+@media (hover: hover) {
+  .project-card:not(:hover, :focus-within) .project-more {
+    opacity: 0;
+  }
+}
+
+.card-menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: 3;
+  display: grid;
+  min-width: 180px;
+  padding: var(--space-1);
+  background: var(--color-surface-raised);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+}
+
+.card-menu [role="menuitem"] {
+  padding: 6px 10px;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.card-menu [role="menuitem"]:hover,
+.card-menu [role="menuitem"]:focus {
+  background: var(--color-hover);
+}
+
+.card-ask {
+  gap: 10px;
+  width: 250px;
+  padding: var(--space-3);
+}
+
+.card-ask p {
+  margin: 0;
+}
+
+.card-ask-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.danger {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: var(--color-step-active-text);
+  font-weight: var(--font-weight-strong);
+}

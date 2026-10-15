@@ -14,6 +14,7 @@
 // A write is reported kept only once its transaction has committed.
 
 import type { Id } from "@kerf/core";
+import { type PieceKind, pieceKindOf } from "./piece-kind";
 
 /** One kept project. Times are ISO strings; `note` is the idea typed for "Something else". */
 export interface LibraryEntry {
@@ -28,8 +29,11 @@ export interface LibraryEntry {
   note: string;
 }
 
-/** What Home shows for a project: everything but the project itself. */
-export type ProjectSummary = Omit<LibraryEntry, "project">;
+/**
+ * What Home shows for a project: everything but the project itself, with the kind of piece it is
+ * (read from the project when listed, never kept: ADR 016, "save intent, derive geometry").
+ */
+export type ProjectSummary = Omit<LibraryEntry, "project"> & { kind: PieceKind };
 
 /** The browser's store of projects. */
 export interface Library {
@@ -69,7 +73,7 @@ export function isLibraryEntry(row: unknown): row is LibraryEntry {
   );
 }
 
-/** The summary of `entry`: every field but the project text. */
+/** The summary of `entry`: every field but the project text, and the kind of piece it holds. */
 export function summaryOf(entry: LibraryEntry): ProjectSummary {
   return {
     id: entry.id,
@@ -78,6 +82,7 @@ export function summaryOf(entry: LibraryEntry): ProjectSummary {
     created: entry.created,
     modified: entry.modified,
     note: entry.note,
+    kind: pieceKindOf(entry.project),
   };
 }
 

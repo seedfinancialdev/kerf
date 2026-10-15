@@ -285,6 +285,7 @@ export function createKerfStore(deps: {
       renameProject: projects.renameProject,
       duplicateProject: projects.duplicateProject,
       deleteProject: projects.deleteProject,
+      readKeptProject: projects.readKeptProject,
       refreshProjects: projects.refreshProjects,
 
       setScreen: (screen) => {

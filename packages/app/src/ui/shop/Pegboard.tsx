@@ -24,8 +24,8 @@ import { RouterSettings } from "./RouterBits";
 import { SizeChoice, type UsualSize } from "./SizeChoice";
 import { ToolCard } from "./ToolCard";
 
-/** What each tool's card shows: its drawing, its name and what it is for. */
-const TOOL_CARDS: Record<
+/** What each tool's card shows: its drawing, its name and what it is for; Home's shop summary uses them too. */
+export const TOOL_CARDS: Record<
   PegTool,
   { drawing: DrawingName; name: string; use: string; tip: TipText }
 > = {

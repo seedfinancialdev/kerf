@@ -8,12 +8,14 @@
 // inside it (ThreeDGuard); any other fault in Kerf is caught and said (WindowGuard).
 
 import { type ReactNode, useEffect } from "react";
+import { defaultChoice, newProject, type PieceId } from "./model/new-project";
 import type { KerfStore } from "./model/store-types";
-import { KerfProvider, useKerf } from "./state/useKerf";
+import { KerfProvider, useKerf, useKerfStore } from "./state/useKerf";
 import { useScreenHistory } from "./state/useScreenHistory";
 import { Drawer } from "./ui/Drawer";
 import { HintLine } from "./ui/HintLine";
 import { HistoryPanel } from "./ui/HistoryPanel";
+import { Home } from "./ui/home/Home";
 import { Inspector } from "./ui/Inspector";
 import { Notice } from "./ui/Notice";
 import { ProjectTree } from "./ui/ProjectTree";
@@ -41,23 +43,27 @@ export function App({ store, model }: { store: KerfStore; model: ReactNode }) {
 
 function Screens({ model }: { model: ReactNode }) {
   useScreenHistory();
+  const store = useKerfStore();
   const screen = useKerf((s) => s.screen);
   const theme = useKerf((s) => s.theme);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
   if (screen === "workshop") return <Window model={model} />;
-  return screen === "shop" ? <YourShop /> : <HomeToCome />;
+  if (screen === "shop") return <YourShop />;
+  return <Home onNewProject={(piece) => startAtOnce(store, piece)} />;
 }
 
-/** Stands in for Home until its screen is built (issue #109). */
-function HomeToCome() {
-  return (
-    <main className="window">
-      <h1>Home</h1>
-      <Notice />
-    </main>
-  );
+/**
+ * Starts `piece` (a bookcase when none was chosen) at once, in the usual sizes, and opens it in the
+ * Workshop; one the engine refuses is said on the notice line. Stands in for the New project panel,
+ * which asks for the sizes first (issue #110, Task 10, replaces this).
+ */
+function startAtOnce(store: KerfStore, piece: PieceId = "bookcase"): void {
+  const { unitsForNew, shopRecord, createProject, say } = store.getState();
+  const made = newProject(defaultChoice(piece, unitsForNew, shopRecord), shopRecord);
+  if (made.ok) void createProject(made.edit, made.note);
+  else say(made.message);
 }
 
 function Window({ model }: { model: ReactNode }) {

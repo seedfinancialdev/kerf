@@ -5,9 +5,11 @@
 // ADR 016, D5: every project is kept in the browser's database; nothing fails without a word.
 
 import "fake-indexeddb/auto";
+import { serializeProject } from "@kerf/core";
 import { IDBFactory } from "fake-indexeddb";
 import { describe, expect, it, vi } from "vitest";
 import { bannedWordsIn } from "../testing/banned-words";
+import { startProject } from "./commands";
 import { browserDatabase, LIBRARY_NOT_KEPT, type LibraryEntry, openLibrary } from "./library";
 
 /** Stands in for a saved project's text; the library keeps it without reading it. */
@@ -33,6 +35,18 @@ describe("openLibrary()", () => {
     expect(list.map((p) => p.id)).toEqual(["B", "A"]);
     expect("project" in (list[0] as object)).toBe(false);
     expect((await library.read("A"))?.project).toBe(PROJECT_TEXT);
+  });
+
+  it("lists each project with the kind of piece it is, for a card with no picture", async () => {
+    const library = await openLibrary(new IDBFactory());
+    const box = serializeProject(startProject("Keepsake box", "imperial").project);
+    await library.write({ ...entry("A", "2026-10-14T10:00:00.000Z"), project: box });
+    await library.write(entry("B", "2026-10-14T11:00:00.000Z"));
+    // A is a box; B's text is not a whole project, so it is drawn blank.
+    expect((await library.list()).map((p) => [p.id, p.kind])).toEqual([
+      ["B", "blank"],
+      ["A", "box"],
+    ]);
   });
 
   it("replaces a project written again under the same id", async () => {

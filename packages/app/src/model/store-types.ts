@@ -28,6 +28,14 @@ export interface Solved {
 /** A tool of the tool row. */
 export type ToolId = "select" | "board" | "pushPull" | "move" | "join" | "edge" | "tape";
 
+/** A kept project as a .kerf file holds it: the project, its times (ISO strings) and its picture. */
+export interface KeptProject {
+  project: Project;
+  created: string;
+  modified: string;
+  thumbnail: Uint8Array | null;
+}
+
 /** A tab of the build-plan drawer. */
 export type DrawerTab = "Shopping" | "Cut list" | "Sheets" | "Setups" | "Assembly";
 
@@ -155,6 +163,11 @@ export interface KerfActions {
    * to put it back. A library that will not delete it is said, and the project stays.
    */
   deleteProject(id: Id): Promise<void>;
+  /**
+   * The kept project `id` as the library has it, for a download. Resolves undefined, having said
+   * why on the notice line, when it is gone or damaged.
+   */
+  readKeptProject(id: Id): Promise<KeptProject | undefined>;
   /** Reads the kept projects again for Home. */
   refreshProjects(): Promise<void>;
   /** Sets how the model is drawn for a file's thumbnail; null when no view can draw it. */
