@@ -17,6 +17,7 @@ import { HistoryPanel } from "./ui/HistoryPanel";
 import { Inspector } from "./ui/Inspector";
 import { Notice } from "./ui/Notice";
 import { ProjectTree } from "./ui/ProjectTree";
+import { YourShop } from "./ui/shop/YourShop";
 import { ToolRow } from "./ui/ToolRow";
 import { TopBar } from "./ui/TopBar";
 import { useShortcuts } from "./ui/useShortcuts";
@@ -45,14 +46,15 @@ function Screens({ model }: { model: ReactNode }) {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
-  return screen === "workshop" ? <Window model={model} /> : <ScreenToCome screen={screen} />;
+  if (screen === "workshop") return <Window model={model} />;
+  return screen === "shop" ? <YourShop /> : <HomeToCome />;
 }
 
-/** Stands in for Your shop and Home until their screens are built (issues #108 and #109). */
-function ScreenToCome({ screen }: { screen: "shop" | "home" }) {
+/** Stands in for Home until its screen is built (issue #109). */
+function HomeToCome() {
   return (
     <main className="window">
-      <h1>{screen === "shop" ? "Your shop" : "Home"}</h1>
+      <h1>Home</h1>
       <Notice />
     </main>
   );

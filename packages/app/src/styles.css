@@ -706,3 +706,398 @@ button[aria-pressed="true"] {
 .tip-anchor {
   display: inline-flex;
 }
+
+/* Buttons that step back from the main choice (design spec, §1: "Skip for now" beside "That's my shop"). */
+.quiet {
+  background: none;
+  border-color: transparent;
+  color: var(--color-text-muted);
+}
+
+.quiet:hover {
+  color: var(--color-text);
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.link-button:hover {
+  color: var(--color-text);
+}
+
+/* Kerf's segmented control, as the steps switcher in the top bar. */
+.seg {
+  display: inline-flex;
+  padding: 3px;
+  background: var(--color-bg);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+}
+
+.seg button {
+  padding: var(--space-1) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-1);
+  background: none;
+  color: var(--color-text-muted);
+}
+
+.seg button[aria-pressed="true"] {
+  background: var(--color-accent);
+  color: var(--color-step-active-text);
+  font-weight: var(--font-weight-strong);
+}
+
+/* Your shop: the pegboard (design spec, §1; the look is 2026-10-14-first-run-and-home/1-your-shop.png). */
+.shop-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.shop-screen .topbar {
+  flex: 0 0 var(--topbar-height);
+}
+
+.shop-page {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 32px 32px 40px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.shop-content {
+  max-width: 1056px;
+  margin: 0 auto;
+}
+
+.shop-content h1 {
+  margin: 26px 0 6px;
+  font-size: 32px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.lede {
+  max-width: 46em;
+  margin: 0 0 22px;
+  color: var(--color-text-muted);
+  font-size: 15px;
+}
+
+/* The board: dots on a 26 px grid, as holes in a pegboard. */
+.pegboard {
+  padding: var(--space-5);
+  background-color: var(--color-viewport);
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--color-text) 7%, transparent) 2.2px,
+    transparent 2.6px
+  );
+  background-size: 26px 26px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: 14px;
+}
+
+.peg-row-title {
+  margin: 4px 4px 14px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-strong);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.peg-row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.peg-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: 12px;
+  color: var(--color-text-muted);
+  top: 0;
+  transition:
+    border-color 0.15s,
+    top 0.15s,
+    box-shadow 0.15s;
+}
+
+/* The peg the card hangs from: hollow until the card is hung. */
+.peg-card::before {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border: 2px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-viewport);
+}
+
+/* Lifted by its offset, not a transform: a transform would become the frame of the card's fixed tip. */
+.peg-card:hover {
+  top: -2px;
+  border-color: color-mix(in srgb, var(--color-text-muted) 45%, var(--color-border));
+}
+
+.peg-card.hung {
+  border-color: var(--color-accent);
+  background: linear-gradient(180deg, var(--color-hover), var(--color-surface));
+  box-shadow: 0 10px 30px -18px var(--color-accent);
+}
+
+.peg-card.hung::before {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.tool-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 18px 12px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+/* A hung tool's drawing and what it is for turn amber; its name stays in the text colour. */
+.tool-card[aria-pressed="true"] {
+  color: var(--color-accent);
+}
+
+.tool-card-drawing {
+  height: 62px;
+}
+
+.tool-card-name {
+  margin-top: var(--space-3);
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: var(--font-weight-strong);
+}
+
+.tool-card-use {
+  font-size: var(--font-size-small);
+}
+
+.tool-settings {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: center;
+  margin-top: -6px;
+  padding: 0 12px 14px;
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.tool-settings .field {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  width: 100%;
+}
+
+.tool-settings .field select,
+.tool-settings .field input {
+  width: 100%;
+  padding: 2px var(--space-1);
+  font-size: var(--font-size-small);
+}
+
+.tool-settings .field input {
+  text-align: right;
+}
+
+.size-choice {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+}
+
+.bits-line {
+  margin: 0;
+}
+
+/* Beside the router card, over the cards to its right, so the whole list shows without scrolling. */
+.bits-panel {
+  position: absolute;
+  top: -1.5px;
+  left: calc(100% + var(--space-2));
+  z-index: 5;
+  display: grid;
+  gap: var(--space-3);
+  width: 400px;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  background: var(--color-surface-raised);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+  box-shadow: 0 16px 40px -16px color-mix(in srgb, var(--color-bg) 80%, transparent);
+  color: var(--color-text);
+  text-align: left;
+}
+
+.bits-panel > .primary {
+  justify-self: end;
+}
+
+.router-bits {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.bit-shape {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* A floated legend sits in the row like any label, so each shape and its sizes share one line. */
+.bit-shape legend {
+  float: left;
+  width: 96px;
+  padding: 3px 0 0;
+  color: var(--color-text-muted);
+}
+
+.bit-sizes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.bit-size {
+  padding: 2px var(--space-2);
+  font-size: var(--font-size-small);
+}
+
+.bit-size[aria-pressed="true"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-step-active-text);
+  font-weight: var(--font-weight-strong);
+}
+
+.bit-shape .shop-length {
+  clear: both;
+  margin: var(--space-1) 0 0 96px;
+}
+
+.bit-shape .shop-length input {
+  width: 96px;
+  text-align: right;
+}
+
+/* The last wood card: a dashed outline until its form is open. */
+.peg-card.add-wood {
+  border-style: dashed;
+  background: none;
+}
+
+.peg-card.add-wood::before {
+  display: none;
+}
+
+/* The open form is taller than a card; the other wood cards keep their own height beside it. */
+.peg-row:has(.add-wood.open) > .peg-card {
+  align-self: start;
+}
+
+.peg-card.add-wood.open {
+  grid-column: span 2;
+  border-style: solid;
+  background: var(--color-surface);
+}
+
+.add-wood-mark {
+  display: grid;
+  place-items: center;
+  height: 62px;
+  font-size: 36px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.wood-form {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-4);
+  font-size: var(--font-size-small);
+}
+
+.wood-form .field {
+  display: grid;
+  gap: 2px;
+}
+
+.wood-kind {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.wood-kind legend {
+  margin-bottom: 2px;
+  padding: 0;
+  color: var(--color-text-muted);
+}
+
+.wood-form .seg {
+  justify-self: start;
+}
+
+.wood-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.shop-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--space-3) 32px;
+  background: var(--color-surface);
+  border-top: var(--border-width) solid var(--color-border);
+  font-size: 14px;
+}
+
+.shop-bar button {
+  padding: 6px var(--space-3);
+}
+
+.shop-count {
+  margin: 0 auto 0 0;
+  color: var(--color-text-muted);
+}
+
+.shop-count b {
+  color: var(--color-accent);
+}

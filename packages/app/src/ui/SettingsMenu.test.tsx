@@ -78,6 +78,12 @@ describe("<SettingsMenu>", () => {
     expect((screen.getByLabelText("Millimetres") as HTMLInputElement).checked).toBe(true);
   });
 
+  it("opens Your shop", () => {
+    const store = setup("none");
+    fireEvent.click(screen.getByRole("button", { name: "Your shop" }));
+    expect(store.getState().screen).toBe("shop");
+  });
+
   it("closes on Escape", () => {
     setup();
     fireEvent.keyDown(window, { key: "Escape" });

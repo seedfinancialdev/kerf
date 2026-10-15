@@ -2,7 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Settings in the top bar: the theme (a browser preference) and the units. Units are both the
+// Settings in the top bar: Your shop (design spec, §1: "reached later from Settings"), the theme (a
+// browser preference) and the units. Units are both the
 // preference for new projects and, when the open project's stock fits the new grid, that project's
 // own field, so the change is an undoable History entry (ADR 015, rule 4).
 
@@ -16,7 +17,7 @@ import { TIPS } from "./tips";
 
 const UNITS_NAME = { imperial: "inches", metric: "millimetres" } as const;
 
-/** Theme and units. */
+/** Your shop, theme and units. */
 export function SettingsMenu() {
   const store = useKerfStore();
   const [open, setOpen] = useState(false);
@@ -53,6 +54,9 @@ export function SettingsMenu() {
       </Tip>
       {open && (
         <div className="settings-panel">
+          <button type="button" onClick={() => store.getState().setScreen("shop")}>
+            Your shop
+          </button>
           <fieldset>
             <legend>Theme</legend>
             <label className="check">

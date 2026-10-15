@@ -69,6 +69,36 @@ export function readLength(text: string, project: Project, self?: string, label?
   }
 }
 
+/** A project with nothing in it, so a length typed for the shop can name no project's sizes. */
+const noProject = (units: Project["units"]): Project => ({
+  schemaVersion: 1,
+  name: "",
+  units,
+  params: [],
+  stock: [],
+  parts: [],
+  instances: [],
+  patterns: [],
+  joints: [],
+  matchSets: [],
+  structures: [],
+});
+
+/**
+ * A length typed on the pegboard (a blade, a bit, a wood's thickness), read like any size field in
+ * `units` but outside any project, and snapped to that grid. Zero or less is refused with `notPositive`,
+ * which names the thing being sized.
+ */
+export function readShopLength(
+  text: string,
+  units: Project["units"],
+  notPositive: string,
+): Reading {
+  const read = readLength(text, noProject(units));
+  if (read.ok && read.value <= 0) return { ok: false, message: notPositive };
+  return read;
+}
+
 /**
  * A whole number typed by the user (a count of shelves or bays), from 0 to `MAX_COUNT`, the most
  * boards of one kind the engine's forms make. A larger count is refused here, before the app builds

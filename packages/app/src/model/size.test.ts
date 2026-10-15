@@ -6,7 +6,14 @@
 
 import { describe, expect, it } from "vitest";
 import { startProject } from "./commands";
-import { exactLiteral, literalFor, readCount, readLength, readPosition } from "./size";
+import {
+  exactLiteral,
+  literalFor,
+  readCount,
+  readLength,
+  readPosition,
+  readShopLength,
+} from "./size";
 
 const bookcase = startProject("Bookcase", "imperial").project;
 const metric = startProject("Bookcase", "metric").project;
@@ -189,5 +196,35 @@ describe("literalFor()", () => {
 
   it("writes a metric value exactly, never rounded to 0.1 mm", () => {
     expect(literalFor(80, "metric")).toBe("0.01mm");
+  });
+});
+
+describe("readShopLength()", () => {
+  const ZERO = "A bit must be bigger than zero.";
+
+  it("reads a length typed for the shop, outside any project", () => {
+    // 5/16" = 5 × 203200 / 16 = 63,500.
+    expect(readShopLength('5/16"', "imperial", ZERO)).toEqual({
+      ok: true,
+      expr: '5/16"',
+      value: 63_500,
+    });
+  });
+
+  it("snaps to the grid of the units it is read in", () => {
+    // 2.2 mm = 2.2 × 8000 = 17,600, on the 0.01 mm grid (80 units).
+    expect(readShopLength("2.2mm", "metric", ZERO)).toMatchObject({ ok: true, value: 17_600 });
+  });
+
+  it("refuses zero and less with the message it is given", () => {
+    expect(readShopLength('0"', "imperial", ZERO)).toEqual({ ok: false, message: ZERO });
+    expect(readShopLength('-1/4"', "imperial", ZERO)).toEqual({ ok: false, message: ZERO });
+  });
+
+  it("knows no project's names", () => {
+    expect(readShopLength("width", "imperial", ZERO)).toEqual({
+      ok: false,
+      message: 'Unknown name "width"',
+    });
   });
 });

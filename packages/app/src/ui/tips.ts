@@ -54,13 +54,44 @@ export const TIPS = {
 
   undo: { name: "Undo", key: "Ctrl+Z", text: "Take back your last change." },
   redo: { name: "Redo", key: "Ctrl+Shift+Z", text: "Put back the change you just took back." },
-  settings: { name: "Settings", text: "Choose dark or light, and inches or millimetres." },
+  settings: {
+    name: "Settings",
+    text: "Change your shop, choose dark or light, and inches or millimetres.",
+  },
   home: { name: "Home", text: "Your projects, and somewhere to start a new one." },
+  tableSaw: {
+    name: "Table saw",
+    text: "Lets Kerf plan every cut to your blade's width.",
+  },
+  dadoStack: { name: "Dado stack", text: "Lets Kerf use dados for shelves." },
+  router: { name: "Router", text: "Lets Kerf round over edges with the bits you have." },
+  trackSaw: {
+    name: "Track saw",
+    text: "Lets Kerf plan cuts to its blade's width when there is no table saw.",
+  },
+  drill: {
+    name: "Drill / driver",
+    text: "Kerf keeps it in mind for screws and shelf-pin holes, coming later.",
+  },
+  chisels: { name: "Chisels", text: "With a dovetail saw, lets Kerf offer hand-cut dovetails." },
+  dovetailSaw: {
+    name: "Dovetail saw",
+    text: "With chisels, lets Kerf offer hand-cut dovetails.",
+  },
+  addWood: {
+    name: "Add your own",
+    text: "Lets new projects start with a sheet or board you keep.",
+  },
   size: {
     name: "Size",
     text: "Type a size, or drag this label left and right to adjust it. Any unit works: 36\", 3', 900 mm.",
   },
 } satisfies Record<string, TipText>;
+
+/** A wood card's tip: what hanging it does. */
+export function woodTip(name: string): TipText {
+  return { name, text: "Lets new projects start with this wood." };
+}
 
 /** The name of one tip. */
 export type TipId = keyof typeof TIPS;

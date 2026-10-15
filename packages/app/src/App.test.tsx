@@ -36,7 +36,7 @@ describe("<App>", () => {
     });
     render(<App store={store} model={null} />);
     expect(screen.queryByRole("navigation", { name: "Workflow" })).toBeNull();
-    expect(screen.getByRole("heading", { name: "Your shop" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Hang up your tools." })).toBeTruthy();
   });
 
   it("puts the theme on the page on Home too", () => {
