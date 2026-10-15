@@ -7,9 +7,9 @@
 // in plain words before Create, Create or Enter to start at once, and the last piece, units and wood
 // remembered. The panel is a modal dialog: the keyboard stays inside it and Escape closes it.
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { startProject } from "../../model/commands";
 import { saveKerfBytes } from "../../model/files";
 import type { Library } from "../../model/library";
@@ -67,6 +67,11 @@ async function typeIn(input: HTMLInputElement, text: string): Promise<void> {
 }
 
 describe("<NewProject>", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
   it("opens on the bookcase at 36 × 72 × 12 with 4 shelves in 3/4 plywood (design spec §3)", () => {
     panel("bookcase");
     expect(tile("Bookcase").getAttribute("aria-pressed")).toBe("true");
@@ -226,5 +231,97 @@ describe("<NewProject>", () => {
     await userEvent.click(choice("Size", "Space to fill"));
     await userEvent.click(within(dialog()).getByRole("tab", { name: "Blank" }));
     expect(bannedWordsIn(dialog().textContent ?? "")).toEqual([]);
+  });
+
+  it("names the field once, and says what to type, for a size typed half way", async () => {
+    panel("bookcase");
+    await typeIn(field("Width"), "30-");
+    const told = 'Width: "30-" isn\'t a length; type one like 30" or 762 mm.';
+    expect(saidUnder(field("Width"))).toBe(told);
+    expect(within(dialog()).getAllByText(told)).toHaveLength(1);
+  });
+
+  it('keeps the sizes typed when the units change: 30" is 762 mm, and back', async () => {
+    panel("bookcase");
+    await typeIn(field("Width"), '30"');
+    await userEvent.click(choice("Units", "Millimetres"));
+    // 30" × 25.4 = 762 mm; 72" = 1828.8 mm; 12" = 304.8 mm
+    expect(field("Width").value).toBe("762mm");
+    expect(field("Height").value).toBe("1828.8mm");
+    expect(field("Depth").value).toBe("304.8mm");
+    await userEvent.click(choice("Units", "Inches"));
+    expect(field("Width").value).toBe('30"');
+    expect(field("Height").value).toBe('72"');
+  });
+
+  it("converts the gap with the sizes, and starts a size it cannot read afresh", async () => {
+    panel("bookcase");
+    await userEvent.click(choice("Size", "Space to fill"));
+    await typeIn(field("Height"), "tall");
+    await userEvent.click(choice("Units", "Millimetres"));
+    // 1/8" = 3.175 mm; "tall" is no length, so the usual metric height (1800 mm) takes its place.
+    expect(field("Gap").value).toBe("3.175mm");
+    expect(field("Height").value).toBe("1800 mm");
+  });
+
+  it("shows a notice raised while it is open inside the panel, where it can be read", async () => {
+    const { store } = panel("bookcase");
+    act(() => store.getState().say("Your shop couldn't be kept in this browser."));
+    expect(within(dialog()).getByRole("status").textContent).toContain(
+      "Your shop couldn't be kept in this browser.",
+    );
+  });
+
+  it("explains a file that cannot be opened and stays open", async () => {
+    const { store } = panel("bookcase");
+    await userEvent.click(within(dialog()).getByRole("tab", { name: "Open file" }));
+    await userEvent.upload(
+      within(dialog()).getByLabelText<HTMLInputElement>("Kerf file to open"),
+      new File([new Uint8Array([1, 2, 3])], "broken.kerf"),
+    );
+    await waitFor(() => expect(within(dialog()).getByRole("status").textContent).not.toBe(""));
+    expect(store.getState().screen).toBe("home");
+    expect(dialog()).toBeTruthy();
+  });
+
+  it("still creates the piece when the preview cannot be drawn", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    // Without ResizeObserver the preview's canvas throws while it is drawn.
+    vi.stubGlobal("ResizeObserver", undefined);
+    const { store } = panel("bookcase");
+    expect(
+      within(dialog()).getByText(
+        "The preview couldn't be drawn, but you can still create the piece.",
+      ),
+    ).toBeTruthy();
+    await userEvent.click(create());
+    await waitFor(() => expect(store.getState().screen).toBe("workshop"));
+    expect(store.getState().notice).toBeNull();
+  });
+
+  it("closes the wood form on Escape and leaves the panel open", async () => {
+    const { onClose } = panel("bookcase");
+    await userEvent.click(choice("Wood, from your shop", "Other…"));
+    await userEvent.click(field("Name"));
+    await userEvent.keyboard("{Escape}");
+    expect(within(dialog()).queryByRole("textbox", { name: "Name" })).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("closes on Escape when the keyboard has left the panel", async () => {
+    const { onClose } = panel("bookcase");
+    (document.activeElement as HTMLElement).blur();
+    expect(document.activeElement).toBe(document.body);
+    await userEvent.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the place where it says a piece comes later, empty, until there is something to say", async () => {
+    panel("bookcase");
+    const place = dialog().querySelector("[aria-live]");
+    expect(place?.textContent).toBe("");
+    await userEvent.click(tile("Dresser"));
+    expect(dialog().querySelector("[aria-live]")).toBe(place);
+    expect(place?.textContent).toContain("Kerf can't build a dresser yet");
   });
 });

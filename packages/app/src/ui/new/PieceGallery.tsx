@@ -11,7 +11,6 @@ import { BLANKS, PIECES, type Piece, type PieceId } from "../../model/new-projec
 import { useKerfStore } from "../../state/useKerf";
 import { Drawing, type DrawingName } from "../art/drawings";
 import { LaterBadge } from "../home/Templates";
-import { Notice } from "../Notice";
 import { addPickedFile } from "../open-file";
 
 /** The gallery's tabs that hold something today. */
@@ -106,8 +105,6 @@ function OpenFile() {
         tabIndex={-1}
         onChange={(e) => void addPickedFile(store, e)}
       />
-      {/* A file that cannot be opened is said here: the notice line on Home is behind the panel. */}
-      <Notice />
     </div>
   );
 }

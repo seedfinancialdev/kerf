@@ -1700,8 +1700,11 @@ button.project-open {
   color: var(--color-text-muted);
 }
 
+/* Kept on the page when empty, so what it later says is announced; it just takes no room. */
 .new-project-later:empty {
-  display: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .open-file {
@@ -1734,10 +1737,13 @@ button.project-open {
   padding: 6px var(--space-3);
 }
 
-.open-file .notice {
-  justify-self: stretch;
+.new-project-gallery .notice {
   border: 0;
   border-radius: var(--radius-1);
+}
+
+.new-project-gallery .notice:not(:empty) {
+  margin-top: var(--space-3);
 }
 
 .piece-settings {

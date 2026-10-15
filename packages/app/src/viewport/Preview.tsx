@@ -4,21 +4,21 @@
 
 // New project's preview (design spec §3: "a live 3D preview of the real model, drawn by the engine"):
 // the solved piece in a small canvas of its own, turning slowly so its depth reads, and still while the
-// pointer is over it. It is only a picture: no navigation, no picking, no thumbnail for Save. If it
-// cannot be drawn it says so, and the piece can still be created.
+// pointer is over it. It is only a picture: no navigation, no picking, no thumbnail for Save, and it
+// never changes the store. If it cannot be drawn it says so in its place, and the piece can still be
+// created.
 
 import type { Project, SolveResult } from "@kerf/core";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import type { Group } from "three";
 import { sceneBounds } from "../scene/frames";
-import { HandOn } from "../state/Boundary";
+import { Boundary, HandOn } from "../state/Boundary";
 import { BoardMesh } from "./BoardMesh";
 import { boardLooks } from "./board-looks";
 import { cameraPosition, FOV_DEGREES, fitView, type View } from "./camera";
 import { meshFor } from "./meshes";
 import { usePalette } from "./palette";
-import { ThreeDGuard } from "./ThreeDGuard";
 import { useGeometry } from "./useGeometry";
 
 /** Said in the preview's place when it cannot be drawn. */
@@ -116,9 +116,11 @@ export function Preview({ project, result }: { project: Project; result: SolveRe
       {failed ? (
         note
       ) : (
-        <ThreeDGuard told={PREVIEW_NOT_DRAWN} fallback={note}>
+        // Not ThreeDGuard: that also warns on the notice line, which would outlast the panel; the
+        // words in the preview's place say all there is to say. The fault is logged for a bug report.
+        <Boundary fallback={() => note} onFailure={(error) => console.error(error)}>
           <PreviewCanvas project={project} result={result} />
-        </ThreeDGuard>
+        </Boundary>
       )}
     </section>
   );

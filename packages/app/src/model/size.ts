@@ -50,6 +50,10 @@ function evaluate(
   }
 }
 
+/** Said for a plain number typed where a length belongs. */
+const addAUnit = (text: string): string =>
+  `"${text.trim()}" is not a length; add a unit (in, " or mm).`;
+
 /**
  * A length typed by the user, as the expression to store and its snapped value. Refuses one beyond
  * what a project allows. `self` is the parameter the field edits, which the text may not use;
@@ -59,8 +63,7 @@ export function readLength(text: string, project: Project, self?: string, label?
   if (text.trim() === "") return { ok: false, message: 'Type a length, like 30" or 762mm.' };
   const r = evaluate(text, project, self, label);
   if ("message" in r) return { ok: false, message: r.message };
-  if (r.q.kind !== "length")
-    return { ok: false, message: `"${text.trim()}" is not a length; add a unit (in, " or mm).` };
+  if (r.q.kind !== "length") return { ok: false, message: addAUnit(text) };
   try {
     return { ok: true, expr: text.trim(), value: snapToGrid(r.q.value, project.units) };
   } catch (error) {
@@ -71,13 +74,19 @@ export function readLength(text: string, project: Project, self?: string, label?
 
 /**
  * A refusal of the size typed as `text` into the field called `label`, in words that name the field
- * and say what to type: the engine's `Unknown name "tall"` (text that names nothing in the project)
- * becomes `Height: "tall" isn't a length; type one like 30" or 762 mm.` Every other `message` is
- * already plain and comes back unchanged.
+ * and say what to type. Kerf's own refusals are already plain and come back unchanged: a bare number
+ * (add a unit), a length too large, and one that ends "must be more than zero." Anything else is the
+ * expression reader's ("Expected a value" for a half-typed `30-`, `Unknown name "tall"`, …) and
+ * becomes `Width: "30-" isn't a length; type one like 30" or 762 mm.`
  */
 export function explainSize(label: string, text: string, message: string): string {
-  if (!message.startsWith("Unknown name")) return message;
-  return `${label}: "${text.trim()}" isn't a length; type one like 30" or 762 mm.`;
+  const plain =
+    message === addAUnit(text) ||
+    message === new LengthRangeError().message ||
+    message.endsWith(" must be more than zero.");
+  return plain
+    ? message
+    : `${label}: "${text.trim()}" isn't a length; type one like 30" or 762 mm.`;
 }
 
 /** A project with nothing in it, so a length typed for the shop can name no project's sizes. */
@@ -168,4 +177,17 @@ export function exactLiteral(len: Len): Expr {
  */
 export function literalFor(len: Len, units: Project["units"]): Expr {
   return units === "imperial" ? formatLength(len, "imperial") : exactLiteral(len);
+}
+
+/**
+ * A length typed in `from` units, typed again for `to` units as `literalFor` writes it (30" becomes
+ * "762mm"), so a change of units keeps what was typed. Undefined for text that is not a length.
+ */
+export function retype(
+  text: string,
+  from: Project["units"],
+  to: Project["units"],
+): Expr | undefined {
+  const read = readLength(text, noProject(from));
+  return read.ok ? literalFor(read.value, to) : undefined;
 }

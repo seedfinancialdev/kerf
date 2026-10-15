@@ -246,6 +246,18 @@ describe("newProject()", () => {
   });
 });
 
+describe("the History label", () => {
+  it("names the piece, not the template it is built from", () => {
+    const label = (piece: PieceId): string => {
+      const r = newProject(defaultChoice(piece, "imperial", STARTER_RECORD), STARTER_RECORD);
+      if (!r.ok) throw new Error(r.message);
+      return r.edit.label;
+    };
+    const pieces: PieceId[] = ["cabinet", "box", "plainCase"];
+    expect(pieces.map(label)).toEqual(["New cabinet", "New box", "New plain case"]);
+  });
+});
+
 describe("pieceFor()", () => {
   it("finds a piece of the gallery or the blanks by its id", () => {
     expect(pieceFor("cabinet").name).toBe("Cabinet");

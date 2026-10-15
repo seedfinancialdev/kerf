@@ -14,6 +14,7 @@ import {
   readLength,
   readPosition,
   readShopLength,
+  retype,
 } from "./size";
 
 const bookcase = startProject("Bookcase", "imperial").project;
@@ -231,24 +232,49 @@ describe("readShopLength()", () => {
 });
 
 describe("explainSize()", () => {
-  it("names the field and says what to type when the text names nothing the project has", () => {
-    // Task 5 review: the engine's 'Unknown name "tall"' does not say which field or what to type.
-    expect(explainSize("Height", "tall", 'Unknown name "tall"')).toBe(
-      'Height: "tall" isn\'t a length; type one like 30" or 762 mm.',
-    );
-  });
+  /** What a New project size field says for `text`, typed into the field called Width. */
+  const said = (text: string): string => {
+    const read = readLength(text, bookcase);
+    if (read.ok) throw new Error(`"${text}" was read as a length`);
+    return explainSize("Width", text, read.message);
+  };
+
+  it.each(["tall", "30-", "30-1/", "30#", "30 x", '36""', '1/0"'])(
+    "names the field and says what to type for the half-typed or mistyped %s",
+    (text) => {
+      // Task 10 review: the engine's words ("Expected a value", "Unexpected character", …) say neither.
+      expect(said(text)).toBe(`Width: "${text}" isn't a length; type one like 30" or 762 mm.`);
+    },
+  );
 
   it("quotes the text as typed, without the spaces around it", () => {
-    expect(explainSize("Width", " wide ", 'Unknown name "wide"')).toBe(
-      'Width: "wide" isn\'t a length; type one like 30" or 762 mm.',
-    );
+    expect(said(" wide ")).toBe('Width: "wide" isn\'t a length; type one like 30" or 762 mm.');
   });
 
-  it("passes every other refusal on unchanged", () => {
-    const bare = '"30" is not a length; add a unit (in, " or mm).';
-    expect(explainSize("Width", "30", bare)).toBe(bare);
+  it("passes on the refusals that are already plain: a bare number, a length too large, zero", () => {
+    expect(said("30")).toBe('"30" is not a length; add a unit (in, " or mm).');
+    expect(said('100001"')).toBe("Length is too large: the limit is 100,000 inches");
     expect(explainSize("Width", '0"', "Width must be more than zero.")).toBe(
       "Width must be more than zero.",
     );
+  });
+});
+
+describe("retype()", () => {
+  it('types 30" again in millimetres, exactly: 30 × 25.4 = 762 mm', () => {
+    expect(retype('30"', "imperial", "metric")).toBe("762mm");
+  });
+
+  it('types 762 mm again in inches: 762 ÷ 25.4 = 30"', () => {
+    expect(retype("762 mm", "metric", "imperial")).toBe('30"');
+  });
+
+  it('types 1/8" as 3.175 mm, which is exact (1/8 × 25.4)', () => {
+    expect(retype('1/8"', "imperial", "metric")).toBe("3.175mm");
+  });
+
+  it("gives nothing for text that is not a length", () => {
+    expect(retype("tall", "imperial", "metric")).toBeUndefined();
+    expect(retype("30", "imperial", "metric")).toBeUndefined();
   });
 });

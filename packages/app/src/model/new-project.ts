@@ -290,8 +290,8 @@ function withSizes(project: Project, size: Size3): Project | string {
 /**
  * The project the panel's choices describe, named after the piece. A piece that is not built yet, a size that
  * is empty, zero or not a length, a gap that eats the space, or wood the shop does not stock comes back as
- * `ok: false` with a message to show and the field it is about. "Something else" and the empty project start with no form; the idea comes back as `note` because a
- * project has nowhere to keep it.
+ * `ok: false` with a message to show and the field it is about. "Something else" and the empty project start
+ * with no form; the idea comes back as `note` because a project has nowhere to keep it.
  */
 export function newProject(choice: NewProjectChoice, record: ShopRecord): NewProjectResult {
   const piece = pieceFor(choice.piece);
@@ -349,7 +349,7 @@ export function newProject(choice: NewProjectChoice, record: ShopRecord): NewPro
   project = setOption(project, structure.id, woodField, choice.wood).project;
   return {
     ok: true,
-    edit: { project, label: started.label },
+    edit: { project, label: `New ${piece.name.toLowerCase()}` },
     outside: choice.sizeMode === "space" ? outside.size : null,
     note,
   };

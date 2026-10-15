@@ -36,6 +36,7 @@ function preview() {
       <Preview project={project} result={result} />
     </KerfProvider>,
   );
+  return store;
 }
 
 describe("<Preview>", () => {
@@ -70,9 +71,12 @@ describe("<Preview>", () => {
   it("says the same, without taking the panel down, when the 3D view itself cannot start", () => {
     // Without ResizeObserver the canvas throws while it is drawn, as a browser without it would.
     vi.stubGlobal("ResizeObserver", undefined);
-    preview();
+    const store = preview();
     expect(screen.getByRole("region", { name: "Preview of your piece" }).textContent).toBe(
       PREVIEW_NOT_DRAWN,
     );
+    // The preview's own words are enough: nothing is left on the notice line for after the panel.
+    expect(store.getState().notice).toBeNull();
+    expect(console_).toHaveBeenCalled();
   });
 });

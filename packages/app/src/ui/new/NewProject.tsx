@@ -28,8 +28,10 @@ import {
 } from "../../model/new-project";
 import { addWood, recordOf, wallFrom } from "../../model/pegboard";
 import type { ShopRecord } from "../../model/shop-record";
+import { retype } from "../../model/size";
 import type { KerfState } from "../../model/store-types";
 import { useKerf, useKerfStore } from "../../state/useKerf";
+import { Notice } from "../Notice";
 import { type GalleryTab, PieceGallery, tabOf } from "./PieceGallery";
 import { PieceSettings } from "./PieceSettings";
 
@@ -57,15 +59,27 @@ function withPiece(choice: NewProjectChoice, next: PieceId, record: ShopRecord):
   );
 }
 
-/** `choice` in `units`, at the piece's usual size in them; its options, and its wood if offered, stay. */
+/**
+ * `choice` in `units`: each size it can read typed again in them (30" becomes 762mm), the piece's
+ * usual one for any it cannot; its options, and its wood if offered, stay.
+ */
 function inUnits(
   choice: NewProjectChoice,
   units: Project["units"],
   record: ShopRecord,
 ): NewProjectChoice {
-  const { sizeMode, shelves, back, note } = choice;
-  const moved = { ...defaultChoice(choice.piece, units, record), sizeMode, shelves, back, note };
-  return withWood(moved, choice.wood, record);
+  const usual = defaultChoice(choice.piece, units, record);
+  const kept = (key: "w" | "h" | "d" | "gap"): string =>
+    retype(choice[key], choice.units, units) ?? usual[key];
+  const moved = {
+    ...choice,
+    units,
+    w: kept("w"),
+    h: kept("h"),
+    d: kept("d"),
+    gap: kept("gap"),
+  };
+  return withWood({ ...moved, wood: usual.wood }, choice.wood, record);
 }
 
 /**
@@ -107,6 +121,20 @@ function useFocusWhileOpen(panel: RefObject<HTMLDivElement | null>): void {
       if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
     };
   }, [panel]);
+}
+
+/**
+ * Escape closes the panel wherever the keyboard is while it is open, on the page as well as in the
+ * panel. A form inside it that Escape shuts first (the wood form) stops the key there.
+ */
+function useEscapeToClose(onClose: () => void): void {
+  useEffect(() => {
+    const listen = (e: globalThis.KeyboardEvent): void => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", listen);
+    return () => document.removeEventListener("keydown", listen);
+  }, [onClose]);
 }
 
 /**
@@ -163,9 +191,9 @@ export function NewProject({ piece, onClose }: { piece?: PieceId; onClose: () =>
     store.getState().rememberChoice(choice);
     void store.getState().createProject(made.edit, made.note);
   };
+  useEscapeToClose(onClose);
   const keys = (e: KeyboardEvent<HTMLDivElement>): void => {
-    if (e.key === "Escape") onClose();
-    else if (e.key === "Tab" && panel.current) keepTabInside(panel.current, e);
+    if (e.key === "Tab" && panel.current) keepTabInside(panel.current, e);
   };
 
   return (
@@ -184,6 +212,8 @@ export function NewProject({ piece, onClose }: { piece?: PieceId; onClose: () =>
           <p className="new-project-lede">
             Pick a piece to start from. Everything can change once it's on screen.
           </p>
+          {/* The notice line, here while Home's is behind the panel: a file refused, wood not kept. */}
+          <Notice />
           <PieceGallery
             tab={tab}
             setTab={setTab}
