@@ -22,6 +22,7 @@ describe("joineryRows()", () => {
       detail: '23/32" wide, 1/4" deep',
       missing: false,
       shop: "Your dado stack cuts this.",
+      topic: "dadoStack",
     });
   });
 
@@ -31,12 +32,15 @@ describe("joineryRows()", () => {
     expect(rows[0]?.shop).toBe(
       "You'd need a dado stack, or a router with a straight bit no wider than 23/32\".",
     );
+    // The engine names the dado stack for a cut nothing in the shop makes (core outputs/machining.ts).
+    expect(rows[0]?.topic).toBe("dadoStack");
   });
 
   it("describes the box's corners as dovetails cut by hand", () => {
     const box = startProject("Keepsake box", "imperial").project;
     const rows = joineryRows(solve(box, loadShopProfile()).joints, "imperial");
-    expect(rows.some((r) => r.text.includes("dovetails") && r.shop === "Cut by hand.")).toBe(true);
+    const corners = rows.filter((r) => r.text.includes("dovetails"));
+    expect(corners.map((r) => [r.shop, r.topic])).toContainEqual(["Cut by hand.", "handTools"]);
   });
 
   it("gives each cut of one joint its own key", () => {

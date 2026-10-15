@@ -6,9 +6,14 @@
 // cove, ogee, straight, rabbeting; sizes tapped on"). The record keeps every bit; the engine reads the
 // roundover and straight ones (model/shop-record.ts).
 
-import { formatLength, INCH, type Len, type Project } from "@kerf/core";
+import { formatLength, type Len, type Project } from "@kerf/core";
 import { useEffect, useRef, useState } from "react";
-import { BIT_SHAPES, type BitShape, type RouterBit } from "../../model/shop-record";
+import {
+  BIT_SHAPES,
+  type BitShape,
+  type RouterBit,
+  USUAL_BIT_SIZES,
+} from "../../model/shop-record";
 import { ShopLengthField } from "./ShopLengthField";
 
 /** What each shape is called on the card. A chamfer bit is sized by its 45° cut. */
@@ -19,21 +24,6 @@ const SHAPE_NAMES: Record<BitShape, string> = {
   ogee: "Ogee",
   straight: "Straight",
   rabbeting: "Rabbeting",
-};
-
-const eighths = (...n: number[]): Len[] => n.map((k) => (k * INCH) / 8);
-
-/**
- * The sizes each shape offers to tap: the common bits sold in sets (radius for edge shapes, cutting
- * width for a straight bit). Any other size is typed with "+ Add a size".
- */
-const USUAL_SIZES: Record<BitShape, readonly Len[]> = {
-  roundover: eighths(1, 2, 3, 4),
-  chamfer: eighths(2, 4),
-  cove: eighths(2, 3, 4),
-  ogee: eighths(2, 3),
-  straight: eighths(2, 3, 4, 6),
-  rabbeting: eighths(3, 4),
 };
 
 const ownedSizes = (bits: readonly RouterBit[], shape: BitShape): Len[] =>
@@ -59,7 +49,7 @@ function ShapeSizes({
 }) {
   const [adding, setAdding] = useState(false);
   const owned = ownedSizes(bits, shape);
-  const shown = [...new Set([...USUAL_SIZES[shape], ...owned])].sort((a, b) => a - b);
+  const shown = [...new Set([...USUAL_BIT_SIZES[shape], ...owned])].sort((a, b) => a - b);
   return (
     <fieldset className="bit-shape">
       <legend>{SHAPE_NAMES[shape]}</legend>

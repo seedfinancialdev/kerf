@@ -430,6 +430,46 @@ button[aria-pressed="true"] {
 .joint.missing .joint-shop {
   color: var(--color-warning);
 }
+/* A question asked in place (ui/InlineQuestion.tsx): a sentence, then its answers in a row. */
+.ask {
+  margin: var(--space-1) 0 var(--space-2);
+  padding: var(--space-2);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+}
+/* Floated, the legend sits inside the box instead of on its border. */
+.ask legend {
+  float: left;
+  width: 100%;
+  margin-bottom: var(--space-2);
+  padding: 0;
+  color: var(--color-text);
+}
+.ask-answers {
+  clear: both;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+/* Edge profile's other shapes (ui/MoreEdgeShapes.tsx): greyed roundovers and shapes coming later. */
+.edge-shapes {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.edge-shapes legend {
+  margin-bottom: var(--space-1);
+  padding: 0;
+  color: var(--color-text-muted);
+}
+/* Greyed, not disabled: pressing it offers to add the bit. */
+.bit-size.no-bit {
+  color: var(--color-text-muted);
+  border-style: dashed;
+}
+
 .ok {
   margin: 0;
   color: var(--color-text-muted);

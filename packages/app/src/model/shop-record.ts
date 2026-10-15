@@ -21,6 +21,21 @@ export const BIT_SHAPES = [
 /** The shape a router bit cuts. Edge shapes are sized by radius; straight bits by cutting width. */
 export type BitShape = (typeof BIT_SHAPES)[number];
 
+const eighths = (...n: number[]): Len[] => n.map((k) => (k * INCH) / 8);
+
+/**
+ * The sizes the router card offers to tap for each shape: the common bits sold in sets (radius for edge
+ * shapes, cutting width for a straight bit). Any other size is typed on the card.
+ */
+export const USUAL_BIT_SIZES: Readonly<Record<BitShape, readonly Len[]>> = {
+  roundover: eighths(1, 2, 3, 4),
+  chamfer: eighths(2, 4),
+  cove: eighths(2, 3, 4),
+  ogee: eighths(2, 3),
+  straight: eighths(2, 3, 4, 6),
+  rabbeting: eighths(3, 4),
+};
+
 /** One router bit on the router card. */
 export interface RouterBit {
   shape: BitShape;
