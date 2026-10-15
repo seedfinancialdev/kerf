@@ -15,12 +15,32 @@ const isWhole = (v: unknown, min: number): v is number =>
 const isBit = (v: unknown): boolean =>
   isObject(v) && (BIT_SHAPES as readonly unknown[]).includes(v.shape) && isWhole(v.size, 1);
 
+const isSheet = (v: unknown): boolean =>
+  isObject(v) &&
+  isWhole(v.length, 1) &&
+  isWhole(v.width, 1) &&
+  (v.grain === "along-length" || v.grain === "none");
+
+const isSolid = (v: unknown): boolean =>
+  isObject(v) &&
+  isWhole(v.maxWidth, 1) &&
+  Array.isArray(v.standardLengths) &&
+  v.standardLengths.length > 0 &&
+  v.standardLengths.every((n) => isWhole(n, 1));
+
+const isAllowance = (v: unknown): boolean =>
+  isObject(v) && isWhole(v.length, 0) && isWhole(v.width, 0);
+
+/** Core's `Stock`: nesting reads the sheet or solid size and the allowance without checking them. */
 const isStock = (v: unknown): boolean =>
   isObject(v) &&
   typeof v.id === "string" &&
   typeof v.name === "string" &&
-  (v.kind === "sheet" || v.kind === "solid" || v.kind === "dimensional") &&
-  isWhole(v.thickness, 1);
+  isWhole(v.thickness, 1) &&
+  isAllowance(v.allowance) &&
+  ((v.kind === "sheet" && isSheet(v.sheet)) ||
+    (v.kind === "solid" && isSolid(v.solid)) ||
+    v.kind === "dimensional");
 
 /** A tool that is absent (`null`) or an object that passes `check`. */
 const isToolOrNull = (v: unknown, check: (tool: Record<string, unknown>) => boolean): boolean =>

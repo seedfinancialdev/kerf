@@ -47,12 +47,32 @@ describe("shopProfileFor()", () => {
     });
   });
 
-  it("cuts dovetails by hand only with both chisels and a dovetail saw", () => {
-    const sawOnly = { ...STARTER_RECORD, chisels: false };
-    expect(shopProfileFor(sawOnly).tools).not.toContainEqual({
-      type: "handTools",
-      dovetails: true,
+  it.each([
+    [true, true, true],
+    [true, false, false],
+    [false, true, false],
+    [false, false, false],
+  ])(
+    "with chisels %s and a dovetail saw %s, hand-cut dovetails are %s",
+    (chisels, dovetailSaw, expected) => {
+      const record = { ...STARTER_RECORD, dadoStack: null, router: null, chisels, dovetailSaw };
+      expect(shopProfileFor(record).tools).toEqual([{ type: "handTools", dovetails: expected }]);
+    },
+  );
+
+  it("prefers the table saw's cut width over the track saw's when both are hung", () => {
+    const both = { ...STARTER_RECORD, tableSaw: { kerf: INCH / 8 }, trackSaw: { kerf: INCH / 16 } };
+    expect(shopProfileFor(both).kerf).toBe(25_400); // 1/8" = 203200 / 8
+  });
+
+  it("passes the optional trims and smallest offcut to the engine only when set", () => {
+    const trimmed = { ...STARTER_RECORD, sheetTrim: 1_000, solidTrim: 2_000, minOffcut: 3_000 };
+    expect(shopProfileFor(trimmed)).toMatchObject({
+      sheetTrim: 1_000,
+      solidTrim: 2_000,
+      minOffcut: 3_000,
     });
+    expect(Object.keys(shopProfileFor(STARTER_RECORD)).sort()).toEqual(["kerf", "tools"]);
   });
 
   it("leaves out a dado stack and a router the shop does not have", () => {
@@ -79,6 +99,19 @@ describe("recordFromProfile()", () => {
     expect(record.dadoStack).toBeNull();
     expect(record.router).toBeNull();
     expect(shopProfileFor(record)).toEqual(profile);
+  });
+});
+
+describe("a version-1 shop with no tools listed", () => {
+  it("has no dado stack, no router and no hand-cut dovetails, which the engine reads as `dovetails: false`", () => {
+    const record = recordFromProfile({ kerf: 25_400, tools: [] }, STARTER_STOCK);
+    expect(record.dadoStack).toBeNull();
+    expect(record.router).toBeNull();
+    // The engine treats a missing hand-tools entry as no dovetails, so the entry is now explicit.
+    expect(shopProfileFor(record)).toEqual({
+      kerf: 25_400,
+      tools: [{ type: "handTools", dovetails: false }],
+    });
   });
 });
 

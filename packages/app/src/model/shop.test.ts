@@ -94,6 +94,14 @@ describe("loadShop()", () => {
       return loadShop(s);
     };
     const { stock: _stock, ...withoutStock } = STARTER_RECORD;
+    const OAK = {
+      id: "01K7M4AP0000000000000000OK",
+      name: "Oak",
+      kind: "solid",
+      thickness: 101_600, // 1/2" = 203200 / 2
+      solid: { standardLengths: [19_507_200], maxWidth: 1_625_600 },
+      allowance: { length: 0, width: 0 },
+    };
     const badStock = (element: unknown) => ({ ...STARTER_RECORD, stock: [element] });
 
     it.each([
@@ -116,6 +124,46 @@ describe("loadShop()", () => {
       ],
       ["a table saw that is not an object", { ...STARTER_RECORD, tableSaw: 5 }],
       ["a dado stack with no width", { ...STARTER_RECORD, dadoStack: {} }],
+      ["stock with no allowance", badStock({ ...OAK, allowance: undefined })],
+      [
+        "stock with a negative allowance",
+        badStock({ ...OAK, allowance: { length: -1, width: 0 } }),
+      ],
+      ["a sheet with no sheet size", badStock({ ...OAK, kind: "sheet", solid: undefined })],
+      [
+        "a sheet of unknown grain",
+        badStock({
+          ...OAK,
+          kind: "sheet",
+          solid: undefined,
+          sheet: { length: 100, width: 100, grain: "across" },
+        }),
+      ],
+      [
+        "a sheet with no width",
+        badStock({
+          ...OAK,
+          kind: "sheet",
+          solid: undefined,
+          sheet: { length: 100, width: 0, grain: "none" },
+        }),
+      ],
+      ["a solid with no solid size", badStock({ ...OAK, solid: undefined })],
+      [
+        "a solid with no standard lengths",
+        badStock({ ...OAK, solid: { standardLengths: [], maxWidth: 100 } }),
+      ],
+      [
+        "a solid with a bad standard length",
+        badStock({ ...OAK, solid: { standardLengths: [100, 1.5], maxWidth: 100 } }),
+      ],
+      [
+        "a solid with no widest board",
+        badStock({ ...OAK, solid: { standardLengths: [100], maxWidth: 0 } }),
+      ],
+      ["a sheet trim that is negative", { ...STARTER_RECORD, sheetTrim: -1 }],
+      ["a board end trim that is fractional", { ...STARTER_RECORD, solidTrim: 0.5 }],
+      ["a smallest offcut that is not a number", { ...STARTER_RECORD, minOffcut: "big" }],
       ["stock that is not a board", badStock(7)],
       ["stock with no name", badStock({ id: "x", kind: "sheet", thickness: 100 })],
       ["stock of an unknown kind", badStock({ id: "x", name: "n", kind: "log", thickness: 100 })],
@@ -130,6 +178,17 @@ describe("loadShop()", () => {
       expect(loaded.record).toEqual(STARTER_RECORD);
       expect(loaded.firstLaunch).toBe(false);
       expect(loaded.problem).toBe(DAMAGED);
+    });
+
+    it("keeps well-formed stock of each kind", () => {
+      const sheet = {
+        ...OAK,
+        kind: "sheet",
+        solid: undefined,
+        sheet: { length: 100, width: 100, grain: "none" },
+      };
+      const mine = JSON.parse(JSON.stringify({ ...STARTER_RECORD, stock: [OAK, sheet] }));
+      expect(saved(mine)).toEqual({ record: mine, firstLaunch: false });
     });
 
     it("keeps a record with a track saw, no table saw, and several bits", () => {
