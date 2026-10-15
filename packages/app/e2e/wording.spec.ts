@@ -3,13 +3,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // CLAUDE.md: banned in UI: mesh, vertex, face (geometry), component, instance, material, extrude,
-// boolean. Checked on every step, every plan tab and every tool panel of the core flow, the New
-// chooser, the Settings menu, a Join answer and a notice, in the words shown and in the
+// boolean. Checked on every step, every plan tab and every tool panel of the core flow, the Settings
+// menu, a Join answer and a notice; on Home, Your shop, every tab of New project, the tour, the
+// tool row's tips, and the questions a skipped shop is asked; in the words shown and in the
 // placeholders, tooltips and labels a screen reader announces.
 
 import { expect, type Page, test } from "@playwright/test";
 import { bannedWordsIn } from "../src/testing/banned-words";
 import { TOOLS } from "../src/tools/tools";
+import { openNewProject, startBookcase } from "./support/start";
 
 /**
  * The words on screen, with every placeholder, tooltip and accessible label (UI text too, though
@@ -27,15 +29,9 @@ async function shown(page: Page): Promise<string> {
 }
 
 test("no screen of the core flow shows a banned word", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "New" }).click();
-  await expect(page.getByRole("button", { name: "Bookcase" })).toBeVisible();
-  const seen: string[] = [await shown(page)];
-  await page.getByRole("button", { name: "Bookcase" }).click();
+  await startBookcase(page);
   const model = page.getByRole("region", { name: "Model" });
-  await expect(model.locator("canvas")).toBeVisible();
-  await expect(model.getByText("Drawing the model…")).toBeHidden();
-  seen.push(await shown(page));
+  const seen: string[] = [await shown(page)];
   await page.getByRole("button", { name: "Settings" }).click();
   await expect(page.getByLabel("Millimetres")).toBeVisible();
   seen.push(await shown(page));
@@ -78,4 +74,104 @@ test("no screen of the core flow shows a banned word", async ({ page }) => {
     seen.push(await shown(page));
   }
   expect(bannedWordsIn(seen.join("\n"))).toEqual([]);
+});
+
+test("Home, Your shop and every tab of New project show no banned word", async ({ page }) => {
+  // A project first, so Home shows a card and its menu as well as the templates.
+  await startBookcase(page);
+  await page.getByRole("button", { name: "Home" }).click();
+  await expect(page.getByRole("heading", { name: "What's on the bench?" })).toBeVisible();
+  const seen: string[] = [await shown(page)];
+  await page.getByRole("button", { name: "More for Bookcase" }).click();
+  await expect(page.getByRole("menu")).toBeVisible();
+  seen.push(await shown(page));
+  await page.keyboard.press("Escape");
+
+  // Your shop, with the router's bits open beside its card.
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Your shop" }).click();
+  await expect(page.getByRole("heading", { name: "Hang up your tools." })).toBeVisible();
+  seen.push(await shown(page));
+  await page.getByRole("button", { name: "Edit bits" }).click();
+  await expect(page.getByRole("dialog", { name: "Router bits" })).toBeVisible();
+  seen.push(await shown(page));
+  await page
+    .getByRole("dialog", { name: "Router bits" })
+    .getByRole("button", { name: "Done" })
+    .click();
+  await page.getByRole("button", { name: "Cancel" }).click();
+
+  // New project: each tab, a piece that comes later, Space to fill, wood of one's own and
+  // Something else.
+  const panel = await openNewProject(page);
+  seen.push(await shown(page));
+  // A piece that comes later is marked unavailable but can still be pressed, to say so.
+  await panel.getByRole("button", { name: /^Table/ }).click({ force: true });
+  await expect(panel.getByText(/Kerf can't build a table yet/)).toBeVisible();
+  seen.push(await shown(page));
+  await panel.getByRole("button", { name: "Bookcase" }).click();
+  await panel.getByRole("button", { name: "Space to fill" }).click();
+  await expect(panel.getByLabel("Gap")).toBeVisible();
+  seen.push(await shown(page));
+  await panel.getByRole("button", { name: "Other…" }).click();
+  seen.push(await shown(page));
+  await panel.getByRole("button", { name: /^Something else/ }).click();
+  await expect(panel.getByLabel("What are you thinking of building?")).toBeVisible();
+  seen.push(await shown(page));
+  for (const tab of ["Blank", "Open file"]) {
+    await panel.getByRole("tab", { name: tab }).click();
+    await expect(panel.getByRole("tab", { name: tab, selected: true })).toBeVisible();
+    seen.push(await shown(page));
+  }
+  expect(bannedWordsIn(seen.join("\n"))).toEqual([]);
+});
+
+test("the tour and the tool row's tips show no banned word", async ({ page }) => {
+  await startBookcase(page);
+  const seen: string[] = [];
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Take the tour" }).click();
+  const tour = page.getByRole("dialog", { name: /^Tour/ });
+  for (const step of [1, 2, 3, 4]) {
+    await expect(tour).toHaveAccessibleName(`Tour, step ${step} of 4`);
+    seen.push(await shown(page));
+    await tour.getByRole("button", { name: step < 4 ? "Next" : "Done" }).click();
+  }
+  await expect(tour).toHaveCount(0);
+  // A tip shows after the pointer rests on its button for a moment; waiting for it to show is the
+  // wait (no fixed sleep).
+  for (const tool of TOOLS) {
+    await page.getByRole("button", { name: new RegExp(`^${tool.label}\\b`) }).hover();
+    await expect(page.getByRole("tooltip")).toContainText(tool.label);
+    seen.push(await shown(page));
+  }
+  expect(bannedWordsIn(seen.join("\n"))).toEqual([]);
+});
+
+test.describe("a skipped shop", () => {
+  // A first visit (the config seeds a returning user, whose shop is set up and never asked).
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("the pegboard and the questions asked when a tool matters show no banned word", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "Hang up your tools." })).toBeVisible();
+    const seen: string[] = [await shown(page)];
+    await page.getByRole("button", { name: "Skip for now" }).click();
+    await startBookcase(page);
+    // The tour of a first Workshop visit, and the Cut list's saw question beside it (Ruling R24).
+    seen.push(await shown(page));
+    await page.getByRole("button", { name: "Skip tour" }).click();
+    await expect(
+      page.getByText('Your cut list assumes a 1/8" blade. What do you cut with?'),
+    ).toBeVisible();
+    seen.push(await shown(page));
+    await page.getByRole("button", { name: "Joinery" }).click();
+    await expect(
+      page.getByText("Dados, grooves and rabbets need a dado stack. Do you have one?"),
+    ).toBeVisible();
+    seen.push(await shown(page));
+    expect(bannedWordsIn(seen.join("\n"))).toEqual([]);
+  });
 });

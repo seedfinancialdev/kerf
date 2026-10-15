@@ -6,18 +6,15 @@
 // cut list.
 
 import { expect, test } from "@playwright/test";
+import { startPlainCase } from "./support/start";
 
 test("draws a 24 x 6 board on the floor and it joins the cut list", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "New" }).click();
-  await page.getByRole("button", { name: "Blank case" }).click();
+  await startPlainCase(page);
   await page.getByRole("tab", { name: "Cut list" }).click();
-  // The blank case: sides, top and bottom, back: 3 lines (the bookcase's 3 without its shelves,
+  // The plain case: sides, top and bottom, back: 3 lines (the bookcase's 3 without its shelves,
   // which share the top and bottom's line).
   await expect(page.getByTestId("cutlist-line")).toHaveCount(3);
   const model = page.getByRole("region", { name: "Model" });
-  await expect(model.locator("canvas")).toBeVisible();
-  await expect(model.getByText("Drawing the model…")).toBeHidden();
   await page.keyboard.press("b");
   const box = await model.boundingBox();
   if (!box) throw new Error("no model area");

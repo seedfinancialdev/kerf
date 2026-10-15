@@ -6,6 +6,7 @@
 // setting. ADR 015, rule 4: millimetres apply to projects started afterwards.
 
 import { expect, test } from "@playwright/test";
+import { modelDrawn } from "./support/start";
 
 test("the light theme gives a light background", async ({ page }) => {
   await page.goto("/");
@@ -22,8 +23,14 @@ test("millimetres show in the cut list of a project started afterwards", async (
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByLabel("Millimetres").check();
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "New" }).click();
-  await page.getByRole("button", { name: "Bookcase" }).click();
+  await page.getByRole("button", { name: "New project" }).click();
+  const panel = page.getByRole("dialog", { name: "New project" });
+  await panel.getByRole("button", { name: "Bookcase" }).click();
+  // New project starts in millimetres now (its metric bookcase is 1800 mm tall); the height is
+  // typed as the template's 72" in millimetres so the side's length is the one checked below.
+  await panel.getByLabel("Height").fill("1828.8 mm");
+  await panel.getByRole("button", { name: "Create" }).click();
+  await modelDrawn(page);
   await page.getByRole("tab", { name: "Cut list" }).click();
   // 72" = 1828.8 mm (Domain model: 1 mm = 8000 units, 1" = 203200 = 25.4 mm).
   await expect(page.getByTestId("cutlist-line").first()).toContainText("1828.8 mm");

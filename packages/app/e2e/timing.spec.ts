@@ -6,14 +6,10 @@
 // 100 ms". Measured in the page, from committing the Width to the cut list showing the new size.
 
 import { expect, test } from "@playwright/test";
+import { startBookcase } from "./support/start";
 
 test("a width change reaches the cut list in under 100 ms", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "New" }).click();
-  await page.getByRole("button", { name: "Bookcase" }).click();
-  const model = page.getByRole("region", { name: "Model" });
-  await expect(model.locator("canvas")).toBeVisible();
-  await expect(model.getByText("Drawing the model…")).toBeHidden();
+  await startBookcase(page);
   await page.getByRole("tab", { name: "Cut list" }).click();
   await expect(page.getByTestId("cutlist-line")).toHaveCount(3);
   // The 36" bookcase: 36 - 15/16 = 35-1/16" (hand calculation; bookcase.spec's 30" gives 29-1/16").

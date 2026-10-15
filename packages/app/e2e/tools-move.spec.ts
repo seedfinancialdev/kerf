@@ -6,21 +6,42 @@
 // the direction (up is the vertical one).
 
 import { expect, type Page, test } from "@playwright/test";
+import { startBookcase } from "./support/start";
 
-/** The project the app keeps in browser storage after each recorded change (its saved intent). */
+/**
+ * The project the app keeps in the browser's library after each recorded change (its saved
+ * intent): the only project in IndexedDB "kerf", store "projects" (library.ts, schema version 1).
+ * The write lands a moment after the change shows, so callers poll.
+ */
 async function keptProject(page: Page): Promise<{
   instances: { name?: string; position: { z: string } }[];
   parts: { name: string; detached?: boolean }[];
 }> {
-  const text = await page.evaluate(() => localStorage.getItem("kerf.project"));
-  if (!text) throw new Error("no project kept");
+  const texts = await page.evaluate(
+    () =>
+      new Promise<string[]>((resolve, reject) => {
+        const opening = indexedDB.open("kerf");
+        opening.onerror = () => reject(opening.error);
+        opening.onsuccess = () => {
+          const db = opening.result;
+          const rows = db.transaction("projects").objectStore("projects").getAll();
+          rows.onerror = () => reject(rows.error);
+          rows.onsuccess = () => {
+            db.close();
+            resolve(rows.result.map((row: { project: string }) => row.project));
+          };
+        };
+      }),
+  );
+  const [text] = texts;
+  if (texts.length !== 1 || text === undefined) {
+    throw new Error(`expected one kept project, found ${texts.length}`);
+  }
   return JSON.parse(text);
 }
 
 test("moves the top by a typed distance and undoes it", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "New" }).click();
-  await page.getByRole("button", { name: "Bookcase" }).click();
+  await startBookcase(page);
   await page.getByRole("button", { name: "Shape" }).click();
   await page.getByTestId("part-group-tops").click();
   await page.keyboard.press("m");
@@ -43,13 +64,9 @@ test("moves the top by a typed distance and undoes it", async ({ page }) => {
 });
 
 test("lifts a shelf by dragging it upward, even past the top of the model", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "New" }).click();
-  await page.getByRole("button", { name: "Bookcase" }).click();
+  await startBookcase(page);
   await page.getByRole("button", { name: "Shape" }).click();
   const model = page.getByRole("region", { name: "Model" });
-  await expect(model.locator("canvas")).toBeVisible();
-  await expect(model.getByText("Drawing the model…")).toBeHidden();
   const box = await model.boundingBox();
   if (!box) throw new Error("no model area");
   await page.keyboard.press("m");
@@ -64,8 +81,11 @@ test("lifts a shelf by dragging it upward, even past the top of the model", asyn
   // A shelf of the row is taken out as a copy of its own and moved.
   await expect(page.getByRole("option", { name: /^Moved Shelf( copy)? \d+ / })).toBeVisible();
   // Up, not down: the moved copy's height is written as its old height plus the distance.
-  const moved = (await keptProject(page)).instances.find((i) =>
-    /^Shelf copy \d+$/.test(i.name ?? ""),
-  );
-  expect(moved?.position.z).toMatch(/\) \+ \S/);
+  await expect
+    .poll(
+      async () =>
+        (await keptProject(page)).instances.find((i) => /^Shelf copy \d+$/.test(i.name ?? ""))
+          ?.position.z,
+    )
+    .toMatch(/\) \+ \S/);
 });

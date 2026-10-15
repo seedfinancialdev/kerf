@@ -24,6 +24,7 @@ test('bookcase in 6 steps, then resize to 30"', async ({ page }) => {
   await page.getByLabel("Width").fill('36"');
   await page.getByLabel("Height").fill('72"');
   await page.getByLabel("Depth").fill('12"');
+  await page.getByRole("button", { name: "Create" }).click();
 
   // 2. Shape: carcase 3/4" plywood, top and bottom between the sides, back inset in rabbets, 1/4"
   //    plywood.

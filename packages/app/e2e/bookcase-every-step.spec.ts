@@ -4,12 +4,13 @@
 
 // The companion to bookcase.spec.ts. The acceptance test starts from the
 // Bookcase template, which already has the choices steps 2 to 5 make, so those clicks change
-// nothing and would pass even if broken. This flow builds the same bookcase from the Blank case
-// (30" x 36" x 12", no shelves, no depths, no roundover), so each step must do its work, and
+// nothing and would pass even if broken. This flow builds the same bookcase from a Plain case
+// (made 30" x 36" x 12", no shelves, no depths, no roundover), so each step must do its work, and
 // checks that each change reaches History. The outputs are then the spec's: Operation specs,
 // "Golden test: bookcase" (3 lines, 3 sheets, 3 setups) and the resize to 30".
 
 import { expect, type Page, test } from "@playwright/test";
+import { startPlainCase } from "./support/start";
 
 /** The History entry a change records; it must appear for the step to have done anything. */
 const recorded = (page: Page, label: string) =>
@@ -22,22 +23,19 @@ async function type(page: Page, label: string, text: string): Promise<void> {
   await field.press("Enter");
 }
 
-test('the bookcase built from the Blank case, every step recorded, then resized to 30"', async ({
+test('the bookcase built from a Plain case, every step recorded, then resized to 30"', async ({
   page,
 }) => {
-  await page.goto("/");
-
-  // 1. New → Blank case, then the spec's size. The Blank case is 30" x 36" x 12", so width and
-  //    height change; depth is already 12".
-  await page.getByRole("button", { name: "New" }).click();
-  await page.getByRole("button", { name: "Blank case" }).click();
-  await recorded(page, "New blank case").toBeVisible();
+  // 1. New project → Plain case, then the spec's size. The case is made 30" x 36" x 12", so width
+  //    and height change; depth is already 12".
+  await startPlainCase(page);
+  await recorded(page, "New plain case").toBeVisible();
   await type(page, "Width", '36"');
   await recorded(page, 'Width 30" → 36"').toBeVisible();
   await type(page, "Height", '72"');
   await recorded(page, 'Height 36" → 72"').toBeVisible();
 
-  // 2. Shape. The Blank case already has the spec's choices, so each select first takes another
+  // 2. Shape. The Plain case already has the spec's choices, so each select first takes another
   //    value and then the spec's, and both are recorded: a select that did nothing would not be.
   await page.getByRole("button", { name: "Shape" }).click();
   await page.getByLabel("Carcase stock").selectOption("4/4 walnut");
@@ -57,7 +55,7 @@ test('the bookcase built from the Blank case, every step recorded, then resized 
   await page.getByLabel("Back stock").selectOption("1/4 plywood");
   await recorded(page, "Back stock: 1/4 plywood").toBeVisible();
   // The spec's depths (Operation specs, bookcase: 1/4" dados and end rabbets, 3/8" back rabbets);
-  // the Blank case leaves them to the default rule, a third of the side's thickness.
+  // the Plain case leaves them to the default rule, a third of the side's thickness.
   await page.getByRole("button", { name: "More" }).click();
   await type(page, "Dado depth", '1/4"');
   await recorded(page, 'Dado depth: 1/4"').toBeVisible();
@@ -66,7 +64,7 @@ test('the bookcase built from the Blank case, every step recorded, then resized 
   await type(page, "Back rabbet depth", '3/8"');
   await recorded(page, 'Back rabbet depth: 3/8"').toBeVisible();
 
-  // 3. Divide: the Blank case's opening is empty, so Add shelves → 4 adds them. They are evenly
+  // 3. Divide: the Plain case's opening is empty, so Add shelves → 4 adds them. They are evenly
   //    spaced already, so choosing Evenly spaced records nothing more.
   await page.getByRole("button", { name: "Divide" }).click();
   await page.getByTestId("opening").first().click();
@@ -80,7 +78,7 @@ test('the bookcase built from the Blank case, every step recorded, then resized 
   await page.getByRole("button", { name: "Accept all" }).click();
   await recorded(page, "Accepted the joinery").toBeVisible();
 
-  // 5. Edge: the shelves → 1/8" roundover on both front edges; the Blank case has none.
+  // 5. Edge: the shelves → 1/8" roundover on both front edges; the Plain case has none.
   await page.getByTestId("part-group-shelves").click();
   await page.getByRole("button", { name: "Edge profile" }).click();
   await page.getByLabel("Radius").selectOption('1/8"');
