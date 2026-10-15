@@ -58,7 +58,7 @@ const BLADES: readonly UsualSize[] = [
 ];
 
 /** A dado stack's widest cut (design spec, §1: "1/2", 3/4", 13/16", other"). */
-const DADO_WIDTHS: readonly UsualSize[] = [
+export const DADO_WIDTHS: readonly UsualSize[] = [
   { label: '1/2"', size: INCH / 2 },
   { label: '3/4"', size: (3 * INCH) / 4 },
   { label: '13/16"', size: (13 * INCH) / 16 },

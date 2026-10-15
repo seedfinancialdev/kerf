@@ -203,7 +203,7 @@ describe("Tip", () => {
 
   describe("placement", () => {
     // The window is 1000 x 700; the tip is 200 x 50; the control is the box each test sets.
-    const place = (control: { left: number; top: number; bottom: number }) => {
+    const place = (control: { left: number; top: number; bottom: number }, placement?: "left") => {
       vi.stubGlobal("innerWidth", 1000);
       vi.stubGlobal("innerHeight", 700);
       vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
@@ -221,7 +221,7 @@ describe("Tip", () => {
         } as DOMRect;
       });
       render(
-        <Tip tip={pushPull}>
+        <Tip tip={pushPull} {...(placement && { placement })}>
           <button type="button">Push/Pull</button>
         </Tip>,
       );
@@ -249,6 +249,57 @@ describe("Tip", () => {
       const tip = place({ left: 100, top: 660, bottom: 690 });
       // Below would end at 690 + 6 + 50 = 746 > 700; above: 660 - 6 - 50 = 604.
       expect(tip.style.top).toBe("604px");
+    });
+
+    it("sits 6 px to the left of its control, level with its top, when placed left", () => {
+      const tip = place({ left: 900, top: 300, bottom: 330 }, "left");
+      // left = 900 - 6 - 200 = 694; top = 300.
+      expect([tip.style.left, tip.style.top]).toEqual(["694px", "300px"]);
+    });
+
+    it("stays inside the window's bottom when placed left", () => {
+      const tip = place({ left: 900, top: 670, bottom: 690 }, "left");
+      // 700 - 50 - 8 = 642.
+      expect(tip.style.top).toBe("642px");
+    });
+
+    it("sits to the left of the panel it is anchored to, so it covers none of the panel's controls", () => {
+      vi.stubGlobal("innerWidth", 1000);
+      vi.stubGlobal("innerHeight", 700);
+      vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        const box = this.classList.contains("tip")
+          ? { left: 0, top: 0, width: 200, height: 50 }
+          : this.classList.contains("panel")
+            ? { left: 800, top: 0, width: 200, height: 700 }
+            : { left: 900, top: 300, width: 40, height: 30 };
+        return {
+          ...box,
+          right: box.left + box.width,
+          bottom: box.top + box.height,
+          x: box.left,
+          y: box.top,
+          toJSON: () => box,
+        } as DOMRect;
+      });
+      render(
+        <div className="panel">
+          <Tip tip={pushPull} placement="left" anchorTo=".panel">
+            <button type="button">Push/Pull</button>
+          </Tip>
+        </div>,
+      );
+      tabTo(screen.getByRole("button"));
+      const tip = screen.getByRole("tooltip");
+      // The panel's left edge, 800, less 6 and the tip's 200: 594; level with the control's top, 300.
+      expect([tip.style.left, tip.style.top]).toEqual(["594px", "300px"]);
+    });
+
+    it("goes below when there is no room on the left", () => {
+      const tip = place({ left: 100, top: 20, bottom: 50 }, "left");
+      // 100 - 6 - 200 < 8, so below: left 100, top 50 + 6.
+      expect([tip.style.left, tip.style.top]).toEqual(["100px", "56px"]);
     });
   });
 });

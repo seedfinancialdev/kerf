@@ -2,76 +2,167 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// What "ask when it matters" asks about each tool, and what each answer writes to the shop record
-// (design spec, "Ask when it matters"; ADR 016, D4). Every answer marks its topic told, so it is asked
-// once.
+// What "ask when it matters" asks about each tool, what each answer writes to the shop record, and what
+// Kerf then says it will plan for (design spec, "Ask when it matters"; ADR 016, D4). Every answer marks
+// its topic told, so it is asked once; nothing is assumed without saying so (Rulings R24, R25).
 
-import { answered, DEFAULT_KERF, type ShopRecord, type ToolTopic } from "./shop-record";
+import { formatLength, type Len, type Project } from "@kerf/core";
+import {
+  answered,
+  DEFAULT_KERF,
+  type ShopRecord,
+  shopProfileFor,
+  type ToolTopic,
+  toldAbout,
+} from "./shop-record";
 import { STARTER_DADO_WIDTH } from "./starter";
 
-/** One answer to a tool question: its button text and the record it leaves. */
+type Units = Project["units"];
+
+/** One answer to a tool question. */
 export interface ToolAnswer {
+  /** The button's words. */
   label: string;
-  record: (record: ShopRecord) => ShopRecord;
+  /**
+   * The record after this answer, marked told. `widest` is the dado stack's widest cut chosen with the
+   * question (project units); other answers ignore it.
+   */
+  record: (record: ShopRecord, widest: Len) => ShopRecord;
+  /** What Kerf will plan for now, said once the answer is given, from the record it left. */
+  says: (record: ShopRecord, units: Units) => string;
 }
 
-/** A question about one tool: the sentence asked and its answers, the first being the usual one. */
+/** A question about one tool. */
 export interface ToolQuestion {
-  text: string;
+  /** The sentence asked, from the record as it is. */
+  text: (record: ShopRecord, units: Units) => string;
+  /** The answers, the first being the usual one unless `peers`. */
   answers: readonly ToolAnswer[];
+  /** True when no answer is the usual one, so none is drawn as recommended. */
+  peers?: boolean;
+  /** True when the dado stack's widest cut is chosen with the question, so Yes assumes nothing. */
+  asksWidest?: boolean;
+}
+
+/**
+ * True when a screen should ask about `topic`. A saw is asked about once, even on a skipped pegboard that
+ * assumes a table saw, because every cut is planned with its blade; and on a pegboard saved without one
+ * (Ruling R24). Any other tool is asked about until the shop is set up or told (ADR 016, D4).
+ */
+export function asksAbout(record: ShopRecord, topic: ToolTopic): boolean {
+  if (topic !== "saw") return !toldAbout(record, topic);
+  if (record.told.includes("saw")) return false;
+  return !record.setUp || (!record.tableSaw && !record.trackSaw);
+}
+
+/** The widest cut the dado question starts at: the record's own dado stack, else 3/4" (Ruling R25). */
+export function startingWidest(record: ShopRecord): Len {
+  return record.dadoStack?.maxWidth ?? STARTER_DADO_WIDTH;
 }
 
 /** An answer that changes the record with `change`, then marks `topic` told. */
 const answer = (
   topic: ToolTopic,
   label: string,
-  change: (record: ShopRecord) => Partial<ShopRecord>,
+  change: (record: ShopRecord, widest: Len) => Partial<ShopRecord>,
+  says: ToolAnswer["says"],
 ): ToolAnswer => ({
   label,
-  record: (record) => answered({ ...record, ...change(record) }, topic),
+  record: (record, widest) => answered({ ...record, ...change(record, widest) }, topic),
+  says,
 });
 
 const NO_OTHER_WAY = "No, show me another way";
 
+const blade = (record: ShopRecord, units: Units) =>
+  formatLength(shopProfileFor(record).kerf, units);
+
 /**
  * A handheld saw run along a guide cuts like a track saw, so a circular saw is kept on the track saw's
- * card; "not sure" assumes the common 1/8" blade on the same card. Neither claims a table saw the woodworker
- * did not name.
+ * card; "not sure" assumes the common 1/8" blade on the same card. What Kerf says names only the blade,
+ * never a saw the woodworker did not pick.
  */
-const guidedSaw = (record: ShopRecord) => ({ trackSaw: record.trackSaw ?? { kerf: DEFAULT_KERF } });
+const guidedSaw = (label: string): ToolAnswer =>
+  answer(
+    "saw",
+    label,
+    (r) => ({ trackSaw: r.trackSaw ?? { kerf: DEFAULT_KERF } }),
+    (r, units) => `Kerf will plan for a ${blade(r, units)} blade.`,
+  );
 
 /** The question for every topic. A tool kept on Yes keeps its own settings when the record has it. */
 export const TOOL_QUESTIONS: Readonly<Record<ToolTopic, ToolQuestion>> = {
   saw: {
-    text: "What do you cut with?",
+    text: (r, units) => `Your cut list assumes a ${blade(r, units)} blade. What do you cut with?`,
+    peers: true,
     answers: [
-      answer("saw", "Table saw", (r) => ({ tableSaw: r.tableSaw ?? { kerf: DEFAULT_KERF } })),
-      answer("saw", "Track saw", guidedSaw),
-      answer("saw", "Circular saw", guidedSaw),
-      answer("saw", 'Not sure, use 1/8"', guidedSaw),
+      answer(
+        "saw",
+        "Table saw",
+        (r) => ({ tableSaw: r.tableSaw ?? { kerf: DEFAULT_KERF } }),
+        (r, units) => `Kerf will plan for your table saw's ${blade(r, units)} blade.`,
+      ),
+      answer(
+        "saw",
+        "Track saw",
+        (r) => ({ trackSaw: r.trackSaw ?? { kerf: DEFAULT_KERF } }),
+        (r, units) => `Kerf will plan for your track saw's ${blade(r, units)} blade.`,
+      ),
+      guidedSaw("Circular saw"),
+      guidedSaw('Not sure, use 1/8"'),
     ],
   },
   dadoStack: {
-    text: "This joint needs a dado stack. Do you have one?",
+    text: () => "Dados, grooves and rabbets need a dado stack. Do you have one?",
+    asksWidest: true,
     answers: [
-      answer("dadoStack", "Yes, I have one", (r) => ({
-        dadoStack: r.dadoStack ?? { maxWidth: STARTER_DADO_WIDTH },
-      })),
-      answer("dadoStack", NO_OTHER_WAY, () => ({ dadoStack: null })),
+      answer(
+        "dadoStack",
+        "Yes, I have one",
+        (_, widest) => ({ dadoStack: { maxWidth: widest } }),
+        (r, units) =>
+          `Kerf will plan dados, grooves and rabbets up to ${formatLength(startingWidest(r), units)} wide with your dado stack.`,
+      ),
+      answer(
+        "dadoStack",
+        NO_OTHER_WAY,
+        () => ({ dadoStack: null }),
+        () => "No dado stack: each joint says what else would cut it.",
+      ),
     ],
   },
   router: {
-    text: "This joint needs a router. Do you have one?",
+    text: () => "These joints need a router. Do you have one?",
     answers: [
-      answer("router", "Yes, I have one", (r) => ({ router: r.router ?? { bits: [] } })),
-      answer("router", NO_OTHER_WAY, () => ({ router: null })),
+      answer(
+        "router",
+        "Yes, I have one",
+        (r) => ({ router: r.router ?? { bits: [] } }),
+        () => "Kerf has your router. Add your bits in Your shop.",
+      ),
+      answer(
+        "router",
+        NO_OTHER_WAY,
+        () => ({ router: null }),
+        () => "No router: each joint says what else would cut it.",
+      ),
     ],
   },
   handTools: {
-    text: "These corners are cut by hand. Do you have chisels and a dovetail saw?",
+    text: () => "These corners are cut by hand. Do you have chisels and a dovetail saw?",
     answers: [
-      answer("handTools", "Yes, I have them", () => ({ chisels: true, dovetailSaw: true })),
-      answer("handTools", NO_OTHER_WAY, () => ({ chisels: false, dovetailSaw: false })),
+      answer(
+        "handTools",
+        "Yes, I have them",
+        () => ({ chisels: true, dovetailSaw: true }),
+        () => "Kerf will plan hand-cut dovetails.",
+      ),
+      answer(
+        "handTools",
+        NO_OTHER_WAY,
+        () => ({ chisels: false, dovetailSaw: false }),
+        () => "No dovetail tools: choose another corner joint below.",
+      ),
     ],
   },
 };

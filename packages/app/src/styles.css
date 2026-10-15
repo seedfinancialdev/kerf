@@ -464,6 +464,19 @@ button[aria-pressed="true"] {
   padding: 0;
   color: var(--color-text-muted);
 }
+/* What Kerf will plan for, once a question is answered. */
+.ask-said {
+  margin: var(--space-1) 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+/* Shapes coming later: they cannot be pressed, but stay focusable so their tip can be read. */
+.bit-size.later {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
 /* Greyed, not disabled: pressing it offers to add the bit. */
 .bit-size.no-bit {
   color: var(--color-text-muted);

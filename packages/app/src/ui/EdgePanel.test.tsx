@@ -11,6 +11,7 @@ import { setShelves, startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
+import { bannedWordsIn } from "../testing/banned-words";
 import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { EdgePanel } from "./EdgePanel";
@@ -174,11 +175,12 @@ describe("<EdgePanel>", () => {
     expect(shownProject(store.getState())).toBe(before);
   });
 
-  // Design spec, "Router bits and edge shapes"; ADR 016, D7: the shapes owned first, the common
-  // roundovers without a bit greyed with a reason and an offer, chamfer, cove and ogee later.
+  // Design spec, "Router bits and edge shapes"; ADR 016, D7; Ruling R26: the shapes owned first, the
+  // common roundovers without a bit greyed with a reason and an offer, chamfer, cove and ogee later.
   describe("the shapes it offers", () => {
     const THREE_EIGHTHS = 76_200; // 3/8" = 3 × 203200 / 8
     const ADD_QUESTION = 'Add a 3/8" roundover bit to your shop?';
+    const NO_BIT = '3/8" roundover, not in your shop. Press to add it.';
     /** The tip a pointer resting on `element` shows (after the half second, design spec "Tooltips"). */
     const tipOver = (element: Element): string | null => {
       vi.useFakeTimers();
@@ -191,6 +193,11 @@ describe("<EdgePanel>", () => {
         vi.useRealTimers();
       }
     };
+    /** Focus as Tab gives it: a key press first, so the focus counts as keyboard focus. */
+    const tabTo = (element: HTMLElement) => {
+      fireEvent.keyDown(document.body, { key: "Tab" });
+      act(() => element.focus());
+    };
 
     it('uses the 1/8" roundover the shop owns at once, without asking', () => {
       const store = setup("Top");
@@ -202,17 +209,18 @@ describe("<EdgePanel>", () => {
       ).toMatchObject([{ type: "roundover", radius: "3.175mm" }]);
     });
 
-    it('greys a 3/8" roundover the shop has no bit for, and says why', () => {
+    it('names a 3/8" roundover the shop has no bit for as not in the shop, and says why in its tip', () => {
       setup("Top");
-      const greyed = screen.getByRole("button", { name: '3/8" roundover' });
-      // Greyed, not disabled: pressing it offers to add the bit.
-      expect(greyed.className).toContain("no-bit");
-      expect(tipOver(greyed)).toContain('Needs a 3/8" roundover bit.');
+      const greyed = screen.getByRole("button", { name: NO_BIT });
+      expect(greyed.textContent).toBe('3/8" roundover');
+      const tip = tipOver(greyed);
+      expect(tip).toContain('Needs a 3/8" roundover bit.');
+      expect(bannedWordsIn(tip ?? "")).toEqual([]);
     });
 
-    it("adds the bit on Yes and rounds with it", () => {
+    it("adds the bit on Yes, says so, and rounds with it", () => {
       const store = setup("Top");
-      fireEvent.click(screen.getByRole("button", { name: '3/8" roundover' }));
+      fireEvent.click(screen.getByRole("button", { name: NO_BIT }));
       expect(screen.getByText(ADD_QUESTION)).toBeTruthy();
       fireEvent.click(screen.getByRole("button", { name: "Yes, add it" }));
       expect(store.getState().shopRecord.router?.bits).toContainEqual({
@@ -220,6 +228,9 @@ describe("<EdgePanel>", () => {
         size: THREE_EIGHTHS,
       });
       expect(screen.queryByText(ADD_QUESTION)).toBeNull();
+      expect(screen.getByRole("status").textContent).toBe(
+        'Added a 3/8" roundover bit to your shop.',
+      );
       expect((screen.getByLabelText("Radius") as HTMLSelectElement).value).toBe(
         String(THREE_EIGHTHS),
       );
@@ -233,21 +244,36 @@ describe("<EdgePanel>", () => {
     it("leaves the shop and the radius alone on No", () => {
       const store = setup("Top");
       const before = store.getState().shopRecord;
-      fireEvent.click(screen.getByRole("button", { name: '3/8" roundover' }));
+      fireEvent.click(screen.getByRole("button", { name: NO_BIT }));
       fireEvent.click(screen.getByRole("button", { name: "No" }));
       expect(screen.queryByText(ADD_QUESTION)).toBeNull();
       expect(store.getState().shopRecord).toBe(before);
       expect((screen.getByLabelText("Radius") as HTMLSelectElement).value).toBe("25400");
     });
 
-    it("shows chamfer, cove and ogee as later, and cannot be pressed", () => {
-      setup("Top");
+    it("shows chamfer, cove and ogee as later: reachable by keyboard, with a tip, and pressing does nothing", () => {
+      const store = setup("Top");
+      const before = store.getState().shopRecord;
+      const project = shownProject(store.getState());
       const chamfer = screen.getByRole("button", { name: /^Chamfer/ });
-      expect((chamfer as HTMLButtonElement).disabled).toBe(true);
+      expect(chamfer.getAttribute("aria-disabled")).toBe("true");
       expect(chamfer.textContent).toContain("Later");
-      expect(tipOver(chamfer.parentElement as Element)).toContain("Chamfers are coming later.");
+      tabTo(chamfer);
+      expect(document.activeElement).toBe(chamfer);
+      const tip = screen.getByRole("tooltip").textContent;
+      expect(tip).toContain("Chamfers are coming later.");
+      expect(bannedWordsIn(tip ?? "")).toEqual([]);
+      fireEvent.click(chamfer);
+      expect(store.getState().shopRecord).toBe(before);
+      expect(shownProject(store.getState())).toBe(project);
+      expect(screen.queryByText(/to your shop\?/)).toBeNull();
       expect(screen.getByRole("button", { name: /^Cove/ })).toBeTruthy();
       expect(screen.getByRole("button", { name: /^Ogee/ })).toBeTruthy();
+    });
+
+    it("uses only shop words on the panel", () => {
+      setup("Top");
+      expect(bannedWordsIn(document.body.textContent ?? "")).toEqual([]);
     });
 
     it("no longer sends the woodworker to Start for bits", () => {
@@ -256,7 +282,9 @@ describe("<EdgePanel>", () => {
         store.getState().setShopRecord({ ...store.getState().shopRecord, router: { bits: [] } }),
       );
       expect(screen.queryByText(/Add them in Start/)).toBeNull();
-      expect(screen.getByRole("button", { name: '1/8" roundover' })).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: '1/8" roundover, not in your shop. Press to add it.' }),
+      ).toBeTruthy();
     });
   });
 });

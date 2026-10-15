@@ -24,6 +24,9 @@ export interface TipText {
   text: string;
 }
 
+/** Where a tip sits: below its control (the usual place), or to its left. */
+export type TipPlacement = "below" | "left";
+
 /** How long the pointer rests before the first tip shows, in milliseconds. */
 const DELAY_MS = 500;
 /** A tip shown within this long of another one hiding appears at once (moving along a row of tools). */
@@ -50,8 +53,23 @@ type Trigger = ReactElement<{
   ref?: React.Ref<HTMLElement>;
 }>;
 
-/** Where a tip goes: below its control, inside the window, or above when below would run off the bottom. */
-function placeTip(control: DOMRect, tip: DOMRect): { left: number; top: number } {
+/** The part of a control's box a tip is placed by. */
+type Box = Pick<DOMRect, "left" | "top" | "bottom">;
+
+/**
+ * Where a tip goes: below its control, or above when below would run off the bottom. Placed `left`, it
+ * sits beside the control instead, level with its top, so it covers nothing in a row of controls beneath;
+ * with no room on the left it goes below. Always inside the window.
+ */
+function placeTip(
+  control: Box,
+  tip: DOMRect,
+  placement: TipPlacement,
+): { left: number; top: number } {
+  const beside = control.left - GAP - tip.width;
+  if (placement === "left" && beside >= EDGE) {
+    return { left: beside, top: Math.min(control.top, window.innerHeight - tip.height - EDGE) };
+  }
   const left = Math.max(EDGE, Math.min(control.left, window.innerWidth - tip.width - EDGE));
   const below = control.bottom + GAP;
   const top = below + tip.height > window.innerHeight ? control.top - GAP - tip.height : below;
@@ -59,13 +77,27 @@ function placeTip(control: DOMRect, tip: DOMRect): { left: number; top: number }
 }
 
 /**
- * Shows `tip` for its one child control. A disabled control gets no pointer events from the browser, so
+ * Shows `tip` for its one child control, below it unless `placement` says left. A disabled control gets no pointer events from the browser, so
  * wrap it in an element that does (a span) and give that to `Tip`.
  */
-export function Tip({ tip, children }: { tip: TipText; children: Trigger }) {
+export function Tip({
+  tip,
+  placement = "below",
+  anchorTo,
+  children,
+}: {
+  tip: TipText;
+  placement?: TipPlacement;
+  /**
+   * A selector for the control's container (its panel) whose left edge the tip lines up with instead of
+   * the control's, so a tip placed left covers none of the panel's controls.
+   */
+  anchorTo?: string;
+  children: Trigger;
+}) {
   const id = useId();
   const [shown, setShown] = useState(false);
-  const [anchor, setAnchor] = useState<DOMRect | null>(null);
+  const [anchor, setAnchor] = useState<Box | null>(null);
   const [at, setAt] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
   const target = useRef<HTMLElement | null>(null);
   const bubble = useRef<HTMLSpanElement | null>(null);
@@ -77,7 +109,9 @@ export function Tip({ tip, children }: { tip: TipText; children: Trigger }) {
 
   const show = () => {
     visible.current = true;
-    setAnchor(target.current?.getBoundingClientRect() ?? null);
+    const box = target.current?.getBoundingClientRect();
+    const outer = anchorTo ? target.current?.closest(anchorTo)?.getBoundingClientRect() : undefined;
+    setAnchor(box ? { left: outer?.left ?? box.left, top: box.top, bottom: box.bottom } : null);
     setShown(true);
   };
   const later = (ms: number) => {
@@ -96,8 +130,8 @@ export function Tip({ tip, children }: { tip: TipText; children: Trigger }) {
   // Measure the tip once it is on screen, so it is placed by its real size.
   useLayoutEffect(() => {
     const box = bubble.current?.getBoundingClientRect();
-    if (shown && anchor && box) setAt(placeTip(anchor, box));
-  }, [shown, anchor]);
+    if (shown && anchor && box) setAt(placeTip(anchor, box, placement));
+  }, [shown, anchor, placement]);
 
   // A scroll or resize leaves the tip pointing at the wrong place; a touch tip also goes at the next tap.
   useEffect(() => {
