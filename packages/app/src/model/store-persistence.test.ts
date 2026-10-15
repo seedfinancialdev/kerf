@@ -5,12 +5,14 @@
 // Design spec, "Saving": the current project is kept in browser storage after every change, so a
 // reload restores it; ADR 015, rule 11 for what happens when that cannot work.
 
-import { type Project, serializeProject } from "@kerf/core";
+import { type Project, type Stock, serializeProject } from "@kerf/core";
 import { handMadeBookcase } from "@kerf/fixtures/builders";
 import { describe, expect, it } from "vitest";
 import { bannedWordsIn } from "../testing/banned-words";
 import { memoryStorage, unreadable } from "../testing/memory-storage";
 import { type Edit, setSize, startProject } from "./commands";
+import { saveShop } from "./shop";
+import { STARTER_RECORD } from "./shop-record";
 import { STARTER_SHOP } from "./starter";
 import { type AppStorage, createStorage } from "./storage";
 import { createKerfStore, shownProject } from "./store";
@@ -284,6 +286,24 @@ describe("a shop change the browser cannot keep", () => {
     s.getState().dismissNotice();
     s.getState().setShop({ ...shop, kerf: 12_700 });
     expect(s.getState().notice).toBeNull();
+  });
+});
+
+describe("a shop change keeps the stock the woodworker chose", () => {
+  it("saves the stored stock with the new shop", () => {
+    const storage = createStorage(memoryStorage());
+    const oak: Stock = {
+      id: "01K7M4AP0000000000000000OK",
+      name: "Oak",
+      kind: "solid",
+      thickness: 101_600, // 1/2" = 203200 / 2
+      solid: { standardLengths: [19_507_200], maxWidth: 1_625_600 },
+      allowance: { length: 0, width: 0 },
+    };
+    saveShop(storage, { ...STARTER_RECORD, setUp: true, stock: [oak] });
+    const s = createKerfStore({ storage });
+    s.getState().setShop({ ...s.getState().shop, kerf: 12_700 });
+    expect(JSON.parse(storage.read("kerf.shop") ?? "null").stock).toEqual([oak]);
   });
 });
 

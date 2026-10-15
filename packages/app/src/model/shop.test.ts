@@ -78,4 +78,68 @@ describe("loadShop()", () => {
     expect(loaded.firstLaunch).toBe(false);
     expect(loaded.problem).toMatch(/^Your saved shop could not be read from this browser/);
   });
+
+  it("returns firstLaunch false when the browser keeps nothing, so a skip is never asked again", () => {
+    const loaded = loadShop(createStorage(undefined));
+    expect(loaded.record).toEqual(STARTER_RECORD);
+    expect(loaded.firstLaunch).toBe(false);
+  });
+
+  describe("a saved record that was damaged", () => {
+    const DAMAGED =
+      "Your saved shop could not be used (it was damaged), so the starter shop is in use.";
+    const saved = (value: unknown) => {
+      const s = store();
+      s.write("kerf.shop", JSON.stringify(value));
+      return loadShop(s);
+    };
+    const { stock: _stock, ...withoutStock } = STARTER_RECORD;
+    const badStock = (element: unknown) => ({ ...STARTER_RECORD, stock: [element] });
+
+    it.each([
+      ["a missing field", withoutStock],
+      ["a flag that is not true or false", { ...STARTER_RECORD, drill: "yes" }],
+      ["a setUp that is not true or false", { ...STARTER_RECORD, setUp: 1 }],
+      ["a router with no bits", { ...STARTER_RECORD, router: {} }],
+      ["router bits that are not a list", { ...STARTER_RECORD, router: { bits: "x" } }],
+      [
+        "a bit of an unknown shape",
+        { ...STARTER_RECORD, router: { bits: [{ shape: "dovetail", size: 100 }] } },
+      ],
+      [
+        "a bit with a fractional size",
+        { ...STARTER_RECORD, router: { bits: [{ shape: "straight", size: 1.5 }] } },
+      ],
+      [
+        "a bit with a zero size",
+        { ...STARTER_RECORD, router: { bits: [{ shape: "straight", size: 0 }] } },
+      ],
+      ["a table saw that is not an object", { ...STARTER_RECORD, tableSaw: 5 }],
+      ["a dado stack with no width", { ...STARTER_RECORD, dadoStack: {} }],
+      ["stock that is not a board", badStock(7)],
+      ["stock with no name", badStock({ id: "x", kind: "sheet", thickness: 100 })],
+      ["stock of an unknown kind", badStock({ id: "x", name: "n", kind: "log", thickness: 100 })],
+      [
+        "stock with a fractional thickness",
+        badStock({ id: "x", name: "n", kind: "solid", thickness: 1.5 }),
+      ],
+      ["a topic nobody asks about", { ...STARTER_RECORD, told: ["lathe"] }],
+      ["a version Kerf does not know", { ...STARTER_RECORD, version: 3 }],
+    ])("falls back to the starter record for %s", (_name, value) => {
+      const loaded = saved(value);
+      expect(loaded.record).toEqual(STARTER_RECORD);
+      expect(loaded.firstLaunch).toBe(false);
+      expect(loaded.problem).toBe(DAMAGED);
+    });
+
+    it("keeps a record with a track saw, no table saw, and several bits", () => {
+      const mine = {
+        ...STARTER_RECORD,
+        tableSaw: null,
+        trackSaw: { kerf: 12_700 },
+        router: { bits: [{ shape: "cove" as const, size: 50_800 }] },
+      };
+      expect(saved(mine)).toEqual({ record: mine, firstLaunch: false });
+    });
+  });
 });

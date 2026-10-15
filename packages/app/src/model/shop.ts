@@ -6,13 +6,8 @@
 // (ADR 015, D4; the pegboard record is ADR 016, D3) and checked by the engine's own rule before use.
 
 import { type ShopProfile, shopProblem } from "@kerf/core";
-import {
-  recordFromProfile,
-  type ShopRecord,
-  STARTER_RECORD,
-  shopProfileFor,
-  type ToolTopic,
-} from "./shop-record";
+import { recordFromProfile, type ShopRecord, STARTER_RECORD, shopProfileFor } from "./shop-record";
+import { isShopRecord } from "./shop-record-check";
 import { STARTER_STOCK } from "./starter";
 import type { AppStorage } from "./storage";
 
@@ -20,20 +15,6 @@ import type { AppStorage } from "./storage";
 const SHOP_UNREADABLE =
   "Your saved shop could not be read from this browser, so the starter shop is in use. Your " +
   "saved shop is left as it was.";
-
-const TOPICS: readonly string[] = ["saw", "dadoStack", "router", "handTools"] satisfies ToolTopic[];
-
-const isRecord = (value: unknown): value is ShopRecord => {
-  const r = value as Partial<ShopRecord> | null;
-  return (
-    typeof r === "object" &&
-    r !== null &&
-    r.version === 2 &&
-    Array.isArray(r.stock) &&
-    Array.isArray(r.told) &&
-    r.told.every((t) => TOPICS.includes(t))
-  );
-};
 
 const unusable = (reason: string) =>
   `Your saved shop could not be used (${reason}), so the starter shop is in use.`;
@@ -49,6 +30,8 @@ export function loadShop(storage: AppStorage): {
   problem?: string;
 } {
   const text = storage.read("kerf.shop");
+  // Without browser storage nothing can be kept, so asking again every load would never end (R10).
+  if (!storage.available) return { record: STARTER_RECORD, firstLaunch: false };
   if (text === undefined) {
     // The storage does not write over a shop it could not read (`AppStorage.couldNotRead`).
     return storage.couldNotRead("kerf.shop")
@@ -61,14 +44,19 @@ export function loadShop(storage: AppStorage): {
   } catch {
     return { record: STARTER_RECORD, firstLaunch: false, problem: unusable("it was damaged") };
   }
-  const record = isRecord(parsed) ? parsed : undefined;
-  const problem = shopProblem(record ? shopProfileFor(record) : parsed);
+  // A saved pegboard names its version; anything else is a version-1 `ShopProfile`.
+  if (typeof parsed === "object" && parsed !== null && "version" in parsed) {
+    if (!isShopRecord(parsed))
+      return { record: STARTER_RECORD, firstLaunch: false, problem: unusable("it was damaged") };
+    const problem = shopProblem(shopProfileFor(parsed));
+    return problem
+      ? { record: STARTER_RECORD, firstLaunch: false, problem: unusable(problem.message) }
+      : { record: parsed, firstLaunch: false };
+  }
+  const problem = shopProblem(parsed);
   if (problem)
     return { record: STARTER_RECORD, firstLaunch: false, problem: unusable(problem.message) };
-  return {
-    record: record ?? recordFromProfile(parsed as ShopProfile, STARTER_STOCK),
-    firstLaunch: false,
-  };
+  return { record: recordFromProfile(parsed as ShopProfile, STARTER_STOCK), firstLaunch: false };
 }
 
 /** Shown once when the shop could not be written to browser storage (ADR 015, rule 11). */

@@ -67,6 +67,19 @@ describe("recordFromProfile()", () => {
     expect(record.setUp).toBe(true);
     expect(shopProfileFor(record)).toEqual(STARTER_SHOP);
   });
+
+  it("keeps the trims and smallest offcut of a saved version-1 shop", () => {
+    const profile = { ...STARTER_SHOP, sheetTrim: 1_000, solidTrim: 2_000, minOffcut: 3_000 };
+    expect(shopProfileFor(recordFromProfile(profile, STARTER_STOCK))).toEqual(profile);
+  });
+
+  it("keeps a version-1 shop with no dado stack, no router and no hand-cut dovetails", () => {
+    const profile = { kerf: 19_050, tools: [{ type: "handTools" as const, dovetails: false }] };
+    const record = recordFromProfile(profile, STARTER_STOCK);
+    expect(record.dadoStack).toBeNull();
+    expect(record.router).toBeNull();
+    expect(shopProfileFor(record)).toEqual(profile);
+  });
 });
 
 describe("toldAbout() / answered()", () => {

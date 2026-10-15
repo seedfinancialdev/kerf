@@ -8,8 +8,18 @@
 import { INCH, type Len, type ShopProfile, type Stock } from "@kerf/core";
 import { STARTER_DADO_WIDTH, STARTER_STOCK } from "./starter";
 
+/** Every shape a router bit can have. */
+export const BIT_SHAPES = [
+  "roundover",
+  "chamfer",
+  "cove",
+  "ogee",
+  "straight",
+  "rabbeting",
+] as const;
+
 /** The shape a router bit cuts. Edge shapes are sized by radius; straight bits by cutting width. */
-export type BitShape = "roundover" | "chamfer" | "cove" | "ogee" | "straight" | "rabbeting";
+export type BitShape = (typeof BIT_SHAPES)[number];
 
 /** One router bit on the router card. */
 export interface RouterBit {
@@ -18,8 +28,11 @@ export interface RouterBit {
   size: Len;
 }
 
+/** Every topic "ask when it matters" can ask about (ADR 016, D4). */
+export const TOOL_TOPICS = ["saw", "dadoStack", "router", "handTools"] as const;
+
 /** What "ask when it matters" can ask about (ADR 016, D4). */
-export type ToolTopic = "saw" | "dadoStack" | "router" | "handTools";
+export type ToolTopic = (typeof TOOL_TOPICS)[number];
 
 /** Everything on the pegboard. A `null` tool is one the shop does not have. */
 export interface ShopRecord {
@@ -37,6 +50,12 @@ export interface ShopRecord {
   stock: Stock[];
   /** Topics answered one at a time after a skipped pegboard. */
   told: ToolTopic[];
+  /** Carried from a saved version-1 shop (no editor yet): the engine's sheet trim, in project units. */
+  sheetTrim?: Len;
+  /** Carried from a saved version-1 shop: the engine's board end trim, in project units. */
+  solidTrim?: Len;
+  /** Carried from a saved version-1 shop: the smallest offcut worth keeping, in project units. */
+  minOffcut?: Len;
 }
 
 /** The cut width assumed when the shop has no saw on its wall: a common 1/8" blade. */
@@ -71,7 +90,13 @@ export function shopProfileFor(record: ShopRecord): ShopProfile {
       roundoverBits: sizesOf(record.router.bits, "roundover"),
     });
   tools.push({ type: "handTools", dovetails: record.chisels && record.dovetailSaw });
-  return { kerf: record.tableSaw?.kerf ?? record.trackSaw?.kerf ?? DEFAULT_KERF, tools };
+  return {
+    kerf: record.tableSaw?.kerf ?? record.trackSaw?.kerf ?? DEFAULT_KERF,
+    tools,
+    ...(record.sheetTrim !== undefined && { sheetTrim: record.sheetTrim }),
+    ...(record.solidTrim !== undefined && { solidTrim: record.solidTrim }),
+    ...(record.minOffcut !== undefined && { minOffcut: record.minOffcut }),
+  };
 }
 
 /** A version-1 saved shop (a `ShopProfile`) read as a set-up pegboard, so nothing it said is lost. */
@@ -95,6 +120,9 @@ export function recordFromProfile(profile: ShopProfile, stock: readonly Stock[])
     chisels: hand?.dovetails ?? false,
     dovetailSaw: hand?.dovetails ?? false,
     stock: [...stock],
+    ...(profile.sheetTrim !== undefined && { sheetTrim: profile.sheetTrim }),
+    ...(profile.solidTrim !== undefined && { solidTrim: profile.solidTrim }),
+    ...(profile.minOffcut !== undefined && { minOffcut: profile.minOffcut }),
   };
 }
 
