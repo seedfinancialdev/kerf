@@ -7,45 +7,50 @@
  * Dark is the default; the light theme is a token swap (Interaction spec, "Visual system").
  */
 
+/* Values from the brand kit, docs/brand/tokens.json; ADR 017 maps the kit's names to these. */
 :root,
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --color-bg: #1d1e20;
-  --color-surface: #25272a;
-  --color-surface-raised: #2d2f33;
-  --color-border: #3a3d42;
-  --color-text: #e6e7e9;
-  --color-text-muted: #9a9ea6;
-  --color-accent: #e0a458;
-  --color-focus: #6cb4ff;
-  --color-error: #ff6b6b;
-  --color-viewport: #1a1b1d;
-  --color-hover: #3a3220;
-  --color-warning: #e6c069;
-  --color-step-active-text: #1d1e20;
-  --color-wood-sheet: #d9b48a;
-  --color-wood-solid: #8a5a3c;
+  --color-bg: #161513;
+  --color-viewport: #1d1c1a;
+  --color-surface: #262522;
+  --color-surface-raised: #2f2d29;
+  --color-selection: #1a2f48;
+  --color-border: #34322e;
+  --color-border-strong: #7a756e;
+  --color-text: #ece7dd;
+  --color-text-muted: #9a9589;
+  --color-accent: #4d9df0;
+  --color-focus: #4d9df0;
+  --color-step-active-text: #1d1c1a;
+  --color-error: #f0865c;
+  --color-warning: #e3bf47;
+  --color-wood-sheet: #dcc8a0;
+  --color-on-wood-sheet: #1d1c1a;
+  --color-wood-solid: #b8803f;
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --color-bg: #f2f2f0;
-  --color-surface: #ffffff;
-  --color-surface-raised: #fafaf8;
-  --color-border: #d4d4d0;
-  --color-text: #1d1e20;
-  --color-text-muted: #5f636b;
-  --color-accent: #a8641a;
-  --color-focus: #1f6fd0;
-  --color-error: #c62828;
-  --color-viewport: #e9e9e6;
-  --color-hover: #f3e3cc;
-  --color-warning: #7a5600;
+  --color-bg: #eae6dd;
+  --color-viewport: #f4f1ea;
+  --color-surface: #fbf9f5;
+  --color-surface-raised: #ebe7de;
+  --color-selection: #dbe8fa;
+  --color-border: #d9d4c9;
+  --color-border-strong: #85807a;
+  --color-text: #1d1c1a;
+  --color-text-muted: #66615a;
+  --color-accent: #1a64c4;
+  --color-focus: #1a64c4;
   --color-step-active-text: #ffffff;
-  --color-wood-sheet: #c9a27a;
-  --color-wood-solid: #6b4430;
+  --color-error: #b4421b;
+  --color-warning: #7a5c00;
+  --color-wood-sheet: #c4a878;
+  --color-on-wood-sheet: #1d1c1a;
+  --color-wood-solid: #7e5327;
 }
 
 :root {

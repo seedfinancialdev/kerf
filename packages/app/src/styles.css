@@ -41,7 +41,7 @@ body {
 
 .brand {
   font-weight: var(--font-weight-strong);
-  color: var(--color-accent);
+  color: var(--color-text);
 }
 
 .project-name {
@@ -183,7 +183,7 @@ button {
   font: inherit;
   color: var(--color-text);
   background: var(--color-surface-raised);
-  border: var(--border-width) solid var(--color-border);
+  border: var(--border-width) solid var(--color-border-strong);
   border-radius: var(--radius-1);
   padding: var(--space-1) var(--space-2);
 }
@@ -198,7 +198,7 @@ select:focus-visible,
 [role="treeitem"]:focus-visible,
 [role="option"]:focus-visible {
   outline: 2px solid var(--color-focus);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 .fields {
@@ -231,7 +231,7 @@ select:focus-visible,
   padding: var(--space-1) var(--space-2);
   background: var(--color-bg);
   color: var(--color-text);
-  border: var(--border-width) solid var(--color-border);
+  border: var(--border-width) solid var(--color-border-strong);
   border-radius: var(--radius-1);
   font: inherit;
   font-variant-numeric: var(--font-numeric);
@@ -334,7 +334,7 @@ select:focus-visible,
 }
 
 .tree-row[aria-selected="true"] {
-  background: var(--color-hover);
+  background: var(--color-selection);
   font-weight: var(--font-weight-strong);
 }
 
@@ -588,7 +588,7 @@ button[aria-pressed="true"] {
   font-size: var(--font-size-diagram);
   text-anchor: middle;
   dominant-baseline: middle;
-  fill: var(--color-step-active-text);
+  fill: var(--color-on-wood-sheet);
 }
 
 .visually-hidden {
@@ -665,7 +665,7 @@ button[aria-pressed="true"] {
   padding: var(--space-1) var(--space-2);
   background: var(--color-bg);
   color: var(--color-text);
-  border: var(--border-width) solid var(--color-border);
+  border: var(--border-width) solid var(--color-border-strong);
   border-radius: var(--radius-1);
   font: inherit;
 }
