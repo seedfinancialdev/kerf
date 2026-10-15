@@ -44,11 +44,11 @@ Dark is the default theme; the workspace is a calm charcoal and the wood-toned m
 
 ## Type
 
-- Headings and the brand voice in Archivo (`display`), weights 500–600, tight tracking as the styles define. Archivo is a plain grotesque with a straight-legged K; it is the closest hosted face to the wordmark's construction. Never use Archivo for the wordmark itself — the wordmark is drawn.
+- Headings and the brand voice in Archivo (`display`), weight 600, tight tracking as the styles define. Archivo is a plain grotesque with a straight-legged K; it is the closest hosted face to the wordmark's construction. Never use Archivo for the wordmark itself — the wordmark is drawn.
 - Everything else in IBM Plex Sans (`ui`). Every measurement is set in `dimension` or `dimension-lg` with `font-variant-numeric: tabular-nums`, so a column of lengths lines up like a rule.
 - Write fractions the way the shop does — `3/4`, `11 1/4` — never decimals in the interface, never a stacked fraction glyph. Units are `in.` and `mm`, lowercase, in `ink-muted` after the number.
 - Plain text exports and the CLI use IBM Plex Mono (`code`).
-- Both families are bundled with the app from the `@fontsource` packages (`@fontsource/ibm-plex-sans` 400, 500, 600; `@fontsource/archivo` 600), so Kerf never calls a font host and works offline. Fallback stacks are in `type.families`.
+- Both families are bundled with the app from the `@fontsource` packages (`@fontsource/ibm-plex-sans` 400, 600; `@fontsource/archivo` 600), so Kerf never calls a font host and works offline. Fallback stacks are in `type.families`.
 
 ## Voice
 

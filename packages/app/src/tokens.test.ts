@@ -100,3 +100,25 @@ describe("styles.css", () => {
     expect(defined.has(name)).toBe(true);
   });
 });
+
+describe("the themes", () => {
+  // A token defined in one theme only falls back silently in the other (no error, transparent or
+  // inherited colour), which the "tokens.css defines" check above cannot see: it reads the whole file.
+  it("define the same colour tokens", () => {
+    const names = (selector: string) => Object.keys(theme(selector)).sort();
+    expect(names(':root[data-theme="light"] {')).toEqual(names(':root[data-theme="dark"] {'));
+  });
+});
+
+describe("main.tsx", () => {
+  const main = readFileSync(new URL("./main.tsx", import.meta.url), "utf8");
+  const bundled = [
+    ...new Set([...main.matchAll(/@fontsource\/[\w-]+\/(\d+)\.css/g)].map((m) => m[1] as string)),
+  ];
+  const used = new Set([...css.matchAll(/--font-weight-[\w-]+:\s*(\d+)/g)].map((m) => m[1]));
+
+  // A face nothing sets is shipped to every user for nothing (CLAUDE.md: no dead code).
+  it.each(bundled)("bundles weight %s, which a --font-weight token sets", (weight) => {
+    expect(used.has(weight)).toBe(true);
+  });
+});
