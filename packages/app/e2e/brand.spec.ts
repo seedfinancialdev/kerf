@@ -27,3 +27,12 @@ test("sets the panels in IBM Plex Sans, loaded from Kerf itself", async ({ page,
   expect(loaded).toContain("IBM Plex Sans");
   expect(outside).toEqual([]);
 });
+
+test("shows the Kerf symbol as the tab icon", async ({ page, request }) => {
+  await page.goto("/");
+
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/favicon.svg");
+  const icon = await request.get("/favicon.svg");
+  expect(icon.ok()).toBe(true);
+  expect(await icon.text()).toContain("M0 0H10V32H0Z");
+});
