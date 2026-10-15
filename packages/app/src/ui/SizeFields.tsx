@@ -22,7 +22,7 @@ export function SizeFields({ structure }: { structure: Id }) {
   const s = project?.structures.find((x) => x.id === structure);
   if (!project || !s) return null;
   return (
-    <div className="fields">
+    <div className="fields" data-tour="sizes">
       {sizeOrder(s.type).map((key) => (
         <SizeField key={key} structure={structure} sizeKey={key} />
       ))}

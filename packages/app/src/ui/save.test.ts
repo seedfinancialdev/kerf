@@ -22,7 +22,7 @@ const NOW = new Date("2026-10-13T08:30:00.000Z");
 
 /** A store showing the bookcase, begun at `CREATED`. */
 const bookcaseStore = () =>
-  workshopStore(startProject("Bookcase", "imperial"), () => Date.parse(CREATED));
+  workshopStore(startProject("Bookcase", "imperial"), { clockDate: () => Date.parse(CREATED) });
 
 const saved: { blobs: Blob[]; names: string[]; revoked: string[] } = {
   blobs: [],

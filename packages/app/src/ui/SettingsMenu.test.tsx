@@ -84,6 +84,14 @@ describe("<SettingsMenu>", () => {
     expect(store.getState().screen).toBe("shop");
   });
 
+  it("takes the tour again and closes", () => {
+    const store = setup();
+    store.getState().finishTour();
+    fireEvent.click(screen.getByRole("button", { name: "Take the tour" }));
+    expect(store.getState().toured).toBe(false);
+    expect(screen.queryByLabelText("Light")).toBeNull();
+  });
+
   it("closes on Escape", () => {
     setup();
     fireEvent.keyDown(window, { key: "Escape" });

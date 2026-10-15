@@ -41,7 +41,7 @@ export function Drawer() {
     document.getElementById(`tab-${target}`)?.focus();
   };
   return (
-    <section aria-label="Drawer" className={tall ? "drawer tall" : "drawer"}>
+    <section aria-label="Drawer" className={tall ? "drawer tall" : "drawer"} data-tour="drawer">
       <div role="tablist" aria-label="Plan sections" className="tabs">
         {TABS.map((t) => (
           <Tip key={t} tip={TIPS[t]}>

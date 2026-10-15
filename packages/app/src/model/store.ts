@@ -347,6 +347,7 @@ export function createKerfStore(deps: {
         deps.storage.write("kerf.toured", "yes");
         set({ toured: true });
       },
+      startTour: () => set({ toured: false }),
       setTool: (tool) => {
         const dropped = { tool, pending: null, proposal: null };
         // A preview belongs to the tool that drew it; leaving it would show, and put in a downloaded file, a change

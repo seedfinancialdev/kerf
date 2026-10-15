@@ -119,7 +119,7 @@ export function TopBar() {
         </button>
       </Tip>
       {name && <ProjectNameMenu name={name} />}
-      <nav aria-label="Workflow" className="steps-nav">
+      <nav aria-label="Workflow" className="steps-nav" data-tour="steps">
         <ol className="steps">
           {STEPS.map((s) => (
             <li key={s}>

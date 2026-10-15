@@ -21,13 +21,14 @@ import { ProjectTree } from "./ui/ProjectTree";
 import { YourShop } from "./ui/shop/YourShop";
 import { ToolRow } from "./ui/ToolRow";
 import { TopBar } from "./ui/TopBar";
+import { Tour } from "./ui/Tour";
 import { useShortcuts } from "./ui/useShortcuts";
 import { WindowGuard } from "./ui/WindowGuard";
 import { ThreeDGuard, viewFailure } from "./viewport/ThreeDGuard";
 
 /**
  * The Kerf window, on the screen `store` is on; the Workshop has the top bar, the project tree,
- * the model, the inspector and the build-plan drawer. `model` is the 3D view, passed in so tests
+ * the model, the inspector and the build-plan drawer, with the tour on a first visit. `model` is the 3D view, passed in so tests
  * can leave WebGL out.
  */
 export function App({ store, model }: { store: KerfStore; model: ReactNode }) {
@@ -67,7 +68,7 @@ function Window({ model }: { model: ReactNode }) {
           <HistoryPanel />
         </aside>
         <main className="center">
-          <section aria-label="Model" className="model">
+          <section aria-label="Model" className="model" data-tour="model">
             <ThreeDGuard told={viewFailure} showsTold retryOn={history}>
               {model}
             </ThreeDGuard>
@@ -79,6 +80,7 @@ function Window({ model }: { model: ReactNode }) {
           <Inspector />
         </aside>
       </div>
+      <Tour />
     </div>
   );
 }

@@ -7,7 +7,7 @@
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Tip } from "./Tip";
+import { Tip, type TipPlacement } from "./Tip";
 
 const pushPull = {
   name: "Push/Pull",
@@ -203,7 +203,10 @@ describe("Tip", () => {
 
   describe("placement", () => {
     // The window is 1000 x 700; the tip is 200 x 50; the control is the box each test sets.
-    const place = (control: { left: number; top: number; bottom: number }, placement?: "left") => {
+    const place = (
+      control: { left: number; top: number; bottom: number },
+      placement?: TipPlacement,
+    ) => {
       vi.stubGlobal("innerWidth", 1000);
       vi.stubGlobal("innerHeight", 700);
       vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
@@ -300,6 +303,30 @@ describe("Tip", () => {
       const tip = place({ left: 100, top: 20, bottom: 50 }, "left");
       // 100 - 6 - 200 < 8, so below: left 100, top 50 + 6.
       expect([tip.style.left, tip.style.top]).toEqual(["100px", "56px"]);
+    });
+
+    it("sits 6 px above its control when placed above", () => {
+      const tip = place({ left: 100, top: 300, bottom: 330 }, "above");
+      // top = 300 - 6 - 50 = 244.
+      expect([tip.style.left, tip.style.top]).toEqual(["100px", "244px"]);
+    });
+
+    it("goes below when there is no room above", () => {
+      const tip = place({ left: 100, top: 20, bottom: 50 }, "above");
+      // 20 - 6 - 50 < 8, so below: top 50 + 6.
+      expect(tip.style.top).toBe("56px");
+    });
+
+    it("sits 6 px to the right of its control, level with its top, when placed right", () => {
+      const tip = place({ left: 100, top: 300, bottom: 330 }, "right");
+      // The control is 40 wide, so its right edge is 140: left = 140 + 6 = 146.
+      expect([tip.style.left, tip.style.top]).toEqual(["146px", "300px"]);
+    });
+
+    it("goes below when there is no room on the right", () => {
+      const tip = place({ left: 900, top: 300, bottom: 330 }, "right");
+      // 940 + 6 + 200 > 1000 - 8, so below: left 1000 - 200 - 8 = 792, top 330 + 6.
+      expect([tip.style.left, tip.style.top]).toEqual(["792px", "336px"]);
     });
   });
 });

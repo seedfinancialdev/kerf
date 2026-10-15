@@ -143,12 +143,32 @@ describe("<Home> sidebar", () => {
     );
   });
 
-  it("shows Learn, not yet working, with a tip that the tour is coming soon", async () => {
-    await home();
+  it("brings the tour back with Learn, on the newest project, with a tip saying so", async () => {
+    const { store } = await home([bookcase("Hall shelf"), bookcase("Garage shelf")]);
+    act(() => store.getState().finishTour());
     const learn = sidebar().getByRole("button", { name: "Learn" });
-    expect((learn as HTMLButtonElement).disabled).toBe(true);
-    await userEvent.hover(learn.parentElement as HTMLElement);
-    expect((await screen.findByRole("tooltip")).textContent).toBe("LearnThe tour is coming soon.");
+    await userEvent.hover(learn);
+    expect((await screen.findByRole("tooltip")).textContent).toBe(
+      "LearnTake the short tour of the workshop.",
+    );
+    fireEvent.click(learn);
+    await waitFor(() => expect(store.getState().screen).toBe("workshop"));
+    // "Garage shelf" was made last, so it is the newest change and first in the list.
+    expect(store.getState().projectId).toBe(
+      store.getState().projects.find((p) => p.name === "Garage shelf")?.id,
+    );
+    expect(store.getState().toured).toBe(false);
+  });
+
+  it("says to make a project first when Learn is pressed with none", async () => {
+    const { store } = await home();
+    act(() => store.getState().finishTour());
+    fireEvent.click(sidebar().getByRole("button", { name: "Learn" }));
+    expect(store.getState().notice?.text).toBe(
+      "Make a project first, then the tour will show you around.",
+    );
+    expect(store.getState().screen).toBe("home");
+    expect(store.getState().toured).toBe(true);
   });
 
   it("sums up the shop and goes to Your shop with Edit", async () => {

@@ -63,7 +63,7 @@ export const TIPS = {
   home: { name: "Home", text: "Your projects, and somewhere to start a new one." },
   table: { name: "Table", text: "Tables are coming later." },
   dresser: { name: "Dresser", text: "Dressers are coming later." },
-  learn: { name: "Learn", text: "The tour is coming soon." },
+  learn: { name: "Learn", text: "Take the short tour of the workshop." },
   tableSaw: {
     name: "Table saw",
     text: "Lets Kerf plan every cut to your blade's width.",

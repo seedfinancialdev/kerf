@@ -759,6 +759,83 @@ button[aria-pressed="true"] {
   display: inline-flex;
 }
 
+/* The tour's card (ui/Tour.tsx, design spec §4): a small card beside what it is about, with an arrow
+   pointing into it from the side named by data-arrow, --arrow along that side. */
+.tour {
+  position: fixed;
+  z-index: 60;
+  display: grid;
+  gap: var(--space-2);
+  width: 280px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius-2);
+  font-size: var(--font-size-panel);
+}
+
+.tour[data-arrow]::before {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  border: inherit;
+  border-radius: 0;
+  transform: rotate(45deg);
+}
+
+.tour[data-arrow="below"]::before {
+  top: -6px;
+  left: calc(var(--arrow) - 5px);
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.tour[data-arrow="above"]::before {
+  bottom: -6px;
+  left: calc(var(--arrow) - 5px);
+  border-top: 0;
+  border-left: 0;
+}
+
+.tour[data-arrow="left"]::before {
+  right: -6px;
+  top: calc(var(--arrow) - 5px);
+  border-bottom: 0;
+  border-left: 0;
+}
+
+.tour[data-arrow="right"]::before {
+  left: -6px;
+  top: calc(var(--arrow) - 5px);
+  border-top: 0;
+  border-right: 0;
+}
+
+.tour-count {
+  margin: 0;
+  color: var(--color-accent);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-strong);
+}
+
+.tour-text {
+  margin: 0;
+}
+
+.tour-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.tour-skip {
+  margin-right: auto;
+  padding-left: 0;
+}
+
 /* Buttons that step back from the main choice (design spec, §1: "Skip for now" beside "That's my shop"). */
 .quiet {
   background: none;
@@ -1262,7 +1339,6 @@ button[aria-pressed="true"] {
 }
 
 .home-learn {
-  display: flex;
   margin-top: var(--space-3);
 }
 

@@ -495,4 +495,16 @@ describe("the tour", () => {
     expect(store.getState().toured).toBe(true);
     expect(storeWith(memoryLibrary(), backing).getState().toured).toBe(true);
   });
+
+  it("starts again from Learn for this visit only, until it is finished again", () => {
+    const backing = memoryStorage();
+    const store = storeWith(memoryLibrary(), backing);
+    store.getState().finishTour();
+    store.getState().startTour();
+    expect(store.getState().toured).toBe(false);
+    expect(storeWith(memoryLibrary(), backing).getState().toured).toBe(true);
+    backing.removeItem("kerf.toured");
+    store.getState().finishTour();
+    expect(backing.getItem("kerf.toured")).toBe("yes");
+  });
 });

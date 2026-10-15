@@ -214,6 +214,11 @@ export interface KerfActions {
   setShopRecord(record: ShopRecord): void;
   /** Notes that the tour was seen or skipped, for this visit and later ones. */
   finishTour(): void;
+  /**
+   * Shows the tour again from its first tip (Learn, design spec §4). Nothing is written: a browser
+   * closed mid-tour still counts it seen, and finishing it notes so again.
+   */
+  startTour(): void;
   /** Picks the active tool, dropping the last one's action and any preview it drew. */
   setTool(tool: ToolId): void;
   /** Sets or clears the active tool's half-finished action; another tool's action is dropped. */

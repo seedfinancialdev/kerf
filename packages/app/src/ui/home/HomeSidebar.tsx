@@ -88,6 +88,25 @@ function RecentFiles() {
   );
 }
 
+/** Says that the tour needs a project to show around the Workshop in (design spec §4). */
+const NO_PROJECT_FOR_TOUR = "Make a project first, then the tour will show you around.";
+
+/**
+ * Brings the tour back (design spec §4, "reopened from Learn"): it shows the Workshop, so it opens
+ * the newest project and starts there, or says that a project is needed first.
+ */
+function useLearn(): () => Promise<void> {
+  const store = useKerfStore();
+  return async () => {
+    const newest = store.getState().projects[0];
+    if (!newest) {
+      store.getState().say(NO_PROJECT_FOR_TOUR);
+      return;
+    }
+    if (await store.getState().openProject(newest.id)) store.getState().startTour();
+  };
+}
+
 /**
  * The sidebar. `view` is the view shown, `query` what is typed in Find a project; the handlers
  * change them, start a new project and open a file.
@@ -108,6 +127,7 @@ export function HomeSidebar({
   openFile: () => void;
 }) {
   const current = (v: HomeView) => (v === view ? "page" : undefined);
+  const learn = useLearn();
   return (
     <aside className="home-sidebar" aria-label="Your projects">
       <button type="button" className="primary home-new" onClick={newProject}>
@@ -143,13 +163,10 @@ export function HomeSidebar({
         </button>
       </nav>
       <RecentFiles />
-      {/* The tour comes back here (design spec §4); until it is built, Learn says so. */}
       <Tip tip={TIPS.learn}>
-        <span className="tip-anchor home-learn">
-          <button type="button" className="home-link" disabled>
-            Learn
-          </button>
-        </span>
+        <button type="button" className="home-link home-learn" onClick={() => void learn()}>
+          Learn
+        </button>
       </Tip>
       <ShopSummary />
     </aside>
