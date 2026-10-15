@@ -7,12 +7,16 @@
 import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import { describe, expect, it } from "vitest";
-import { type LibraryEntry, openLibrary } from "./library";
+import { bannedWordsIn } from "../testing/banned-words";
+import { LIBRARY_NOT_KEPT, type LibraryEntry, openLibrary } from "./library";
+
+/** Stands in for a saved project's text; the library keeps it without reading it. */
+const PROJECT_TEXT = '{"schemaVersion":1}';
 
 const entry = (id: string, modified: string): LibraryEntry => ({
   id,
   name: `Project ${id}`,
-  project: '{"schemaVersion":1}',
+  project: PROJECT_TEXT,
   thumbnail: new Uint8Array([137, 80, 78, 71]),
   created: "2026-10-14T09:00:00.000Z",
   modified,
@@ -28,7 +32,7 @@ describe("openLibrary()", () => {
     const list = await library.list();
     expect(list.map((p) => p.id)).toEqual(["B", "A"]);
     expect("project" in (list[0] as object)).toBe(false);
-    expect((await library.read("A"))?.project).toBe('{"schemaVersion":1}');
+    expect((await library.read("A"))?.project).toBe(PROJECT_TEXT);
   });
 
   it("replaces a project written again under the same id", async () => {
@@ -62,5 +66,135 @@ describe("openLibrary()", () => {
       },
     } as unknown as IDBFactory;
     expect((await openLibrary(refusing)).available).toBe(false);
+  });
+});
+
+/** A factory whose database hands out `transaction`, to make the browser fail in ways fake-indexeddb will not. */
+function factoryWith(transaction: () => unknown): IDBFactory {
+  return {
+    open: () => {
+      const request: Record<string, unknown> = {};
+      setTimeout(() => {
+        request.result = { transaction, close: () => undefined };
+        (request.onsuccess as (() => void) | undefined)?.();
+      });
+      return request;
+    },
+  } as unknown as IDBFactory;
+}
+
+/** Writes `row` straight into the store, as an older or damaged Kerf could have. */
+async function putRaw(factory: IDBFactory, row: object): Promise<void> {
+  const opening = factory.open("kerf", 1);
+  const db = await new Promise<IDBDatabase>((resolve, reject) => {
+    opening.onsuccess = () => resolve(opening.result);
+    opening.onerror = () => reject(opening.error);
+  });
+  const tx = db.transaction("projects", "readwrite");
+  tx.objectStore("projects").put(row);
+  await new Promise((resolve) => {
+    tx.oncomplete = resolve;
+  });
+  db.close();
+}
+
+describe("openLibrary() when the browser fails", () => {
+  it("does not say a write was kept when its transaction aborts after the request succeeded", async () => {
+    const aborting = () => {
+      const tx: Record<string, unknown> = {};
+      tx.objectStore = () => ({
+        put: () => {
+          const request: Record<string, unknown> = {};
+          setTimeout(() => {
+            (request.onsuccess as (() => void) | undefined)?.();
+            (tx.onabort as () => void)();
+          });
+          return request;
+        },
+        delete: () => {
+          const request: Record<string, unknown> = {};
+          setTimeout(() => {
+            (request.onsuccess as (() => void) | undefined)?.();
+            (tx.onabort as () => void)();
+          });
+          return request;
+        },
+      });
+      return tx;
+    };
+    const library = await openLibrary(factoryWith(aborting));
+    expect(await library.write(entry("A", "2026-10-14T10:00:00.000Z"))).toBe(false);
+    expect(await library.remove("A")).toBe(false);
+  });
+
+  it("does not keep an entry the database cannot store", async () => {
+    const library = await openLibrary(new IDBFactory());
+    const unstorable = { ...entry("A", "2026-10-14T10:00:00.000Z"), note: () => 1 };
+    expect(await library.write(unstorable as unknown as LibraryEntry)).toBe(false);
+    expect(await library.list()).toEqual([]);
+  });
+
+  it("is unavailable when opening fails later, with an error", async () => {
+    const failing = {
+      open: () => {
+        const request: Record<string, unknown> = { error: new DOMException("no", "UnknownError") };
+        setTimeout(() => (request.onerror as () => void)());
+        return request;
+      },
+    } as unknown as IDBFactory;
+    expect((await openLibrary(failing)).available).toBe(false);
+  });
+
+  it("is unavailable when opening is blocked, rather than waiting forever", async () => {
+    const blocked = {
+      open: () => {
+        const request: Record<string, unknown> = {};
+        setTimeout(() => (request.onblocked as () => void)());
+        return request;
+      },
+    } as unknown as IDBFactory;
+    expect((await openLibrary(blocked)).available).toBe(false);
+  });
+
+  it("skips a damaged row when listing, and will not read it", async () => {
+    const factory = new IDBFactory();
+    const library = await openLibrary(factory);
+    await library.write(entry("A", "2026-10-14T10:00:00.000Z"));
+    const { modified: _modified, ...noModified } = entry("B", "x");
+    const { project: _project, ...noProject } = entry("C", "2026-10-14T12:00:00.000Z");
+    await putRaw(factory, noModified);
+    await putRaw(factory, noProject);
+    expect((await library.list()).map((p) => p.id)).toEqual(["A"]);
+    expect(await library.read("B")).toBeUndefined();
+    expect(await library.read("C")).toBeUndefined();
+  });
+
+  it("keeps working after another tab upgrades the database, by giving the connection up", async () => {
+    const factory = new IDBFactory();
+    const library = await openLibrary(factory);
+    await library.write(entry("A", "2026-10-14T10:00:00.000Z"));
+    const upgrading = factory.open("kerf", 2);
+    await new Promise((resolve) => {
+      upgrading.onsuccess = resolve;
+    });
+    expect(await library.read("A")).toBeUndefined();
+    expect(await library.write(entry("B", "2026-10-14T10:00:00.000Z"))).toBe(false);
+    upgrading.result.close();
+  });
+
+  it("reports a missing project as removed, since it is gone either way", async () => {
+    const library = await openLibrary(new IDBFactory());
+    expect(await library.remove("nothing")).toBe(true);
+  });
+
+  it("finds nothing to read when unavailable", async () => {
+    expect(await (await openLibrary(undefined)).read("A")).toBeUndefined();
+    expect(await (await openLibrary(undefined)).remove("A")).toBe(false);
+  });
+});
+
+describe("LIBRARY_NOT_KEPT", () => {
+  it("uses shop language", () => {
+    expect(bannedWordsIn(LIBRARY_NOT_KEPT)).toEqual([]);
   });
 });
