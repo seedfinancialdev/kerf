@@ -23,6 +23,11 @@ body {
   font-variant-numeric: var(--font-numeric);
 }
 
+h2 {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-strong);
+}
+
 .window {
   display: grid;
   grid-template-rows: var(--topbar-height) var(--hint-height) auto 1fr;
