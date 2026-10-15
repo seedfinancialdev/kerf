@@ -8,10 +8,12 @@
 
 import { serializeProject } from "@kerf/core";
 import { readKerf } from "@kerf/io";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type Edit, startProject } from "../../model/commands";
+import { openKerfBytes } from "../../model/files";
 import type { LibraryEntry } from "../../model/library";
 import { createStorage } from "../../model/storage";
 import { createKerfStore } from "../../model/store";
@@ -47,7 +49,7 @@ function Cards() {
 }
 
 /** A library holding `edit`'s project, changed yesterday, with `thumbnail` as its picture. */
-async function kept(edit: Edit, thumbnail: Uint8Array | null): Promise<KerfStore> {
+async function kept(edit: Edit, thumbnail: Uint8Array | null) {
   const library = memoryLibrary();
   const entry: LibraryEntry = {
     id: "P1",
@@ -61,18 +63,18 @@ async function kept(edit: Edit, thumbnail: Uint8Array | null): Promise<KerfStore
   await library.write(entry);
   const store = createKerfStore({ storage: createStorage(memoryStorage()), library });
   await store.getState().refreshProjects();
-  return store;
+  return { store, library, entry };
 }
 
 /** A card for the kept bookcase, with no picture unless one is given. */
 async function bookcaseCard(thumbnail: Uint8Array | null = null) {
-  const store = await kept(startProject("Bookcase", "imperial"), thumbnail);
+  const { store, library, entry } = await kept(startProject("Bookcase", "imperial"), thumbnail);
   const view = render(
     <KerfProvider store={store}>
       <Cards />
     </KerfProvider>,
   );
-  return { store, view };
+  return { store, view, library, entry };
 }
 
 const card = () => within(screen.getByRole("listitem"));
@@ -95,7 +97,12 @@ beforeEach(() => {
   };
 });
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(async () => {
+  // Cards let go of their pictures a moment after they go; that moment belongs to this test.
+  cleanup();
+  await new Promise((done) => setTimeout(done, 0));
+  vi.restoreAllMocks();
+});
 
 describe("<ProjectCard>", () => {
   it("shows the project's name and when it was last changed", async () => {
@@ -111,10 +118,46 @@ describe("<ProjectCard>", () => {
     expect(new Uint8Array(await (urls.made[0] as Blob).arrayBuffer())).toEqual(PNG);
   });
 
+  it("shows the picture on the card's very first frame, before anything else runs", async () => {
+    const { store } = await kept(startProject("Bookcase", "imperial"), PNG);
+    const [project] = store.getState().projects;
+    if (!project) throw new Error("the bookcase should be listed");
+    // Drawn to markup only: no effect ever runs, so the address must come from drawing itself.
+    const firstFrame = renderToStaticMarkup(
+      <KerfProvider store={store}>
+        <ProjectCard project={project} now={NOW} />
+      </KerfProvider>,
+    );
+    expect(firstFrame).toContain('src="blob:picture-1"');
+  });
+
+  it("keeps the picture's address when the projects are listed again with the same picture", async () => {
+    const { store } = await bookcaseCard(PNG);
+    await act(() => store.getState().refreshProjects());
+    await new Promise((done) => setTimeout(done, 0));
+    expect(urls.made).toHaveLength(1);
+    expect(urls.revoked).toEqual([]);
+    expect(screen.getByRole("listitem").querySelector("img")?.getAttribute("src")).toBe(
+      "blob:picture-1",
+    );
+  });
+
+  it("makes one new address for a new picture and lets go of the old one", async () => {
+    const { store, library, entry } = await bookcaseCard(PNG);
+    const newer = new Uint8Array([...PNG, 0]);
+    await library.write({ ...entry, thumbnail: newer, modified: NOW.toISOString() });
+    await act(() => store.getState().refreshProjects());
+    await waitFor(() => expect(urls.revoked).toEqual(["blob:picture-1"]));
+    expect(urls.made).toHaveLength(2);
+    expect(screen.getByRole("listitem").querySelector("img")?.getAttribute("src")).toBe(
+      "blob:picture-2",
+    );
+  });
+
   it("lets go of the picture when the card goes", async () => {
     const { view } = await bookcaseCard(PNG);
     view.unmount();
-    expect(urls.revoked).toEqual(["blob:picture-1"]);
+    await waitFor(() => expect(urls.revoked).toEqual(["blob:picture-1"]));
   });
 
   it("draws the kind of piece when there is no picture yet", async () => {
@@ -179,6 +222,36 @@ describe("<ProjectCard> menu", () => {
     expect(card().queryByRole("textbox")).toBeNull();
   });
 
+  it("gives the keyboard back to the card's ⋯ button once the name is kept", async () => {
+    await bookcaseCard();
+    await userEvent.click(more());
+    await userEvent.click(menuItem("Rename"));
+    await userEvent.type(card().getByRole("textbox", { name: "Name" }), " two{Enter}");
+    expect(document.activeElement).toBe(card().getByRole("button", { name: /^More for/ }));
+  });
+
+  it("gives the keyboard back to the card's ⋯ button when renaming is cancelled", async () => {
+    await bookcaseCard();
+    await userEvent.click(more());
+    await userEvent.click(menuItem("Rename"));
+    await userEvent.keyboard("{Escape}");
+    expect(document.activeElement).toBe(more());
+  });
+
+  it("says why when the project cannot be renamed because it has gone", async () => {
+    const { store, library } = await bookcaseCard();
+    // Another tab deleted it after this list was shown.
+    await library.remove("P1");
+    await userEvent.click(more());
+    await userEvent.click(menuItem("Rename"));
+    await userEvent.type(card().getByRole("textbox", { name: "Name" }), " two{Enter}");
+    await waitFor(() =>
+      expect(store.getState().notice?.text).toBe(
+        "This project could not be found in this browser.",
+      ),
+    );
+  });
+
   it("leaves the name as it was when renaming is cancelled with Escape", async () => {
     const { store } = await bookcaseCard();
     await userEvent.click(more());
@@ -219,7 +292,10 @@ describe("<ProjectCard> menu", () => {
     await userEvent.click(menuItem("Download .kerf file"));
     await waitFor(() => expect(downloads).toEqual(["Bookcase.kerf"]));
     const file = new Uint8Array(await (urls.made[0] as Blob).arrayBuffer());
-    expect(readKerf(file).project.name).toBe("Bookcase");
+    const opened = openKerfBytes(file);
+    // The file opens back to the project as it was kept, with the times it was kept with.
+    expect(opened.ok && opened.project).toEqual(startProject("Bookcase", "imperial").project);
+    expect(readKerf(file).meta.modified).toBe(YESTERDAY.toISOString());
   });
 
   it("asks before deleting, and Cancel keeps the project", async () => {
@@ -243,6 +319,8 @@ describe("<ProjectCard> menu", () => {
     );
     await waitFor(() => expect(names(store)).toEqual([]));
     expect(screen.getByRole("status").textContent).toContain('Deleted "Bookcase".');
+    // The card is gone; the keyboard goes to the Undo that would bring it back.
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Undo this" }));
     await act(() => store.getState().notice?.undo?.());
     expect(names(store)).toEqual(["Bookcase"]);
   });

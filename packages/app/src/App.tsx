@@ -57,7 +57,7 @@ function Screens({ model }: { model: ReactNode }) {
 /**
  * Starts `piece` (a bookcase when none was chosen) at once, in the usual sizes, and opens it in the
  * Workshop; one the engine refuses is said on the notice line. Stands in for the New project panel,
- * which asks for the sizes first (issue #110, Task 10, replaces this).
+ * which asks for the sizes first and replaces this (issue #110).
  */
 function startAtOnce(store: KerfStore, piece: PieceId = "bookcase"): void {
   const { unitsForNew, shopRecord, createProject, say } = store.getState();

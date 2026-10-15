@@ -11,23 +11,10 @@ import { editedAgo } from "../../model/edited-ago";
 import type { ProjectSummary } from "../../model/library";
 import { useKerfStore } from "../../state/useKerf";
 import { Drawing } from "../art/drawings";
+import { focusNotice } from "../Notice";
 import { downloadKeptProject } from "../save";
 import { ProjectMenu, type ProjectMenuActions } from "./ProjectMenu";
-
-/** An address for the PNG `bytes` an `<img>` can show, let go when the bytes change or the card goes. */
-function usePictureUrl(bytes: Uint8Array | null): string | null {
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    if (!bytes) {
-      setUrl(null);
-      return;
-    }
-    const made = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "image/png" }));
-    setUrl(made);
-    return () => URL.revokeObjectURL(made);
-  }, [bytes]);
-  return url;
-}
+import { usePictureUrl } from "./picture-url";
 
 /**
  * The name, being changed: Enter keeps it, Escape leaves it as it was, and leaving the field keeps
@@ -60,6 +47,8 @@ function NameField({
       value={text}
       onChange={(e) => setText(e.target.value)}
       onKeyDown={(e) => {
+        // The key is used up here: the focus moves to ⋯, which must not take it as a press.
+        if (e.key === "Enter" || e.key === "Escape") e.preventDefault();
         if (e.key === "Enter" && keep(text)) answered.current = true;
         if (e.key === "Escape") {
           answered.current = true;
@@ -78,18 +67,23 @@ function NameField({
 /** The card for the kept project `project`; `now` is when its "Edited …" line is counted from. */
 export function ProjectCard({ project, now }: { project: ProjectSummary; now: Date }) {
   const store = useKerfStore();
-  const picture = usePictureUrl(project.thumbnail);
+  const picture = usePictureUrl(project.id, project.thumbnail);
   const [renaming, setRenaming] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
   const { id, name } = project;
 
+  /** Closes the name field and gives the keyboard back to ⋯, which stays where the field was. */
+  const stopRenaming = (): void => {
+    setRenaming(false);
+    more.current?.focus();
+  };
   /** Renames the project to `wanted`; false when the store refused it as blank (and said so). */
   const keepName = (wanted: string): boolean => {
     // The same name again is no change, so the card does not move to the top as just edited.
     if (wanted.trim() !== name) void store.getState().renameProject(id, wanted);
     if (wanted.trim() === "") return false;
-    setRenaming(false);
+    stopRenaming();
     return true;
   };
   const actions: ProjectMenuActions = {
@@ -111,7 +105,8 @@ export function ProjectCard({ project, now }: { project: ProjectSummary; now: Da
     },
     remove: () => {
       setMenuOpen(false);
-      void store.getState().deleteProject(id);
+      // The card goes; the keyboard goes to the Undo that would bring it back.
+      void store.getState().deleteProject(id).then(focusNotice);
     },
   };
 
@@ -120,7 +115,11 @@ export function ProjectCard({ project, now }: { project: ProjectSummary; now: Da
   ) : (
     <Drawing name={project.kind} className="project-drawing" />
   );
-  const edited = <span className="project-edited">Edited {editedAgo(project.modified, now)}</span>;
+  const edited = (
+    <span className="project-edited">
+      Edited {editedAgo(project.modified, now, navigator.language)}
+    </span>
+  );
   const cardBody = (title: ReactNode): ReactNode => (
     <>
       <span className="project-art">{art}</span>
@@ -134,7 +133,7 @@ export function ProjectCard({ project, now }: { project: ProjectSummary; now: Da
     <li className="project-card">
       {renaming ? (
         <div className="project-open">
-          {cardBody(<NameField name={name} keep={keepName} cancel={() => setRenaming(false)} />)}
+          {cardBody(<NameField name={name} keep={keepName} cancel={stopRenaming} />)}
         </div>
       ) : (
         <button

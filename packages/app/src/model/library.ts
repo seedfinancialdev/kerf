@@ -14,7 +14,7 @@
 // A write is reported kept only once its transaction has committed.
 
 import type { Id } from "@kerf/core";
-import { type PieceKind, pieceKindOf } from "./piece-kind";
+import { type PieceKind, pieceKinds } from "./piece-kind";
 
 /** One kept project. Times are ISO strings; `note` is the idea typed for "Something else". */
 export interface LibraryEntry {
@@ -73,8 +73,8 @@ export function isLibraryEntry(row: unknown): row is LibraryEntry {
   );
 }
 
-/** The summary of `entry`: every field but the project text, and the kind of piece it holds. */
-export function summaryOf(entry: LibraryEntry): ProjectSummary {
+/** The summary of `entry`: every field but the project text, with `kind`, the piece it holds. */
+function summaryOf(entry: LibraryEntry, kind: PieceKind): ProjectSummary {
   return {
     id: entry.id,
     name: entry.name,
@@ -82,13 +82,26 @@ export function summaryOf(entry: LibraryEntry): ProjectSummary {
     created: entry.created,
     modified: entry.modified,
     note: entry.note,
-    kind: pieceKindOf(entry.project),
+    kind,
   };
 }
 
 /** Newest change first. */
-export const newestFirst = (a: ProjectSummary, b: ProjectSummary): number =>
+const newestFirst = (a: ProjectSummary, b: ProjectSummary): number =>
   b.modified.localeCompare(a.modified);
+
+/**
+ * Lists `rows` as Home shows them: whole entries only, each with its kind from `kinds` (which
+ * reads only what changed), newest change first.
+ */
+export function summariesOf(
+  rows: readonly unknown[],
+  kinds: ReturnType<typeof pieceKinds>,
+): ProjectSummary[] {
+  const entries = rows.filter(isLibraryEntry);
+  const kindOf = kinds(entries);
+  return entries.map((e) => summaryOf(e, kindOf.get(e.id) ?? "blank")).sort(newestFirst);
+}
 
 const done = <T>(request: IDBRequest<T>): Promise<T> =>
   new Promise((resolve, reject) => {
@@ -177,6 +190,7 @@ export async function openLibrary(factory: IDBFactory | undefined): Promise<Libr
       return otherwise;
     }
   };
+  const kinds = pieceKinds();
   const change = (work: (store: IDBObjectStore) => void): Promise<boolean> =>
     attempt(async () => {
       const tx = db.transaction(STORE, "readwrite");
@@ -189,7 +203,7 @@ export async function openLibrary(factory: IDBFactory | undefined): Promise<Libr
     list: () =>
       attempt(async () => {
         const rows: unknown[] = await done(db.transaction(STORE).objectStore(STORE).getAll());
-        return rows.filter(isLibraryEntry).map(summaryOf).sort(newestFirst);
+        return summariesOf(rows, kinds);
       }, []),
     read: (id) =>
       attempt(async () => {

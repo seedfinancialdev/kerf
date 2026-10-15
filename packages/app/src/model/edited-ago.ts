@@ -21,13 +21,16 @@ function daysBetween(earlier: Date, later: Date): number {
 }
 
 /**
- * When `modified` (an ISO time, as the library keeps it) was, seen from `now`: "just now" under a
- * minute (or a little ahead of this computer's clock), "5 minutes ago", "3 hours ago" earlier the
- * same day, "yesterday" for any time the day before, "3 days ago" up to six days back, and the date
- * in the browser's own way of writing it after that. A time that is not a time gives "on an unknown
- * date", never a wrong count.
+ * When `modified` (an ISO time, as the library keeps it) was, seen from `now`:
+ * - "just now" under a minute ago, and for any time ahead of `now` (this computer's clock may be
+ *   behind the one that wrote it);
+ * - "5 minutes ago" under an hour, then "3 hours ago" for earlier the same day;
+ * - "yesterday" for any time on the calendar day before, "3 days ago" up to six calendar days back;
+ * - after that the date, written as `locale` (a BCP 47 tag, such as the browser's
+ *   `navigator.language`) writes dates.
+ * A time that is not a time gives "on an unknown date", never a wrong count.
  */
-export function editedAgo(modified: string, now: Date): string {
+export function editedAgo(modified: string, now: Date, locale: string): string {
   const then = new Date(modified);
   if (Number.isNaN(then.getTime())) return "on an unknown date";
   const ago = now.getTime() - then.getTime();
@@ -37,5 +40,5 @@ export function editedAgo(modified: string, now: Date): string {
   if (days === 0) return count(Math.floor(ago / HOUR_MS), "hour");
   if (days === 1) return "yesterday";
   if (days <= DAYS_COUNTED) return count(days, "day");
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(then);
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(then);
 }

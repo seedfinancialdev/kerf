@@ -34,3 +34,11 @@ export function Notice() {
     </div>
   );
 }
+
+/**
+ * Moves the keyboard to the notice line's first button (Undo, when it offers one), for an action
+ * whose own control has gone; does nothing when the line shows no button.
+ */
+export function focusNotice(): void {
+  document.querySelector<HTMLElement>(".notice button")?.focus();
+}

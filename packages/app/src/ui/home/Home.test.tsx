@@ -6,6 +6,7 @@
 // Recent files, Learn, Your shop), the templates, the Recent files cards, All projects, opening a
 // file, and a browser that cannot keep projects (ADR 016, D1 and D5).
 
+import { parseProject } from "@kerf/core";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -189,6 +190,22 @@ describe("<Home> projects", () => {
     await waitFor(() => expect(store.getState().screen).toBe("workshop"));
   });
 
+  it("shows every card when one project's kind cannot be read for a fault in Kerf", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const parse = (text: string) => {
+      if (text.includes("Den shelf")) throw new TypeError("x is undefined");
+      return parseProject(text);
+    };
+    await home([bookcase("Hall shelf"), bookcase("Den shelf")], memoryLibrary({ parse }));
+    expect(cardNames()).toEqual(["Den shelf", "Hall shelf"]);
+  });
+
+  it("ignores spaces around what is typed in Find a project", async () => {
+    await home(["Living room bookcase", "Keepsake box"].map(bookcase));
+    await userEvent.type(sidebar().getByRole("searchbox", { name: "Find a project" }), "  box ");
+    expect(cardNames()).toEqual(["Keepsake box"]);
+  });
+
   it("leaves only the projects whose names hold what is typed in Find a project, in any case", async () => {
     await home(["Living room bookcase", "Keepsake box", "BOOK nook"].map(bookcase));
     await userEvent.type(sidebar().getByRole("searchbox", { name: "Find a project" }), "book");
@@ -237,6 +254,23 @@ describe("<Home> Open file…", () => {
     await pick(file, "From a friend.kerf");
     await waitFor(() => expect(store.getState().screen).toBe("workshop"));
     expect(store.getState().projects.map((p) => p.name)).toEqual(["From a friend", "Hall shelf"]);
+  });
+
+  it("adds the same file again as a second project when it is picked twice", async () => {
+    const { store } = await home();
+    const file = saveKerfBytes(bookcase("From a friend").project, {
+      created: NOW.toISOString(),
+      modified: NOW.toISOString(),
+    });
+    await pick(file, "From a friend.kerf");
+    await waitFor(() => expect(store.getState().projects).toHaveLength(1));
+    await pick(file, "From a friend.kerf");
+    await waitFor(() =>
+      expect(store.getState().projects.map((p) => p.name)).toEqual([
+        "From a friend",
+        "From a friend",
+      ]),
+    );
   });
 
   it("says why a damaged file cannot be opened and stays on Home", async () => {
