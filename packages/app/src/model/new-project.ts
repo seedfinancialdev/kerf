@@ -5,7 +5,7 @@
 // New project (design spec §3, ADR 016): what the New project panel asks, turned into one project. The panel
 // only gathers choices; everything that can be wrong with them is found here, in plain words, before Create.
 
-import type { Id, Project, Stock } from "@kerf/core";
+import { formatLength, gridSize, type Id, type Project, type Stock } from "@kerf/core";
 import {
   type Edit,
   setOption,
@@ -14,11 +14,11 @@ import {
   startProject,
   type TemplateName,
 } from "./commands";
-import { type SizeKey, sizeLabel, sizeOrder } from "./labels";
+import { sizeLabel, sizeOrder } from "./labels";
 import type { ShopRecord } from "./shop-record";
 import { literalFor, readLength } from "./size";
-import { outsideFromSpace, type Size3 } from "./space";
-import { STOCK_IDS } from "./starter";
+import { DEFAULT_GAP, DEFAULT_GAP_METRIC, outsideFromSpace, type Size3 } from "./space";
+import { STOCK_IDS, starterStockFor } from "./starter";
 
 /** Every kind of piece the New project panel offers, in the gallery or among the blanks. */
 export type PieceId =
@@ -128,13 +128,20 @@ export type NewProjectResult =
   | { ok: false; message: string };
 
 const SIZES = {
-  imperial: { case: ['36"', '72"', '12"'], box: ['12"', '6"', '8"'], gap: '1/8"' },
+  imperial: {
+    case: ['36"', '72"', '12"'],
+    box: ['12"', '6"', '8"'],
+    gap: formatLength(DEFAULT_GAP, "imperial"),
+  },
   metric: {
     case: ["900 mm", "1800 mm", "300 mm"],
     box: ["300 mm", "150 mm", "200 mm"],
-    gap: "3 mm",
+    gap: formatLength(DEFAULT_GAP_METRIC, "metric"),
   },
 } as const;
+
+/** The pieces sized as a box (length, height, width) rather than a case. */
+const BOX_PIECES: readonly PieceId[] = ["box", "plainBox"];
 
 const allPieces = [...PIECES, ...BLANKS];
 
@@ -163,7 +170,8 @@ export function defaultChoice(
   units: Project["units"],
   record: ShopRecord,
 ): NewProjectChoice {
-  const [w, h, d] = SIZES[units][pieceFor(piece).template?.endsWith("box") ? "box" : "case"];
+  const offered = woodOffered(units, record);
+  const [w, h, d] = SIZES[units][BOX_PIECES.includes(piece) ? "box" : "case"];
   return {
     piece,
     units,
@@ -174,18 +182,22 @@ export function defaultChoice(
     gap: SIZES[units].gap,
     shelves: 4,
     back: true,
-    wood: (thickestSheet(record.stock) ?? record.stock[0])?.id ?? STOCK_IDS.plywood34,
+    wood: (thickestSheet(offered) ?? offered[0])?.id ?? STOCK_IDS.plywood34,
     note: "",
   };
 }
 
-/** The project's stock with the shop's first, so the template's own stock ids still resolve. */
-function withShopStock(project: Project, record: ShopRecord): Project {
-  const shop = new Set(record.stock.map((s) => s.id));
-  return {
-    ...project,
-    stock: [...record.stock, ...project.stock.filter((s) => !shop.has(s.id))],
-  };
+/**
+ * The wood a new project in `units` can be built from: the shop's stock first, then any starter stock the
+ * shop lacks, so the templates' own stock ids always resolve. A metric project keeps only wood whose thickness
+ * is a whole number of 0.01 mm steps (the 3/4 plywood is not), since every length there sits on that grid.
+ */
+export function woodOffered(units: Project["units"], record: ShopRecord): Stock[] {
+  const fits = (s: Stock): boolean =>
+    units === "imperial" || s.thickness % gridSize("metric") === 0;
+  const shop = record.stock.filter(fits);
+  const held = new Set(shop.map((s) => s.id));
+  return [...shop, ...starterStockFor(units).filter((s) => !held.has(s.id))];
 }
 
 function emptyProject(name: string, units: Project["units"], record: ShopRecord): Project {
@@ -194,7 +206,7 @@ function emptyProject(name: string, units: Project["units"], record: ShopRecord)
     name,
     units,
     params: [],
-    stock: [...record.stock],
+    stock: woodOffered(units, record),
     parts: [],
     instances: [],
     patterns: [],
@@ -239,7 +251,7 @@ function withSizes(project: Project, size: Size3): Project | string {
   const structure = project.structures[0];
   if (!structure) return "This project has nothing to size.";
   let sized = project;
-  for (const key of sizeOrder(structure.type) satisfies SizeKey[]) {
+  for (const key of sizeOrder(structure.type)) {
     const edit = setSize(sized, structure.id, key, literalFor(size[key], project.units));
     if (!edit.ok) return edit.message;
     sized = edit.edit.project;
@@ -268,7 +280,7 @@ export function newProject(choice: NewProjectChoice, record: ShopRecord): NewPro
     return { ok: true, edit: { project, label: "New empty project" }, outside: null, note };
   }
   const started = startProject(piece.template, choice.units);
-  const merged = withShopStock(started.project, record);
+  const merged = { ...started.project, stock: woodOffered(choice.units, record) };
   if (!merged.stock.some((s) => s.id === choice.wood)) {
     return { ok: false, message: "That wood is not in your shop's stock; pick one from the list." };
   }

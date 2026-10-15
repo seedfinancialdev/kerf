@@ -5,7 +5,7 @@
 // Space to fill (ADR 016, D6): a piece sized to an opening, leaving a gap at each side and at the top so it
 // slides in. Whole-number lengths only.
 
-import { INCH, type Len } from "@kerf/core";
+import { INCH, type Len, MM } from "@kerf/core";
 
 /** A width, height and depth (project units). */
 export interface Size3 {
@@ -17,8 +17,11 @@ export interface Size3 {
 /** The piece's outside size, or why the space and gap cannot make one. */
 export type Outside = { ok: true; size: Size3 } | { ok: false; message: string };
 
-/** The gap a new project starts with: 1/8" (ADR 016, D6). */
+/** The gap a new imperial project starts with: 1/8" (ADR 016, D6). */
 export const DEFAULT_GAP: Len = INCH / 8;
+
+/** The gap a new metric project starts with: 3 mm (ADR 016, D6). */
+export const DEFAULT_GAP_METRIC: Len = 3 * MM;
 
 /**
  * The outside size of a piece that fills `space`, leaving `gap` at each side and at the top (all in project

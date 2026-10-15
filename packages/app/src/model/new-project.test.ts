@@ -5,12 +5,12 @@
 // Design spec §3: the template, its size (outside or space to fill), its piece options and the wood become one
 // new project; anything that cannot be built is refused in plain words before Create.
 
-import { INCH, parseLength, solve } from "@kerf/core";
+import { INCH, MM, parseLength, solve } from "@kerf/core";
 import { describe, expect, it } from "vitest";
-import { defaultChoice, newProject } from "./new-project";
+import { defaultChoice, newProject, woodOffered } from "./new-project";
 import { STARTER_RECORD, shopProfileFor } from "./shop-record";
 import { literalFor } from "./size";
-import { STOCK_IDS } from "./starter";
+import { STARTER_STOCK, STOCK_IDS } from "./starter";
 
 const bookcase = defaultChoice("bookcase", "imperial", STARTER_RECORD);
 
@@ -102,27 +102,124 @@ describe("newProject()", () => {
     expect(r.edit.project.structures[0]?.options.carcaseStock).toBe(STOCK_IDS.walnut44);
   });
 
-  it("sizes a keepsake box by length, height and width and uses the wood for its walls", () => {
-    const r = newProject(defaultChoice("box", "imperial", STARTER_RECORD), STARTER_RECORD);
+  it("sizes a box by length, height and width", () => {
+    // Walnut 4/4 walls are 1/2" thick (Tw). Dovetailed corners (the default) run the front and back the full
+    // length: Front, Back = 12" long × 6" wide. Sides = depth 8" long × 6" wide. Bottom (box.ts seatBottom) =
+    // (L − 2Tw) × (D − 2Tw) = 11" × 7", cut from 1/4" plywood.
+    const choice = {
+      ...defaultChoice("box", "imperial", STARTER_RECORD),
+      wood: STOCK_IDS.walnut44,
+    };
+    const r = newProject(choice, STARTER_RECORD);
     if (!r.ok) throw new Error(r.message);
     const result = solve(r.edit.project, shopProfileFor(STARTER_RECORD));
     expect(result.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
-    expect(r.edit.project.structures[0]?.options.wallStock).toBeDefined();
+    const sizeOf = (name: string) =>
+      result.placements.filter((p) => p.partName === name).map((p) => p.size);
+    const wall = (length: number, width: number) => ({ length, width, thickness: INCH / 2 });
+    expect(sizeOf("Front")).toEqual([wall(12 * INCH, 6 * INCH)]);
+    expect(sizeOf("Back")).toEqual([wall(12 * INCH, 6 * INCH)]);
+    expect(sizeOf("Side")).toEqual([wall(8 * INCH, 6 * INCH), wall(8 * INCH, 6 * INCH)]);
+    expect(sizeOf("Bottom")).toEqual([{ length: 11 * INCH, width: 7 * INCH, thickness: INCH / 4 }]);
   });
 
-  it("keeps every stock the template names resolvable, with the shop's stock first", () => {
-    const r = newProject(bookcase, STARTER_RECORD);
+  it("keeps the template's stock resolvable when the shop has none of it", () => {
+    const withoutQuarter = {
+      ...STARTER_RECORD,
+      stock: STARTER_STOCK.filter((x) => x.id !== STOCK_IDS.plywood14),
+    };
+    const r = newProject(defaultChoice("bookcase", "imperial", withoutQuarter), withoutQuarter);
     if (!r.ok) throw new Error(r.message);
-    const ids = r.edit.project.stock.map((s) => s.id);
+    const project = r.edit.project;
+    const ids = project.stock.map((x) => x.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids.slice(0, STARTER_RECORD.stock.length)).toEqual(
-      STARTER_RECORD.stock.map((s) => s.id),
+    expect(ids).toContain(project.structures[0]?.options.backStock);
+    expect(ids.slice(0, withoutQuarter.stock.length)).toEqual(
+      withoutQuarter.stock.map((x) => x.id),
     );
+    const result = solve(project, shopProfileFor(withoutQuarter));
+    expect(result.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+  });
+
+  it("refuses wood the shop does not stock", () => {
+    expect(newProject({ ...bookcase, wood: "NOT-A-STOCK" }, STARTER_RECORD)).toEqual({
+      ok: false,
+      message: "That wood is not in your shop's stock; pick one from the list.",
+    });
+  });
+
+  it("refuses a negative gap", () => {
+    expect(newProject({ ...bookcase, sizeMode: "space", gap: '-1/8"' }, STARTER_RECORD)).toEqual({
+      ok: false,
+      message: "The gap can't be less than zero.",
+    });
+  });
+
+  it("refuses a space whose height alone is used up by the gap", () => {
+    // 1/16" high with a 1/16" gap at the top leaves 0 height, though the width (36") is fine
+    const r = newProject(
+      { ...bookcase, sizeMode: "space", h: '1/16"', gap: '1/16"' },
+      STARTER_RECORD,
+    );
+    expect(r).toEqual({ ok: false, message: "The gap is bigger than the space." });
+  });
+
+  it("says which name it cannot read", () => {
+    expect(newProject({ ...bookcase, h: "tall" }, STARTER_RECORD)).toEqual({
+      ok: false,
+      message: 'Unknown name "tall"',
+    });
+  });
+
+  it('stores 900 mm in an imperial project on the 1/64" grid', () => {
+    // 900 mm = 7_200_000 units; 1/64" = 3_175 units; 7_200_000 / 3_175 = 2267.7 → 2268 steps = 7_200_900
+    const r = newProject({ ...bookcase, w: "900 mm" }, STARTER_RECORD);
+    if (!r.ok) throw new Error(r.message);
+    const width = r.edit.project.params.find((p) => p.name === "width");
+    expect(parseLength(width?.expr ?? "", "imperial")).toBe(7_200_900);
+  });
+
+  describe("in a metric project", () => {
+    const metric = defaultChoice("bookcase", "metric", STARTER_RECORD);
+
+    it("defaults to the 18 mm plywood, the thickest wood on the 0.01 mm grid", () => {
+      expect(metric.wood).toBe(STOCK_IDS.plywood18mm);
+    });
+
+    it("offers only wood on the 0.01 mm grid, with the metric starter stock", () => {
+      // 3/4 plywood is 23/32" = 146_050 units = 1825.6 steps of 80: off the grid
+      const ids = woodOffered("metric", STARTER_RECORD).map((x) => x.id);
+      expect(ids).toEqual([STOCK_IDS.plywood14, STOCK_IDS.walnut44, STOCK_IDS.plywood18mm]);
+      expect(woodOffered("imperial", STARTER_RECORD).map((x) => x.id)).toEqual(
+        STARTER_STOCK.map((x) => x.id),
+      );
+    });
+
+    it("refuses the 3/4 plywood in plain words", () => {
+      expect(newProject({ ...metric, wood: STOCK_IDS.plywood34 }, STARTER_RECORD)).toEqual({
+        ok: false,
+        message: "That wood is not in your shop's stock; pick one from the list.",
+      });
+    });
+
+    it("builds a bookcase that solves without errors", () => {
+      const r = newProject(metric, STARTER_RECORD);
+      if (!r.ok) throw new Error(r.message);
+      const result = solve(r.edit.project, shopProfileFor(STARTER_RECORD));
+      expect(result.diagnostics.filter((d) => d.severity === "error")).toEqual([]);
+    });
   });
 
   it("types the grid sizes in a form that reads back to the same length", () => {
     for (const len of [6_146_800, 16_230_600, 36 * INCH]) {
       expect(parseLength(literalFor(len, "imperial"), "imperial")).toBe(len);
+    }
+  });
+
+  it("types metric sizes in a form that reads back to the same length", () => {
+    for (const len of [894 * MM, 100_000]) {
+      // 100_000 units = 12.5 mm
+      expect(parseLength(literalFor(len, "metric"), "metric")).toBe(len);
     }
   });
 });
