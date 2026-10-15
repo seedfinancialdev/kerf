@@ -153,10 +153,11 @@ describe("<TopBar> Kerf button and project menu", () => {
 
   it("makes no History step when the same name is typed again", async () => {
     const { user, store } = await openMenu();
-    const before = store.getState().history?.entries.length;
+    const rename = vi.fn(async () => undefined);
+    act(() => store.setState({ renameProject: rename }));
     await user.click(screen.getByRole("menuitem", { name: "Rename" }));
     await user.keyboard("{Enter}");
-    expect(store.getState().history?.entries.length).toBe(before);
+    expect(rename).not.toHaveBeenCalled();
   });
 
   it("shows the name button as a menu, with a tip", async () => {
@@ -182,8 +183,15 @@ describe("<TopBar> Kerf button and project menu", () => {
     await user.click(screen.getByRole("button", { name: "Bookcase" }));
     const copy = screen.getByRole("menuitem", { name: "Duplicate" });
     expect(copy.getAttribute("aria-disabled")).toBe("true");
+    const duplicate = vi.fn(async () => undefined);
+    act(() => store.setState({ duplicateProject: duplicate }));
+    const noticeBefore = store.getState().notice;
     await user.click(copy);
-    expect(store.getState().notice?.text ?? "").not.toContain("could not be found");
+    await user.keyboard("{Enter}");
+    await user.keyboard(" ");
+    expect(duplicate).not.toHaveBeenCalled();
+    expect(store.getState().notice).toEqual(noticeBefore);
+    expect(store.getState().projects).toHaveLength(0);
     act(() => copy.blur());
     fireEvent.keyDown(document.body, { key: "Tab" });
     act(() => copy.focus());
