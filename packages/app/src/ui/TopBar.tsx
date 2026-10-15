@@ -9,6 +9,8 @@ import { canRedo, canUndo, currentProject } from "../model/history";
 import { STEPS } from "../model/steps";
 import { useKerf } from "../state/useKerf";
 import { SettingsMenu } from "./SettingsMenu";
+import { Tip } from "./Tip";
+import { TIPS } from "./tips";
 
 /** The five steps, Settings, Undo and Redo. */
 export function TopBar() {
@@ -21,32 +23,40 @@ export function TopBar() {
   const redo = useKerf((s) => s.redo);
   return (
     <header className="topbar">
-      <span className="brand">Kerf</span>
+      <Tip tip={TIPS.home}>
+        <span className="brand">Kerf</span>
+      </Tip>
       {name && <span className="project-name">{name}</span>}
       <nav aria-label="Workflow" className="steps-nav">
         <ol className="steps">
           {STEPS.map((s) => (
             <li key={s}>
-              <button
-                type="button"
-                className="step"
-                aria-pressed={s === step}
-                onClick={() => setStep(s)}
-              >
-                {s}
-              </button>
+              <Tip tip={TIPS[s]}>
+                <button
+                  type="button"
+                  className="step"
+                  aria-pressed={s === step}
+                  onClick={() => setStep(s)}
+                >
+                  {s}
+                </button>
+              </Tip>
             </li>
           ))}
         </ol>
       </nav>
       <div className="topbar-actions">
         <SettingsMenu />
-        <button type="button" onClick={undo} disabled={!undoable}>
-          Undo
-        </button>
-        <button type="button" onClick={redo} disabled={!redoable}>
-          Redo
-        </button>
+        <Tip tip={TIPS.undo}>
+          <button type="button" onClick={undo} disabled={!undoable}>
+            Undo
+          </button>
+        </Tip>
+        <Tip tip={TIPS.redo}>
+          <button type="button" onClick={redo} disabled={!redoable}>
+            Redo
+          </button>
+        </Tip>
       </div>
     </header>
   );

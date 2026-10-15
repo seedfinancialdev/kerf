@@ -14,6 +14,7 @@ import { lengthOf, literalFor } from "../model/size";
 import { shownProject } from "../model/store";
 import { useKerf, useKerfStore } from "../state/useKerf";
 import { NumberField } from "./NumberField";
+import { TIPS } from "./tips";
 
 /** The overall-size fields of one structure, in the order a woodworker reads them. */
 export function SizeFields({ structure }: { structure: Id }) {
@@ -50,6 +51,7 @@ function SizeField({ structure, sizeKey }: { structure: Id; sizeKey: SizeKey }) 
   return (
     <NumberField
       label={sizeLabel(s.type, sizeKey)}
+      tip={TIPS.size}
       display={value === undefined ? expr : formatLength(value, project.units)}
       onSubmit={(text) => {
         const r = setSize(recorded(), structure, sizeKey, text);

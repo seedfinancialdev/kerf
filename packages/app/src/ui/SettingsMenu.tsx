@@ -11,6 +11,8 @@ import { useEffect, useState } from "react";
 import { switchUnits } from "../model/commands";
 import { shownProject } from "../model/store";
 import { useKerf, useKerfStore } from "../state/useKerf";
+import { Tip } from "./Tip";
+import { TIPS } from "./tips";
 
 const UNITS_NAME = { imperial: "inches", metric: "millimetres" } as const;
 
@@ -44,9 +46,11 @@ export function SettingsMenu() {
 
   return (
     <div className="settings">
-      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
-        Settings
-      </button>
+      <Tip tip={TIPS.settings}>
+        <button type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
+          Settings
+        </button>
+      </Tip>
       {open && (
         <div className="settings-panel">
           <fieldset>
