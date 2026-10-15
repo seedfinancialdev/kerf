@@ -69,6 +69,17 @@ export function readLength(text: string, project: Project, self?: string, label?
   }
 }
 
+/**
+ * A refusal of the size typed as `text` into the field called `label`, in words that name the field
+ * and say what to type: the engine's `Unknown name "tall"` (text that names nothing in the project)
+ * becomes `Height: "tall" isn't a length; type one like 30" or 762 mm.` Every other `message` is
+ * already plain and comes back unchanged.
+ */
+export function explainSize(label: string, text: string, message: string): string {
+  if (!message.startsWith("Unknown name")) return message;
+  return `${label}: "${text.trim()}" isn't a length; type one like 30" or 762 mm.`;
+}
+
 /** A project with nothing in it, so a length typed for the shop can name no project's sizes. */
 const noProject = (units: Project["units"]): Project => ({
   schemaVersion: 1,

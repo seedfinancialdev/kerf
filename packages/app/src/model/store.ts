@@ -23,6 +23,7 @@ import {
   undo,
 } from "./history";
 import { newId } from "./ids";
+import { readLastChoice, writeLastChoice } from "./last-choice";
 import { LIBRARY_NOT_KEPT, type Library } from "./library";
 import { libraryActions } from "./library-actions";
 import type { MigrationResult } from "./library-migration";
@@ -105,6 +106,7 @@ function startingState(
     boardStock: null,
     theme: storage.read("kerf.theme") === "light" ? "light" : "dark",
     unitsForNew: storage.read("kerf.units") === "metric" ? "metric" : "imperial",
+    lastChoice: readLastChoice(storage),
     sections: readSections(storage),
     created: null,
     thumbnail: null,
@@ -378,6 +380,13 @@ export function createKerfStore(deps: {
         if (deps.storage.write("kerf.units", unitsForNew) || toldUnitsNotKept) return;
         toldUnitsNotKept = true;
         set(warn(line(), UNITS_NOT_KEPT));
+      },
+      // Forgetting the last piece costs one click next visit, so a browser that will not keep it
+      // is not told about it; the units say so through setUnitsForNew.
+      rememberChoice: ({ piece, units, wood }) => {
+        writeLastChoice(deps.storage, { piece, wood });
+        set({ lastChoice: { piece, wood } });
+        get().setUnitsForNew(units);
       },
     };
   });

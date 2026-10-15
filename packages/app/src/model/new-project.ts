@@ -5,7 +5,14 @@
 // New project (design spec §3, ADR 016): what the New project panel asks, turned into one project. The panel
 // only gathers choices; everything that can be wrong with them is found here, in plain words, before Create.
 
-import { formatLength, gridSize, type Id, type Project, type Stock } from "@kerf/core";
+import {
+  formatLength,
+  gridSize,
+  type Id,
+  type Project,
+  type Stock,
+  type Structure,
+} from "@kerf/core";
 import {
   type Edit,
   setOption,
@@ -16,7 +23,7 @@ import {
 } from "./commands";
 import { sizeLabel, sizeOrder } from "./labels";
 import type { ShopRecord } from "./shop-record";
-import { literalFor, readLength } from "./size";
+import { explainSize, literalFor, readLength } from "./size";
 import { DEFAULT_GAP, DEFAULT_GAP_METRIC, outsideFromSpace, type Size3 } from "./space";
 import { STOCK_IDS, starterStockFor } from "./starter";
 
@@ -86,14 +93,14 @@ export const BLANKS: readonly Piece[] = [
   },
   {
     id: "plainCase",
-    name: "Blank case",
+    name: "Plain case",
     blurb: "A plain case to divide",
     template: "Blank case",
     later: false,
   },
   {
     id: "plainBox",
-    name: "Blank box",
+    name: "Plain box",
     blurb: "A plain box to fill",
     template: "Blank box",
     later: false,
@@ -122,10 +129,16 @@ export interface NewProjectChoice {
   note: string;
 }
 
-/** What `newProject` makes: the project as an edit, the outside size when it came from a space, the idea. */
+/** The choice a refusal is about, so the panel can say it under that field. */
+export type ChoiceField = "w" | "h" | "d" | "gap" | "wood";
+
+/**
+ * What `newProject` makes: the project as an edit, the outside size when it came from a space, the idea;
+ * or why not, with the `field` it is about when it is about one.
+ */
 export type NewProjectResult =
   | { ok: true; edit: Edit; outside: Size3 | null; note: string }
-  | { ok: false; message: string };
+  | { ok: false; message: string; field?: ChoiceField };
 
 const SIZES = {
   imperial: {
@@ -145,10 +158,17 @@ const BOX_PIECES: readonly PieceId[] = ["box", "plainBox"];
 
 const allPieces = [...PIECES, ...BLANKS];
 
-function pieceFor(id: PieceId): Piece {
+/** The piece `id`, from the gallery or the blanks. Throws RangeError for an id that names none. */
+export function pieceFor(id: PieceId): Piece {
   const found = allPieces.find((p) => p.id === id);
   if (!found) throw new RangeError(`There is no piece "${id}".`);
   return found;
+}
+
+/** The form piece `id` is built as, which names its size fields; null for a piece with no form. */
+export function formOf(id: PieceId): Structure["type"] | null {
+  if (!pieceFor(id).template) return null;
+  return BOX_PIECES.includes(id) ? "box" : "case";
 }
 
 /** The thickest sheet in the shop, which is what a case is built from unless told otherwise. */
@@ -216,15 +236,22 @@ function emptyProject(name: string, units: Project["units"], record: ShopRecord)
   };
 }
 
-type Typed = { ok: true; value: number } | { ok: false; message: string };
+type Refusal = { ok: false; message: string; field: ChoiceField };
+type Typed = { ok: true; value: number } | Refusal;
 
-function readSize(text: string, project: Project, label: string, allowZero = false): Typed {
-  if (text.trim() === "") return { ok: false, message: `Type a ${label.toLowerCase()}.` };
+function readSize(
+  choice: NewProjectChoice,
+  field: "w" | "h" | "d" | "gap",
+  project: Project,
+  label: string,
+): Typed {
+  const text = choice[field];
+  const refuse = (message: string): Refusal => ({ ok: false, message, field });
+  if (text.trim() === "") return refuse(`Type a ${label.toLowerCase()}.`);
   const read = readLength(text, project, undefined, label);
-  if (!read.ok) return read;
-  if (read.value <= 0 && !allowZero) {
-    return { ok: false, message: `${label} must be more than zero.` };
-  }
+  if (!read.ok) return refuse(explainSize(label, text, read.message));
+  // A gap of nothing is a piece that fills the space exactly; a size of nothing is no piece.
+  if (read.value <= 0 && field !== "gap") return refuse(`${label} must be more than zero.`);
   return { ok: true, value: read.value };
 }
 
@@ -232,19 +259,20 @@ function readSize(text: string, project: Project, label: string, allowZero = fal
 function outsideOf(
   choice: NewProjectChoice,
   project: Project,
-): { ok: true; size: Size3 } | { ok: false; message: string } {
+): { ok: true; size: Size3 } | Refusal {
   const type = project.structures[0]?.type ?? "case";
   const typed: Partial<Size3> = {};
   for (const key of sizeOrder(type)) {
-    const read = readSize(choice[key], project, sizeLabel(type, key));
+    const read = readSize(choice, key, project, sizeLabel(type, key));
     if (!read.ok) return read;
     typed[key] = read.value;
   }
   const size = typed as Size3;
   if (choice.sizeMode === "outside") return { ok: true, size };
-  const gap = readSize(choice.gap, project, "Gap", true);
+  const gap = readSize(choice, "gap", project, "Gap");
   if (!gap.ok) return gap;
-  return outsideFromSpace(size, gap.value);
+  const outside = outsideFromSpace(size, gap.value);
+  return outside.ok ? outside : { ...outside, field: "gap" };
 }
 
 function withSizes(project: Project, size: Size3): Project | string {
@@ -260,9 +288,9 @@ function withSizes(project: Project, size: Size3): Project | string {
 }
 
 /**
- * The project the panel's choices describe. A piece that is not built yet, a size that is empty, zero or not a
- * length, a gap that eats the space, or wood the shop does not stock comes back as `ok: false` with a message to
- * show. "Something else" and the empty project start with no form; the idea comes back as `note` because a
+ * The project the panel's choices describe, named after the piece. A piece that is not built yet, a size that
+ * is empty, zero or not a length, a gap that eats the space, or wood the shop does not stock comes back as
+ * `ok: false` with a message to show and the field it is about. "Something else" and the empty project start with no form; the idea comes back as `note` because a
  * project has nowhere to keep it.
  */
 export function newProject(choice: NewProjectChoice, record: ShopRecord): NewProjectResult {
@@ -280,9 +308,18 @@ export function newProject(choice: NewProjectChoice, record: ShopRecord): NewPro
     return { ok: true, edit: { project, label: "New empty project" }, outside: null, note };
   }
   const started = startProject(piece.template, choice.units);
-  const merged = { ...started.project, stock: woodOffered(choice.units, record) };
+  // Named after the piece, not the template it is built from (design spec §3).
+  const merged = {
+    ...started.project,
+    name: piece.name,
+    stock: woodOffered(choice.units, record),
+  };
   if (!merged.stock.some((s) => s.id === choice.wood)) {
-    return { ok: false, message: "That wood is not in your shop's stock; pick one from the list." };
+    return {
+      ok: false,
+      message: "That wood is not in your shop's stock; pick one from the list.",
+      field: "wood",
+    };
   }
   const outside = outsideOf(choice, merged);
   if (!outside.ok) return outside;

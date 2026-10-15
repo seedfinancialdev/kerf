@@ -7,7 +7,14 @@
 
 import { INCH, MM, parseLength, solve } from "@kerf/core";
 import { describe, expect, it } from "vitest";
-import { defaultChoice, newProject, woodOffered } from "./new-project";
+import {
+  defaultChoice,
+  formOf,
+  newProject,
+  type PieceId,
+  pieceFor,
+  woodOffered,
+} from "./new-project";
 import { STARTER_RECORD, shopProfileFor } from "./shop-record";
 import { literalFor } from "./size";
 import { STARTER_STOCK, STOCK_IDS } from "./starter";
@@ -37,16 +44,17 @@ describe("newProject()", () => {
     expect(r.outside).toEqual({ w: 6_146_800, h: 16_230_600, d: 12 * INCH }); // hand calc in space.test.ts
   });
 
-  it("refuses an empty, zero or unreadable size with the field's name", () => {
+  it("refuses an empty or zero size, naming the field it belongs to", () => {
     expect(newProject({ ...bookcase, w: "" }, STARTER_RECORD)).toEqual({
       ok: false,
       message: "Type a width.",
+      field: "w",
     });
-    expect(newProject({ ...bookcase, w: '0"' }, STARTER_RECORD)).toMatchObject({
+    expect(newProject({ ...bookcase, w: '0"' }, STARTER_RECORD)).toEqual({
       ok: false,
       message: "Width must be more than zero.",
+      field: "w",
     });
-    expect(newProject({ ...bookcase, h: "tall" }, STARTER_RECORD)).toMatchObject({ ok: false });
   });
 
   it("refuses a gap that is bigger than the space", () => {
@@ -54,7 +62,7 @@ describe("newProject()", () => {
       { ...bookcase, sizeMode: "space", w: '1/4"', gap: '1/8"' },
       STARTER_RECORD,
     );
-    expect(r).toEqual({ ok: false, message: "The gap is bigger than the space." });
+    expect(r).toEqual({ ok: false, message: "The gap is bigger than the space.", field: "gap" });
   });
 
   it("reads millimetres typed into an imperial project", () => {
@@ -145,6 +153,7 @@ describe("newProject()", () => {
     expect(newProject({ ...bookcase, wood: "NOT-A-STOCK" }, STARTER_RECORD)).toEqual({
       ok: false,
       message: "That wood is not in your shop's stock; pick one from the list.",
+      field: "wood",
     });
   });
 
@@ -152,6 +161,7 @@ describe("newProject()", () => {
     expect(newProject({ ...bookcase, sizeMode: "space", gap: '-1/8"' }, STARTER_RECORD)).toEqual({
       ok: false,
       message: "The gap can't be less than zero.",
+      field: "gap",
     });
   });
 
@@ -161,14 +171,25 @@ describe("newProject()", () => {
       { ...bookcase, sizeMode: "space", h: '1/16"', gap: '1/16"' },
       STARTER_RECORD,
     );
-    expect(r).toEqual({ ok: false, message: "The gap is bigger than the space." });
+    expect(r).toEqual({ ok: false, message: "The gap is bigger than the space.", field: "gap" });
   });
 
-  it("says which name it cannot read", () => {
+  it("says which field cannot be read and what to type there", () => {
     expect(newProject({ ...bookcase, h: "tall" }, STARTER_RECORD)).toEqual({
       ok: false,
-      message: 'Unknown name "tall"',
+      message: 'Height: "tall" isn\'t a length; type one like 30" or 762 mm.',
+      field: "h",
     });
+  });
+
+  it('names the project after the piece (design spec §3: a bookcase is named "Bookcase")', () => {
+    const named = (piece: PieceId): string => {
+      const r = newProject(defaultChoice(piece, "imperial", STARTER_RECORD), STARTER_RECORD);
+      if (!r.ok) throw new Error(r.message);
+      return r.edit.project.name;
+    };
+    const pieces: PieceId[] = ["bookcase", "cabinet", "box", "plainCase", "plainBox"];
+    expect(pieces.map(named)).toEqual(["Bookcase", "Cabinet", "Box", "Plain case", "Plain box"]);
   });
 
   it('stores 900 mm in an imperial project on the 1/64" grid', () => {
@@ -199,6 +220,7 @@ describe("newProject()", () => {
       expect(newProject({ ...metric, wood: STOCK_IDS.plywood34 }, STARTER_RECORD)).toEqual({
         ok: false,
         message: "That wood is not in your shop's stock; pick one from the list.",
+        field: "wood",
       });
     });
 
@@ -221,5 +243,28 @@ describe("newProject()", () => {
       // 100_000 units = 12.5 mm
       expect(parseLength(literalFor(len, "metric"), "metric")).toBe(len);
     }
+  });
+});
+
+describe("pieceFor()", () => {
+  it("finds a piece of the gallery or the blanks by its id", () => {
+    expect(pieceFor("cabinet").name).toBe("Cabinet");
+    expect(pieceFor("plainBox").name).toBe("Plain box");
+  });
+
+  it("refuses an id that names no piece", () => {
+    expect(() => pieceFor("rocket" as PieceId)).toThrow(RangeError);
+  });
+});
+
+describe("formOf()", () => {
+  it("builds the bookcase, cabinet and plain case as cases, the box and plain box as boxes", () => {
+    const pieces: PieceId[] = ["bookcase", "cabinet", "plainCase", "box", "plainBox"];
+    expect(pieces.map(formOf)).toEqual(["case", "case", "case", "box", "box"]);
+  });
+
+  it("gives no form for an empty project, an idea, or a piece that comes later", () => {
+    const pieces: PieceId[] = ["empty", "idea", "table", "dresser"];
+    expect(pieces.map(formOf)).toEqual([null, null, null, null]);
   });
 });

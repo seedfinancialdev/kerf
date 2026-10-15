@@ -18,8 +18,11 @@ const KINDS: ReadonlyArray<{ kind: WoodKind; label: string }> = [
   { kind: "board", label: "Board" },
 ];
 
-/** The form, once open: `onAdd` gets the new wood; `onClose` shuts the form. */
-function WoodForm({
+/**
+ * The form for a wood of your own, in `units`: `onAdd` gets the new wood; `onClose` shuts the form.
+ * New project offers it too, as the wood's "Other…".
+ */
+export function WoodForm({
   units,
   onAdd,
   onClose,
@@ -51,7 +54,10 @@ function WoodForm({
       className="wood-form"
       onSubmit={add}
       onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
+        if (e.key !== "Escape") return;
+        // Escape shuts this form only, not a panel the form sits in (New project).
+        e.stopPropagation();
+        onClose();
       }}
     >
       <div className="field">

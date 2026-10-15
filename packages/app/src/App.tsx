@@ -8,9 +8,8 @@
 // inside it (ThreeDGuard); any other fault in Kerf is caught and said (WindowGuard).
 
 import { type ReactNode, useEffect } from "react";
-import { defaultChoice, newProject, type PieceId } from "./model/new-project";
 import type { KerfStore } from "./model/store-types";
-import { KerfProvider, useKerf, useKerfStore } from "./state/useKerf";
+import { KerfProvider, useKerf } from "./state/useKerf";
 import { useScreenHistory } from "./state/useScreenHistory";
 import { Drawer } from "./ui/Drawer";
 import { HintLine } from "./ui/HintLine";
@@ -43,7 +42,6 @@ export function App({ store, model }: { store: KerfStore; model: ReactNode }) {
 
 function Screens({ model }: { model: ReactNode }) {
   useScreenHistory();
-  const store = useKerfStore();
   const screen = useKerf((s) => s.screen);
   const theme = useKerf((s) => s.theme);
   useEffect(() => {
@@ -51,19 +49,7 @@ function Screens({ model }: { model: ReactNode }) {
   }, [theme]);
   if (screen === "workshop") return <Window model={model} />;
   if (screen === "shop") return <YourShop />;
-  return <Home onNewProject={(piece) => startAtOnce(store, piece)} />;
-}
-
-/**
- * Starts `piece` (a bookcase when none was chosen) at once, in the usual sizes, and opens it in the
- * Workshop; one the engine refuses is said on the notice line. Stands in for the New project panel,
- * which asks for the sizes first and replaces this (issue #110).
- */
-function startAtOnce(store: KerfStore, piece: PieceId = "bookcase"): void {
-  const { unitsForNew, shopRecord, createProject, say } = store.getState();
-  const made = newProject(defaultChoice(piece, unitsForNew, shopRecord), shopRecord);
-  if (made.ok) void createProject(made.edit, made.note);
-  else say(made.message);
+  return <Home />;
 }
 
 function Window({ model }: { model: ReactNode }) {

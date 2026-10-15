@@ -1564,3 +1564,337 @@ button.project-open {
   color: var(--color-step-active-text);
   font-weight: var(--font-weight-strong);
 }
+
+/* New project (design spec §3; the look is 2026-10-14-first-run-and-home/3-new-project.png). */
+.new-project-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--color-viewport) 72%, transparent);
+}
+
+.new-project {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  width: min(1100px, 94vw);
+  height: min(720px, 92vh);
+  overflow: hidden;
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 40px 120px -30px color-mix(in srgb, var(--color-viewport) 90%, transparent);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.new-project:focus {
+  outline: none;
+}
+
+.new-project-gallery {
+  min-height: 0;
+  overflow: auto;
+  padding: 22px var(--space-5);
+}
+
+.new-project-gallery h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.new-project-lede {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.new-project-tabs {
+  margin: 14px 0 var(--space-4);
+  padding: 0;
+}
+
+.new-project-tabs [role="tab"] {
+  font-size: 14px;
+}
+
+.new-project-tabs [role="tab"]:disabled {
+  opacity: 0.6;
+}
+
+.new-project-close {
+  position: absolute;
+  top: var(--space-4);
+  right: calc(340px + var(--space-4));
+  padding: var(--space-1) var(--space-2);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.preview {
+  flex: none;
+  height: 190px;
+  overflow: hidden;
+  background: var(--color-viewport);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+}
+
+.preview-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.preview-note {
+  margin: 0;
+  padding: var(--space-4);
+  color: var(--color-text-muted);
+}
+
+.preview-art {
+  display: grid;
+  place-items: center;
+  color: var(--color-wood-sheet);
+}
+
+.preview-art .drawing {
+  height: 150px;
+}
+
+.piece-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.piece-tile .tile-picture {
+  height: 120px;
+}
+
+.piece-tile .tile-picture .drawing {
+  height: 88px;
+}
+
+.piece-tile[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent) inset;
+}
+
+/* A piece that comes later is dimmed as on Home, but can still be pressed to say so. */
+.piece-tile[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.piece-tile[aria-disabled="true"]:hover {
+  border-color: var(--color-border);
+}
+
+.new-project-later {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: var(--radius-2);
+  color: var(--color-text-muted);
+}
+
+.new-project-later:empty {
+  display: none;
+}
+
+.open-file {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: var(--radius-2);
+  color: var(--color-text-muted);
+}
+
+.open-file-art {
+  width: 54px;
+  height: 54px;
+  color: var(--color-accent);
+}
+
+.open-file p {
+  max-width: 34em;
+  margin: 0;
+}
+
+.open-file b {
+  display: block;
+  color: var(--color-text);
+}
+
+.open-file .primary {
+  padding: 6px var(--space-3);
+}
+
+.open-file .notice {
+  justify-self: stretch;
+  border: 0;
+  border-radius: var(--radius-1);
+}
+
+.piece-settings {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--color-bg);
+  border-left: var(--border-width) solid var(--color-border);
+}
+
+.piece-settings-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  overflow: auto;
+  padding: 18px 18px var(--space-2);
+}
+
+.settings-choice {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.settings-label {
+  margin-bottom: 3px;
+  padding: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.settings-choice .seg {
+  flex-wrap: wrap;
+}
+
+.piece-settings .seg button {
+  padding: var(--space-1) 14px;
+}
+
+.piece-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.piece-heading h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: var(--font-weight-strong);
+}
+
+.piece-heading p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.piece-heading > div {
+  min-width: 0;
+}
+
+/* The units stay one control on one line; the blurb beside them wraps instead. */
+.piece-heading .settings-choice {
+  flex: none;
+}
+
+.piece-heading .seg {
+  flex-wrap: nowrap;
+}
+
+.piece-heading .seg button {
+  padding: 2px var(--space-2);
+  font-size: var(--font-size-small);
+}
+
+.piece-settings .field label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: var(--font-size-small);
+}
+
+.piece-settings .field input {
+  width: 100%;
+  padding: 6px var(--space-2);
+  text-align: right;
+}
+
+.three {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.piece-settings .settings-idea input {
+  text-align: left;
+}
+
+.piece-settings input[aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+
+.piece-settings .field-problem {
+  margin-top: var(--space-1);
+}
+
+/* The gap takes one size field's width; the outside size it gives is read under it. */
+.settings-gap {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: var(--space-2);
+}
+
+.settings-gap .field-problem,
+.settings-outside {
+  grid-column: 1 / -1;
+}
+
+.settings-outside {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.settings-wood .wood-form {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+}
+
+.piece-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) 18px 18px;
+}
+
+.piece-settings-actions .field-problem {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.piece-settings-actions .quiet,
+.piece-settings-actions .primary {
+  padding: 6px var(--space-3);
+}
+
+/* Create stays off until the piece can be built; it reads as off in both themes. */
+.piece-settings-actions .primary:disabled {
+  color: var(--color-step-active-text);
+  opacity: 0.45;
+  cursor: default;
+}

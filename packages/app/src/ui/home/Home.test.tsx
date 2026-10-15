@@ -51,13 +51,12 @@ async function home(made: Edit[] = [], library = memoryLibrary()) {
   }
   store.getState().setScreen("home");
   await store.getState().refreshProjects();
-  const onNewProject = vi.fn();
   render(
     <KerfProvider store={store}>
-      <Home onNewProject={onNewProject} />
+      <Home />
     </KerfProvider>,
   );
-  return { store, onNewProject };
+  return { store };
 }
 
 const sidebar = () => within(screen.getByRole("complementary", { name: "Your projects" }));
@@ -94,10 +93,31 @@ describe("<Home> sidebar", () => {
     expect(nav.getByRole("button", { name: "Home" }).getAttribute("aria-current")).toBe("page");
   });
 
-  it("starts a new project with nothing chosen from New project", async () => {
-    const { onNewProject } = await home();
-    fireEvent.click(sidebar().getByRole("button", { name: "New project" }));
-    expect(onNewProject).toHaveBeenCalledWith();
+  it("opens New project over Home, on the bookcase the first time, and hides Home behind it", async () => {
+    await home();
+    await userEvent.click(sidebar().getByRole("button", { name: "New project" }));
+    const panel = within(screen.getByRole("dialog", { name: "New project" }));
+    expect(panel.getByRole("button", { name: /^Bookcase/ }).getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+    const behind = document.querySelector(".home-screen");
+    expect(behind?.getAttribute("aria-hidden")).toBe("true");
+    expect(behind?.hasAttribute("inert")).toBe(true);
+    expect(screen.queryByRole("complementary", { name: "Your projects" })).toBeNull();
+  });
+
+  it("gives Home and the keyboard back when New project is cancelled", async () => {
+    await home();
+    const opener = sidebar().getByRole("button", { name: "New project" });
+    await userEvent.click(opener);
+    await userEvent.click(
+      within(screen.getByRole("dialog", { name: "New project" })).getByRole("button", {
+        name: "Cancel",
+      }),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.querySelector(".home-screen")?.hasAttribute("aria-hidden")).toBe(false);
+    expect(document.activeElement).toBe(opener);
   });
 
   it("lists the five newest projects under Recent files, newest first", async () => {
@@ -169,10 +189,13 @@ describe("<Home> templates", () => {
     expect((await screen.findByRole("tooltip")).textContent).toBe(`${name}${tip}`);
   });
 
-  it("starts New project with the piece chosen when its tile is clicked", async () => {
-    const { onNewProject } = await home();
-    fireEvent.click(main().getByRole("button", { name: /^Bookcase/ }));
-    expect(onNewProject).toHaveBeenCalledWith("bookcase");
+  it("opens New project with the piece chosen when its tile is clicked", async () => {
+    await home();
+    fireEvent.click(main().getByRole("button", { name: /^Cabinet/ }));
+    const panel = within(screen.getByRole("dialog", { name: "New project" }));
+    expect(panel.getByRole("button", { name: /^Cabinet/ }).getAttribute("aria-pressed")).toBe(
+      "true",
+    );
   });
 });
 

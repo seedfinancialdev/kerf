@@ -147,6 +147,23 @@ describe("units for new projects", () => {
   });
 });
 
+describe("the last New project choice", () => {
+  it("is the one last created, even in a later session, its units the units for new projects", () => {
+    const storage = memory();
+    const first = createKerfStore({ storage, library: memoryLibrary() });
+    first.getState().rememberChoice({ piece: "box", units: "metric", wood: "w1" });
+    const later = createKerfStore({ storage, library: memoryLibrary() }).getState();
+    expect(later.lastChoice).toEqual({ piece: "box", wood: "w1" });
+    expect(later.unitsForNew).toBe("metric");
+  });
+
+  it("is nothing on a browser that never made one", () => {
+    expect(
+      createKerfStore({ storage: memory(), library: memoryLibrary() }).getState().lastChoice,
+    ).toEqual({});
+  });
+});
+
 describe("when a project began", () => {
   it("is noted when it is created, and kept with it in the library", async () => {
     const library = memoryLibrary();

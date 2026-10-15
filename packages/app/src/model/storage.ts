@@ -14,6 +14,8 @@ export type StorageKey =
   | "kerf.sections"
   | "kerf.project"
   | "kerf.created"
+  /** The last New project piece, units and wood (last-choice.ts). */
+  | "kerf.lastChoice"
   /** "yes" once the tour has been seen or skipped. */
   | "kerf.toured"
   | "kerf.project.setAside"

@@ -10,7 +10,9 @@ import type { AssemblyStep, Id, Project, ShopProfile, SolveResult, Vec3 } from "
 import type { StoreApi } from "zustand/vanilla";
 import type { Edit } from "./commands";
 import type { History } from "./history";
+import type { LastChoice } from "./last-choice";
 import type { ProjectSummary } from "./library";
+import type { NewProjectChoice } from "./new-project";
 import type { Notice } from "./notices";
 import type { Pending, Proposal } from "./pending";
 import type { Selection } from "./selection";
@@ -101,6 +103,8 @@ export interface KerfState {
    * 015, rule 4).
    */
   unitsForNew: Project["units"];
+  /** The piece and wood New project last created, which it starts from next time (design spec §3). */
+  lastChoice: Partial<LastChoice>;
   /** Open state by section title; a title not listed has its own default. */
   sections: Record<string, boolean>;
   /** When the shown project was first started (meta.json "created"), as an ISO string. */
@@ -256,6 +260,11 @@ export interface KerfActions {
    * cannot keep the choice, says so once.
    */
   setUnitsForNew(units: Project["units"]): void;
+  /**
+   * Remembers `choice` as New project's last (its piece and wood, for this visit and later ones),
+   * and its units as the units for new projects, as `setUnitsForNew` does.
+   */
+  rememberChoice(choice: Pick<NewProjectChoice, "piece" | "units" | "wood">): void;
 }
 
 /** The app's store: its state with its actions. */

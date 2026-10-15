@@ -4,7 +4,7 @@
 
 // Interaction spec, "Workflow modules" and "Screen layout"; design spec, "Layout".
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { App } from "./App";
 import { startProject } from "./model/commands";
@@ -49,13 +49,18 @@ describe("<App>", () => {
     expect(document.documentElement.dataset.theme).toBe("light");
   });
 
-  it("shows Home on a later launch, where a template starts its piece in the Workshop", async () => {
+  it("shows Home on a later launch, where a template opens New project and Create starts it in the Workshop", async () => {
     const backing = memoryStorage();
     backing.setItem("kerf.shop", JSON.stringify(STARTER_RECORD));
     const store = createKerfStore({ storage: createStorage(backing), library: memoryLibrary() });
     render(<App store={store} model={null} />);
     expect(screen.getByRole("heading", { name: "What's on the bench?" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /^Box/ }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "New project" })).getByRole("button", {
+        name: "Create",
+      }),
+    );
     await waitFor(() => expect(store.getState().screen).toBe("workshop"));
     // New project's box (model/new-project.ts): a box structure, kept in the library.
     expect(shownProject(store.getState())?.structures[0]?.type).toBe("box");

@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { startProject } from "./commands";
 import {
   exactLiteral,
+  explainSize,
   literalFor,
   readCount,
   readLength,
@@ -226,5 +227,28 @@ describe("readShopLength()", () => {
       ok: false,
       message: 'Unknown name "width"',
     });
+  });
+});
+
+describe("explainSize()", () => {
+  it("names the field and says what to type when the text names nothing the project has", () => {
+    // Task 5 review: the engine's 'Unknown name "tall"' does not say which field or what to type.
+    expect(explainSize("Height", "tall", 'Unknown name "tall"')).toBe(
+      'Height: "tall" isn\'t a length; type one like 30" or 762 mm.',
+    );
+  });
+
+  it("quotes the text as typed, without the spaces around it", () => {
+    expect(explainSize("Width", " wide ", 'Unknown name "wide"')).toBe(
+      'Width: "wide" isn\'t a length; type one like 30" or 762 mm.',
+    );
+  });
+
+  it("passes every other refusal on unchanged", () => {
+    const bare = '"30" is not a length; add a unit (in, " or mm).';
+    expect(explainSize("Width", "30", bare)).toBe(bare);
+    expect(explainSize("Width", '0"', "Width must be more than zero.")).toBe(
+      "Width must be more than zero.",
+    );
   });
 });
