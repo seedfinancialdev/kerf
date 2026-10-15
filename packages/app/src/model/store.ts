@@ -33,6 +33,7 @@ import {
 } from "./persist";
 import { NOTHING, type Selection } from "./selection";
 import { loadShop, SHOP_NOT_KEPT, saveShop } from "./shop";
+import { recordFromProfile, shopProfileFor } from "./shop-record";
 import type { AppStorage } from "./storage";
 import type { KerfActions, KerfState, KerfStore, Solved } from "./store-types";
 import { viewActions } from "./view-actions";
@@ -140,11 +141,14 @@ export function createKerfStore(deps: {
 }): KerfStore {
   const clock = deps.clock ?? (() => performance.now());
   const loaded = loadShop(deps.storage);
+  // Kept so a shop change saves the stock too; Task 7 moves the record into the store's state.
+  let shopRecord = loaded.record;
+  const shopProfile = shopProfileFor(shopRecord);
 
   const solveFor = (project: Project | null, shop: ShopProfile): Solved | null =>
     solveShown(project, shop, clock);
 
-  const restored = openStoredProject(deps.storage, (project) => solveFor(project, loaded.shop));
+  const restored = openStoredProject(deps.storage, (project) => solveFor(project, shopProfile));
   const startup = warningsFirst(
     [loaded.problem, restored.problem, storageNotice(deps.storage)].filter(
       (w): w is string => w !== undefined,
@@ -212,7 +216,7 @@ export function createKerfStore(deps: {
     };
 
     return {
-      ...startingState(deps.storage, restored.history, loaded.shop, restored.solved, startup),
+      ...startingState(deps.storage, restored.history, shopProfile, restored.solved, startup),
 
       ...viewActions(set, get),
 
@@ -267,7 +271,8 @@ export function createKerfStore(deps: {
         if (h) moveHistory(jumpTo(h, index));
       },
       setShop: (shop) => {
-        const kept = saveShop(deps.storage, shop);
+        shopRecord = recordFromProfile(shop, shopRecord.stock);
+        const kept = saveShop(deps.storage, shopRecord);
         show({ shop });
         if (kept || toldShopNotKept) return;
         toldShopNotKept = true;

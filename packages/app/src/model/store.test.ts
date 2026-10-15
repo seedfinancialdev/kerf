@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { memoryStorage } from "../testing/memory-storage";
 import { setShelves, setSize, startProject } from "./commands";
 import { saveKerfBytes } from "./files";
-import { STARTER_SHOP } from "./starter";
+import { STARTER_SHOP, STARTER_STOCK } from "./starter";
 import { createStorage } from "./storage";
 import { createKerfStore, shownProject } from "./store";
 
@@ -195,7 +195,16 @@ describe("createKerfStore()", () => {
     s.getState().setShop({ kerf: 0, tools: [] });
     expect(cuts().length).toBeGreaterThan(0);
     expect(cuts().every((c) => c.missing)).toBe(true);
-    expect(storage.read("kerf.shop")).toBe(JSON.stringify({ kerf: 0, tools: [] }));
+    // Saved as a pegboard: a saw with no cut width, no other tool, and the starter stock kept.
+    expect(JSON.parse(storage.read("kerf.shop") ?? "null")).toMatchObject({
+      version: 2,
+      setUp: true,
+      tableSaw: { kerf: 0 },
+      dadoStack: null,
+      router: null,
+      chisels: false,
+      stock: STARTER_STOCK,
+    });
   });
 
   it("falls back to the starter shop with a plain notice when the saved shop is invalid", () => {
