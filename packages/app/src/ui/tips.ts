@@ -3,9 +3,21 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // What every tool, step, tab and top-bar control says when you rest on it (design spec, "Tooltips").
-// Keys match `TOOLS` in tools/tools.ts; the step lines match `hintFor` in model/steps.ts.
+// Tool keys are those of `TOOLS` in tools/tools.ts; a step's line is its hint line from model/steps.ts.
 
+import { hintFor, STEPS, type Step } from "../model/steps";
 import type { TipText } from "./Tip";
+
+/** A step's tip: its hint line without the "Name — " lead, which the tip's heading already says. */
+function stepTip(step: Step): TipText {
+  const forWhat = hintFor(step, undefined).slice(`${step} — `.length);
+  return { name: step, text: forWhat.charAt(0).toUpperCase() + forWhat.slice(1) };
+}
+
+const STEP_TIPS = Object.fromEntries(STEPS.map((step) => [step, stepTip(step)])) as Record<
+  Step,
+  TipText
+>;
 
 /** Every tip, by the control it belongs to. */
 export const TIPS = {
@@ -29,14 +41,7 @@ export const TIPS = {
   edge: { name: "Edge profile", key: "F", text: "Round over or chamfer the edge of a board." },
   tape: { name: "Tape", key: "T", text: "Measure the distance between two points on the model." },
 
-  Start: { name: "Start", text: "Pick a template and set the overall size." },
-  Shape: {
-    name: "Shape",
-    text: "Choose how the piece is built. Every board follows the form until you edit it by hand.",
-  },
-  Divide: { name: "Divide", text: "Click an opening, then add shelves, a partition or bays." },
-  Joinery: { name: "Joinery", text: "Check the joints your tools can cut, then accept them." },
-  "Build plan": { name: "Build plan", text: "What to buy, what to cut, and in what order." },
+  ...STEP_TIPS,
 
   Shopping: {
     name: "Shopping",
@@ -61,7 +66,7 @@ export const TIPS = {
     name: "Size",
     text: "Type a size, or drag this label left and right to adjust it. Any unit works: 36\", 3', 900 mm.",
   },
-} as const satisfies Record<string, TipText>;
+} satisfies Record<string, TipText>;
 
 /** The name of one tip. */
 export type TipId = keyof typeof TIPS;

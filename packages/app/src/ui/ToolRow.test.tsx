@@ -6,7 +6,7 @@
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
@@ -321,17 +321,15 @@ describe("the arrow keys while moving", () => {
 });
 
 describe("tool tips (design spec, Tooltips)", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
   it("shows the key and what Push/Pull does after half a second on its button", () => {
-    vi.useFakeTimers();
-    try {
-      setup();
-      fireEvent.pointerEnter(screen.getByRole("button", { name: "Push/Pull P" }));
-      act(() => vi.advanceTimersByTime(500));
-      const tip = screen.getByRole("tooltip").textContent ?? "";
-      expect(tip).toContain("P");
-      expect(tip).toContain("Stretch or shrink");
-    } finally {
-      vi.useRealTimers();
-    }
+    setup();
+    fireEvent.pointerEnter(screen.getByRole("button", { name: "Push/Pull P" }));
+    act(() => vi.advanceTimersByTime(500));
+    const tip = screen.getByRole("tooltip");
+    expect(tip.querySelector("kbd")?.textContent).toBe("P");
+    expect(tip.textContent).toContain("Stretch or shrink");
   });
 });

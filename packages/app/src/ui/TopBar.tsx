@@ -47,15 +47,20 @@ export function TopBar() {
       </nav>
       <div className="topbar-actions">
         <SettingsMenu />
+        {/* A disabled button gets no pointer events, so its tip hangs on the span around it. */}
         <Tip tip={TIPS.undo}>
-          <button type="button" onClick={undo} disabled={!undoable}>
-            Undo
-          </button>
+          <span className="tip-anchor">
+            <button type="button" onClick={undo} disabled={!undoable}>
+              Undo
+            </button>
+          </span>
         </Tip>
         <Tip tip={TIPS.redo}>
-          <button type="button" onClick={redo} disabled={!redoable}>
-            Redo
-          </button>
+          <span className="tip-anchor">
+            <button type="button" onClick={redo} disabled={!redoable}>
+              Redo
+            </button>
+          </span>
         </Tip>
       </div>
     </header>
