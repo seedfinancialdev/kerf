@@ -193,6 +193,42 @@ describe("openLibrary() when the browser fails", () => {
   });
 });
 
+describe("openLibrary() with a misbehaving browser", () => {
+  it("lets go of a connection that opens after the open was given up as blocked", async () => {
+    let closed = false;
+    const late = {
+      open: () => {
+        const request: Record<string, unknown> = {};
+        setTimeout(() => {
+          (request.onblocked as () => void)();
+          request.result = { close: () => (closed = true) };
+          (request.onsuccess as () => void)();
+        });
+        return request;
+      },
+    } as unknown as IDBFactory;
+    expect((await openLibrary(late)).available).toBe(false);
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(closed).toBe(true);
+  });
+
+  it("reports a write false, with nothing left unhandled, when storing throws and the transaction aborts", async () => {
+    const throwing = () => {
+      const tx: Record<string, unknown> = {};
+      tx.objectStore = () => ({
+        put: () => {
+          setTimeout(() => (tx.onabort as (() => void) | undefined)?.());
+          throw new DOMException("cannot clone", "DataCloneError");
+        },
+      });
+      return tx;
+    };
+    const library = await openLibrary(factoryWith(throwing));
+    expect(await library.write(entry("A", "2026-10-14T10:00:00.000Z"))).toBe(false);
+    await new Promise((resolve) => setTimeout(resolve));
+  });
+});
+
 describe("LIBRARY_NOT_KEPT", () => {
   it("uses shop language", () => {
     expect(bannedWordsIn(LIBRARY_NOT_KEPT)).toEqual([]);

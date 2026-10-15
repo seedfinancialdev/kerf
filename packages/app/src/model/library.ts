@@ -107,17 +107,37 @@ function upgrade(db: IDBDatabase, oldVersion: number): void {
   }
 }
 
-/** Opens the database; rejects when it cannot be opened or opening is blocked by another tab. */
+/**
+ * Opens the database; rejects when it cannot be opened or opening is blocked by another tab. A
+ * connection that opens after the open was given up is closed, so it cannot block an upgrade.
+ */
 function openDatabase(factory: IDBFactory): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
+    let settled = false;
     const opening = factory.open(DATABASE, VERSION);
     opening.onupgradeneeded = (event) => upgrade(opening.result, event.oldVersion);
-    opening.onsuccess = () => resolve(opening.result);
-    opening.onerror = () => reject(opening.error);
-    opening.onblocked = () =>
+    opening.onsuccess = () => {
+      const db = opening.result;
+      db.onversionchange = () => db.close();
+      if (settled) db.close();
+      else resolve(db);
+      settled = true;
+    };
+    opening.onerror = () => {
+      settled = true;
+      reject(opening.error);
+    };
+    opening.onblocked = () => {
+      settled = true;
       reject(new DOMException("Another tab is using the database.", "InvalidStateError"));
+    };
   });
 }
+
+/** Whether `error` is a DOMException; a database from another realm throws its own kind. */
+const isDomException = (error: unknown): boolean =>
+  error instanceof DOMException ||
+  (error instanceof Error && Object.prototype.toString.call(error) === "[object DOMException]");
 
 const unavailable: Library = {
   available: false,
@@ -142,21 +162,19 @@ export async function openLibrary(factory: IDBFactory | undefined): Promise<Libr
   } catch {
     return unavailable;
   }
-  db.onversionchange = () => db.close();
   const attempt = async <T>(work: () => Promise<T>, otherwise: T): Promise<T> => {
     try {
       return await work();
     } catch (error) {
-      if (!(error instanceof DOMException)) console.error(error);
+      if (!isDomException(error)) console.error(error);
       return otherwise;
     }
   };
   const change = (work: (store: IDBObjectStore) => void): Promise<boolean> =>
     attempt(async () => {
       const tx = db.transaction(STORE, "readwrite");
-      const finished = committed(tx);
       work(tx.objectStore(STORE));
-      await finished;
+      await committed(tx);
       return true;
     }, false);
   return {

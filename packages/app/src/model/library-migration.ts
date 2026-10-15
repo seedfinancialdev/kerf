@@ -32,9 +32,10 @@ export interface MigrationResult {
  * it and storage no longer does; "kept" when it stays in storage (the library refused it, or the
  * browser would not let it be read); "none" when there was nothing to move, including a damaged
  * project, which `restoreProject` sets aside. `problem` carries what `restoreProject` says about a
- * stored project that could not be opened. If storage keeps the project despite "moved" (removal
- * cannot be confirmed), the next run replaces the same entry, so `modified` changes but nothing is
- * added; then that run returns "moved" again. Never throws.
+ * stored project that could not be opened. If the library already
+ * has the entry (an earlier run moved it but storage would not let the project go), nothing is
+ * written, so work done on it since is never overwritten; the removal is tried again and the
+ * outcome is "moved" again. Never throws.
  */
 export async function migrateStoredProject(
   storage: AppStorage,
@@ -45,6 +46,10 @@ export async function migrateStoredProject(
   if (!history) {
     const outcome = storage.couldNotRead("kerf.project") ? "kept" : "none";
     return problem === undefined ? { outcome } : { outcome, problem };
+  }
+  if (await library.read(MIGRATED_PROJECT_ID)) {
+    storage.remove("kerf.project");
+    return { outcome: "moved" };
   }
   const project = currentProject(history);
   const time = now.toISOString();

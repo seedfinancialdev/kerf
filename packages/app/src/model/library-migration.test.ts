@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage, unreadable } from "../testing/memory-storage";
 import { startProject } from "./commands";
-import { openLibrary } from "./library";
+import { type LibraryEntry, openLibrary } from "./library";
 import { MIGRATED_PROJECT_ID, migrateStoredProject } from "./library-migration";
 import { createStorage } from "./storage";
 
@@ -110,7 +110,7 @@ describe("migrateStoredProject()", () => {
     expect(result.problem).toMatch(/could not be read/);
   });
 
-  it("adds no second entry when storage will not let the project go and it moves again", async () => {
+  it("leaves work done since untouched when it moves again because storage would not let go", async () => {
     const backing = memoryStorage();
     backing.setItem("kerf.project", stored);
     const holding: Storage = {
@@ -120,13 +120,27 @@ describe("migrateStoredProject()", () => {
     };
     const library = memoryLibrary();
     await migrateStoredProject(createStorage(holding), library, NOW);
+    const edited = {
+      ...(await library.read(MIGRATED_PROJECT_ID)),
+      name: "Edited",
+      modified: "2026-10-15T07:00:00.000Z",
+    };
+    await library.write(edited as LibraryEntry);
     const later = new Date("2026-10-15T08:00:00.000Z");
     expect((await migrateStoredProject(createStorage(holding), library, later)).outcome).toBe(
       "moved",
     );
-    const list = await library.list();
-    expect(list).toHaveLength(1);
-    expect(list[0]?.modified).toBe(later.toISOString());
+    expect(await library.list()).toHaveLength(1);
+    expect(await library.read(MIGRATED_PROJECT_ID)).toEqual(edited);
+  });
+
+  it("removes the stored project once the library already has it", async () => {
+    const { backing, storage } = withStoredProject();
+    const library = memoryLibrary();
+    await migrateStoredProject(storage, library, NOW);
+    backing.setItem("kerf.project", stored);
+    expect((await migrateStoredProject(storage, library, NOW)).outcome).toBe("moved");
+    expect(backing.getItem("kerf.project")).toBeNull();
   });
 
   it("moves the project into the real library", async () => {
@@ -137,7 +151,7 @@ describe("migrateStoredProject()", () => {
     expect(backing.getItem("kerf.project")).toBeNull();
   });
 
-  it("keeps the stored project when the real library's write does not commit", async () => {
+  it("keeps the stored project when the library (a fake with a failing write) refuses it", async () => {
     const { backing, storage } = withStoredProject();
     const refusing = { ...memoryLibrary(), write: async () => false };
     expect((await migrateStoredProject(storage, refusing, NOW)).outcome).toBe("kept");
