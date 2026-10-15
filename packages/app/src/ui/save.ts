@@ -2,10 +2,11 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Saving the shown project as a .kerf download (design spec, "Saving"), shared by the File section
-// and the window's fallback after a fault (WindowGuard), so Save works even when the window cannot.
+// Saving the shown project as a .kerf download (design spec, "Saving"), used by the window's
+// fallback after a fault (WindowGuard), so Save works even when the window cannot.
 
 import { fileNameFor, SAVE_FAULT, saveFailureReason, saveKerfBytes } from "../model/files";
+import { pictureInTime } from "../model/picture";
 import { shownProject } from "../model/store";
 import type { KerfStore } from "../model/store-types";
 
@@ -23,33 +24,7 @@ function download(bytes: Uint8Array, name: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-/**
- * How long Save waits for the view's picture, in milliseconds. A slow or stuck canvas (software
- * WebGL, a lost context) must never hold the file back; past this the file goes without a picture.
- */
-const THUMBNAIL_WAIT_MS = 1000;
-
-/** The view's picture, or a rejection once `THUMBNAIL_WAIT_MS` has passed without one. */
-function pictureInTime(take: () => Promise<Uint8Array>): Promise<Uint8Array> {
-  return new Promise((resolve, reject) => {
-    const late = setTimeout(
-      () => reject(new Error(`The 3D view gave no picture within ${THUMBNAIL_WAIT_MS} ms.`)),
-      THUMBNAIL_WAIT_MS,
-    );
-    take().then(
-      (picture) => {
-        clearTimeout(late);
-        resolve(picture);
-      },
-      (error: unknown) => {
-        clearTimeout(late);
-        reject(error);
-      },
-    );
-  });
-}
-
-/** Said when Save is asked for with no project open (the File section's Save is off then). */
+/** Said when Save is asked for with no project open (the window's fallback offers it regardless). */
 const NOTHING_TO_SAVE = "There is no project to save yet.";
 
 /**
@@ -66,14 +41,8 @@ export async function saveShownProject(store: KerfStore, now: Date): Promise<voi
   }
   const stamp = now.toISOString();
   // A view that cannot draw its picture, or not in time, must not stop the save: the file just has
-  // no thumbnail. The failure is still logged so that files saved without pictures are noticed.
-  const take = s.thumbnail;
-  const thumbnail = await Promise.resolve()
-    .then(() => (take ? pictureInTime(take) : undefined))
-    .catch((error: unknown) => {
-      console.error(error);
-      return undefined;
-    });
+  // no thumbnail.
+  const thumbnail = (await pictureInTime(s.thumbnail)) ?? undefined;
   try {
     download(
       saveKerfBytes(project, { created: s.created ?? stamp, modified: stamp }, thumbnail),

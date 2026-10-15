@@ -13,11 +13,15 @@ import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { Problems } from "./Problems";
 
 function shown(diagnostics: Diagnostic[]): string[] {
-  const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+  const store = createKerfStore({
+    storage: createStorage(memoryStorage()),
+    library: memoryLibrary(),
+  });
   store.getState().apply(startProject("Bookcase", "imperial"));
   const solved = store.getState().solved;
   if (!solved) throw new Error("not solved");

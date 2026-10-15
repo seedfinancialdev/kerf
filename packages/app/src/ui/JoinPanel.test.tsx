@@ -13,6 +13,7 @@ import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
 import { bookcaseWithShelf } from "../testing/bookcase-with-shelf";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { drawBoard } from "../tools/board";
 import { propose } from "../tools/join";
@@ -22,7 +23,10 @@ afterEach(cleanup);
 
 function setup() {
   const project = bookcaseWithShelf();
-  const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+  const store = createKerfStore({
+    storage: createStorage(memoryStorage()),
+    library: memoryLibrary(),
+  });
   store.getState().begin({ label: "Start", project });
   store.getState().setTool("join");
   render(
@@ -71,7 +75,10 @@ describe("<JoinPanel>", () => {
 
   describe("with a form-made bookcase", () => {
     const formSetup = () => {
-      const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+      const store = createKerfStore({
+        storage: createStorage(memoryStorage()),
+        library: memoryLibrary(),
+      });
       store.getState().begin(startProject("Bookcase", "imperial"));
       store.getState().setTool("join");
       render(

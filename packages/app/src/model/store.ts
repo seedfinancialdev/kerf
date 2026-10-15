@@ -2,13 +2,15 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The app's state (design spec, "How it is built", layer 2): the project as History, a preview
-// while something is dragged, the solve of whatever is shown, and the step, selection, shop and
-// tool. Every change goes through `apply` (or `preview` then `commit`), and the engine solves the
-// shown project straight after, so the screens, the cut list and the file can never disagree.
+// The app's state (design spec, "How it is built", layer 2): the screen, the open project as
+// History, a preview while something is dragged, the solve of whatever is shown, and the step,
+// selection, shop and tool. Every change goes through `apply` (or `preview` then `commit`), and the
+// engine solves the shown project straight after, so the screens, the cut list and the kept project
+// can never disagree.
 
 import { assemblyOrder, type Project, type ShopProfile, serializeProject, solve } from "@kerf/core";
 import { createStore } from "zustand/vanilla";
+import type { Edit } from "./commands";
 import {
   canRedo,
   canUndo,
@@ -20,22 +22,25 @@ import {
   startHistory,
   undo,
 } from "./history";
-import { afterHistoryMoved, dismiss, type NoticeLine, tell, warn, warningsFirst } from "./notices";
+import { newId } from "./ids";
+import { LIBRARY_NOT_KEPT, type Library } from "./library";
+import { libraryActions } from "./library-actions";
+import type { MigrationResult } from "./library-migration";
 import {
-  NOT_KEPT,
-  OPEN_STORED_FAULT,
-  readSections,
-  restoreProject,
-  setAsideStoredProject,
-  storageNotice,
-  UNITS_NOT_KEPT,
-  writeProject,
-} from "./persist";
+  afterHistoryMoved,
+  dismiss,
+  type Notice,
+  type NoticeLine,
+  tell,
+  warn,
+  warningsFirst,
+} from "./notices";
+import { readSections, storageNotice, UNITS_NOT_KEPT } from "./persist";
 import { NOTHING, type Selection } from "./selection";
 import { loadShop, SHOP_NOT_KEPT, saveShop } from "./shop";
-import { recordFromProfile, shopProfileFor } from "./shop-record";
+import { type ShopRecord, shopProfileFor } from "./shop-record";
 import type { AppStorage } from "./storage";
-import type { KerfActions, KerfState, KerfStore, Solved } from "./store-types";
+import type { KerfActions, KerfState, KerfStore, Screen, Solved } from "./store-types";
 import { viewActions } from "./view-actions";
 
 /** The project on screen: the preview while dragging, otherwise History's current entry. */
@@ -68,43 +73,27 @@ function stillThere(selection: Selection, solved: Solved | null): Selection {
 }
 
 /**
- * The stored project, solved, or why it could not be opened. A fault in Kerf while solving it is
- * logged and the project set aside, like one that cannot be read, so the app always starts
- * (ADR 015, rule 11).
- */
-function openStoredProject(
-  storage: AppStorage,
-  solveFor: (project: Project) => Solved | null,
-): { history: History | null; problem?: string; solved: Solved | null } {
-  const restored = restoreProject(storage);
-  if (!restored.history) return { ...restored, solved: null };
-  try {
-    return { ...restored, solved: solveFor(currentProject(restored.history)) };
-  } catch (error) {
-    console.error(error);
-    return { ...setAsideStoredProject(storage, OPEN_STORED_FAULT), solved: null };
-  }
-}
-
-/**
- * The state a session starts in: the Start step, the stored project (`history`) and its solve, the
- * shop, the stored preferences, and the start-up notices (`startup`). Without a stored project,
- * nothing is open.
+ * The state a session starts in: on `screen`, with no project open, the shop from `shopRecord`,
+ * the stored preferences, and the start-up notices (`startup`). Projects are opened from Home.
  */
 function startingState(
   storage: AppStorage,
-  history: History | null,
-  shop: ShopProfile,
-  solved: Solved | null,
+  screen: Screen,
+  shopRecord: ShopRecord,
   startup: NoticeLine,
 ): KerfState {
   return {
-    history,
+    screen,
+    projectId: null,
+    projects: [],
+    history: null,
     previewed: null,
-    solved,
-    step: "Start",
+    solved: null,
+    step: "Shape",
     selection: NOTHING,
-    shop,
+    shopRecord,
+    shop: shopProfileFor(shopRecord),
+    toured: storage.read("kerf.toured") === "yes",
     ...startup,
     tool: "select",
     pending: null,
@@ -116,7 +105,7 @@ function startingState(
     theme: storage.read("kerf.theme") === "light" ? "light" : "dark",
     unitsForNew: storage.read("kerf.units") === "metric" ? "metric" : "imperial",
     sections: readSections(storage),
-    created: storage.read("kerf.created") ?? null,
+    created: null,
     thumbnail: null,
     notDrawn: [],
     hovered: null,
@@ -126,38 +115,52 @@ function startingState(
 }
 
 /**
- * Makes the store. `storage` keeps the project, shop, theme and screen choices (persist.ts and
- * shop.ts); `clock` returns milliseconds and times the solve (default `performance.now`);
- * `clockDate` returns epoch milliseconds for when a project began (default `Date.now`). Starts on
- * the Start step, with the stored project if the engine accepts it (one it rejects is set aside,
- * never deleted); otherwise with none. Every recorded change is written back to storage; if that
- * fails, the user is told once. Start-up warnings are shown in turn: a shop problem first, then a
- * project problem, then the warning that this browser keeps nothing.
+ * The start-up warnings, in turn: a shop problem, what was wrong with the project older Kerf kept
+ * (`migration`), that the library would not take it, and that this browser keeps nothing.
+ */
+function startupWarnings(
+  storage: AppStorage,
+  shopProblem: string | undefined,
+  migration: MigrationResult | undefined,
+): string[] {
+  // A project the browser would not let be read stays where it was ("kept") with its own words;
+  // only one the library refused means projects are not kept.
+  const refused = migration?.outcome === "kept" && migration.problem === undefined;
+  return [
+    shopProblem,
+    migration?.problem,
+    refused ? LIBRARY_NOT_KEPT : undefined,
+    storageNotice(storage),
+  ].filter((w): w is string => w !== undefined);
+}
+
+/**
+ * Makes the store. `storage` keeps the shop, the tour, theme and screen choices (persist.ts and
+ * shop.ts); `library` keeps the projects; `migration` is what became of the project older Kerf
+ * kept (library-migration.ts), said at start; `clock` returns milliseconds and times the solve
+ * (default `performance.now`); `clockDate` returns epoch milliseconds for when a project began or
+ * changed (default `Date.now`). Starts on Your shop at first launch, else on Home, with no project
+ * open. Every recorded change to the open project is written to the library; if that fails, the
+ * user is told once.
  */
 export function createKerfStore(deps: {
   storage: AppStorage;
+  library: Library;
+  migration?: MigrationResult;
   clock?: () => number;
   clockDate?: () => number;
 }): KerfStore {
   const clock = deps.clock ?? (() => performance.now());
+  const epochMs = (): number => deps.clockDate?.() ?? Date.now();
+  const now = (): string => new Date(epochMs()).toISOString();
   const loaded = loadShop(deps.storage);
-  // Kept so a shop change saves the stock too; Task 7 moves the record into the store's state.
-  let shopRecord = loaded.record;
-  const shopProfile = shopProfileFor(shopRecord);
+  const startup = warningsFirst(startupWarnings(deps.storage, loaded.problem, deps.migration));
 
   const solveFor = (project: Project | null, shop: ShopProfile): Solved | null =>
     solveShown(project, shop, clock);
 
-  const restored = openStoredProject(deps.storage, (project) => solveFor(project, shopProfile));
-  const startup = warningsFirst(
-    [loaded.problem, restored.problem, storageNotice(deps.storage)].filter(
-      (w): w is string => w !== undefined,
-    ),
-  );
-
   // True once the user has been told that a kind of work is not being kept (each is said once).
-  // Without storage at all the start-up warning has already said so for the project and the shop.
-  let toldNotKept = !deps.storage.available;
+  // Without storage at all the start-up warning has already said so for the shop.
   let toldShopNotKept = !deps.storage.available;
   let toldUnitsNotKept = false;
   const warnedOnce = new Set<string>();
@@ -187,7 +190,7 @@ export function createKerfStore(deps: {
         // The view tries every board again once History moves (Viewport.tsx).
         ...(moved ? { proposal: null, notDrawn: [] } : {}),
       });
-      if (moved) keep(get().history);
+      if (moved) projects.keep();
     };
 
     /**
@@ -205,30 +208,76 @@ export function createKerfStore(deps: {
     });
 
     /**
-     * Keeps the shown History entry in storage. When the project cannot be written, warns once; the
-     * warning waits behind any notice the user has not dismissed yet.
+     * Shows `edit`'s project with a History of its own, so Undo never reaches into another
+     * project. A measurement belongs to the project it was taken on (ADR 015, rule 11).
      */
-    const keep = (history: History | null): void => {
-      if (!history) return;
-      if (writeProject(deps.storage, currentProject(history)) || toldNotKept) return;
-      toldNotKept = true;
-      set(warn(line(), NOT_KEPT));
+    const showAfresh = (edit: Edit, patch: Partial<KerfState>): void =>
+      moveHistory(startHistory(edit), { tape: null, guides: [], ...patch });
+
+    /** As `showAfresh`, in the Workshop on Shape: how a kept project is opened. */
+    const openAfresh = (edit: Edit, patch: Partial<KerfState>): void =>
+      showAfresh(edit, { screen: "workshop", step: "Shape", ...patch });
+
+    /** Drops whatever was started or picked in the Workshop: it belongs to the project shown. */
+    const leaveWorkshop = (screen: Screen): void => {
+      const dropped = { screen, pending: null, proposal: null, selection: NOTHING };
+      if (get().previewed) show({ ...dropped, previewed: null });
+      else set(dropped);
     };
 
+    /** Shows `text` with an Undo that runs `undo`, then goes if it is still on screen. */
+    const offerUndo = (text: string, undo: () => Promise<void>): void => {
+      const offer: Notice = {
+        text,
+        kind: "undo",
+        undo: async () => {
+          await undo();
+          if (get().notice === offer) set(dismiss(line()));
+        },
+      };
+      set(tell(line(), offer));
+    };
+
+    const projects = libraryActions({
+      library: deps.library,
+      get,
+      set,
+      now,
+      newProjectId: () => newId(epochMs()),
+      openAfresh,
+      closeProject: () =>
+        show({
+          history: null,
+          previewed: null,
+          pending: null,
+          projectId: null,
+          created: null,
+          selection: NOTHING,
+          tape: null,
+          guides: [],
+          screen: get().screen === "workshop" ? "home" : get().screen,
+        }),
+      offerUndo,
+    });
+
     return {
-      ...startingState(deps.storage, restored.history, shopProfile, restored.solved, startup),
+      ...startingState(deps.storage, loaded.firstLaunch ? "shop" : "home", loaded.record, startup),
 
       ...viewActions(set, get),
 
-      begin: (edit) => {
-        const created = new Date(deps.clockDate?.() ?? Date.now()).toISOString();
-        deps.storage.write("kerf.created", created);
-        set({ created });
-        // Unlike `apply`, a project equal to the shown one is still recorded: the user opened a
-        // file.
-        const h = get().history;
-        // A measurement belongs to the project it was taken on (ADR 015, rule 11).
-        moveHistory(h ? record(h, edit) : startHistory(edit), { tape: null, guides: [] });
+      createProject: projects.createProject,
+      openProject: projects.openProject,
+      addFile: projects.addFile,
+      renameProject: projects.renameProject,
+      duplicateProject: projects.duplicateProject,
+      deleteProject: projects.deleteProject,
+      refreshProjects: projects.refreshProjects,
+
+      begin: (edit) => showAfresh(edit, { projectId: null, created: now() }),
+      setScreen: (screen) => {
+        if (screen === "workshop" && !get().history) set({ screen: "home" });
+        else if (screen !== "workshop" && get().screen === "workshop") leaveWorkshop(screen);
+        else set({ screen });
       },
 
       apply: (edit, notice) => {
@@ -270,13 +319,17 @@ export function createKerfStore(deps: {
         const h = get().history;
         if (h) moveHistory(jumpTo(h, index));
       },
-      setShop: (shop) => {
-        shopRecord = recordFromProfile(shop, shopRecord.stock);
+      setShopRecord: (shopRecord) => {
         const kept = saveShop(deps.storage, shopRecord);
-        show({ shop });
+        show({ shopRecord, shop: shopProfileFor(shopRecord) });
         if (kept || toldShopNotKept) return;
         toldShopNotKept = true;
         set(warn(line(), SHOP_NOT_KEPT));
+      },
+      // A browser that cannot keep it shows the tour again next visit: a small cost, not lost work.
+      finishTour: () => {
+        deps.storage.write("kerf.toured", "yes");
+        set({ toured: true });
       },
       setTool: (tool) => {
         const dropped = { tool, pending: null, proposal: null };

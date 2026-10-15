@@ -2,13 +2,15 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The Kerf window (Interaction spec, "Screen layout"; design spec, "Layout"). The model view is
+// The Kerf window (Interaction spec, "Screen layout"; design spec, "Layout" and "The flow"): the
+// screen the store is on, with the browser's Back and Forward following it. The model view is
 // passed in, so the window can be drawn without WebGL in tests, and a failure inside it stays
 // inside it (ThreeDGuard); any other fault in Kerf is caught and said (WindowGuard).
 
 import { type ReactNode, useEffect } from "react";
 import type { KerfStore } from "./model/store-types";
 import { KerfProvider, useKerf } from "./state/useKerf";
+import { useScreenHistory } from "./state/useScreenHistory";
 import { Drawer } from "./ui/Drawer";
 import { HintLine } from "./ui/HintLine";
 import { HistoryPanel } from "./ui/HistoryPanel";
@@ -22,16 +24,33 @@ import { WindowGuard } from "./ui/WindowGuard";
 import { ThreeDGuard, viewFailure } from "./viewport/ThreeDGuard";
 
 /**
- * The Kerf window: the top bar, the project tree, the model, the inspector and the build-plan
- * drawer, all reading `store`. `model` is the 3D view, passed in so tests can leave WebGL out.
+ * The Kerf window, on the screen `store` is on; the Workshop has the top bar, the project tree,
+ * the model, the inspector and the build-plan drawer. `model` is the 3D view, passed in so tests
+ * can leave WebGL out.
  */
 export function App({ store, model }: { store: KerfStore; model: ReactNode }) {
   return (
     <KerfProvider store={store}>
       <WindowGuard>
-        <Window model={model} />
+        <Screens model={model} />
       </WindowGuard>
     </KerfProvider>
+  );
+}
+
+function Screens({ model }: { model: ReactNode }) {
+  useScreenHistory();
+  const screen = useKerf((s) => s.screen);
+  return screen === "workshop" ? <Window model={model} /> : <ScreenToCome screen={screen} />;
+}
+
+/** Stands in for Your shop and Home until their screens are built (issues #108 and #109). */
+function ScreenToCome({ screen }: { screen: "shop" | "home" }) {
+  return (
+    <main className="window">
+      <h1>{screen === "shop" ? "Your shop" : "Home"}</h1>
+      <Notice />
+    </main>
   );
 }
 

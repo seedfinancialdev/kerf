@@ -14,6 +14,8 @@ export type StorageKey =
   | "kerf.sections"
   | "kerf.project"
   | "kerf.created"
+  /** "yes" once the tour has been seen or skipped. */
+  | "kerf.toured"
   | "kerf.project.setAside"
   /** A later rejected project, set aside without overwriting the earlier ones (persist.ts). */
   | `kerf.project.setAside.${number}`;

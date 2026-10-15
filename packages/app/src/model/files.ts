@@ -104,10 +104,6 @@ export function saveFailureReason(error: unknown): string | undefined {
 export const SAVE_FAULT =
   "Kerf hit a problem saving this project, so nothing was saved. Please report it.";
 
-/** Said when opening a file that was read fails through a fault in Kerf rather than in the file. */
-export const OPEN_FAULT =
-  "Kerf hit a problem opening this file. Please report it; your project is unchanged.";
-
 /** A file name from the project name, with characters file systems reject replaced. */
 export function fileNameFor(project: Project): string {
   const base = project.name

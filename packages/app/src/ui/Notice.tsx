@@ -21,7 +21,8 @@ export function Notice() {
         <>
           <span>{notice.text}</span>
           {notice.kind === "undo" && (
-            <button type="button" onClick={undo}>
+            // A deleted project is put back by the notice's own Undo; a change, by History's.
+            <button type="button" onClick={notice.undo ? () => void notice.undo?.() : undo}>
               Undo this
             </button>
           )}

@@ -4,13 +4,15 @@
 
 // Interaction spec, "Workflow modules" and "Screen layout"; design spec, "Layout".
 
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { App } from "./App";
 import { startProject } from "./model/commands";
 import { createStorage } from "./model/storage";
 import { createKerfStore, shownProject } from "./model/store";
+import { memoryLibrary } from "./testing/memory-library";
 import { memoryStorage } from "./testing/memory-storage";
+import { workshopStore } from "./testing/workshop-store";
 import { boardTool } from "./tools/board";
 
 /** Changes the store the way a click would: inside `act`, so the screen has redrawn afterwards. */
@@ -18,31 +20,44 @@ function change(run: () => void): void {
   act(run);
 }
 
+/** The Workshop with the bookcase open, as one History entry. */
 function renderApp() {
-  const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+  const store = workshopStore();
   render(<App store={store} model={null} />);
   return store;
 }
 
 describe("<App>", () => {
-  it("shows the five steps, Start first and pressed", () => {
+  it("shows the Workshop only once a project is open: at first launch it is Your shop", () => {
+    const store = createKerfStore({
+      storage: createStorage(memoryStorage()),
+      library: memoryLibrary(),
+    });
+    render(<App store={store} model={null} />);
+    expect(screen.queryByRole("navigation", { name: "Workflow" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Your shop" })).toBeTruthy();
+  });
+
+  it("shows the four steps, Shape first and pressed", () => {
     renderApp();
     const steps = screen.getByRole("navigation", { name: "Workflow" }).querySelectorAll("button");
     expect([...steps].map((b) => b.textContent)).toEqual([
-      "Start",
       "Shape",
       "Divide",
       "Joinery",
       "Build plan",
     ]);
-    expect(screen.getByRole("button", { name: "Start" }).getAttribute("aria-pressed")).toBe("true");
-  });
-
-  it("moves to Shape and shows what Shape is for", () => {
-    renderApp();
-    fireEvent.click(screen.getByRole("button", { name: "Shape" }));
     expect(screen.getByRole("button", { name: "Shape" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByText(/^Shape — choose how the case is built/)).toBeTruthy();
+  });
+
+  it("moves to Divide and shows what Divide is for", () => {
+    renderApp();
+    fireEvent.click(screen.getByRole("button", { name: "Divide" }));
+    expect(screen.getByRole("button", { name: "Divide" }).getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+    expect(screen.getByText(/^Divide — click an opening/)).toBeTruthy();
   });
 
   it("has the project, model and inspector regions", () => {
@@ -74,6 +89,24 @@ describe("<App>", () => {
     expect(store.getState().history?.at).toBe(0);
     fireEvent.keyDown(window, { key: "z", ctrlKey: true, shiftKey: true });
     expect(store.getState().history?.at).toBe(1);
+  });
+
+  it("puts a deleted project back from the notice's Undo this, leaving the open one as it was", async () => {
+    const store = createKerfStore({
+      storage: createStorage(memoryStorage()),
+      library: memoryLibrary(),
+    });
+    await store.getState().createProject(startProject("Blank box", "imperial"), "");
+    const box = store.getState().projectId as string;
+    await store.getState().createProject(startProject("Bookcase", "imperial"), "");
+    await store.getState().deleteProject(box);
+    render(<App store={store} model={null} />);
+    expect(screen.getByRole("status").textContent).toContain('Deleted "Blank box".');
+    fireEvent.click(screen.getByRole("button", { name: "Undo this" }));
+    await waitFor(() =>
+      expect(store.getState().projects.map((p) => p.name)).toEqual(["Bookcase", "Blank box"]),
+    );
+    expect(store.getState().history?.entries).toHaveLength(1);
   });
 
   it("shows a notice with an Undo this button that undoes the change", () => {
@@ -206,8 +239,7 @@ describe("<App>", () => {
     it("keeps the panels, the drawer and the cut list working, and says what to do", () => {
       // React reports the caught error on the console; the test is about what the user sees.
       const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
-      const store = createKerfStore({ storage: createStorage(memoryStorage()) });
-      store.getState().apply(startProject("Bookcase", "imperial"));
+      const store = workshopStore();
       render(<App store={store} model={<Broken />} />);
       quiet.mockRestore();
       expect(screen.getByRole("complementary", { name: "Project" })).toBeTruthy();
@@ -225,7 +257,7 @@ describe("<App>", () => {
       function Faulty(): never {
         throw new TypeError("x is undefined");
       }
-      const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+      const store = workshopStore();
       render(<App store={store} model={<Faulty />} />);
       quiet.mockRestore();
       expect(screen.getByRole("region", { name: "Model" }).textContent).toBe(
@@ -241,8 +273,7 @@ describe("<App>", () => {
         if (broken) throw new Error("Error creating WebGL context.");
         return <p>the model</p>;
       }
-      const store = createKerfStore({ storage: createStorage(memoryStorage()) });
-      store.getState().apply(startProject("Bookcase", "imperial"));
+      const store = workshopStore();
       store.getState().apply(startProject("Blank case", "imperial"));
       render(<App store={store} model={<Flaky />} />);
       broken = false;
@@ -280,8 +311,7 @@ describe("<App>", () => {
     it("leaves a fault the 3D view's guard handled to that guard: one notice, and the tool's action and preview kept", () => {
       // The 3D view's renderer (R3F) hands every fault a boundary caught to the page's error event
       // as well (its root's onCaughtError is reportError); here that event is sent by hand.
-      const store = createKerfStore({ storage: createStorage(memoryStorage()) });
-      store.getState().apply(startProject("Bookcase", "imperial"));
+      const store = workshopStore();
       store.getState().setTool("board");
       store.getState().setPending({ tool: "board", from: { placed: null, point: [0, 0, 0] } });
       store.getState().preview(startProject("Blank case", "imperial").project);
@@ -323,7 +353,7 @@ describe("<App>", () => {
     });
 
     it("says so when a panel's button fails, and logs it", () => {
-      const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+      const store = workshopStore();
       // The drawer takes the action when it is drawn, so it fails from the first click.
       vi.spyOn(store.getState(), "setDrawerTab").mockImplementation(() => {
         throw fault;

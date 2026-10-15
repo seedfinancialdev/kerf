@@ -8,7 +8,7 @@ import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import { describe, expect, it, vi } from "vitest";
 import { bannedWordsIn } from "../testing/banned-words";
-import { LIBRARY_NOT_KEPT, type LibraryEntry, openLibrary } from "./library";
+import { browserDatabase, LIBRARY_NOT_KEPT, type LibraryEntry, openLibrary } from "./library";
 
 /** Stands in for a saved project's text; the library keeps it without reading it. */
 const PROJECT_TEXT = '{"schemaVersion":1}';
@@ -255,6 +255,27 @@ describe("openLibrary() logging", () => {
     expect(await readWhenTransactionThrows(new TypeError("a bug"))).toBeUndefined();
     expect(logged).toHaveBeenCalledOnce();
     logged.mockRestore();
+  });
+});
+
+describe("browserDatabase()", () => {
+  it("is the page's database", () => {
+    expect(browserDatabase()).toBe(globalThis.indexedDB);
+  });
+
+  it("is none where reading the page's database throws, as a sandboxed page's does", () => {
+    const own = Object.getOwnPropertyDescriptor(globalThis, "indexedDB");
+    Object.defineProperty(globalThis, "indexedDB", {
+      configurable: true,
+      get: () => {
+        throw new DOMException("The page may not use storage.", "SecurityError");
+      },
+    });
+    try {
+      expect(browserDatabase()).toBeUndefined();
+    } finally {
+      if (own) Object.defineProperty(globalThis, "indexedDB", own);
+    }
   });
 });
 

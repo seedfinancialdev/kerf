@@ -12,6 +12,7 @@ import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { fromScene } from "../scene/frames";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { axisOf, dispatchDrag, dispatchPointer } from "./dispatch";
 
@@ -43,7 +44,10 @@ describe("fromScene()", () => {
 
 describe("dispatchPointer()", () => {
   it("gives a click on empty space its line of sight from the view's camera", () => {
-    const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+    const store = createKerfStore({
+      storage: createStorage(memoryStorage()),
+      library: memoryLibrary(),
+    });
     store.getState().apply(startProject("Bookcase", "imperial"));
     store.getState().setTool("board");
     const canvas = document.createElement("canvas");
@@ -65,7 +69,10 @@ describe("dispatchPointer()", () => {
 
 describe("a click on empty space with a line of sight", () => {
   it.each(["move", "pushPull"] as const)("does nothing for the %s tool", (tool) => {
-    const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+    const store = createKerfStore({
+      storage: createStorage(memoryStorage()),
+      library: memoryLibrary(),
+    });
     store.getState().apply(startProject("Bookcase", "imperial"));
     store.getState().setTool(tool);
     const before = store.getState().history?.entries.length;
@@ -84,7 +91,10 @@ describe("a click on empty space with a line of sight", () => {
 
 describe("dispatchDrag() after O or H", () => {
   it("leaves a waiting Push/Pull alone, so orbiting the view records nothing", () => {
-    const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+    const store = createKerfStore({
+      storage: createStorage(memoryStorage()),
+      library: memoryLibrary(),
+    });
     store.getState().apply(startProject("Bookcase", "imperial"));
     store.getState().setTool("pushPull");
     const side = store.getState().solved?.result.placements.find((p) => p.partName === "Side");

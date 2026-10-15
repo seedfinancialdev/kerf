@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } fr
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { BOARD_FAULT, ThreeDGuard, VIEW_NOT_STARTED } from "./ThreeDGuard";
 
@@ -20,7 +21,8 @@ function Broken(): never {
   throw fault;
 }
 
-const fresh = () => createKerfStore({ storage: createStorage(memoryStorage()) });
+const fresh = () =>
+  createKerfStore({ storage: createStorage(memoryStorage()), library: memoryLibrary() });
 
 describe("<ThreeDGuard>", () => {
   let console_: MockInstance;

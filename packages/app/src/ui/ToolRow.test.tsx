@@ -9,12 +9,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { startProject } from "../model/commands";
-import { createStorage } from "../model/storage";
-import { createKerfStore } from "../model/store";
-import { memoryStorage } from "../testing/memory-storage";
+import { workshopStore } from "../testing/workshop-store";
 
 function setup() {
-  const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+  const store = workshopStore();
   render(<App store={store} model={null} />);
   return store;
 }

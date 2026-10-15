@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// A structure's overall size (Interaction spec, "Overall size first"), shown in Start and in Shape.
+// A structure's overall size (Interaction spec, "Overall size first"), shown in Shape.
 // Typing records one change; dragging previews every step and records one change on release.
 
 import { formatLength, type Id, type Len, type Project } from "@kerf/core";

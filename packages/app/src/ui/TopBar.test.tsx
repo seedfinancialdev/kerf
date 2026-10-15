@@ -8,12 +8,10 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { startProject } from "../model/commands";
-import { createStorage } from "../model/storage";
-import { createKerfStore } from "../model/store";
-import { memoryStorage } from "../testing/memory-storage";
+import { workshopStore } from "../testing/workshop-store";
 
 function openApp() {
-  const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+  const store = workshopStore();
   render(<App store={store} model={null} />);
   return store;
 }
@@ -23,9 +21,7 @@ describe("<TopBar> tips", () => {
   afterEach(() => vi.useRealTimers());
 
   it("names Undo while it is disabled, since a disabled button gets no pointer events", () => {
-    render(
-      <App store={createKerfStore({ storage: createStorage(memoryStorage()) })} model={null} />,
-    );
+    render(<App store={workshopStore()} model={null} />);
     const undo = screen.getByRole("button", { name: "Undo" });
     expect(undo.hasAttribute("disabled")).toBe(true);
     // The pointer enters the wrapper around the button, which is what a browser reports.

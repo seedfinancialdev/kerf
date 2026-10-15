@@ -12,6 +12,7 @@ import { setOption, startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { drawBoard } from "../tools/board";
 import { Drawer } from "./Drawer";
@@ -19,7 +20,10 @@ import { Drawer } from "./Drawer";
 const IN = 203_200;
 
 function setup() {
-  const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+  const store = createKerfStore({
+    storage: createStorage(memoryStorage()),
+    library: memoryLibrary(),
+  });
   store.getState().apply(startProject("Bookcase", "imperial"));
   render(
     <KerfProvider store={store}>
@@ -108,7 +112,10 @@ describe("<Drawer>", () => {
   describe("a tab with nothing in it", () => {
     /** A project of one hand-drawn board: nothing to machine or glue, and no error. */
     function oneBoard() {
-      const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+      const store = createKerfStore({
+        storage: createStorage(memoryStorage()),
+        library: memoryLibrary(),
+      });
       const base = { ...startProject("Bookcase", "imperial").project, structures: [], params: [] };
       const ply = base.stock.find((s) => s.name === "3/4 plywood")?.id ?? "";
       const drawn = drawBoard(

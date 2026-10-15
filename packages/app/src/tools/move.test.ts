@@ -13,6 +13,7 @@ import { startProject } from "../model/commands";
 import type { Pending } from "../model/pending";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { lockedDelta, type MoveMode, moveBoards, moveTool } from "./move";
 import type { ModelHit, ModelPointer } from "./pointer";
@@ -195,7 +196,10 @@ describe("lockedDelta()", () => {
 
 describe("the Move tool", () => {
   const started = () => {
-    const s = createKerfStore({ storage: createStorage(memoryStorage()) });
+    const s = createKerfStore({
+      storage: createStorage(memoryStorage()),
+      library: memoryLibrary(),
+    });
     s.getState().apply(startProject("Bookcase", "imperial"));
     s.getState().setTool("move");
     return s;
@@ -488,7 +492,10 @@ describe("the Move tool", () => {
 
     it("moves a metric top down by a typed -50mm: exactly 400000 units", () => {
       // 50 mm x 8000 units per mm = 400000 (Domain model, "Units & precision").
-      const s = createKerfStore({ storage: createStorage(memoryStorage()) });
+      const s = createKerfStore({
+        storage: createStorage(memoryStorage()),
+        library: memoryLibrary(),
+      });
       s.getState().apply(startProject("Bookcase", "metric"));
       s.getState().setTool("move");
       const top = topOf(s);

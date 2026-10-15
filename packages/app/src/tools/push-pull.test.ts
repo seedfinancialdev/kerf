@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import type { ModelHit, ModelPointer } from "./pointer";
 import { faceOf, pushPull, pushPullTool, travelAlong } from "./push-pull";
@@ -185,7 +186,10 @@ describe("travelAlong()", () => {
 
 describe("the Push/Pull tool", () => {
   const started = () => {
-    const s = createKerfStore({ storage: createStorage(memoryStorage()) });
+    const s = createKerfStore({
+      storage: createStorage(memoryStorage()),
+      library: memoryLibrary(),
+    });
     s.getState().apply(startProject("Bookcase", "imperial"));
     s.getState().setTool("pushPull");
     return s;

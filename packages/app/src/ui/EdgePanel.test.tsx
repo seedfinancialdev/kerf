@@ -11,12 +11,16 @@ import { setShelves, startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { EdgePanel } from "./EdgePanel";
 import { Inspector } from "./Inspector";
 
 function setup(boards = "Shelf") {
-  const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+  const store = createKerfStore({
+    storage: createStorage(memoryStorage()),
+    library: memoryLibrary(),
+  });
   store.getState().apply(startProject("Bookcase", "imperial"));
   store.getState().setStep("Joinery");
   const shelves =
@@ -99,11 +103,9 @@ describe("<EdgePanel>", () => {
     const IN = 203_200;
     const withBits = (store: ReturnType<typeof setup>, roundoverBits: number[]) =>
       act(() =>
-        store.getState().setShop({
-          ...store.getState().shop,
-          tools: store
-            .getState()
-            .shop.tools.map((t) => (t.type === "router" ? { ...t, roundoverBits } : t)),
+        store.getState().setShopRecord({
+          ...store.getState().shopRecord,
+          router: { bits: roundoverBits.map((size) => ({ shape: "roundover" as const, size })) },
         }),
       );
 

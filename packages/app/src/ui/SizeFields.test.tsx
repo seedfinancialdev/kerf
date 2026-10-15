@@ -10,11 +10,15 @@ import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { SizeFields } from "./SizeFields";
 
 function setup() {
-  const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+  const store = createKerfStore({
+    storage: createStorage(memoryStorage()),
+    library: memoryLibrary(),
+  });
   store.getState().apply(startProject("Bookcase", "imperial"));
   const id = shownProject(store.getState())?.structures[0]?.id ?? "";
   render(
@@ -161,7 +165,10 @@ describe("<SizeFields>", () => {
     });
 
     it("drops its preview when the field goes away mid-drag", () => {
-      const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+      const store = createKerfStore({
+        storage: createStorage(memoryStorage()),
+        library: memoryLibrary(),
+      });
       store.getState().apply(startProject("Bookcase", "imperial"));
       const id = shownProject(store.getState())?.structures[0]?.id ?? "";
       const view = render(

@@ -15,6 +15,11 @@
 export interface Notice {
   text: string;
   kind: "undo" | "said" | "warning";
+  /**
+   * Takes back a change that is not a History step (a project deleted on Home, design spec §2);
+   * absent, Undo steps History back.
+   */
+  undo?: () => Promise<void>;
 }
 
 /**

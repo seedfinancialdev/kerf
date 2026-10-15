@@ -12,10 +12,12 @@ import { openKerfBytes } from "../model/files";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { ACTION_FAULT, WindowGuard } from "./WindowGuard";
 
-const fresh = () => createKerfStore({ storage: createStorage(memoryStorage()) });
+const fresh = () =>
+  createKerfStore({ storage: createStorage(memoryStorage()), library: memoryLibrary() });
 
 function Broken(): never {
   throw new TypeError("x is undefined");

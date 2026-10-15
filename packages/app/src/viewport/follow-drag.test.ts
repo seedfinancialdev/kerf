@@ -13,6 +13,7 @@ import { setSize, startProject } from "../model/commands";
 import type { Pending } from "../model/pending";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { moveTool } from "../tools/move";
 import { followDrag, followsDrag } from "./follow-drag";
@@ -39,7 +40,10 @@ const pointer = (type: string, x: number, y: number, pointerId = 1) =>
 
 /** The bookcase, then Width 30" when `resized`, so there is an entry to undo. */
 function started(resized = false) {
-  const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+  const store = createKerfStore({
+    storage: createStorage(memoryStorage()),
+    library: memoryLibrary(),
+  });
   store.getState().apply(startProject("Bookcase", "imperial"));
   const project = shownProject(store.getState());
   const wider = project && setSize(project, project.structures[0]?.id ?? "", "w", '30"');
@@ -198,7 +202,10 @@ describe("a press whose pointer is already gone", () => {
 
 describe("followsDrag()", () => {
   const state = (pending: Pending | null, navigation: "orbit" | "pan" | null = null) => {
-    const s = createKerfStore({ storage: createStorage(memoryStorage()) }).getState();
+    const s = createKerfStore({
+      storage: createStorage(memoryStorage()),
+      library: memoryLibrary(),
+    }).getState();
     return { ...s, pending, navigation };
   };
   const { top } = started();

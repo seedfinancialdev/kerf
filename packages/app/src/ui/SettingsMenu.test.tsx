@@ -13,6 +13,7 @@ import { STOCK_IDS } from "../model/starter";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { SettingsMenu } from "./SettingsMenu";
 
@@ -22,7 +23,10 @@ type Fixture = "none" | "bookcase" | "quarter-inch-bookcase";
  * A bookcase on the starter 3/4 plywood, or one whose only stock is 1/4 plywood (50800 = 635 × 80).
  */
 function setup(fixture: Fixture = "quarter-inch-bookcase") {
-  const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+  const store = createKerfStore({
+    storage: createStorage(memoryStorage()),
+    library: memoryLibrary(),
+  });
   if (fixture !== "none") {
     store.getState().apply(startProject("Bookcase", "imperial"));
   }

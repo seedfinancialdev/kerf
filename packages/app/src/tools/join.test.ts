@@ -13,6 +13,7 @@ import { newId } from "../model/ids";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { bookcaseWithShelf } from "../testing/bookcase-with-shelf";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { drawBoard } from "./board";
 import { acceptProposal, joinTool, propose } from "./join";
@@ -250,7 +251,10 @@ describe("taking over form boards", () => {
 
 describe("the Join tool", () => {
   const started = () => {
-    const s = createKerfStore({ storage: createStorage(memoryStorage()) });
+    const s = createKerfStore({
+      storage: createStorage(memoryStorage()),
+      library: memoryLibrary(),
+    });
     s.getState().begin({ label: "Start", project: bookcaseWithShelf() });
     s.getState().setTool("join");
     return s;

@@ -10,6 +10,7 @@ import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { TapePanel } from "./TapePanel";
 
@@ -18,7 +19,10 @@ const IN = 203_200;
 afterEach(cleanup);
 
 function setup() {
-  const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+  const store = createKerfStore({
+    storage: createStorage(memoryStorage()),
+    library: memoryLibrary(),
+  });
   store.getState().begin(startProject("Bookcase", "imperial"));
   store.getState().setTool("tape");
   render(

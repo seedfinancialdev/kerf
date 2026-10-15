@@ -8,11 +8,12 @@ import { describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { handlerFor, type ModelHit } from "./pointer";
 
 const store = () => {
-  const s = createKerfStore({ storage: createStorage(memoryStorage()) });
+  const s = createKerfStore({ storage: createStorage(memoryStorage()), library: memoryLibrary() });
   s.getState().apply(startProject("Bookcase", "imperial"));
   return s;
 };

@@ -2,16 +2,16 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Design spec, "Saving": the current project is kept in browser storage after every change, so a
-// reload restores it; ADR 015, rule 11 for what happens when that cannot work.
+// Design spec §2, "Keeping projects": the open project is kept in the library after every change,
+// and the shop and preferences in browser storage; ADR 015, rule 11 for what happens when that
+// cannot work.
 
 import { type Project, type Stock, serializeProject } from "@kerf/core";
-import { handMadeBookcase } from "@kerf/fixtures/builders";
-import { describe, expect, it } from "vitest";
-import { bannedWordsIn } from "../testing/banned-words";
+import { describe, expect, it, vi } from "vitest";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage, unreadable } from "../testing/memory-storage";
 import { type Edit, setSize, startProject } from "./commands";
-import { saveShop } from "./shop";
+import { LIBRARY_NOT_KEPT, type Library, type LibraryEntry } from "./library";
 import { STARTER_RECORD } from "./shop-record";
 import { STARTER_SHOP } from "./starter";
 import { type AppStorage, createStorage } from "./storage";
@@ -19,93 +19,119 @@ import { createKerfStore, shownProject } from "./store";
 
 const renamed = (p: Project): Edit => ({ project: { ...p, name: "Renamed" }, label: "Rename" });
 const memory = (): AppStorage => createStorage(memoryStorage());
+const full = (): AppStorage => createStorage(memoryStorage(true));
+const bookcase = () => startProject("Bookcase", "imperial");
 
-describe("the store across a reload", () => {
-  it("brings back the last project, as one History entry", () => {
-    const storage = memory();
-    createKerfStore({ storage }).getState().apply(startProject("Bookcase", "imperial"));
-    const again = createKerfStore({ storage }).getState();
-    expect(again.history?.entries.map((e) => e.label)).toEqual(["Opened your last project"]);
-    expect(again.solved?.result.cutList.lines).toHaveLength(3);
+/** A store over `library` with one project created in it, and that project's id. */
+async function withProject(library: Library = memoryLibrary(), edit: Edit = bookcase()) {
+  const store = createKerfStore({ storage: memory(), library });
+  await store.getState().createProject(edit, "");
+  return { store, id: store.getState().projectId as string };
+}
+
+/** A library whose writes can be refused from a point on, as a disk that fills up does. */
+const fillingLibrary = (): Library & { fill(): void } => {
+  const inner = memoryLibrary();
+  let refusing = false;
+  return {
+    ...inner,
+    write: (entry: LibraryEntry) => (refusing ? Promise.resolve(false) : inner.write(entry)),
+    fill: () => {
+      refusing = true;
+    },
+  };
+};
+
+describe("the open project in the library", () => {
+  it("is written exactly as the engine saves it", async () => {
+    const library = memoryLibrary();
+    const { store, id } = await withProject(library);
+    const p = shownProject(store.getState()) as Project;
+    expect((await library.read(id))?.project).toBe(serializeProject(p));
   });
 
-  it("sets aside a stored project the engine rejects, says so, and starts empty", () => {
-    const storage = memory();
-    storage.write("kerf.project", '{"schemaVersion": 1, "name": 7}');
-    const s = createKerfStore({ storage }).getState();
-    expect(s.history).toBeNull();
-    expect(s.notice?.text).toMatch(/^Your last project could not be opened/);
-    expect(storage.read("kerf.project.setAside")).toBe('{"schemaVersion": 1, "name": 7}');
-    expect(storage.read("kerf.project")).toBeUndefined();
-  });
-
-  it("says once that work will not survive a reload when the browser has no storage", () => {
-    const s = createKerfStore({ storage: createStorage(undefined) }).getState();
-    expect(s.notice?.text).toBe(
-      "This browser won't keep your work between visits. Use Save to keep a copy.",
+  it("is written as the shown entry after an undo", async () => {
+    const library = memoryLibrary();
+    const { store, id } = await withProject(library);
+    const first = shownProject(store.getState()) as Project;
+    store.getState().apply(renamed(first));
+    store.getState().undo();
+    await vi.waitFor(async () =>
+      expect((await library.read(id))?.project).toBe(serializeProject(first)),
     );
   });
 
-  it("starts new projects in the units last chosen, even in a later session", () => {
-    const storage = memory();
-    createKerfStore({ storage }).getState().setUnitsForNew("metric");
-    expect(createKerfStore({ storage }).getState().unitsForNew).toBe("metric");
+  it("is not written while a drag is only previewed", async () => {
+    const library = memoryLibrary();
+    const { store, id } = await withProject(library);
+    const before = await library.read(id);
+    store.getState().preview(renamed(shownProject(store.getState()) as Project).project);
+    await store.getState().refreshProjects();
+    expect(await library.read(id)).toEqual(before);
   });
 
-  it("leaves the units for new projects alone when a metric project is restored", () => {
-    const storage = memory();
-    createKerfStore({ storage }).getState().apply(startProject("Bookcase", "metric"));
-    const again = createKerfStore({ storage }).getState();
-    expect(shownProject(again)?.units).toBe("metric");
-    expect(again.unitsForNew).toBe("imperial");
+  it("keeps working and warns once when the library will not take a change", async () => {
+    const { store } = await withProject(memoryLibrary({ failWrites: true }));
+    expect(store.getState().notice).toEqual({ text: LIBRARY_NOT_KEPT, kind: "warning" });
+    store.getState().dismissNotice();
+    const p = shownProject(store.getState()) as Project;
+    const resized = setSize(p, p.structures[0]?.id ?? "", "w", '30"');
+    if (!resized.ok) throw new Error(resized.message);
+    store.getState().apply(resized.edit);
+    await store.getState().refreshProjects();
+    expect(store.getState().notice).toBeNull();
+    expect(store.getState().solved?.result.cutList.lines).toHaveLength(3);
+    expect(store.getState().history?.entries).toHaveLength(2);
   });
 
-  it("keeps the chosen units for new projects when an open project stays in the other ones", () => {
-    const storage = memory();
-    const s = createKerfStore({ storage });
-    s.getState().apply(startProject("Bookcase", "imperial"));
-    s.getState().setUnitsForNew("metric");
-    s.getState().apply(startProject("Bookcase", "imperial"));
-    expect(s.getState().unitsForNew).toBe("metric");
+  it("keeps an Undo offer on screen and shows the not-kept warning after it", async () => {
+    const library = fillingLibrary();
+    const { store } = await withProject(library);
+    library.fill();
+    const offer = "Shelf 2 now overlaps Back; Undo puts it back.";
+    store.getState().apply(renamed(shownProject(store.getState()) as Project), offer);
+    await store.getState().refreshProjects();
+    expect(store.getState().notice).toEqual({ text: offer, kind: "undo" });
+    store.getState().dismissNotice();
+    expect(store.getState().notice).toEqual({ text: LIBRARY_NOT_KEPT, kind: "warning" });
   });
 
-  it("writes the project exactly as the engine saves it", () => {
-    const storage = memory();
-    const s = createKerfStore({ storage });
-    s.getState().apply(startProject("Bookcase", "imperial"));
-    const p = shownProject(s.getState());
-    if (!p) throw new Error("no project");
-    expect(storage.read("kerf.project")).toBe(serializeProject(p));
-  });
-
-  it("stores the shown entry after an undo", () => {
-    const storage = memory();
-    const s = createKerfStore({ storage });
-    s.getState().apply(startProject("Bookcase", "imperial"));
-    const first = shownProject(s.getState());
-    if (!first) throw new Error("no project");
-    s.getState().apply(renamed(first));
-    s.getState().undo();
-    expect(storage.read("kerf.project")).toBe(serializeProject(first));
-  });
-
-  it("does not touch storage while a drag is only previewed", () => {
-    const storage = memory();
-    const s = createKerfStore({ storage });
-    s.getState().apply(startProject("Bookcase", "imperial"));
-    const before = storage.read("kerf.project");
-    const p = shownProject(s.getState());
-    if (!p) throw new Error("no project");
-    s.getState().preview(renamed(p).project);
-    expect(storage.read("kerf.project")).toBe(before);
+  it("keeps its time when it is only opened, so Home does not call it edited", async () => {
+    const library = memoryLibrary();
+    const { store, id } = await withProject(library);
+    const before = (await library.read(id))?.modified;
+    await store.getState().createProject(startProject("Blank box", "imperial"), "");
+    await store.getState().openProject(id);
+    await store.getState().refreshProjects();
+    expect((await library.read(id))?.modified).toBe(before);
   });
 });
 
-describe("a browser store that cannot be written", () => {
-  const full = (): AppStorage => createStorage(memoryStorage(true));
+describe("units for new projects", () => {
+  it("are the ones last chosen, even in a later session", () => {
+    const storage = memory();
+    createKerfStore({ storage, library: memoryLibrary() }).getState().setUnitsForNew("metric");
+    expect(createKerfStore({ storage, library: memoryLibrary() }).getState().unitsForNew).toBe(
+      "metric",
+    );
+  });
 
-  it("uses the chosen units for new projects until the page closes, and says so once", () => {
-    const s = createKerfStore({ storage: full() });
+  it("are left alone when a metric project is opened", async () => {
+    const { store } = await withProject(memoryLibrary(), startProject("Bookcase", "metric"));
+    expect(shownProject(store.getState())?.units).toBe("metric");
+    expect(store.getState().unitsForNew).toBe("imperial");
+  });
+
+  it("stay as chosen when an open project stays in the other ones", () => {
+    const s = createKerfStore({ storage: memory(), library: memoryLibrary() });
+    s.getState().apply(bookcase());
+    s.getState().setUnitsForNew("metric");
+    s.getState().apply(bookcase());
+    expect(s.getState().unitsForNew).toBe("metric");
+  });
+
+  it("apply until the page closes when the browser cannot keep them, which is said once", () => {
+    const s = createKerfStore({ storage: full(), library: memoryLibrary() });
     s.getState().dismissNotice();
     s.getState().setUnitsForNew("metric");
     const told =
@@ -119,151 +145,104 @@ describe("a browser store that cannot be written", () => {
     s.getState().apply(startProject("Bookcase", s.getState().unitsForNew));
     expect(shownProject(s.getState())?.units).toBe("metric");
   });
-
-  it("keeps working and warns once that the latest changes were not kept", () => {
-    const s = createKerfStore({ storage: full() });
-    s.getState().apply(startProject("Bookcase", "imperial"));
-    const warning =
-      "Your latest changes couldn't be kept in this browser. Use Save to keep a copy.";
-    expect(s.getState().notice).toEqual({ text: warning, kind: "warning" });
-    s.getState().dismissNotice();
-    const p = shownProject(s.getState());
-    if (!p) throw new Error("no project");
-    expect(s.getState().solved?.result.cutList.lines).toHaveLength(3);
-    const resized = setSize(p, p.structures[0]?.id ?? "", "w", '30"');
-    if (!resized.ok) throw new Error(resized.message);
-    s.getState().apply(resized.edit);
-    expect(s.getState().notice).toBeNull();
-    expect(s.getState().solved?.result.cutList.lines).toHaveLength(3);
-    expect(s.getState().history?.entries).toHaveLength(2);
-  });
-
-  it("keeps an Undo offer and shows the warning after it", () => {
-    const s = createKerfStore({ storage: full() });
-    const offer = "Shelf 2 now overlaps Back; Undo puts it back.";
-    s.getState().apply(startProject("Bookcase", "imperial"), offer);
-    expect(s.getState().notice).toEqual({ text: offer, kind: "undo" });
-    s.getState().dismissNotice();
-    expect(s.getState().notice?.text).toMatch(/^Your latest changes couldn't be kept/);
-  });
-
-  it("does not remember the units when the project was not kept", () => {
-    const storage = full();
-    createKerfStore({ storage }).getState().apply(startProject("Bookcase", "metric"));
-    expect(storage.read("kerf.units")).toBeUndefined();
-  });
-
-  it("calls a stored project with schema version 0 damaged, not newer", () => {
-    const storage = memory();
-    const text = serializeProject(startProject("Bookcase", "imperial").project).replace(
-      '"schemaVersion": 1',
-      '"schemaVersion": 0',
-    );
-    storage.write("kerf.project", text);
-    expect(createKerfStore({ storage }).getState().notice?.text).toBe(
-      "Your last project could not be opened: its contents are damaged or do not make sense. " +
-        "It was set aside in this browser.",
-    );
-  });
-
-  it("says a stored project from a newer Kerf is newer, not damaged, and sets it aside", () => {
-    const storage = memory();
-    const text = serializeProject(startProject("Bookcase", "imperial").project).replace(
-      '"schemaVersion": 1',
-      '"schemaVersion": 2',
-    );
-    storage.write("kerf.project", text);
-    const s = createKerfStore({ storage }).getState();
-    expect(s.history).toBeNull();
-    expect(s.notice?.text).toBe(
-      "Your last project was made by a newer version of Kerf; update Kerf to open it. " +
-        "It was set aside in this browser.",
-    );
-    expect(storage.read("kerf.project.setAside")).toBe(text);
-  });
-
-  it("leaves a rejected stored project where it is when it cannot be set aside", () => {
-    const bad = '{"schemaVersion": 1, "name": 7}';
-    const removed: string[] = [];
-    const storage: AppStorage = {
-      available: true,
-      read: (key) => (key === "kerf.project" ? bad : undefined),
-      write: () => false,
-      couldNotRead: () => false,
-      remove: (key) => {
-        removed.push(key);
-      },
-    };
-    const s = createKerfStore({ storage }).getState();
-    expect(s.history).toBeNull();
-    expect(s.notice?.text).toMatch(
-      "Your last project could not be opened: its contents are damaged or do not make sense. " +
-        "It was left where it was.",
-    );
-    expect(removed).toEqual([]);
-  });
 });
 
 describe("when a project began", () => {
-  it("is noted by begin, and survives a reload", () => {
-    const storage = memory();
-    const s = createKerfStore({ storage, clockDate: () => Date.UTC(2026, 9, 12) });
-    s.getState().begin(startProject("Bookcase", "imperial"));
+  it("is noted when it is created, and kept with it in the library", async () => {
+    const library = memoryLibrary();
+    const s = createKerfStore({
+      storage: memory(),
+      library,
+      clockDate: () => Date.UTC(2026, 9, 12),
+    });
+    await s.getState().createProject(bookcase(), "");
     expect(s.getState().created).toBe("2026-10-12T00:00:00.000Z");
-    expect(createKerfStore({ storage }).getState().created).toBe("2026-10-12T00:00:00.000Z");
+    const id = s.getState().projectId as string;
+    expect((await library.read(id))?.created).toBe("2026-10-12T00:00:00.000Z");
   });
 
-  it("records a project even when it is the one already shown, so opening a saved copy is in History", () => {
-    const s = createKerfStore({ storage: memory() });
-    s.getState().begin(startProject("Bookcase", "imperial"));
-    s.getState().begin({
-      label: "Opened Bookcase.kerf",
-      project: startProject("Bookcase", "imperial").project,
+  it("is noted by begin, which starts a History of its own, so Undo never reaches the last project", () => {
+    const s = createKerfStore({
+      storage: memory(),
+      library: memoryLibrary(),
+      clockDate: () => Date.UTC(2026, 9, 12),
     });
-    expect(s.getState().history?.entries.map((e) => e.label)).toEqual([
-      "New bookcase",
-      "Opened Bookcase.kerf",
-    ]);
+    s.getState().begin(bookcase());
+    const box = startProject("Blank box", "imperial").project;
+    s.getState().begin({ label: "Opened Box.kerf", project: box });
+    expect(s.getState().history?.entries.map((e) => e.label)).toEqual(["Opened Box.kerf"]);
+    expect(s.getState().created).toBe("2026-10-12T00:00:00.000Z");
   });
 });
 
 describe("warnings that must not be lost (ADR 015, rule 11: the app says so once)", () => {
-  const full = (): AppStorage => createStorage(memoryStorage(true));
-  const NOT_KEPT_TEXT =
-    "Your latest changes couldn't be kept in this browser. Use Save to keep a copy.";
+  const SET_ASIDE = "Your last project could not be opened. It was set aside in this browser.";
 
-  it("shows the not-kept warning after a plain notice that was showing is dismissed", () => {
-    const s = createKerfStore({ storage: full() });
-    s.getState().say("Something else");
-    s.getState().apply(startProject("Bookcase", "imperial"));
-    expect(s.getState().notice?.text).toBe("Something else");
-    s.getState().dismissNotice();
-    expect(s.getState().notice).toEqual({ text: NOT_KEPT_TEXT, kind: "warning" });
+  it("says once that work will not survive a reload when the browser has no storage", () => {
+    const s = createKerfStore({ storage: createStorage(undefined), library: memoryLibrary() });
+    expect(s.getState().notice?.text).toBe(
+      "This browser won't keep your work between visits. Use Save to keep a copy.",
+    );
   });
 
-  it("keeps the set-aside warning when the 3D view's warning arrives, and shows that one next", () => {
-    const storage = memory();
-    storage.write("kerf.project", '{"schemaVersion": 1, "name": 7}');
-    const s = createKerfStore({ storage });
+  it("shows the not-kept warning after a plain notice that was showing is dismissed", async () => {
+    const s = createKerfStore({ storage: memory(), library: memoryLibrary({ failWrites: true }) });
+    s.getState().say("Something else");
+    await s.getState().createProject(bookcase(), "");
+    expect(s.getState().notice?.text).toBe("Something else");
+    s.getState().dismissNotice();
+    expect(s.getState().notice).toEqual({ text: LIBRARY_NOT_KEPT, kind: "warning" });
+  });
+
+  it("keeps the old project's warning when the 3D view's warning arrives, and shows that one next", () => {
+    const s = createKerfStore({
+      storage: memory(),
+      library: memoryLibrary(),
+      migration: { outcome: "none", problem: SET_ASIDE },
+    });
     const view = "The 3D view could not start (no WebGL), so boards are shown as plain blanks.";
     s.getState().warn(view);
-    expect(s.getState().notice?.text).toMatch(/^Your last project could not be opened/);
+    expect(s.getState().notice?.text).toBe(SET_ASIDE);
     s.getState().dismissNotice();
     expect(s.getState().notice).toEqual({ text: view, kind: "warning" });
   });
 
-  it("shows every start-up warning in turn: the shop's, then the project's", () => {
+  it("shows every start-up warning in turn: the shop's, then the old project's", () => {
     const storage = memory();
     storage.write("kerf.shop", "not json");
-    storage.write("kerf.project", '{"schemaVersion": 1, "name": 7}');
-    const s = createKerfStore({ storage });
+    const s = createKerfStore({
+      storage,
+      library: memoryLibrary(),
+      migration: { outcome: "none", problem: SET_ASIDE },
+    });
     expect(s.getState().notice?.text).toMatch(/^Your saved shop could not be used/);
     s.getState().dismissNotice();
-    expect(s.getState().notice?.text).toMatch(/^Your last project could not be opened/);
+    expect(s.getState().notice?.text).toBe(SET_ASIDE);
+  });
+
+  it("says projects are not kept when the old project stayed because the library refused it", () => {
+    const s = createKerfStore({
+      storage: memory(),
+      library: memoryLibrary({ failWrites: true }),
+      migration: { outcome: "kept" },
+    });
+    expect(s.getState().notice).toEqual({ text: LIBRARY_NOT_KEPT, kind: "warning" });
+  });
+
+  it("says only why when the old project stayed because the browser would not let it be read", () => {
+    const unreadableOld = "Your last project could not be read from this browser.";
+    const s = createKerfStore({
+      storage: memory(),
+      library: memoryLibrary(),
+      migration: { outcome: "kept", problem: unreadableOld },
+    });
+    expect(s.getState().notice?.text).toBe(unreadableOld);
+    s.getState().dismissNotice();
+    expect(s.getState().notice).toBeNull();
   });
 
   it("shows an answer at once over a warning, and the warning again once it is dismissed", () => {
-    const s = createKerfStore({ storage: createStorage(undefined) });
+    const s = createKerfStore({ storage: createStorage(undefined), library: memoryLibrary() });
     const nothingKept = s.getState().notice?.text;
     s.getState().say("A distance of zero changes nothing.");
     expect(s.getState().notice?.text).toBe("A distance of zero changes nothing.");
@@ -274,24 +253,24 @@ describe("warnings that must not be lost (ADR 015, rule 11: the app says so once
 
 describe("a shop change the browser cannot keep", () => {
   it("is used until the page closes, and the user is told once", () => {
-    const s = createKerfStore({ storage: createStorage(memoryStorage(true)) });
-    // Blade kerf 1/8" = 203200 / 8 = 25400.
-    const shop = { ...s.getState().shop, kerf: 25_400 };
-    s.getState().setShop(shop);
-    expect(s.getState().shop.kerf).toBe(25_400);
+    const s = createKerfStore({ storage: full(), library: memoryLibrary() });
+    // Blade kerf 1/16" = 203200 / 16 = 12700.
+    const record = { ...STARTER_RECORD, setUp: true, tableSaw: { kerf: 12_700 } };
+    s.getState().setShopRecord(record);
+    expect(s.getState().shop.kerf).toBe(12_700);
     expect(s.getState().notice).toEqual({
       text: "Your shop couldn't be kept in this browser; it applies until you close the page.",
       kind: "warning",
     });
     s.getState().dismissNotice();
-    s.getState().setShop({ ...shop, kerf: 12_700 });
+    s.getState().setShopRecord({ ...record, tableSaw: { kerf: 25_400 } });
     expect(s.getState().notice).toBeNull();
   });
 });
 
-describe("a shop change keeps the stock the woodworker chose", () => {
-  it("saves the stored stock with the new shop", () => {
-    const storage = createStorage(memoryStorage());
+describe("a shop change", () => {
+  it("saves the wood on the pegboard with the tools", () => {
+    const storage = memory();
     const oak: Stock = {
       id: "01K7M4AP0000000000000000OK",
       name: "Oak",
@@ -300,41 +279,9 @@ describe("a shop change keeps the stock the woodworker chose", () => {
       solid: { standardLengths: [19_507_200], maxWidth: 1_625_600 },
       allowance: { length: 0, width: 0 },
     };
-    saveShop(storage, { ...STARTER_RECORD, setUp: true, stock: [oak] });
-    const s = createKerfStore({ storage });
-    s.getState().setShop({ ...s.getState().shop, kerf: 12_700 });
+    const s = createKerfStore({ storage, library: memoryLibrary() });
+    s.getState().setShopRecord({ ...STARTER_RECORD, setUp: true, stock: [oak] });
     expect(JSON.parse(storage.read("kerf.shop") ?? "null").stock).toEqual([oak]);
-  });
-});
-
-describe("a stored project the engine rejects", () => {
-  /** The hand-made bookcase as stored, its first board naming a part the project does not have. */
-  const brokenText = (): string => {
-    const stored = JSON.parse(serializeProject(handMadeBookcase()));
-    stored.instances[0].def = "01J9ZZZZZZZZZZZZZZZZZZZZZZ";
-    return JSON.stringify(stored);
-  };
-
-  it("is described in shop words, with no file path or banned word from the engine", () => {
-    const storage = memory();
-    storage.write("kerf.project", brokenText());
-    const text = createKerfStore({ storage }).getState().notice?.text ?? "";
-    expect(text).toBe(
-      "Your last project could not be opened: its contents are damaged or do not make sense. " +
-        "It was set aside in this browser.",
-    );
-    expect(text).not.toMatch(/\$/);
-    expect(bannedWordsIn(text)).toEqual([]);
-  });
-
-  it("does not overwrite a copy set aside earlier", () => {
-    const storage = memory();
-    storage.write("kerf.project", '{"schemaVersion": 1, "name": 7}');
-    createKerfStore({ storage });
-    storage.write("kerf.project", '{"schemaVersion": 1, "name": 8}');
-    createKerfStore({ storage });
-    expect(storage.read("kerf.project.setAside")).toBe('{"schemaVersion": 1, "name": 7}');
-    expect(storage.read("kerf.project.setAside.2")).toBe('{"schemaVersion": 1, "name": 8}');
   });
 });
 
@@ -353,36 +300,25 @@ describe("section open state that storage holds damaged", () => {
   ])("starts with %s read as what it can keep", (_, stored, sections) => {
     const storage = memory();
     storage.write("kerf.sections", stored);
-    expect(createKerfStore({ storage }).getState().sections).toEqual(sections);
+    expect(createKerfStore({ storage, library: memoryLibrary() }).getState().sections).toEqual(
+      sections,
+    );
   });
 });
 
-describe("work the browser could not read at start", () => {
-  const PROJECT_UNREADABLE =
-    "Your last project could not be read from this browser, so Kerf started without it. It is " +
-    "left as it was; use Save to keep a copy of new work.";
-  const SHOP_UNREADABLE =
-    "Your saved shop could not be read from this browser, so the starter shop is in use. Your " +
-    "saved shop is left as it was.";
-
-  it("says the last project could not be read, and never writes over it", () => {
-    const backing = unreadable(["kerf.project"]);
-    backing.setItem("kerf.project", "the last project");
-    const s = createKerfStore({ storage: createStorage(backing) });
-    expect(s.getState().history).toBeNull();
-    expect(s.getState().notice).toEqual({ text: PROJECT_UNREADABLE, kind: "warning" });
-    s.getState().apply(startProject("Bookcase", "imperial"));
-    backing.readable(true);
-    expect(backing.getItem("kerf.project")).toBe("the last project");
-  });
-
-  it("says the saved shop could not be read, uses the starter shop, and never writes over it", () => {
+describe("a saved shop the browser could not read at start", () => {
+  it("is said, the starter shop is used, and it is never written over", () => {
     const backing = unreadable(["kerf.shop"]);
     backing.setItem("kerf.shop", "the saved shop");
-    const s = createKerfStore({ storage: createStorage(backing) });
+    const s = createKerfStore({ storage: createStorage(backing), library: memoryLibrary() });
     expect(s.getState().shop).toEqual(STARTER_SHOP);
-    expect(s.getState().notice).toEqual({ text: SHOP_UNREADABLE, kind: "warning" });
-    s.getState().setShop({ ...STARTER_SHOP, kerf: 0 });
+    expect(s.getState().notice).toEqual({
+      text:
+        "Your saved shop could not be read from this browser, so the starter shop is in use. " +
+        "Your saved shop is left as it was.",
+      kind: "warning",
+    });
+    s.getState().setShopRecord({ ...STARTER_RECORD, setUp: true });
     backing.readable(true);
     expect(backing.getItem("kerf.shop")).toBe("the saved shop");
   });

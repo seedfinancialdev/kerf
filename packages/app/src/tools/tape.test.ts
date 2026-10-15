@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import type { ModelPointer } from "./handler";
 import { measureBetween, tapeTool } from "./tape";
@@ -61,7 +62,10 @@ describe("measureBetween()", () => {
 
 describe("tapeTool", () => {
   const started = () => {
-    const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+    const store = createKerfStore({
+      storage: createStorage(memoryStorage()),
+      library: memoryLibrary(),
+    });
     store.getState().begin(startProject("Bookcase", "imperial"));
     store.getState().setTool("tape");
     return store;

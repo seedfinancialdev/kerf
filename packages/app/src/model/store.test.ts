@@ -6,14 +6,17 @@
 // a drag previews and records once (ADR 015, rule 2). Numbers: Operation specs, bookcase.
 
 import { describe, expect, it } from "vitest";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { setShelves, setSize, startProject } from "./commands";
 import { saveKerfBytes } from "./files";
+import { STARTER_RECORD } from "./shop-record";
 import { STARTER_SHOP, STARTER_STOCK } from "./starter";
 import { createStorage } from "./storage";
 import { createKerfStore, shownProject } from "./store";
 
-const fresh = () => createKerfStore({ storage: createStorage(memoryStorage()) });
+const fresh = () =>
+  createKerfStore({ storage: createStorage(memoryStorage()), library: memoryLibrary() });
 const shelfCut = (s: ReturnType<typeof fresh>) =>
   s.getState().solved?.result.cutList.lines.find((l) => l.parts.some((p) => p.name === "Shelf"))
     ?.length;
@@ -21,14 +24,15 @@ const shelfCut = (s: ReturnType<typeof fresh>) =>
 describe("createKerfStore()", () => {
   it("remembers which sections are open across a reload", () => {
     const storage = createStorage(memoryStorage());
-    createKerfStore({ storage }).getState().toggleSection("Your shop");
-    expect(createKerfStore({ storage }).getState().sections["Your shop"]).toBe(false);
+    createKerfStore({ storage, library: memoryLibrary() }).getState().toggleSection("Your shop");
+    expect(
+      createKerfStore({ storage, library: memoryLibrary() }).getState().sections["Your shop"],
+    ).toBe(false);
   });
 
-  it("starts with no project, on the Start step", () => {
+  it("starts with no project open", () => {
     const s = fresh().getState();
-    expect(s.history).toBeNull();
-    expect(s.step).toBe("Start");
+    expect([s.history, s.projectId]).toEqual([null, null]);
   });
 
   it("solves the bookcase as soon as it is started: shelves 35-1/16 cut", () => {
@@ -188,11 +192,19 @@ describe("createKerfStore()", () => {
 
   it("solves again with a new shop and saves it: with no tools every cut is missing", () => {
     const storage = createStorage(memoryStorage());
-    const s = createKerfStore({ storage });
+    const s = createKerfStore({ storage, library: memoryLibrary() });
     s.getState().apply(startProject("Bookcase", "imperial"));
     const cuts = () => s.getState().solved?.result.joints.flatMap((j) => j.cuts) ?? [];
     expect(cuts().some((c) => !c.missing)).toBe(true);
-    s.getState().setShop({ kerf: 0, tools: [] });
+    s.getState().setShopRecord({
+      ...STARTER_RECORD,
+      setUp: true,
+      tableSaw: { kerf: 0 },
+      dadoStack: null,
+      router: null,
+      chisels: false,
+      dovetailSaw: false,
+    });
     expect(cuts().length).toBeGreaterThan(0);
     expect(cuts().every((c) => c.missing)).toBe(true);
     // Saved as a pegboard: a saw with no cut width, no other tool, and the starter stock kept.
@@ -210,7 +222,10 @@ describe("createKerfStore()", () => {
   it("falls back to the starter shop with a plain notice when the saved shop is invalid", () => {
     const backing = memoryStorage();
     backing.setItem("kerf.shop", JSON.stringify({ kerf: 0 }));
-    const s = createKerfStore({ storage: createStorage(backing) }).getState();
+    const s = createKerfStore({
+      storage: createStorage(backing),
+      library: memoryLibrary(),
+    }).getState();
     expect(s.shop).toEqual(STARTER_SHOP);
     expect(s.notice?.kind).toBe("warning");
     expect(s.notice?.text.startsWith("Your saved shop could not be used")).toBe(true);
@@ -218,7 +233,7 @@ describe("createKerfStore()", () => {
 
   it("saves the theme", () => {
     const storage = createStorage(memoryStorage());
-    const s = createKerfStore({ storage });
+    const s = createKerfStore({ storage, library: memoryLibrary() });
     s.getState().setTheme("light");
     expect(s.getState().theme).toBe("light");
     expect(storage.read("kerf.theme")).toBe("light");
@@ -228,6 +243,7 @@ describe("createKerfStore()", () => {
     const ticks = [10, 25];
     const s = createKerfStore({
       storage: createStorage(memoryStorage()),
+      library: memoryLibrary(),
       clock: () => ticks.shift() ?? 0,
     });
     s.getState().apply(startProject("Bookcase", "imperial"));
@@ -592,9 +608,9 @@ describe("the tape and guide lines", () => {
 
   it("are not written to browser storage", () => {
     const storage = createStorage(memoryStorage());
-    const s = createKerfStore({ storage });
+    const s = createKerfStore({ storage, library: memoryLibrary() });
     s.getState().begin(startProject("Bookcase", "imperial"));
     s.getState().addGuide([0, 0, 0], [203_200, 0, 0]);
-    expect(createKerfStore({ storage }).getState().guides).toEqual([]);
+    expect(createKerfStore({ storage, library: memoryLibrary() }).getState().guides).toEqual([]);
   });
 });

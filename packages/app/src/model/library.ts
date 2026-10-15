@@ -195,3 +195,12 @@ export async function openLibrary(factory: IDBFactory | undefined): Promise<Libr
     remove: (id) => change((store) => store.delete(id)),
   };
 }
+
+/** The page's database, or undefined where reading it throws (a sandboxed page, blocked site data). */
+export function browserDatabase(): IDBFactory | undefined {
+  try {
+    return globalThis.indexedDB ?? undefined;
+  } catch {
+    return undefined;
+  }
+}

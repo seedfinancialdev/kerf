@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 import { startProject, UNPLACEABLE } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { boardBetween, boardTool, drawBoard } from "./board";
 import type { ModelHit, ModelPointer } from "./pointer";
@@ -256,7 +257,10 @@ describe("boardBetween()", () => {
 
 describe("the Board tool", () => {
   const started = (project: Project = base()) => {
-    const s = createKerfStore({ storage: createStorage(memoryStorage()) });
+    const s = createKerfStore({
+      storage: createStorage(memoryStorage()),
+      library: memoryLibrary(),
+    });
     s.getState().begin({ label: "Start", project });
     s.getState().setTool("board");
     return s;
@@ -376,7 +380,10 @@ describe("the Board tool", () => {
   });
 
   it("asks which project to draw in when there is none", () => {
-    const s = createKerfStore({ storage: createStorage(memoryStorage()) });
+    const s = createKerfStore({
+      storage: createStorage(memoryStorage()),
+      library: memoryLibrary(),
+    });
     expect(boardTool.measure?.('24", 6"', s)).toBe("Start a project first.");
   });
 
