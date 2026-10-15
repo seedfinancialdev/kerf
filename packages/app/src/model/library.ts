@@ -137,7 +137,9 @@ function openDatabase(factory: IDBFactory): Promise<IDBDatabase> {
 /** Whether `error` is a DOMException; a database from another realm throws its own kind. */
 const isDomException = (error: unknown): boolean =>
   error instanceof DOMException ||
-  (error instanceof Error && Object.prototype.toString.call(error) === "[object DOMException]");
+  (typeof error === "object" &&
+    error !== null &&
+    Object.prototype.toString.call(error) === "[object DOMException]");
 
 const unavailable: Library = {
   available: false,

@@ -157,4 +157,23 @@ describe("migrateStoredProject()", () => {
     expect((await migrateStoredProject(storage, refusing, NOW)).outcome).toBe("kept");
     expect(backing.getItem("kerf.project")).toBe(stored);
   });
+
+  it("repairs a damaged row at the fixed id by writing the project over it", async () => {
+    const factory = new IDBFactory();
+    const library = await openLibrary(factory);
+    const opening = factory.open("kerf", 1);
+    const db = await new Promise<IDBDatabase>((resolve) => {
+      opening.onsuccess = () => resolve(opening.result);
+    });
+    const tx = db.transaction("projects", "readwrite");
+    tx.objectStore("projects").put({ id: MIGRATED_PROJECT_ID, name: "damaged" });
+    await new Promise((resolve) => {
+      tx.oncomplete = resolve;
+    });
+    db.close();
+    const { backing, storage } = withStoredProject();
+    expect((await migrateStoredProject(storage, library, NOW)).outcome).toBe("moved");
+    expect((await library.read(MIGRATED_PROJECT_ID))?.project).toBe(stored);
+    expect(backing.getItem("kerf.project")).toBeNull();
+  });
 });

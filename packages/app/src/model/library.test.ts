@@ -6,7 +6,7 @@
 
 import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { bannedWordsIn } from "../testing/banned-words";
 import { LIBRARY_NOT_KEPT, type LibraryEntry, openLibrary } from "./library";
 
@@ -226,6 +226,35 @@ describe("openLibrary() with a misbehaving browser", () => {
     const library = await openLibrary(factoryWith(throwing));
     expect(await library.write(entry("A", "2026-10-14T10:00:00.000Z"))).toBe(false);
     await new Promise((resolve) => setTimeout(resolve));
+  });
+});
+
+describe("openLibrary() logging", () => {
+  const readWhenTransactionThrows = async (error: unknown) => {
+    const library = await openLibrary(
+      factoryWith(() => {
+        throw error;
+      }),
+    );
+    return library.read("A");
+  };
+
+  it("stays quiet about a DOMException made in another realm", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const foreign = Object.assign(Object.create(null), {
+      name: "InvalidStateError",
+      [Symbol.toStringTag]: "DOMException",
+    });
+    expect(await readWhenTransactionThrows(foreign)).toBeUndefined();
+    expect(logged).not.toHaveBeenCalled();
+    logged.mockRestore();
+  });
+
+  it("logs a fault in Kerf itself", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    expect(await readWhenTransactionThrows(new TypeError("a bug"))).toBeUndefined();
+    expect(logged).toHaveBeenCalledOnce();
+    logged.mockRestore();
   });
 });
 
