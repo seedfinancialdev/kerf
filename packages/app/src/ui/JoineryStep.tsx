@@ -21,7 +21,8 @@ export function JoineryStep() {
   const project = useKerf((s) => shownProject(s));
   const joints = useKerf((s) => s.solved?.result.joints);
   const shopRecord = useKerf((s) => s.shopRecord);
-  // The Workshop shows only with a project open (App.tsx), so there is nothing to show without one.
+  // The Workshop shows only with a project open (App.tsx; Ruling R27),
+  // so the no-project state renders nothing rather than words nobody can reach.
   if (!project || !joints) return null;
   const rows = joineryRows(joints, project.units);
   // Ask when it matters (ADR 016, D4): a tool the shop was never told about is asked about once, on

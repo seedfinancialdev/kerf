@@ -139,7 +139,7 @@ body {
   color: var(--color-text-muted);
 }
 
-/* The window's place after a fault while drawing it (ui/WindowGuard.tsx): the words, Save. */
+/* The window's place after a fault while drawing it (ui/WindowGuard.tsx): the words and a download. */
 .window-lost {
   display: grid;
   gap: var(--space-3);
@@ -1592,6 +1592,11 @@ button.project-open {
 .card-menu [role="menuitem"]:hover,
 .card-menu [role="menuitem"]:focus {
   background: var(--color-hover);
+}
+
+.card-menu [role="menuitem"][aria-disabled="true"] {
+  color: var(--color-text-muted);
+  cursor: default;
 }
 
 /* The workshop's top bar holds the open project's name and its menu (ui/TopBar.tsx). */

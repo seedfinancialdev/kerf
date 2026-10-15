@@ -2,12 +2,13 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Saving a project as a .kerf download (design spec, "Saving"): the shown project, used by the
-// window's fallback after a fault (WindowGuard), so a download works even when the window cannot, and
-// the project menus' Download .kerf file, for the open project and, from Home, any kept project, from its card on Home (design spec §2, "Download .kerf file").
+// Downloading a project as a .kerf file (design spec, "Saving"). The open project is downloaded
+// from the workshop's project menu and from the window's fallback after a fault (WindowGuard), so
+// a download works even when the window cannot be drawn. Any kept project is downloaded from its
+// card on Home (design spec §2, "Download .kerf file").
 
 import type { Id } from "@kerf/core";
-import { fileNameFor, SAVE_FAULT, saveFailureReason, saveKerfBytes } from "../model/files";
+import { DOWNLOAD_FAULT, fileNameFor, saveFailureReason, saveKerfBytes } from "../model/files";
 import { pictureInTime } from "../model/picture";
 import { shownProject } from "../model/store";
 import type { KeptProject, KerfStore } from "../model/store-types";
@@ -27,7 +28,7 @@ function download(bytes: Uint8Array, name: string): void {
 }
 
 /** Said when a download is asked for with no project open (the window's fallback offers it regardless). */
-const NOTHING_TO_SAVE = "There is no project to download yet.";
+const NOTHING_TO_DOWNLOAD = "There is no project to download yet.";
 
 /**
  * Downloads the shown project as a .kerf file stamped `now` (its modified time, and its created
@@ -38,11 +39,11 @@ export async function saveShownProject(store: KerfStore, now: Date): Promise<voi
   const s = store.getState();
   const project = shownProject(s);
   if (!project) {
-    s.say(NOTHING_TO_SAVE);
+    s.say(NOTHING_TO_DOWNLOAD);
     return;
   }
   const stamp = now.toISOString();
-  // A view that cannot draw its picture, or not in time, must not stop the save: the file just has
+  // A view that cannot draw its picture, or not in time, must not stop the download: the file just has
   // no thumbnail.
   const thumbnail = await pictureInTime(s.thumbnail);
   downloadKerf(store, { project, created: s.created ?? stamp, modified: stamp, thumbnail });
@@ -52,7 +53,7 @@ export async function saveShownProject(store: KerfStore, now: Date): Promise<voi
  * Downloads the kept project `id` as a .kerf file. The open project is saved as it is shown,
  * stamped `now` (`saveShownProject`); any other is saved as the library keeps it, with its own
  * times and picture, since downloading changes nothing. A project that is gone or damaged, or a
- * failure to save, is said on the notice line. Never rejects.
+ * failure to write the file, is said on the notice line. Never rejects.
  */
 export async function downloadKeptProject(store: KerfStore, id: Id, now: Date): Promise<void> {
   const s = store.getState();
@@ -79,11 +80,11 @@ function downloadKerf(store: KerfStore, kept: KeptProject): void {
   } catch (error) {
     const reason = saveFailureReason(error);
     if (reason !== undefined) {
-      store.getState().say(`The file could not be saved: ${reason}`);
+      store.getState().say(`The file could not be downloaded: ${reason}`);
       return;
     }
     // A fault in Kerf, not in the project: the stack is what a bug report needs.
     console.error(error);
-    store.getState().say(SAVE_FAULT);
+    store.getState().say(DOWNLOAD_FAULT);
   }
 }

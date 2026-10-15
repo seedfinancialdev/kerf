@@ -26,7 +26,7 @@ export function ProjectCard({ project, now }: { project: ProjectSummary; now: Da
   const more = useRef<HTMLButtonElement>(null);
   const { id, name } = project;
 
-  /** Closes the name field and gives the keyboard back to ⋯, which stays where the field was. */
+  /** Closes the name field and gives the keyboard back to the menu's trigger, which stays where the field was. */
   const stopRenaming = (): void => {
     setRenaming(false);
     more.current?.focus();

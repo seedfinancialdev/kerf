@@ -131,7 +131,8 @@ export function Viewport() {
     if (boards.length > 0) setView(fitView(...sceneBounds(boards)));
   }, [hasBoards, fitRequest, created, store]);
 
-  // The Workshop shows only with a project open (App.tsx), so there is nothing to show without one.
+  // The Workshop shows only with a project open (App.tsx; Ruling R27),
+  // so the no-project state renders nothing rather than words nobody can reach.
   if (!project || !result) return null;
   const looks = boardLooks(result, project);
   const selected = new Set(selection.kind === "boards" ? selection.instances : []);

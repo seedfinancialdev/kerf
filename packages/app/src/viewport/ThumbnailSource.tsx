@@ -17,7 +17,7 @@ export function ThumbnailSource() {
       () =>
         new Promise((resolve, reject) => {
           gl.domElement.toBlob((blob) => {
-            // Save leaves the picture out and logs why (ui/save.ts); nothing here is swallowed.
+            // A download leaves the picture out and logs why (ui/save.ts); nothing here is swallowed.
             if (!blob) {
               reject(new Error("The 3D view gave no picture for the thumbnail."));
               return;

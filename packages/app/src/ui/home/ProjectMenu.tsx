@@ -2,14 +2,16 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// A project's menu (design spec §2, "Project card menu (⋯)"): Rename, Duplicate, Download .kerf
+// A project's menu (design spec §2, "Project card menu"): Rename, Duplicate, Download .kerf
 // file and, on its Home card, Delete (which asks first; the store then offers Undo for a few
 // seconds). In the workshop's top bar the menu ends with Back to Home instead of Delete.
 
 import { type KeyboardEvent, type RefObject, useEffect, useId, useRef, useState } from "react";
+import { Tip } from "../Tip";
+import { TIPS } from "../tips";
 
 /**
- * What the menu's items do; `close` shuts the menu, giving focus back to its button when asked.
+ * What the menu's items do; `close` shuts the menu, giving focus back to its trigger when asked.
  * An item whose action is left out is not listed: `remove` belongs to a Home card, `home` to the
  * workshop.
  */
@@ -29,7 +31,7 @@ function focusNext(items: HTMLElement[], step: number): void {
 }
 
 /**
- * Wires the box `box` as a popup over its parent (which holds the ⋯ button too): its first button
+ * Wires the box `box` as a popup over its parent (which holds the menu's trigger too): its first button
  * takes the focus when it opens; arrow keys, Home and End move between its buttons; Escape, or a
  * press anywhere outside the parent, closes it. Returns the box's key handler.
  */
@@ -42,7 +44,7 @@ function usePopup(
   }, [box]);
 
   useEffect(() => {
-    // The parent holds the ⋯ button, whose own click toggles the popup.
+    // The parent holds the menu's trigger, whose own click toggles the popup.
     const away = (e: PointerEvent): void => {
       const holder = box.current?.parentElement;
       if (holder && e.target instanceof Node && !holder.contains(e.target)) close(false);
@@ -101,8 +103,17 @@ function DeleteQuestion({
   );
 }
 
-/** The menu for the project `name`, below its ⋯ button; Delete asks before it deletes. */
-export function ProjectMenu({ name, actions }: { name: string; actions: ProjectMenuActions }) {
+/** The menu for the project `name`, below its trigger; Delete asks before it deletes. */
+export function ProjectMenu({
+  name,
+  actions,
+  canCopy = true,
+}: {
+  name: string;
+  actions: ProjectMenuActions;
+  /** False when copies cannot be kept: Duplicate stays listed, greyed, with a tip saying why. */
+  canCopy?: boolean;
+}) {
   const [asking, setAsking] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const onKeyDown = usePopup(box, actions.close);
@@ -125,11 +136,19 @@ export function ProjectMenu({ name, actions }: { name: string; actions: ProjectM
       className="card-menu"
       onKeyDown={onKeyDown}
     >
-      {items.map(([label, choose]) => (
-        <button key={label} type="button" role="menuitem" tabIndex={-1} onClick={choose}>
-          {label}
-        </button>
-      ))}
+      {items.map(([label, choose]) =>
+        label === "Duplicate" && !canCopy ? (
+          <Tip key={label} tip={TIPS.copyNeedsStorage}>
+            <button type="button" role="menuitem" tabIndex={-1} aria-disabled="true">
+              {label}
+            </button>
+          </Tip>
+        ) : (
+          <button key={label} type="button" role="menuitem" tabIndex={-1} onClick={choose}>
+            {label}
+          </button>
+        ),
+      )}
     </div>
   );
 }

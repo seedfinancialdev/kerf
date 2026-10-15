@@ -37,7 +37,7 @@ export function NameField({
       value={text}
       onChange={(e) => setText(e.target.value)}
       onKeyDown={(e) => {
-        // The key is used up here: the focus moves to ⋯, which must not take it as a press.
+        // The key is used up here: the focus moves to the menu's trigger, which must not take it as a press.
         if (e.key === "Enter" || e.key === "Escape") e.preventDefault();
         if (e.key === "Enter" && keep(text)) answered.current = true;
         if (e.key === "Escape") {

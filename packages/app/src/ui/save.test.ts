@@ -138,7 +138,7 @@ describe("saveShownProject()", () => {
     await saveShownProject(store, NOW);
     const text = store.getState().notice?.text ?? "";
     expect(text).toBe(
-      "Kerf hit a problem saving this project, so nothing was saved. Please report it.",
+      "Kerf hit a problem preparing this file, so nothing was downloaded. Please report it.",
     );
     expect(bannedWordsIn(text)).toEqual([]);
     expect(logged).toHaveBeenCalledWith(fault);

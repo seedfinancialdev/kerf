@@ -23,6 +23,7 @@ import { stepTip, TIPS } from "./tips";
  */
 function ProjectNameMenu({ name }: { name: string }) {
   const store = useKerfStore();
+  const projectsKept = useKerf((s) => s.projectsKept);
   const [renaming, setRenaming] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
@@ -51,8 +52,10 @@ function ProjectNameMenu({ name }: { name: string }) {
     const before = new Set(projects.map((p) => p.id));
     await duplicateProject(projectId);
     const made = store.getState().projects.find((p) => !before.has(p.id));
-    // A copy that could not be made has already been explained on the notice line.
-    if (made) store.getState().say(`Made "${made.name}" on Home.`);
+    // The library's own words are about a project Home listed; this one is on screen.
+    store
+      .getState()
+      .say(made ? `Made "${made.name}" on Home.` : `The copy of ${name} could not be made.`);
   };
   const actions: ProjectMenuActions = {
     close: (refocus) => {
@@ -80,17 +83,19 @@ function ProjectNameMenu({ name }: { name: string }) {
   if (renaming) return <NameField name={name} keep={keepName} cancel={stopRenaming} />;
   return (
     <div className="project-menu-holder">
-      <button
-        ref={button}
-        type="button"
-        className="project-name"
-        aria-haspopup="menu"
-        aria-expanded={menuOpen}
-        onClick={() => setMenuOpen(!menuOpen)}
-      >
-        {name}
-      </button>
-      {menuOpen && <ProjectMenu name={name} actions={actions} />}
+      <Tip tip={TIPS.projectMenu}>
+        <button
+          ref={button}
+          type="button"
+          className="project-name"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
+          {name} <span aria-hidden="true">▾</span>
+        </button>
+      </Tip>
+      {menuOpen && <ProjectMenu name={name} actions={actions} canCopy={projectsKept} />}
     </div>
   );
 }

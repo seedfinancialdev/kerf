@@ -58,6 +58,8 @@ export const TIPS = {
     name: "Settings",
     text: "Change your shop, choose dark or light, and inches or millimetres.",
   },
+  projectMenu: { name: "Project menu", text: "Rename, copy or download this project." },
+  copyNeedsStorage: { name: "Duplicate", text: "Copies need a browser that keeps projects." },
   home: { name: "Home", text: "Your projects, and somewhere to start a new one." },
   table: { name: "Table", text: "Tables are coming later." },
   dresser: { name: "Dresser", text: "Dressers are coming later." },

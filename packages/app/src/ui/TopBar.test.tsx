@@ -9,6 +9,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { startProject } from "../model/commands";
+import { createStorage } from "../model/storage";
+import { createKerfStore } from "../model/store";
+import { memoryLibrary } from "../testing/memory-library";
+import { memoryStorage } from "../testing/memory-storage";
 import { workshopStore } from "../testing/workshop-store";
 import { saveShownProject } from "./save";
 
@@ -129,6 +133,76 @@ describe("<TopBar> Kerf button and project menu", () => {
     );
     expect(store.getState().screen).toBe("workshop");
     expect(store.getState().projects.map((p) => p.name)).toContain("Bookcase copy");
+  });
+
+  it("refuses a blank name, says why, and keeps the field open", async () => {
+    const { user, store } = await openMenu();
+    await user.click(screen.getByRole("menuitem", { name: "Rename" }));
+    await user.clear(screen.getByRole("textbox", { name: "Name" }));
+    await user.keyboard("{Enter}");
+    expect(store.getState().notice?.text).toBe("Give the project a name.");
+    expect(screen.getByRole("textbox", { name: "Name" })).toBeTruthy();
+  });
+
+  it("gives the keyboard back to the name button after Enter", async () => {
+    const { user } = await openMenu();
+    await user.click(screen.getByRole("menuitem", { name: "Rename" }));
+    await user.type(screen.getByRole("textbox", { name: "Name" }), " two{Enter}");
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Bookcase two" }));
+  });
+
+  it("makes no History step when the same name is typed again", async () => {
+    const { user, store } = await openMenu();
+    const before = store.getState().history?.entries.length;
+    await user.click(screen.getByRole("menuitem", { name: "Rename" }));
+    await user.keyboard("{Enter}");
+    expect(store.getState().history?.entries.length).toBe(before);
+  });
+
+  it("shows the name button as a menu, with a tip", async () => {
+    await openApp();
+    const name = screen.getByRole("button", { name: "Bookcase" });
+    expect(name.getAttribute("aria-haspopup")).toBe("menu");
+    expect(name.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.keyDown(document.body, { key: "Tab" });
+    act(() => name.focus());
+    expect(screen.getByRole("tooltip").textContent).toContain(
+      "Rename, copy or download this project",
+    );
+  });
+
+  it("shows Duplicate disabled, with a tip, when the browser keeps no projects", async () => {
+    const user = userEvent.setup();
+    const store = createKerfStore({
+      storage: createStorage(memoryStorage()),
+      library: memoryLibrary({ available: false }),
+    });
+    await store.getState().createProject(startProject("Bookcase", "imperial"), "");
+    render(<App store={store} model={null} />);
+    await user.click(screen.getByRole("button", { name: "Bookcase" }));
+    const copy = screen.getByRole("menuitem", { name: "Duplicate" });
+    expect(copy.getAttribute("aria-disabled")).toBe("true");
+    await user.click(copy);
+    expect(store.getState().notice?.text ?? "").not.toContain("could not be found");
+    act(() => copy.blur());
+    fireEvent.keyDown(document.body, { key: "Tab" });
+    act(() => copy.focus());
+    expect(screen.getByRole("tooltip").textContent).toContain(
+      "Copies need a browser that keeps projects.",
+    );
+  });
+
+  it("says plainly that the copy could not be made when the library cannot be read", async () => {
+    const user = userEvent.setup();
+    const library = { ...memoryLibrary(), read: async () => undefined };
+    const store = createKerfStore({ storage: createStorage(memoryStorage()), library });
+    await store.getState().createProject(startProject("Bookcase", "imperial"), "");
+    render(<App store={store} model={null} />);
+    await user.click(screen.getByRole("button", { name: "Bookcase" }));
+    await user.click(screen.getByRole("menuitem", { name: "Duplicate" }));
+    await waitFor(() =>
+      expect(store.getState().notice?.text).toBe("The copy of Bookcase could not be made."),
+    );
   });
 
   it("goes Home from Back to Home", async () => {
