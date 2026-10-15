@@ -2,9 +2,11 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The tour (design spec §4): four tips, one at a time, each a small card beside the part of the
-// Workshop it is about, shown the first time the Workshop opens and again from Learn. It never
-// covers what it points at and never blocks the screen: Escape or a click elsewhere ends it.
+// The tour (design spec §4): four tips, one at a time, each a small card by the part of the Workshop
+// it is about, shown the first time the Workshop opens and again from Learn. A card never covers its
+// own part, another tip's part, or a control a tip names (Ruling R29); it sits on the model as a note
+// sits on a drawing. It never blocks the screen: Escape, or a press outside both the card and the
+// part it is about, ends it (Ruling R30), so the model can be orbited during its own tip.
 
 import {
   type CSSProperties,
@@ -15,47 +17,61 @@ import {
   useRef,
   useState,
 } from "react";
+import { NOTHING } from "../model/selection";
 import { useKerf, useKerfStore } from "../state/useKerf";
-import { placeTip, type TipPlacement } from "./Tip";
+import { keptInside, placeTip, type TipPlacement } from "./Tip";
 
-/** One tip: the part of the Workshop it points at (its `data-tour` name), its words, and its side. */
+/** Where a card sits: on a side of its anchor, or inside the anchor's top-left corner. */
+type CardPlacement = TipPlacement | "inside";
+
+/** One tip: the part of the Workshop it points at (its `data-tour` name), its words, and its place. */
 interface TourTip {
   anchor: "steps" | "sizes" | "model" | "drawer";
   text: string;
-  placement: TipPlacement;
-  /** A selector for the anchor's panel, whose edge the card sits beside instead of the anchor's. */
-  panel?: string;
+  placement: CardPlacement;
+  /**
+   * A selector for something next to the anchor the card must also stay clear of: the card is
+   * placed past it, as if the anchor reached across it toward the card's side.
+   */
+  clear?: string;
 }
 
 /**
- * The four tips in the design spec's words (§4). Each sits where it covers nothing it talks about:
- * under the steps, left of the inspector the sizes are in (over the model), right of the model (over
- * the inspector, as the left panel is too narrow) and above the drawer.
+ * The four tips in the design spec's words (§4), placed by Ruling R29: under the steps and past the
+ * hint line; left of the inspector the sizes are in; inside the model's top-left corner, clear of
+ * the sizes; and in the model's bottom-left corner above the tool row, pointing down at the drawer.
  */
 const TOUR: readonly [TourTip, ...TourTip[]] = [
   {
     anchor: "steps",
     text: "These four steps take your piece from shape to cut list.",
     placement: "below",
+    clear: ".hint",
   },
   {
     anchor: "sizes",
     text: "Type a size, or drag its label to adjust it. Any unit works.",
     placement: "left",
-    panel: ".panel",
+    clear: ".panel-right",
   },
   {
     anchor: "model",
     text: "Orbit with the middle mouse button or two fingers. The tools work like SketchUp's: P to push or pull, M to move, T to measure.",
-    placement: "right",
+    placement: "inside",
   },
   {
     anchor: "drawer",
     text: "Your shopping list, cut list, sheets and assembly steps live here, always up to date.",
     placement: "above",
+    clear: ".tool-row",
   },
 ];
 
+/**
+ * How far in a card sits from its anchor's start when above or below it, and from the anchor's
+ * corner when inside it, in pixels.
+ */
+const INSET = 16;
 /** How far along its part of the screen the card's arrow points, from that part's start, in pixels. */
 const ARROW_INSET = 20;
 /** The nearest the arrow comes to the card's corners, in pixels, so it clears their rounding. */
@@ -72,13 +88,27 @@ interface CardPlace {
 const anchorOf = (tip: TourTip): HTMLElement | null =>
   document.querySelector<HTMLElement>(`[data-tour="${tip.anchor}"]`);
 
+/** `target` reaching across `clear` along the axis a card placed `placement` is laid out on. */
+function reaching(target: DOMRect, clear: DOMRect | undefined, placement: TipPlacement) {
+  const box = { left: target.left, right: target.right, top: target.top, bottom: target.bottom };
+  if (!clear) return box;
+  if (placement === "left" || placement === "right") {
+    return {
+      ...box,
+      left: Math.min(box.left, clear.left),
+      right: Math.max(box.right, clear.right),
+    };
+  }
+  return { ...box, top: Math.min(box.top, clear.top), bottom: Math.max(box.bottom, clear.bottom) };
+}
+
 /**
- * Where a card of size `card` (pixels) goes for `tip`: beside its anchor, with the arrow pointing
- * a little way into it; or, when the anchor is not on screen, in the middle of the window.
+ * Where a card of size `card` (pixels) goes for `tip`: by its anchor, with the arrow pointing a
+ * little way into it; inside the anchor, with no arrow; or, when the anchor is not on screen, in
+ * the middle of the window.
  */
 function placeCard(tip: TourTip, card: DOMRect): CardPlace {
-  const anchor = anchorOf(tip);
-  const target = anchor?.getBoundingClientRect();
+  const target = anchorOf(tip)?.getBoundingClientRect();
   if (!target) {
     return {
       left: (window.innerWidth - card.width) / 2,
@@ -86,14 +116,24 @@ function placeCard(tip: TourTip, card: DOMRect): CardPlace {
       arrow: null,
     };
   }
-  const edge = tip.panel ? anchor?.closest(tip.panel)?.getBoundingClientRect() : undefined;
-  const beside = edge
-    ? { left: edge.left, right: edge.right, top: target.top, bottom: target.bottom }
-    : target;
-  const { left, top, side } = placeTip(beside, card, tip.placement);
-  const along = side === "below" || side === "above";
-  const at = along ? target.left + ARROW_INSET - left : target.top + ARROW_INSET - top;
-  const room = (along ? card.width : card.height) - ARROW_CLEAR;
+  if (tip.placement === "inside") {
+    return {
+      left: keptInside(target.left + INSET, card.width, window.innerWidth),
+      top: keptInside(target.top + INSET, card.height, window.innerHeight),
+      arrow: null,
+    };
+  }
+  const clear = tip.clear ? document.querySelector(tip.clear)?.getBoundingClientRect() : undefined;
+  const box = reaching(target, clear, tip.placement);
+  const stacked = tip.placement === "below" || tip.placement === "above";
+  const { left, top, side } = placeTip(
+    stacked ? { ...box, left: box.left + INSET } : box,
+    card,
+    tip.placement,
+  );
+  const level = side === "below" || side === "above";
+  const at = level ? target.left + ARROW_INSET - left : target.top + ARROW_INSET - top;
+  const room = (level ? card.width : card.height) - ARROW_CLEAR;
   return { left, top, arrow: { side, at: Math.max(ARROW_CLEAR, Math.min(at, room)) } };
 }
 
@@ -111,6 +151,20 @@ export function Tour() {
   return toured ? null : <TourCard />;
 }
 
+/**
+ * Puts the overall sizes on screen for their tip (Ruling R31): they are in the Shape step's panel,
+ * which picked boards replace, under a Size section that may have been closed.
+ */
+function useBringOutSizes(): () => void {
+  const store = useKerfStore();
+  return () => {
+    const { step, selection, sections, setStep, select, toggleSection } = store.getState();
+    if (step !== "Shape") setStep("Shape");
+    if (selection.kind === "boards") select(NOTHING);
+    if (sections.Size === false) toggleSection("Size");
+  };
+}
+
 /** The card for the tip shown, from the first; it ends the tour through the store's `finishTour`. */
 function TourCard() {
   const store = useKerfStore();
@@ -124,12 +178,10 @@ function TourCard() {
   const back = TOUR[index - 1];
   const next = TOUR[index + 1];
   const finish = (): void => store.getState().finishTour();
+  const bringOutSizes = useBringOutSizes();
 
   const show = (shown: TourTip): void => {
-    // The sizes are in the Shape step's panel, so their tip needs Shape on screen.
-    if (shown.anchor === "sizes" && store.getState().step !== "Shape") {
-      store.getState().setStep("Shape");
-    }
+    if (shown.anchor === "sizes") bringOutSizes();
     setTip(shown);
   };
 
@@ -149,16 +201,29 @@ function TourCard() {
   }, [tip, textId]);
 
   // The keyboard lands on Next, so Enter walks the tour; the button stays put as it becomes Done.
-  useEffect(() => forward.current?.focus(), []);
+  // At the end it goes back where it was (Settings, when started there), unless a press on the page
+  // has since put it somewhere else.
+  useEffect(() => {
+    const before = document.activeElement;
+    forward.current?.focus();
+    return () => {
+      const lost = document.activeElement === null || document.activeElement === document.body;
+      if (lost && before instanceof HTMLElement && before !== document.body && before.isConnected) {
+        before.focus();
+      }
+    };
+  }, []);
 
-  // It never blocks the screen (§4): a click elsewhere or Escape ends it; a scroll or resize moves it.
+  // It never blocks the screen (§4): Escape or a press outside the card and the tip's own part ends
+  // it (Ruling R30); a scroll or resize moves it.
   useEffect(() => {
     const end = (): void => store.getState().finishTour();
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === "Escape") end();
     };
     const onPointer = (e: PointerEvent): void => {
-      if (!(e.target instanceof Node && card.current?.contains(e.target))) end();
+      const on = e.target instanceof Node ? e.target : null;
+      if (!(card.current?.contains(on) || anchorOf(tip)?.contains(on))) end();
     };
     window.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onPointer, true);
@@ -170,7 +235,7 @@ function TourCard() {
       window.removeEventListener("scroll", remeasure, true);
       window.removeEventListener("resize", remeasure);
     };
-  }, [store]);
+  }, [store, tip]);
 
   const style = {
     left: place?.left ?? 0,

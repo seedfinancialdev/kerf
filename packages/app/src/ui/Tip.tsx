@@ -64,6 +64,14 @@ export interface Placed {
 }
 
 /**
+ * `start` (pixels), moved as little as needed for something `length` pixels long that starts there
+ * to sit inside a window `span` pixels across, 8 px from either edge.
+ */
+export function keptInside(start: number, length: number, span: number): number {
+  return Math.max(EDGE, Math.min(start, span - length - EDGE));
+}
+
+/**
  * Where a tip of size `tip` (pixels) goes beside `control`, always inside the window. Below, it
  * flips above when it would run off the bottom. Above, left or right, it goes below when that side
  * has no room. Beside the control it is level with its top, so it covers nothing in a row of
@@ -81,7 +89,7 @@ export function placeTip(
   if (placement === "right" && rightOf + tip.width <= window.innerWidth - EDGE) {
     return { left: rightOf, top: level, side: "right" };
   }
-  const left = Math.max(EDGE, Math.min(control.left, window.innerWidth - tip.width - EDGE));
+  const left = keptInside(control.left, tip.width, window.innerWidth);
   const above = control.top - GAP - tip.height;
   if (placement === "above" && above >= EDGE) return { left, top: above, side: "above" };
   const below = control.bottom + GAP;

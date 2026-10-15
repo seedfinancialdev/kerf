@@ -8,7 +8,7 @@
 // own field, so the change is an undoable History entry (ADR 015, rule 4).
 
 import type { Project } from "@kerf/core";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { switchUnits } from "../model/commands";
 import { shownProject } from "../model/store";
 import { useKerf, useKerfStore } from "../state/useKerf";
@@ -21,6 +21,7 @@ const UNITS_NAME = { imperial: "inches", metric: "millimetres" } as const;
 export function SettingsMenu() {
   const store = useKerfStore();
   const [open, setOpen] = useState(false);
+  const opener = useRef<HTMLButtonElement>(null);
   const forNew = useKerf((s) => s.unitsForNew);
   const theme = useKerf((s) => s.theme);
   const projectUnits = useKerf((s) => shownProject(s)?.units);
@@ -48,7 +49,7 @@ export function SettingsMenu() {
   return (
     <div className="settings">
       <Tip tip={TIPS.settings}>
-        <button type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <button ref={opener} type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
           Settings
         </button>
       </Tip>
@@ -61,6 +62,8 @@ export function SettingsMenu() {
             type="button"
             onClick={() => {
               setOpen(false);
+              // The tour gives the keyboard back to what had it when it began.
+              opener.current?.focus();
               store.getState().startTour();
             }}
           >

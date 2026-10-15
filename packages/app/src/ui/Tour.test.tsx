@@ -8,6 +8,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
+import { startProject } from "../model/commands";
 import { bannedWordsIn } from "../testing/banned-words";
 import { memoryStorage } from "../testing/memory-storage";
 import { workshopStore } from "../testing/workshop-store";
@@ -130,20 +131,77 @@ describe("<Tour>", () => {
     expect(bannedWordsIn(tour().textContent ?? "")).toEqual([]);
   });
 
+  it("lets the model be orbited during its own tip, but a press on a tool ends the tour", async () => {
+    const { store } = await firstVisit();
+    press("Next");
+    press("Next");
+    // The middle button (1) orbits the model (design spec §4, tip 3; Ruling R30).
+    fireEvent.pointerDown(anchor("model"), { button: 1 });
+    expect(store.getState().toured).toBe(false);
+    press("Next");
+    fireEvent.pointerDown(screen.getByRole("button", { name: /^Board/ }));
+    expect(store.getState().toured).toBe(true);
+  });
+
+  it("clears picked boards for the sizes tip, so the Shape panel with the sizes shows", async () => {
+    const store = await workshopStore();
+    render(<App store={store} model={null} />);
+    const board = store.getState().solved?.result.placements[0]?.instance ?? "";
+    act(() => store.getState().select({ kind: "boards", instances: [board] }));
+    act(() => store.getState().startTour());
+    press("Next");
+    expect(store.getState().selection).toEqual({ kind: "none" });
+    expect(anchor("sizes").getAttribute("aria-describedby")).toBe(
+      tour().getAttribute("aria-describedby"),
+    );
+  });
+
+  it("opens a closed Size section for the sizes tip", async () => {
+    const store = await workshopStore();
+    render(<App store={store} model={null} />);
+    act(() => store.getState().toggleSection("Size"));
+    expect(anchor("sizes")).toBeNull();
+    act(() => store.getState().startTour());
+    press("Next");
+    expect(store.getState().sections.Size).toBe(true);
+    expect(anchor("sizes").getAttribute("aria-describedby")).toBe(
+      tour().getAttribute("aria-describedby"),
+    );
+  });
+
+  it("puts the keyboard on Next when it opens, and gives it back to Settings when it ends", async () => {
+    const store = await workshopStore();
+    render(<App store={store} model={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Take the tour" }));
+    expect(document.activeElement).toBe(within(tour()).getByRole("button", { name: "Next" }));
+    press("Skip tour");
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Settings" }));
+  });
+
+  it("leaves the keyboard on the page when it ends on a first visit, where nothing had it", async () => {
+    await firstVisit();
+    expect(document.activeElement).toBe(within(tour()).getByRole("button", { name: "Next" }));
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(document.activeElement).toBe(document.body);
+  });
+
   describe("where it sits", () => {
-    /** A 1440 × 900 window laid out as the Workshop is, in pixels. */
-    const BOXES: Record<string, { left: number; top: number; width: number; height: number }> = {
-      steps: { left: 520, top: 8, width: 400, height: 32 },
-      sizes: { left: 1152, top: 140, width: 276, height: 150 },
-      model: { left: 232, top: 76, width: 908, height: 480 },
-      drawer: { left: 232, top: 600, width: 908, height: 300 },
+    /** The 1440 × 900 Workshop as the browser lays it out (measured), in pixels. */
+    const BOXES = {
+      steps: { left: 534, top: 6, width: 318, height: 32 },
+      hint: { left: 0, top: 44, width: 1440, height: 32 },
+      sizes: { left: 1165, top: 120, width: 251, height: 94 },
+      inspector: { left: 1140, top: 76, width: 300, height: 824 },
+      model: { left: 232, top: 76, width: 908, height: 571 },
+      toolRow: { left: 232, top: 647, width: 908, height: 43 },
+      drawer: { left: 232, top: 690, width: 908, height: 210 },
     };
-    /** The inspector the sizes are in, along the window's right edge. */
-    const INSPECTOR = { left: 1140, top: 76, width: 300, height: 824 };
     /** The tip card's own size. */
     const CARD = { width: 280, height: 140 };
+    type Shape = { left: number; top: number; width: number; height: number };
 
-    const rect = (box: { left: number; top: number; width: number; height: number }) =>
+    const rect = (box: Shape) =>
       ({
         ...box,
         right: box.left + box.width,
@@ -153,73 +211,128 @@ describe("<Tour>", () => {
         toJSON: () => box,
       }) as DOMRect;
 
+    /** The box of each element as laid out in `BOXES`; nothing else takes up room. */
+    const layOut = (boxes: typeof BOXES = BOXES) => {
+      vi.stubGlobal("innerWidth", 1440);
+      vi.stubGlobal("innerHeight", 900);
+      vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        const tour = this.dataset.tour as keyof typeof BOXES | undefined;
+        if (tour && tour in boxes) return rect(boxes[tour]);
+        if (this.classList.contains("hint")) return rect(boxes.hint);
+        if (this.classList.contains("panel-right")) return rect(boxes.inspector);
+        if (this.classList.contains("tool-row")) return rect(boxes.toolRow);
+        if (this.classList.contains("tour")) return rect({ left: 0, top: 0, ...CARD });
+        return rect({ left: 0, top: 0, width: 0, height: 0 });
+      });
+    };
+
     /** True when two boxes share any area. */
     const overlap = (a: DOMRect, b: DOMRect): boolean =>
       a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 
-    // Gap 6 px between the card and what it points at (Tip.tsx), 8 px from the window's edge:
-    //   steps  below: top 8 + 32 + 6 = 46, left 520.
-    //   sizes  left of the inspector: left 1140 − 6 − 280 = 854, top 140.
-    //   model  right: left 232 + 908 + 6 = 1146 (1146 + 280 = 1426 ≤ 1440 − 8), top 76.
-    //   drawer above: top 600 − 6 − 140 = 454, left 232.
+    const cardBox = () =>
+      rect({
+        left: Number.parseFloat(tour().style.left),
+        top: Number.parseFloat(tour().style.top),
+        ...CARD,
+      });
+
+    // Ruling R29. Gap 6 px (Tip.tsx); a card above or below sits 16 px in from its anchor's start,
+    // and one inside the model 16 px in from its corner:
+    //   steps  below the hint line: left 534 + 16 = 550, top 44 + 32 + 6 = 82.
+    //   sizes  left of the inspector: left 1140 − 6 − 280 = 854, top 120.
+    //   model  inside its top-left corner: left 232 + 16 = 248, top 76 + 16 = 92.
+    //   drawer above the tool row: left 232 + 16 = 248, top 647 − 6 − 140 = 501.
     const EXPECTED = [
-      { left: 520, top: 46 },
-      { left: 854, top: 140 },
-      { left: 1146, top: 76 },
-      { left: 232, top: 454 },
+      { left: 550, top: 82 },
+      { left: 854, top: 120 },
+      { left: 248, top: 92 },
+      { left: 248, top: 501 },
     ];
 
-    it("puts each tip beside its part of the screen, never over it, and the sizes' tip clear of the inspector", async () => {
-      vi.stubGlobal("innerWidth", 1440);
-      vi.stubGlobal("innerHeight", 900);
-      vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
-        this: HTMLElement,
-      ) {
-        const named = this.dataset.tour ? BOXES[this.dataset.tour] : undefined;
-        if (named) return rect(named);
-        if (this.classList.contains("panel-right")) return rect(INSPECTOR);
-        if (this.classList.contains("tour")) return rect({ left: 0, top: 0, ...CARD });
-        return rect({ left: 0, top: 0, width: 0, height: 0 });
-      });
+    it("puts each tip where the spec's ruling says", async () => {
+      layOut();
       await firstVisit();
       for (const [i, at] of EXPECTED.entries()) {
-        const card = rect({
-          left: Number.parseFloat(tour().style.left),
-          top: Number.parseFloat(tour().style.top),
-          ...CARD,
-        });
-        expect({ left: card.left, top: card.top }).toEqual(at);
-        expect(overlap(card, rect(BOXES[ANCHORS[i] as string] as DOMRect))).toBe(false);
-        if (ANCHORS[i] === "sizes") expect(overlap(card, rect(INSPECTOR))).toBe(false);
+        expect({ left: cardBox().left, top: cardBox().top }).toEqual(at);
         if (i < EXPECTED.length - 1) press("Next");
       }
     });
 
-    it("follows its part of the screen when the window is resized or scrolled", async () => {
-      vi.stubGlobal("innerWidth", 1440);
-      vi.stubGlobal("innerHeight", 900);
-      let stepsTop = 8;
-      vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
-        this: HTMLElement,
-      ) {
-        if (this.dataset.tour === "steps")
-          return rect({ ...BOXES.steps, top: stepsTop } as DOMRect);
-        if (this.classList.contains("tour")) return rect({ left: 0, top: 0, ...CARD });
-        return rect({ left: 0, top: 0, width: 0, height: 0 });
-      });
+    it("covers no tip's part of the screen, nor the hint line, the inspector or the tool row", async () => {
+      layOut();
       await firstVisit();
-      // The steps move down 100 px: below them is 108 + 32 + 6 = 146.
-      stepsTop = 108;
+      // The model is left out: tips 2 to 4 sit on it, as a note sits on a drawing (Ruling R29).
+      const covered = [
+        BOXES.steps,
+        BOXES.hint,
+        BOXES.sizes,
+        BOXES.inspector,
+        BOXES.toolRow,
+        BOXES.drawer,
+      ];
+      for (const i of EXPECTED.keys()) {
+        for (const box of covered) expect(overlap(cardBox(), rect(box))).toBe(false);
+        if (i < EXPECTED.length - 1) press("Next");
+      }
+    });
+
+    it("points its arrow into the part it is about: up at the steps, right at the sizes, down at the drawer", async () => {
+      layOut();
+      await firstVisit();
+      // The arrow points 20 px into its anchor, no nearer the card's corner than 14 px:
+      //   steps  534 + 20 − 550 = 4, so 14.   sizes  120 + 20 − 120 = 20.
+      //   model  inside it, so no arrow.       drawer 232 + 20 − 248 = 4, so 14.
+      const arrows = [
+        ["below", "14px"],
+        ["left", "20px"],
+        [null, ""],
+        ["above", "14px"],
+      ];
+      for (const [i, [side, at]] of arrows.entries()) {
+        expect([
+          tour().getAttribute("data-arrow"),
+          tour().style.getPropertyValue("--arrow"),
+        ]).toEqual([side, at]);
+        if (i < arrows.length - 1) press("Next");
+      }
+    });
+
+    it("sits in the middle of the window, with no arrow, when its part is not on screen", async () => {
+      layOut();
+      // A project of boards drawn by hand has no sizes to show (ShapeStep.tsx).
+      const bookcase = startProject("Bookcase", "imperial").project;
+      const store = await workshopStore(
+        { label: "Boards only", project: { ...bookcase, structures: [] } },
+        { storage: memoryStorage() },
+      );
+      render(<App store={store} model={null} />);
+      press("Next");
+      // (1440 − 280) / 2 = 580; (900 − 140) / 2 = 380.
+      expect({ left: cardBox().left, top: cardBox().top }).toEqual({ left: 580, top: 380 });
+      expect(tour().hasAttribute("data-arrow")).toBe(false);
+    });
+
+    it("follows its part of the screen when the window is resized or scrolled", async () => {
+      const moved = structuredClone(BOXES);
+      layOut(moved);
+      await firstVisit();
+      // The steps and hint line move down 100 px: below them is 144 + 32 + 6 = 182.
+      moved.steps.top += 100;
+      moved.hint.top += 100;
       act(() => {
         window.dispatchEvent(new Event("resize"));
       });
-      expect(tour().style.top).toBe("146px");
-      // And 50 px more on a scroll: 158 + 32 + 6 = 196.
-      stepsTop = 158;
+      expect(tour().style.top).toBe("182px");
+      // And 50 px more on a scroll: 194 + 32 + 6 = 232.
+      moved.steps.top += 50;
+      moved.hint.top += 50;
       act(() => {
         document.dispatchEvent(new Event("scroll"));
       });
-      expect(tour().style.top).toBe("196px");
+      expect(tour().style.top).toBe("232px");
     });
   });
 });
