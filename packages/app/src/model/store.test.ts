@@ -30,6 +30,20 @@ describe("createKerfStore()", () => {
     ).toBe(false);
   });
 
+  it("shows a section for now without remembering it, and a toggle then closes and remembers it", () => {
+    const backing = memoryStorage();
+    backing.setItem("kerf.sections", JSON.stringify({ Size: false }));
+    const store = createKerfStore({ storage: createStorage(backing), library: memoryLibrary() });
+    store.getState().showSection("Size");
+    expect(store.getState().sectionsShown).toEqual(["Size"]);
+    expect(backing.getItem("kerf.sections")).toBe('{"Size":false}');
+    // Shown, so the user's press closes it, and that choice is kept.
+    store.getState().toggleSection("Size");
+    expect(store.getState().sectionsShown).toEqual([]);
+    expect(store.getState().sections.Size).toBe(false);
+    expect(backing.getItem("kerf.sections")).toBe('{"Size":false}');
+  });
+
   it("starts with no project open", () => {
     const s = fresh().getState();
     expect([s.history, s.projectId]).toEqual([null, null]);

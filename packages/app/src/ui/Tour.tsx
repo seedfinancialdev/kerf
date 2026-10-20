@@ -29,6 +29,8 @@ interface TourTip {
   anchor: "steps" | "sizes" | "model" | "drawer";
   text: string;
   placement: CardPlacement;
+  /** False for a card whose arrow would land on something else than its part (tip 4). */
+  arrow?: boolean;
   /**
    * A selector for something next to the anchor the card must also stay clear of: the card is
    * placed past it, as if the anchor reached across it toward the card's side.
@@ -39,7 +41,7 @@ interface TourTip {
 /**
  * The four tips in the design spec's words (§4), placed by Ruling R29: under the steps and past the
  * hint line; left of the inspector the sizes are in; inside the model's top-left corner, clear of
- * the sizes; and in the model's bottom-left corner above the tool row, pointing down at the drawer.
+ * the sizes; and in the model's bottom-left corner above the tool row, with no arrow.
  */
 const TOUR: readonly [TourTip, ...TourTip[]] = [
   {
@@ -64,6 +66,8 @@ const TOUR: readonly [TourTip, ...TourTip[]] = [
     text: "Your shopping list, cut list, sheets and assembly steps live here, always up to date.",
     placement: "above",
     clear: ".tool-row",
+    // Above the tool row, an arrow would point at a tool, not at the drawer's tabs (Task 13 review).
+    arrow: false,
   },
 ];
 
@@ -103,8 +107,8 @@ function reaching(target: DOMRect, clear: DOMRect | undefined, placement: TipPla
 }
 
 /**
- * Where a card of size `card` (pixels) goes for `tip`: by its anchor, with the arrow pointing a
- * little way into it; inside the anchor, with no arrow; or, when the anchor is not on screen, in
+ * Where a card of size `card` (pixels) goes for `tip`: by its anchor, with the arrow (unless the
+ * tip has none) pointing a little way into it; inside the anchor, with no arrow; or, when the anchor is not on screen, in
  * the middle of the window.
  */
 function placeCard(tip: TourTip, card: DOMRect): CardPlace {
@@ -131,6 +135,7 @@ function placeCard(tip: TourTip, card: DOMRect): CardPlace {
     card,
     tip.placement,
   );
+  if (tip.arrow === false) return { left, top, arrow: null };
   const level = side === "below" || side === "above";
   const at = level ? target.left + ARROW_INSET - left : target.top + ARROW_INSET - top;
   const room = (level ? card.width : card.height) - ARROW_CLEAR;
@@ -158,10 +163,11 @@ export function Tour() {
 function useBringOutSizes(): () => void {
   const store = useKerfStore();
   return () => {
-    const { step, selection, sections, setStep, select, toggleSection } = store.getState();
+    const { step, selection, sections, setStep, select, showSection } = store.getState();
     if (step !== "Shape") setStep("Shape");
     if (selection.kind === "boards") select(NOTHING);
-    if (sections.Size === false) toggleSection("Size");
+    // Shown for now, not saved: the woodworker closed it and it stays closed next time.
+    if (sections.Size === false) showSection("Size");
   };
 }
 

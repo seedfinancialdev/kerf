@@ -156,17 +156,31 @@ describe("<Tour>", () => {
     );
   });
 
-  it("opens a closed Size section for the sizes tip", async () => {
-    const store = await workshopStore();
-    render(<App store={store} model={null} />);
-    act(() => store.getState().toggleSection("Size"));
+  it("opens a closed Size section for the sizes tip, and leaves it saved as closed", async () => {
+    const backing = memoryStorage();
+    // The woodworker closed Size on an earlier visit.
+    backing.setItem("kerf.sections", JSON.stringify({ Size: false }));
+    const { store } = await firstVisit(backing);
     expect(anchor("sizes")).toBeNull();
-    act(() => store.getState().startTour());
     press("Next");
-    expect(store.getState().sections.Size).toBe(true);
     expect(anchor("sizes").getAttribute("aria-describedby")).toBe(
       tour().getAttribute("aria-describedby"),
     );
+    press("Next");
+    press("Next");
+    press("Done");
+    expect(store.getState().toured).toBe(true);
+    // A tour changes no saved choice (Task 13 review).
+    expect(backing.getItem("kerf.sections")).toBe('{"Size":false}');
+  });
+
+  it("ends when the sizes are pressed during the model's tip", async () => {
+    const { store } = await firstVisit();
+    press("Next");
+    press("Next");
+    // Tip 3 is about the model; the sizes are tip 2's part, outside both the card and the model.
+    fireEvent.pointerDown(anchor("sizes"));
+    expect(store.getState().toured).toBe(true);
   });
 
   it("puts the keyboard on Next when it opens, and gives it back to Settings when it ends", async () => {
@@ -279,17 +293,19 @@ describe("<Tour>", () => {
       }
     });
 
-    it("points its arrow into the part it is about: up at the steps, right at the sizes, down at the drawer", async () => {
+    it("points its arrow into the part it is about: up at the steps, right at the sizes", async () => {
       layOut();
       await firstVisit();
       // The arrow points 20 px into its anchor, no nearer the card's corner than 14 px:
       //   steps  534 + 20 − 550 = 4, so 14.   sizes  120 + 20 − 120 = 20.
-      //   model  inside it, so no arrow.       drawer 232 + 20 − 248 = 4, so 14.
+      //   model  inside it, so no arrow.
+      //   drawer above the tool row, so an arrow would land on a tool, not the drawer's tabs: none
+      //          (Task 13 review).
       const arrows = [
         ["below", "14px"],
         ["left", "20px"],
         [null, ""],
-        ["above", "14px"],
+        [null, ""],
       ];
       for (const [i, [side, at]] of arrows.entries()) {
         expect([

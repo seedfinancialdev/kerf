@@ -107,6 +107,8 @@ export interface KerfState {
   lastChoice: Partial<LastChoice>;
   /** Open state by section title; a title not listed has its own default. */
   sections: Record<string, boolean>;
+  /** Sections opened for now, over `sections`, and never saved (the tour's, Ruling R31). */
+  sectionsShown: readonly string[];
   /** When the shown project was first started (meta.json "created"), as an ISO string. */
   created: string | null;
   /**
@@ -243,10 +245,15 @@ export interface KerfActions {
   /** Uses and saves the colour theme. */
   setTheme(theme: "dark" | "light"): void;
   /**
-   * Opens or closes the section `title` (open when never stored unless `defaultOpen` is false) and
-   * remembers it.
+   * Opens or closes the section `title` (open when never stored unless `defaultOpen` is false, or
+   * shown for now) and remembers it.
    */
   toggleSection(title: string, defaultOpen?: boolean): void;
+  /**
+   * Opens the section `title` for now without remembering it: a tour must not change a choice the
+   * woodworker saved (Task 13 review).
+   */
+  showSection(title: string): void;
   /**
    * Shows an answer to the user's last action at once, over any warning (which shows again after).
    * `undo` says whether it offers Undo; without it the notice stays until dismissed.

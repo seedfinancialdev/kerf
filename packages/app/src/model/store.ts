@@ -108,6 +108,7 @@ function startingState(
     unitsForNew: storage.read("kerf.units") === "metric" ? "metric" : "imperial",
     lastChoice: readLastChoice(storage),
     sections: readSections(storage),
+    sectionsShown: [],
     created: null,
     thumbnail: null,
     notDrawn: [],
@@ -360,9 +361,15 @@ export function createKerfStore(deps: {
         set({ theme });
       },
       toggleSection: (title, defaultOpen = true) => {
-        const sections = { ...get().sections, [title]: !(get().sections[title] ?? defaultOpen) };
-        deps.storage.write("kerf.sections", JSON.stringify(sections));
-        set({ sections });
+        const { sections, sectionsShown } = get();
+        const open = sectionsShown.includes(title) || (sections[title] ?? defaultOpen);
+        const next = { ...sections, [title]: !open };
+        deps.storage.write("kerf.sections", JSON.stringify(next));
+        set({ sections: next, sectionsShown: sectionsShown.filter((t) => t !== title) });
+      },
+      showSection: (title) => {
+        const { sectionsShown } = get();
+        if (!sectionsShown.includes(title)) set({ sectionsShown: [...sectionsShown, title] });
       },
       say: (text, undoable = false) =>
         set(tell(line(), { text, kind: undoable ? "undo" : "said" })),
