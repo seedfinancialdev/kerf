@@ -1,0 +1,352 @@
+[
+  {
+    "id": "space-gap-once-at-sides",
+    "file": "packages/app/src/model/space.ts",
+    "find": "space.w - 2 * gap",
+    "replace": "space.w - gap",
+    "why": "A piece sized to an opening leaves a gap on one side only, so it is too wide to slide in."
+  },
+  {
+    "id": "space-gap-twice-at-top",
+    "file": "packages/app/src/model/space.ts",
+    "find": "h: space.h - gap,",
+    "replace": "h: space.h - 2 * gap,",
+    "why": "A piece sized to an opening is made too short, leaving a gap at the top and again at the bottom."
+  },
+  {
+    "id": "space-depth-trimmed",
+    "file": "packages/app/src/model/space.ts",
+    "find": "d: space.d }",
+    "replace": "d: space.d - gap }",
+    "why": "The depth typed for the space is made shorter by the gap, though the gap is only at the sides and top."
+  },
+  {
+    "id": "space-zero-gap-refused",
+    "file": "packages/app/src/model/space.ts",
+    "find": "if (gap < 0)",
+    "replace": "if (gap <= 0)",
+    "why": "A gap of nothing, a piece that fills the space exactly, is refused as if it were negative."
+  },
+  {
+    "id": "space-negative-gap-allowed",
+    "file": "packages/app/src/model/space.ts",
+    "find": "if (gap < 0)",
+    "replace": "if (gap < -Infinity)",
+    "why": "A gap less than zero is accepted, making a piece bigger than the space it must fit."
+  },
+  {
+    "id": "space-width-all-used-allowed",
+    "file": "packages/app/src/model/space.ts",
+    "find": "size.w <= 0 ||",
+    "replace": "size.w < 0 ||",
+    "why": "A gap that uses up the whole width is allowed through and makes a piece with no width."
+  },
+  {
+    "id": "space-height-all-used-allowed",
+    "file": "packages/app/src/model/space.ts",
+    "find": "|| size.h <= 0",
+    "replace": "|| size.h < 0",
+    "why": "A gap that uses up the whole height is allowed through and makes a piece with no height."
+  },
+  {
+    "id": "shop-hand-dovetails-either-tool",
+    "file": "packages/app/src/model/shop-record.ts",
+    "find": "record.chisels && record.dovetailSaw",
+    "replace": "record.chisels || record.dovetailSaw",
+    "why": "Hand-cut dovetails are planned for a shop that has only the chisels or only the saw."
+  },
+  {
+    "id": "shop-track-saw-before-table-saw",
+    "file": "packages/app/src/model/shop-record.ts",
+    "find": "record.tableSaw?.kerf ?? record.trackSaw?.kerf ?? DEFAULT_KERF",
+    "replace": "record.trackSaw?.kerf ?? record.tableSaw?.kerf ?? DEFAULT_KERF",
+    "why": "A shop with both saws has its cuts planned with the track saw's blade instead of the table saw's."
+  },
+  {
+    "id": "shop-no-saw-no-default-blade",
+    "file": "packages/app/src/model/shop-record.ts",
+    "find": "record.trackSaw?.kerf ?? DEFAULT_KERF,",
+    "replace": "record.trackSaw?.kerf ?? 0,",
+    "why": "A shop with no saw on its wall is planned with a blade that cuts nothing."
+  },
+  {
+    "id": "shop-set-up-not-told",
+    "file": "packages/app/src/model/shop-record.ts",
+    "find": "return record.setUp || record.told.includes(topic);",
+    "replace": "return record.told.includes(topic);",
+    "why": "A shop that was set up on the pegboard is still asked about tools it already answered for."
+  },
+  {
+    "id": "shop-set-up-always-told",
+    "file": "packages/app/src/model/shop-record.ts",
+    "find": "return record.setUp || record.told.includes(topic);",
+    "replace": "return record.setUp || true;",
+    "why": "A tool is taken as answered for after a skipped pegboard, so Kerf never asks about it."
+  },
+  {
+    "id": "asks-saw-set-up-not-considered",
+    "file": "packages/app/src/model/tool-questions.ts",
+    "find": "return !record.setUp ||",
+    "replace": "return false ||",
+    "why": "A skipped pegboard is never asked about its saw, though every cut is planned with its blade."
+  },
+  {
+    "id": "asks-saw-with-either-saw-missing",
+    "file": "packages/app/src/model/tool-questions.ts",
+    "find": "(!record.tableSaw && !record.trackSaw)",
+    "replace": "(!record.tableSaw || !record.trackSaw)",
+    "why": "A set-up shop with one saw is asked which saw it cuts with."
+  },
+  {
+    "id": "asks-saw-after-told",
+    "file": "packages/app/src/model/tool-questions.ts",
+    "find": "if (record.told.includes(\"saw\")) return false;",
+    "replace": "",
+    "why": "The saw question is asked again after the woodworker answered it."
+  },
+  {
+    "id": "library-oldest-first",
+    "file": "packages/app/src/model/library.ts",
+    "find": "b.modified.localeCompare(a.modified)",
+    "replace": "a.modified.localeCompare(b.modified)",
+    "why": "Home lists the project changed longest ago first, not the newest."
+  },
+  {
+    "id": "library-write-not-waited-for",
+    "file": "packages/app/src/model/library.ts",
+    "find": "await committed(tx);",
+    "replace": "committed(tx).catch(() => undefined);",
+    "why": "A write is called kept before its transaction commits, so a full disk is reported as success."
+  },
+  {
+    "id": "library-write-failure-reported-kept",
+    "file": "packages/app/src/model/library.ts",
+    "find": "tx.onabort = () =>\n      reject(",
+    "replace": "tx.onabort = () =>\n      resolve(",
+    "why": "A cancelled write is reported as kept."
+  },
+  {
+    "id": "migration-removes-after-refusal",
+    "file": "packages/app/src/model/library-migration.ts",
+    "find": "if (!kept) return { outcome: \"kept\" };",
+    "replace": "",
+    "why": "The old stored project is removed even though the library refused it, losing the user's work."
+  },
+  {
+    "id": "migration-overwrites-existing-entry",
+    "file": "packages/app/src/model/library-migration.ts",
+    "find": "if (await library.read(MIGRATED_PROJECT_ID)) {",
+    "replace": "if ((await library.read(MIGRATED_PROJECT_ID)) && false) {",
+    "why": "A migration run again writes over the library's copy, losing work done on it since."
+  },
+  {
+    "id": "migration-retry-keeps-storage",
+    "file": "packages/app/src/model/library-migration.ts",
+    "find": "{\n    storage.remove(\"kerf.project\");",
+    "replace": "{\n    ",
+    "why": "When the library already has the project, the old copy in storage is never removed, so it moves again every start."
+  },
+  {
+    "id": "migration-unreadable-reads-as-nothing",
+    "file": "packages/app/src/model/library-migration.ts",
+    "find": "storage.couldNotRead(\"kerf.project\") ? \"kept\" : \"none\"",
+    "replace": "storage.couldNotRead(\"kerf.project\") ? \"none\" : \"kept\"",
+    "why": "A stored project the browser would not let be read is reported as nothing to move, and the other way round."
+  },
+  {
+    "id": "migration-created-time-lost",
+    "file": "packages/app/src/model/library-migration.ts",
+    "find": "storage.read(\"kerf.created\") ?? time",
+    "replace": "time",
+    "why": "The migrated project forgets when it was first saved."
+  },
+  {
+    "id": "kinds-cache-by-id-only",
+    "file": "packages/app/src/model/piece-kind.ts",
+    "find": "before?.modified === k.modified ? before.kind",
+    "replace": "before ? before.kind",
+    "why": "A project changed into another kind of piece keeps showing its old drawing, as the cache ignores when it changed."
+  },
+  {
+    "id": "kinds-cache-reads-every-time",
+    "file": "packages/app/src/model/piece-kind.ts",
+    "find": "before?.modified === k.modified ? before.kind : readKind(k, parse)",
+    "replace": "readKind(k, parse)",
+    "why": "Every project is parsed again each time Home lists them, though only the changed ones need it."
+  },
+  {
+    "id": "kinds-cache-never-forgets",
+    "file": "packages/app/src/model/piece-kind.ts",
+    "find": "known = next;",
+    "replace": "known = new Map([...known, ...next]);",
+    "why": "A deleted project stays in the cache for the rest of the session."
+  },
+  {
+    "id": "wood-metric-grid-ignored",
+    "file": "packages/app/src/model/new-project.ts",
+    "find": "units === \"imperial\" || s.thickness % gridSize(\"metric\") === 0",
+    "replace": "true",
+    "why": "A metric project is offered wood whose thickness is off its grid, such as 3/4 plywood."
+  },
+  {
+    "id": "wood-grid-test-inverted",
+    "file": "packages/app/src/model/new-project.ts",
+    "find": "s.thickness % gridSize(\"metric\") === 0",
+    "replace": "s.thickness % gridSize(\"metric\") !== 0",
+    "why": "A metric project keeps only the wood that does not fit its grid."
+  },
+  {
+    "id": "wood-starter-repeats-shop",
+    "file": "packages/app/src/model/new-project.ts",
+    "find": "!held.has(s.id)",
+    "replace": "true",
+    "why": "A wood the shop has is listed a second time from the starter stock."
+  },
+  {
+    "id": "wood-starter-first",
+    "file": "packages/app/src/model/new-project.ts",
+    "find": "return [...shop, ...starterStockFor(units).filter((s) => !held.has(s.id))];",
+    "replace": "return [...starterStockFor(units).filter((s) => !held.has(s.id)), ...shop];",
+    "why": "The starter wood comes ahead of the shop's own, so a new project starts with wood the shop does not use."
+  },
+  {
+    "id": "explain-size-unit-message-reworded",
+    "file": "packages/app/src/model/size.ts",
+    "find": "message === addAUnit(text) ||",
+    "replace": "false ||",
+    "why": "The instruction to add a unit is replaced by a vaguer message that does not tell what to type."
+  },
+  {
+    "id": "explain-size-range-message-reworded",
+    "file": "packages/app/src/model/size.ts",
+    "find": "message === new LengthRangeError().message ||",
+    "replace": "false ||",
+    "why": "The message for a length too large is replaced by one that says it is not a length."
+  },
+  {
+    "id": "explain-size-zero-message-reworded",
+    "file": "packages/app/src/model/size.ts",
+    "find": "message.endsWith(\" must be more than zero.\")",
+    "replace": "false",
+    "why": "The message for a size of zero is replaced by one that says it is not a length."
+  },
+  {
+    "id": "explain-size-everything-plain",
+    "file": "packages/app/src/model/size.ts",
+    "find": "return plain\n    ? message",
+    "replace": "return true\n    ? message",
+    "why": "The expression reader's own wording is shown to the user, such as \"Expected a value\"."
+  },
+  {
+    "id": "edited-ago-minute-boundary",
+    "file": "packages/app/src/model/edited-ago.ts",
+    "find": "if (ago < MINUTE_MS)",
+    "replace": "if (ago <= MINUTE_MS)",
+    "why": "A change exactly a minute ago is called just now."
+  },
+  {
+    "id": "edited-ago-hour-boundary",
+    "file": "packages/app/src/model/edited-ago.ts",
+    "find": "if (ago < HOUR_MS)",
+    "replace": "if (ago <= HOUR_MS)",
+    "why": "A change exactly an hour ago is called 60 minutes ago."
+  },
+  {
+    "id": "edited-ago-days-this-week",
+    "file": "packages/app/src/model/edited-ago.ts",
+    "find": "days <= DAYS_COUNTED",
+    "replace": "days < DAYS_COUNTED",
+    "why": "A change six days ago shows a date instead of \"6 days ago\"."
+  },
+  {
+    "id": "edited-ago-yesterday",
+    "file": "packages/app/src/model/edited-ago.ts",
+    "find": "if (days === 1) return \"yesterday\";",
+    "replace": "",
+    "why": "The day before is called \"1 day ago\" instead of \"yesterday\"."
+  },
+  {
+    "id": "edited-ago-today-by-clock",
+    "file": "packages/app/src/model/edited-ago.ts",
+    "find": "if (days === 0)",
+    "replace": "if (ago < 24 * HOUR_MS)",
+    "why": "A change late yesterday is counted in hours as if it were today."
+  },
+  {
+    "id": "edited-ago-plural-one",
+    "file": "packages/app/src/model/edited-ago.ts",
+    "find": "n === 1 ? \"\" : \"s\"",
+    "replace": "n === 0 ? \"\" : \"s\"",
+    "why": "One minute, hour or day is written in the plural."
+  },
+  {
+    "id": "edited-ago-future-time",
+    "file": "packages/app/src/model/edited-ago.ts",
+    "find": "const ago = now.getTime() - then.getTime();",
+    "replace": "const ago = Math.abs(now.getTime() - then.getTime());",
+    "why": "A change time ahead of this computer's clock is counted as if it were that long ago."
+  },
+  {
+    "id": "edited-ago-unknown-date",
+    "file": "packages/app/src/model/edited-ago.ts",
+    "find": "if (Number.isNaN(then.getTime())) return \"on an unknown date\";",
+    "replace": "",
+    "why": "A time that is not a time is shown as a wrong count or \"Invalid Date\"."
+  },
+  {
+    "id": "retype-to-metric-inverted",
+    "file": "packages/app/src/model/size.ts",
+    "find": "return to === \"metric\"\n    ?",
+    "replace": "return to !== \"metric\"\n    ?",
+    "why": "A change of units writes inches in a metric field and the other way round."
+  },
+  {
+    "id": "retype-metric-space",
+    "file": "packages/app/src/model/size.ts",
+    "find": ".slice(0, -\"mm\".length)} mm`",
+    "replace": "}`",
+    "why": "A size changed to metric is typed as \"762mm mm\"."
+  },
+  {
+    "id": "retype-reads-in-new-units",
+    "file": "packages/app/src/model/size.ts",
+    "find": "readLength(text, noProject(from))",
+    "replace": "readLength(text, noProject(to))",
+    "why": "A size is read in the units it is being changed to, so 30\" turns into the wrong length."
+  },
+  {
+    "id": "tour-press-on-card-ends-tour",
+    "file": "packages/app/src/ui/Tour.tsx",
+    "find": "card.current?.contains(on) ||",
+    "replace": "false ||",
+    "why": "A press on the tour's own card ends the tour, so its buttons cannot be used."
+  },
+  {
+    "id": "tour-press-on-part-ends-tour",
+    "file": "packages/app/src/ui/Tour.tsx",
+    "find": "|| anchorOf(tip)?.contains(on)",
+    "replace": "|| false",
+    "why": "A press on the part the tip is about ends the tour, so the model cannot be orbited during its own tip."
+  },
+  {
+    "id": "tour-press-outside-does-not-end",
+    "file": "packages/app/src/ui/Tour.tsx",
+    "find": "if (!(card.current?.contains(on) || anchorOf(tip)?.contains(on))) end();",
+    "replace": "",
+    "why": "A press outside the tour leaves it showing, so it blocks the user's work."
+  },
+  {
+    "id": "store-leave-workshop-no-picture",
+    "file": "packages/app/src/model/store.ts",
+    "find": "projects.keep(true);\n      const dropped",
+    "replace": "const dropped",
+    "why": "Leaving the Workshop does not take the project's picture, so Home shows an old one."
+  },
+  {
+    "id": "store-leave-workshop-picture-after-switch",
+    "file": "packages/app/src/model/store.ts",
+    "find": "projects.keep(true);\n      const dropped",
+    "replace": "queueMicrotask(() => projects.keep(true));\n      const dropped",
+    "why": "The picture is taken after the screen has changed, when the view no longer shows the project."
+  }
+]
