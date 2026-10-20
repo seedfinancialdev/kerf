@@ -101,9 +101,11 @@ export function libraryActions(
   const write = async (entry: LibraryEntry): Promise<void> => {
     if (!(await library.write(entry))) get().warnOnce(LIBRARY_NOT_KEPT);
   };
-  // The open project's idea, as last read or typed: a change written while its entry cannot be
-  // read back still carries it.
+  // The open project's idea, and each project's picture, as last read or written: a change written
+  // while its entry cannot be read back still carries them. Pictures are by project, so a write
+  // still waiting when another project opens carries its own.
   let openNote = "";
+  const pictures = new Map<Id, Uint8Array | null>();
   /** The entry `id`, or undefined having said it cannot be found and listed what is left. */
   const entryFor = async (id: Id): Promise<LibraryEntry | undefined> => {
     const entry = await library.read(id);
@@ -128,11 +130,13 @@ export function libraryActions(
       if (unchanged && !started) return;
       const picture = await (started ?? pictureInTime(thumbnail));
       if (unchanged && picture === null) return;
+      const kept = picture ?? before?.thumbnail ?? pictures.get(projectId) ?? null;
+      pictures.set(projectId, kept);
       await write({
         id: projectId,
         name: project.name,
         project: text,
-        thumbnail: picture ?? before?.thumbnail ?? null,
+        thumbnail: kept,
         created: before?.created ?? created ?? changed,
         modified: unchanged ? before.modified : changed,
         note: before?.note ?? note,
@@ -191,6 +195,7 @@ export function libraryActions(
         return false;
       }
       openNote = entry.note;
+      pictures.set(id, entry.thumbnail);
       ctx.openAfresh(
         { label: `Opened ${entry.name}`, project },
         { projectId: id, created: entry.created, selection: NOTHING },

@@ -234,6 +234,31 @@ describe("the library", () => {
     expect((await library.read(id))?.note).toBe("for the alcove");
   });
 
+  it("keeps the picture when the entry could not be read back before a change is written", async () => {
+    const inner = memoryLibrary();
+    let blind = false;
+    const library: Library = {
+      ...inner,
+      read: (id) => (blind ? Promise.resolve(undefined) : inner.read(id)),
+    };
+    const store = storeWith(library);
+    await store.getState().createProject(bookcase(), "");
+    const id = store.getState().projectId as string;
+    store.getState().setThumbnailSource(async () => PICTURE);
+    store.getState().setScreen("home");
+    store.getState().setThumbnailSource(null);
+    await store.getState().openProject(id);
+    // No view draws a picture now, and the entry cannot be read back as the change is written.
+    blind = true;
+    const p = shownProject(store.getState()) as Project;
+    store.getState().apply({ label: "Renamed", project: { ...p, name: "Alcove" } });
+    await store.getState().refreshProjects();
+    blind = false;
+    const kept = await library.read(id);
+    expect(kept?.name).toBe("Alcove");
+    expect([...(kept?.thumbnail ?? [])]).toEqual([...PICTURE]);
+  });
+
   it("says once that projects are not kept when the library refuses a write", async () => {
     const store = storeWith(memoryLibrary({ failWrites: true }));
     await store.getState().createProject(bookcase(), "");
