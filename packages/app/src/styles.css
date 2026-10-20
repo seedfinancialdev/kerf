@@ -795,28 +795,28 @@ button[aria-pressed="true"] {
 
 .tour[data-arrow="below"]::before {
   top: -6px;
-  left: calc(var(--arrow) - 5px);
+  left: calc(var(--arrow, 50%) - 5px);
   border-right: 0;
   border-bottom: 0;
 }
 
 .tour[data-arrow="above"]::before {
   bottom: -6px;
-  left: calc(var(--arrow) - 5px);
+  left: calc(var(--arrow, 50%) - 5px);
   border-top: 0;
   border-left: 0;
 }
 
 .tour[data-arrow="left"]::before {
   right: -6px;
-  top: calc(var(--arrow) - 5px);
+  top: calc(var(--arrow, 50%) - 5px);
   border-bottom: 0;
   border-left: 0;
 }
 
 .tour[data-arrow="right"]::before {
   left: -6px;
-  top: calc(var(--arrow) - 5px);
+  top: calc(var(--arrow, 50%) - 5px);
   border-top: 0;
   border-right: 0;
 }
@@ -1002,7 +1002,7 @@ button[aria-pressed="true"] {
 
 .peg-card.hung {
   border-color: var(--color-accent);
-  background: linear-gradient(180deg, var(--color-hover), var(--color-surface));
+  background: linear-gradient(180deg, var(--color-surface-raised), var(--color-surface));
   box-shadow: 0 10px 30px -18px var(--color-accent);
 }
 
@@ -1475,7 +1475,7 @@ button[aria-pressed="true"] {
   height: 140px;
   background: radial-gradient(
     120% 90% at 50% 100%,
-    var(--color-hover) 0%,
+    var(--color-surface-raised) 0%,
     var(--color-surface-raised) 62%
   );
   color: var(--color-wood-sheet);
@@ -1679,7 +1679,7 @@ button.project-open {
 
 .card-menu [role="menuitem"]:hover,
 .card-menu [role="menuitem"]:focus {
-  background: var(--color-hover);
+  background: var(--color-surface-raised);
 }
 
 .card-menu [role="menuitem"][aria-disabled="true"] {
