@@ -245,10 +245,10 @@ describe("<NewProject>", () => {
     panel("bookcase");
     await typeIn(field("Width"), '30"');
     await userEvent.click(choice("Units", "Millimetres"));
-    // 30" × 25.4 = 762 mm; 72" = 1828.8 mm; 12" = 304.8 mm
-    expect(field("Width").value).toBe("762mm");
-    expect(field("Height").value).toBe("1828.8mm");
-    expect(field("Depth").value).toBe("304.8mm");
+    // 30" × 25.4 = 762 mm; 72" = 1828.8 mm; 12" = 304.8 mm, spaced as the usual "900 mm" is.
+    expect(field("Width").value).toBe("762 mm");
+    expect(field("Height").value).toBe("1828.8 mm");
+    expect(field("Depth").value).toBe("304.8 mm");
     await userEvent.click(choice("Units", "Inches"));
     expect(field("Width").value).toBe('30"');
     expect(field("Height").value).toBe('72"');
@@ -260,7 +260,7 @@ describe("<NewProject>", () => {
     await typeIn(field("Height"), "tall");
     await userEvent.click(choice("Units", "Millimetres"));
     // 1/8" = 3.175 mm; "tall" is no length, so the usual metric height (1800 mm) takes its place.
-    expect(field("Gap").value).toBe("3.175mm");
+    expect(field("Gap").value).toBe("3.175 mm");
     expect(field("Height").value).toBe("1800 mm");
   });
 

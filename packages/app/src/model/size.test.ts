@@ -273,8 +273,8 @@ describe("explainSize()", () => {
 });
 
 describe("retype()", () => {
-  it('types 30" again in millimetres, exactly: 30 × 25.4 = 762 mm', () => {
-    expect(retype('30"', "imperial", "metric")).toBe("762mm");
+  it('types 30" again in millimetres, exactly and spaced as the usual sizes: 30 × 25.4 = 762 mm', () => {
+    expect(retype('30"', "imperial", "metric")).toBe("762 mm");
   });
 
   it('types 762 mm again in inches: 762 ÷ 25.4 = 30"', () => {
@@ -282,7 +282,7 @@ describe("retype()", () => {
   });
 
   it('types 1/8" as 3.175 mm, which is exact (1/8 × 25.4)', () => {
-    expect(retype('1/8"', "imperial", "metric")).toBe("3.175mm");
+    expect(retype('1/8"', "imperial", "metric")).toBe("3.175 mm");
   });
 
   it("gives nothing for text that is not a length", () => {

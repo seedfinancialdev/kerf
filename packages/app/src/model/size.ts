@@ -185,8 +185,9 @@ export function literalFor(len: Len, units: Project["units"]): Expr {
 }
 
 /**
- * A length typed in `from` units, typed again for `to` units as `literalFor` writes it (30" becomes
- * "762mm"), so a change of units keeps what was typed. Undefined for text that is not a length.
+ * A length typed in `from` units, typed again for `to` units, exactly, as the usual sizes are written
+ * (30" becomes "762 mm", beside the usual "900 mm"), so a change of units keeps what was typed.
+ * Undefined for text that is not a length.
  */
 export function retype(
   text: string,
@@ -194,5 +195,8 @@ export function retype(
   to: Project["units"],
 ): Expr | undefined {
   const read = readLength(text, noProject(from));
-  return read.ok ? literalFor(read.value, to) : undefined;
+  if (!read.ok) return undefined;
+  return to === "metric"
+    ? `${exactLiteral(read.value).slice(0, -"mm".length)} mm`
+    : literalFor(read.value, to);
 }
