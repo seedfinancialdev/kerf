@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // What every tool, step, tab and top-bar control says when you rest on it (design spec,
-// "Tooltips"). Tool keys are those of `TOOLS` in tools/tools.ts; a step's line is its hint line
-// from model/steps.ts.
+// "Tooltips"). Tool keys are those of `TOOLS` in tools/tools.ts; a step's line is its hint
+// line from model/steps.ts.
 
 import type { Structure } from "@kerf/core";
 import { hintFor, type Step } from "../model/steps";

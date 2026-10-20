@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// When a project was last changed, as a person says it (design spec §2, "Recent files": "the name
-// and when it was last changed"): minutes and hours today, "yesterday", days this week, then the
-// date.
+// When a project was last changed, as a person says it (design spec §2, "Recent files": "the
+// name and when it was last changed"): minutes and hours today, "yesterday", days this week,
+// then the date.
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;

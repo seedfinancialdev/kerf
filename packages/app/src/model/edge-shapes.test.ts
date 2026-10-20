@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// ADR 016, D7: Edge profile offers the roundovers whose bits are on the router card; the common
-// roundovers without a bit greyed; chamfer, cove and ogee as Later (the engine draws roundovers
-// only).
+// ADR 016, D7: Edge profile offers the roundovers whose bits are on the router card; the
+// common roundovers without a bit greyed; chamfer, cove and ogee as Later (the engine
+// draws roundovers only).
 
 import { INCH } from "@kerf/core";
 import { describe, expect, it } from "vitest";
@@ -25,8 +25,8 @@ describe("COMMON_ROUNDOVERS", () => {
 
 describe("edgeShapeOffers()", () => {
   it("offers the starter's 1/8\" roundover, the other common roundovers without a bit, and the rest later", () => {
-    // Shapes not on the wall are shown at their smallest usual size, 1/4" for each (RouterBits
-    // sizes).
+    // Shapes not on the wall are shown at their smallest usual size, 1/4" for
+    // each (RouterBits sizes).
     expect(edgeShapeOffers(STARTER_RECORD)).toEqual([
       { shape: "roundover", size: EIGHTH, state: "owned" },
       { shape: "roundover", size: QUARTER, state: "noBit" },

@@ -20,8 +20,8 @@ const answer = (topic: ToolTopic, label: string) => {
 };
 
 /**
- * The pegboard saved with "That's my shop" after taking both saws down (the starter has a table
- * saw).
+ * The pegboard saved with "That's my shop" after taking both saws down (the starter has
+ * a table saw).
  */
 const SET_UP_WITHOUT_SAWS: ShopRecord = recordOf(
   toggleTool(wallFrom(STARTER_RECORD), "tableSaw"),

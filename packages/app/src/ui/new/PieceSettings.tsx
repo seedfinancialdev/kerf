@@ -261,10 +261,10 @@ function PieceOptions({
 }
 
 /**
- * The settings for `choice`, as `made` (newProject's answer) finds them. `shown` is the last piece
- * that could be built, drawn while a size is being typed; `offered` the wood the shop has in these
- * units. `update` and `setUnits` change the choice; `onAddWood` adds a wood to the shop and picks
- * it.
+ * The settings for `choice`, as `made` (newProject's answer) finds them. `shown` is the last
+ * piece that could be built, drawn while a size is being typed; `offered` the wood the shop has
+ * in these units. `update` and `setUnits` change the choice; `onAddWood` adds a wood to the shop
+ * and picks it.
  */
 export function PieceSettings({
   choice,

@@ -17,8 +17,8 @@ import { CutListTab } from "./CutListTab";
 const QUESTION = 'Your cut list assumes a 1/8" blade. What do you cut with?';
 
 /**
- * The cut list of a new bookcase, its shop as the skipped pegboard leaves it unless `record` is
- * given.
+ * The cut list of a new bookcase, its shop as the skipped pegboard leaves it unless
+ * `record` is given.
  */
 async function cutList(record?: ShopRecord) {
   const store = await workshopStore();

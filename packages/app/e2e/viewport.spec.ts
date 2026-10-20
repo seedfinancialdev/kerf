@@ -31,8 +31,8 @@ test("the model area says it is drawing until the first picture is up", async ({
   await page.clock.install();
   const panel = await openNewProject(page);
   await panel.getByRole("button", { name: "Bookcase" }).click();
-  // Held before Create is clicked: once clicked, the first frame could be drawn before a later
-  // hold.
+  // Held before Create is clicked: once clicked, the first frame could be drawn before
+  // a later hold.
   await page.clock.pauseAt(Date.now() + 60_000);
   await panel.getByRole("button", { name: "Create" }).click();
   const model = page.getByRole("region", { name: "Model" });

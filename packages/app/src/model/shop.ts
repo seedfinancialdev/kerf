@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The user's shop (Domain model, ShopProfile: "per user, not per project"), kept in the browser
-// (ADR 015, D4; the pegboard record is ADR 016, D3) and checked by the engine's own rule before
-// use.
+// The user's shop (Domain model, ShopProfile: "per user, not per project"), kept in the
+// browser (ADR 015, D4; the pegboard record is ADR 016, D3) and checked by the engine's own
+// rule before use.
 
 import { type ShopProfile, shopProblem } from "@kerf/core";
 import { recordFromProfile, type ShopRecord, STARTER_RECORD, shopProfileFor } from "./shop-record";
@@ -37,8 +37,7 @@ const asideKey = (n: number): StorageKey =>
 
 /**
  * Copies the unusable saved shop `text` to the first free set-aside key, so a later change to the
- * shop never destroys it; a copy already set aside is not made again. False when it could not be
- * written.
+ * shop never destroys it; a copy already set aside is not made again. False if it was not kept.
  */
 function setAside(storage: AppStorage, text: string): boolean {
   let n = 1;

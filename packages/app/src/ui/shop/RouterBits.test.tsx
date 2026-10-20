@@ -14,8 +14,8 @@ import type { RouterBit } from "../../model/shop-record";
 import { RouterBits } from "./RouterBits";
 
 /**
- * The bit list as the router card holds it, starting from `start`; `seen` is every list it was
- * given.
+ * The bit list as the router card holds it, starting from `start`; `seen` is every list
+ * it was given.
  */
 function bitsFrom(start: RouterBit[]) {
   const seen: RouterBit[][] = [];

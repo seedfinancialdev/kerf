@@ -3,11 +3,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // New project (design spec §3; the look is 2026-10-14-first-run-and-home/3-new-project.png): a
-// large panel over Home with the gallery on the left (PieceGallery) and the chosen piece's settings
-// on the right (PieceSettings). It holds the choice; newProject (model/new-project.ts) decides on
-// every change whether Create is on and what the preview shows. It is a modal dialog: the keyboard
-// starts on the chosen piece and stays inside, Escape closes it, and Create or Enter starts at
-// once.
+// large panel over Home with the gallery on the left (PieceGallery) and the chosen piece's
+// settings on the right (PieceSettings). It holds the choice; newProject (model/new-project.ts)
+// decides on every change whether Create is on and what the preview shows. It is a modal dialog:
+// the keyboard starts on the chosen piece and stays inside, Escape closes it, and Create or Enter
+// starts at once.
 
 import { type Id, type Project, type SolveResult, type Stock, solve } from "@kerf/core";
 import {

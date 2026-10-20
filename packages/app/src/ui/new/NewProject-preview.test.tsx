@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Design spec §3: the preview updates as sizes change, and (Task 10 brief) keeps the last piece
-// that could be built while a size is being typed and cannot be read yet. The real preview draws to
-// a canvas jsdom cannot read, so it is stood in for by one that says the width of the case it was
-// given.
+// that could be built while a size is being typed and cannot be read yet. The real preview
+// draws to a canvas jsdom cannot read, so it is stood in for by one that says the width of the
+// case it was given.
 
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

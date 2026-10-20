@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The shop as hung on the pegboard (ADR 016, D3). It keeps every tool and bit the woodworker owns,
-// so Kerf already knows when later joinery needs them; the engine is given only what it understands
-// today.
+// The shop as hung on the pegboard (ADR 016, D3). It keeps every tool and bit the woodworker
+// owns, so Kerf already knows when later joinery needs them; the engine is given only what
+// it understands today.
 
 import { INCH, type Len, type ShopProfile, type Stock } from "@kerf/core";
 import { STARTER_DADO_WIDTH, STARTER_STOCK } from "./starter";

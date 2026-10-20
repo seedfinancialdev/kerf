@@ -2,10 +2,10 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The cut list (Cut list & nesting): one line per identical cut size, with the visible size beside
-// the cut size (Domain model, decision 3). Every cut is planned with the saw's blade width, so the
-// saw is asked about here when it matters (ADR 016, D4; Ruling R24, model/tool-questions.ts
-// asksAbout).
+// The cut list (Cut list & nesting): one line per identical cut size, with the visible
+// size beside the cut size (Domain model, decision 3). Every cut is planned with the
+// saw's blade width, so the saw is asked about here when it matters (ADR 016, D4; Ruling
+// R24, model/tool-questions.ts asksAbout).
 
 import { cutLineText } from "../model/plan-text";
 import { shownProject } from "../model/store";

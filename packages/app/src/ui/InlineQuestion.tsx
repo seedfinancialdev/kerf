@@ -15,8 +15,8 @@ export interface InlineAnswer {
 
 /**
  * Asks `text` in place, with any `children` (a setting the answer needs) between it and the
- * answers. The first answer is the usual one and is drawn as the primary button, unless the answers
- * are `peers`.
+ * answers. The first answer is the usual one and is drawn as the primary button, unless the
+ * answers are `peers`.
  */
 export function InlineQuestion({
   text,

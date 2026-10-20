@@ -90,8 +90,8 @@ function ShapeSizes({
 }
 
 /**
- * Every shape a bit can cut, each with its sizes to tap on or off; `onChange` gets the new bit
- * list.
+ * Every shape a bit can cut, each with its sizes to tap on or off; `onChange` gets the
+ * new bit list.
  */
 export function RouterBits({
   bits,

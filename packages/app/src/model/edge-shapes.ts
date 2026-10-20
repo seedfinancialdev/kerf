@@ -68,8 +68,8 @@ export function edgeShapeOffers(record: ShopRecord): EdgeShapeOffer[] {
 
 /**
  * The record with `bit` on the router card, hanging a router if the shop had none. Owning a bit
- * says the shop has a router, so the router counts as told (ADR 016, D4). Unchanged if the bit is
- * already there.
+ * says the shop has a router, so the router counts as told (ADR 016, D4). Unchanged if the bit
+ * is already there.
  */
 export function withRouterBit(record: ShopRecord, bit: RouterBit): ShopRecord {
   const bits = record.router?.bits ?? [];

@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Design spec, "Tooltips": every control has one, including Undo and Redo while there is nothing to
-// undo.
+// Design spec, "Tooltips": every control has one, including Undo and Redo while there is
+// nothing to undo.
 
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

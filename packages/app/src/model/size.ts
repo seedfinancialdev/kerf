@@ -185,10 +185,11 @@ export function literalFor(len: Len, units: Project["units"]): Expr {
 }
 
 /**
- * A length typed in `from` units, typed again for `to` units as the usual sizes are written, so a
- * change of units keeps what was typed. Inches to millimetres is exact (30" becomes "762 mm", beside
- * the usual "900 mm"); millimetres to inches is the nearest 1/64", the inch grid ("900 mm" becomes
- * 35-7/16", 0.0044" short). Undefined for text that is not a length.
+ * A length typed in `from` units, typed again for `to` units as the usual sizes are written, so
+ * a change of units keeps what was typed. Inches to millimetres is exact (30" becomes "762 mm",
+ * beside the usual "900 mm"); millimetres to inches is the nearest 1/64", the inch grid, which
+ * can be over or under ("900 mm" becomes 35-7/16", 0.0044" over). Undefined for text that is
+ * not a length.
  */
 export function retype(
   text: string,

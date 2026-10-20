@@ -28,8 +28,8 @@ function download(bytes: Uint8Array, name: string): void {
 }
 
 /**
- * Said when a download is asked for with no project open (the window's fallback offers it
- * regardless).
+ * Said when a download is asked for with no project open (the window's fallback
+ * offers it regardless).
  */
 const NOTHING_TO_DOWNLOAD = "There is no project to download yet.";
 

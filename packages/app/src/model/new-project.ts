@@ -112,8 +112,8 @@ export const BLANKS: readonly Piece[] = [
 ];
 
 /**
- * Everything the New project panel gathers. Sizes are text as typed, so they can be wrong until
- * Create.
+ * Everything the New project panel gathers. Sizes are text as typed, so they can be
+ * wrong until Create.
  */
 export interface NewProjectChoice {
   piece: PieceId;
@@ -348,8 +348,8 @@ export function newProject(choice: NewProjectChoice, record: ShopRecord): NewPro
     project = shelves.edit.project;
   }
   if (choice.piece === "cabinet") {
-    // The case's back option: "none", "inset-rabbet" or "applied" (core/src/structures/case.ts,
-    // line 56).
+    // The case's back option: "none", "inset-rabbet" or "applied"
+    // (core/src/structures/case.ts, line 56).
     project = setOption(
       project,
       structure.id,

@@ -3,11 +3,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // The tour (design spec §4): four tips, one at a time, each a small card by the part of the
-// Workshop it is about, shown the first time the Workshop opens and again from Learn. A card never
-// covers its own part, another tip's part, or a control a tip names (Ruling R29); it sits on the
-// model as a note sits on a drawing. It never blocks the screen: Escape, or a press outside both
-// the card and the part it is about, ends it (Ruling R30), so the model can be orbited during its
-// own tip.
+// Workshop it is about, shown the first time the Workshop opens and again from Learn. A card
+// never covers its own part, another tip's part, or a control a tip names (Ruling R29); it sits
+// on the model as a note sits on a drawing. It never blocks the screen: Escape, or a press
+// outside both the card and the part it is about, ends it (Ruling R30), so the model can be
+// orbited during its own tip.
 
 import {
   type CSSProperties,
@@ -69,8 +69,8 @@ const TOUR: readonly [TourTip, ...TourTip[]] = [
     text: "Your shopping list, cut list, sheets and assembly steps live here, always up to date.",
     placement: "above",
     clear: ".tool-row",
-    // Above the tool row, an arrow would point at a tool, not at the drawer's tabs (Task 13
-    // review).
+    // Above the tool row, an arrow would point at a tool, not at the drawer's tabs
+    // (Task 13 review).
     arrow: false,
   },
 ];
@@ -88,8 +88,8 @@ const ARROW_INSET = 20;
 const ARROW_CLEAR = 14;
 
 /**
- * Where the card is drawn: its top-left corner, and the side and offset of its arrow (none when
- * unanchored).
+ * Where the card is drawn: its top-left corner, and the side and offset of its arrow
+ * (none when unanchored).
  */
 interface CardPlace {
   left: number;

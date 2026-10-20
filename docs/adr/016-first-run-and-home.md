@@ -4,8 +4,9 @@ Status: accepted (maintainer, 2026-10-14). Design: `docs/superpowers/specs/2026-
 
 Outcomes: Final review (code, silent failure, tests, whole branch): Critical 0, Important 14 (code 1, silent
 failure 5, tests 5, branch 3, several the same M4-upgrade finding), Minor 28 (code 4, silent failure 6, tests 6,
-branch 12); fixed in 696d50e, 83fb282, c632e3a and the documentation commit that records this line; the rest are
-known limits 19 to 30. The review of the pull request is pending.
+branch 12); fixed in 696d50e, 83fb282, c632e3a, 97ffb05 and afe4b26; the rest are known limits 19 to 25, and
+limits 26 to 30 list the edges of those fixes. The re-review of the fixes (Minor 9) was fixed in the commits that
+follow afe4b26. The review of the pull request is pending.
 
 ## Context
 
@@ -96,9 +97,10 @@ building because the spec is silent.
     before tip 2; any mouse button on the model, not only the one that orbits, keeps the tour during tip 3.
 25. A new metric project's gap starts at 3 mm, the round size nearest 1/8"; D6 gives only the imperial default
     (maintainer to confirm).
-26. If storage will not let the old project go and the moved project is edited, the next start keeps the stored
-    copy once as "<name> (older tab)": storage cannot tell an older tab's change from the original it still
-    holds.
+26. While storage will not let the old project go, each start that finds the moved project edited, and no
+    project with exactly the stored text, keeps the stored copy again as "<name> (older tab)" (so a copy that
+    was renamed or edited is made again), and says the change came from an older Kerf tab though none may have
+    been open: storage cannot tell an older tab's change from the original it still holds.
 27. New project, Open file or opening another project replaces an open project the library does not keep without
     asking; Home's "Open now, not kept" card and banner are the warning (final review ruling on branch I3).
 28. Home's empty line "Projects you start will show here." also shows under the banner of a browser that keeps

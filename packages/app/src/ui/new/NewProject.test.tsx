@@ -2,11 +2,11 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Design spec §3, "New project": the gallery (Templates, Blank, Open file, Inspiration later), the
-// piece's settings (units, outside size or space to fill, the gap, shelves or back, the wood),
-// refusals in plain words before Create, Create or Enter to start at once, and the last piece,
-// units and wood remembered. The panel is a modal dialog: the keyboard stays inside it and Escape
-// closes it.
+// Design spec §3, "New project": the gallery (Templates, Blank, Open file, Inspiration later),
+// the piece's settings (units, outside size or space to fill, the gap, shelves or back, the
+// wood), refusals in plain words before Create, Create or Enter to start at once, and the last
+// piece, units and wood remembered. The panel is a modal dialog: the keyboard stays inside it and
+// Escape closes it.
 
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

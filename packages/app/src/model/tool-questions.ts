@@ -2,10 +2,10 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// What "ask when it matters" asks about each tool, what each answer writes to the shop record, and
-// what Kerf then says it will plan for (design spec, "Ask when it matters"; ADR 016, D4). Every
-// answer marks its topic told, so it is asked once; nothing is assumed without saying so (Rulings
-// R24, R25).
+// What "ask when it matters" asks about each tool, what each answer writes to the shop record,
+// and what Kerf then says it will plan for (design spec, "Ask when it matters"; ADR 016, D4).
+// Every answer marks its topic told, so it is asked once; nothing is assumed without saying so
+// (Rulings R24, R25).
 
 import { formatLength, type Len, type Project } from "@kerf/core";
 import {

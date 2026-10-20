@@ -175,9 +175,9 @@ describe("<EdgePanel>", () => {
     expect(shownProject(store.getState())).toBe(before);
   });
 
-  // Design spec, "Router bits and edge shapes"; ADR 016, D7; Ruling R26: the shapes owned first,
-  // the common roundovers without a bit greyed with a reason and an offer, chamfer, cove and ogee
-  // later.
+  // Design spec, "Router bits and edge shapes"; ADR 016, D7; Ruling R26: the shapes owned
+  // first, the common roundovers without a bit greyed with a reason and an offer, chamfer, cove
+  // and ogee later.
   describe("the shapes it offers", () => {
     const THREE_EIGHTHS = 76_200; // 3/8" = 3 × 203200 / 8
     const ADD_QUESTION = 'Add a 3/8" roundover bit to your shop?';
