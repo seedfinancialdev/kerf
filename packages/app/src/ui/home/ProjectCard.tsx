@@ -124,7 +124,7 @@ export function ProjectCard({ project, now }: { project: ProjectSummary; now: Da
 }
 
 /** Said on the card of the open project the library does not keep. */
-export const OPEN_NOT_KEPT = "Open now, not kept";
+const OPEN_NOT_KEPT = "Open now, not kept";
 
 /**
  * The open project that the library does not keep (`openProjectNotKept`), as a card that goes back
