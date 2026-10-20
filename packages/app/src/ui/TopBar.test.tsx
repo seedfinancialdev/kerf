@@ -6,7 +6,7 @@
 
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { App } from "../App";
 import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
@@ -208,6 +208,45 @@ describe("<TopBar> Kerf button and project menu", () => {
     expect(screen.getByRole("tooltip").textContent).toContain(
       "Copies need a browser that keeps projects.",
     );
+  });
+
+  it("puts the disabled Duplicate's tip beside the menu, off the items below it", async () => {
+    // A 1000 x 700 window, a 200 x 50 tip, and every other box 160 x 30 at (100, 100).
+    vi.stubGlobal("innerWidth", 1000);
+    vi.stubGlobal("innerHeight", 700);
+    const boxes = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const box = this.classList.contains("tip")
+          ? { left: 0, top: 0, width: 200, height: 50 }
+          : { left: 100, top: 100, width: 160, height: 30 };
+        return { ...box, right: box.left + box.width, bottom: box.top + box.height } as DOMRect;
+      });
+    onTestFinished(() => {
+      boxes.mockRestore();
+      vi.unstubAllGlobals();
+    });
+    const user = userEvent.setup();
+    const store = createKerfStore({
+      storage: createStorage(memoryStorage()),
+      library: memoryLibrary({ available: false }),
+    });
+    await store.getState().createProject(startProject("Bookcase", "imperial"), "");
+    render(<App store={store} model={null} />);
+    await user.click(screen.getByRole("button", { name: "Bookcase" }));
+    fireEvent.keyDown(document.body, { key: "Tab" });
+    act(() => screen.getByRole("menuitem", { name: "Duplicate" }).focus());
+    const tip = screen.getByRole("tooltip");
+    // To the right of the item, level with its top: left = 100 + 160 + 6 = 266, top = 100.
+    expect([tip.style.left, tip.style.top]).toEqual(["266px", "100px"]);
+  });
+
+  it("marks the name button expanded while its menu is open", async () => {
+    const { user } = await openMenu();
+    const name = screen.getByRole("button", { name: "Bookcase" });
+    expect(name.getAttribute("aria-expanded")).toBe("true");
+    await user.keyboard("{Escape}");
+    expect(name.getAttribute("aria-expanded")).toBe("false");
   });
 
   it("says plainly that the copy could not be made when the library cannot be read", async () => {

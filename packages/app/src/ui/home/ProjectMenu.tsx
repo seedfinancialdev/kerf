@@ -138,7 +138,8 @@ export function ProjectMenu({
     >
       {items.map(([label, choose]) =>
         label === "Duplicate" && !canCopy ? (
-          <Tip key={label} tip={TIPS.copyNeedsStorage}>
+          // Beside the menu, so the tip covers none of the items below Duplicate.
+          <Tip key={label} tip={TIPS.copyNeedsStorage} placement="right">
             <button type="button" role="menuitem" tabIndex={-1} aria-disabled="true">
               {label}
             </button>
