@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Design spec, "Design tokens": every text/background pair reads at 4.5:1 in both themes (WCAG 2.1
-// contrast ratio: (L1 + 0.05) / (L2 + 0.05), relative luminance from sRGB).
+// Design spec, "Design tokens": every text/background pair reads at 4.5:1 and every control boundary at
+// 3:1 in both themes (WCAG 2.1 contrast ratio: (L1 + 0.05) / (L2 + 0.05), relative luminance from sRGB).
 
 // @vitest-environment node
 
@@ -35,19 +35,42 @@ function contrast(a: string, b: string): number {
   return ((hi ?? 0) + 0.05) / ((lo ?? 0) + 0.05);
 }
 
-const PAIRS: Array<[string, string]> = [
+// Text on its background (WCAG 2.1 SC 1.4.3): 4.5:1. The tightest, by hand from the formula above:
+// light error #b4421b on bg #eae6dd: L = 0.1368 and 0.7931, (0.7931 + 0.05) / (0.1368 + 0.05) = 4.51.
+const TEXT_PAIRS: Array<[string, string]> = [
   ["text", "bg"],
   ["text", "surface"],
   ["text", "surface-raised"],
+  ["text", "viewport"],
+  ["text", "selection"],
   ["text-muted", "bg"],
   ["text-muted", "surface"],
   ["text-muted", "surface-raised"],
+  ["text-muted", "viewport"],
   ["accent", "surface"],
-  ["error", "surface"],
+  ["accent", "surface-raised"],
   ["error", "bg"],
+  ["error", "surface"],
+  ["error", "surface-raised"],
   ["warning", "surface"],
+  ["warning", "surface-raised"],
   ["step-active-text", "accent"],
-  ["text", "hover"],
+  ["step-active-text", "error"],
+  ["on-wood-sheet", "wood-sheet"],
+];
+
+// A control's boundary and the focus ring against what they sit on (WCAG 2.1 SC 1.4.11): 3:1. The
+// tightest: dark border-strong #7a756e on surface-raised #2f2d29: L = 0.1799 and 0.0264,
+// (0.1799 + 0.05) / (0.0264 + 0.05) = 3.01.
+const CONTROL_PAIRS: Array<[string, string]> = [
+  ["border-strong", "bg"],
+  ["border-strong", "surface"],
+  ["border-strong", "surface-raised"],
+  ["focus", "bg"],
+  ["focus", "surface"],
+  ["focus", "surface-raised"],
+  ["focus", "viewport"],
+  ["focus", "selection"],
 ];
 
 describe.each([
@@ -55,9 +78,47 @@ describe.each([
   ["light", ':root[data-theme="light"] {'],
 ])("the %s theme", (_name, selector) => {
   const t = theme(selector);
-  it.each(PAIRS)("reads %s on %s at 4.5:1 or better", (fg, bg) => {
+  it.each(TEXT_PAIRS)("reads %s on %s at 4.5:1 or better", (fg, bg) => {
     expect(t[fg], `--color-${fg} missing`).toBeDefined();
     expect(t[bg], `--color-${bg} missing`).toBeDefined();
     expect(contrast(t[fg] as string, t[bg] as string)).toBeGreaterThanOrEqual(4.5);
+  });
+  it.each(CONTROL_PAIRS)("shows %s against %s at 3:1 or better", (fg, bg) => {
+    expect(t[fg], `--color-${fg} missing`).toBeDefined();
+    expect(t[bg], `--color-${bg} missing`).toBeDefined();
+    expect(contrast(t[fg] as string, t[bg] as string)).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe("styles.css", () => {
+  const styles = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+  const defined = new Set([...css.matchAll(/(--[\w-]+):/g)].map((m) => m[1]));
+  const used = [...new Set([...styles.matchAll(/var\((--[\w-]+)\)/g)].map((m) => m[1] as string))];
+
+  // A missing custom property makes CSS fall back silently (no error, transparent or inherited colour).
+  it.each(used)("uses %s, which tokens.css defines", (name) => {
+    expect(defined.has(name)).toBe(true);
+  });
+});
+
+describe("the themes", () => {
+  // A token defined in one theme only falls back silently in the other (no error, transparent or
+  // inherited colour), which the "tokens.css defines" check above cannot see: it reads the whole file.
+  it("define the same colour tokens", () => {
+    const names = (selector: string) => Object.keys(theme(selector)).sort();
+    expect(names(':root[data-theme="light"] {')).toEqual(names(':root[data-theme="dark"] {'));
+  });
+});
+
+describe("main.tsx", () => {
+  const main = readFileSync(new URL("./main.tsx", import.meta.url), "utf8");
+  const bundled = [
+    ...new Set([...main.matchAll(/@fontsource\/[\w-]+\/(\d+)\.css/g)].map((m) => m[1] as string)),
+  ];
+  const used = new Set([...css.matchAll(/--font-weight-[\w-]+:\s*(\d+)/g)].map((m) => m[1]));
+
+  // A face nothing sets is shipped to every user for nothing (CLAUDE.md: no dead code).
+  it.each(bundled)("bundles weight %s, which a --font-weight token sets", (weight) => {
+    expect(used.has(weight)).toBe(true);
   });
 });

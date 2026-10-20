@@ -101,7 +101,8 @@ Between consumer and utilitarian, modeled on Lightroom more than Photoshop: a ca
 
 **Visual system**
 
-- **Type:** the system UI font at 12-13 px in panels, tabular numerals for every dimension so columns line up.
+- **Type:** IBM Plex Sans at 14 px in panels and 12 px for labels and captions, headings in Archivo, both
+  bundled with the app; tabular numerals for every dimension so columns line up (`docs/brand/`, ADR 017).
 - **Tokens from day one:** colors, spacing and type defined as design tokens, so the light theme and later branding are a token swap, not a redesign.
 - **Viewport:** soft studio lighting, subtle wood-grain textures per species, visible grain direction on hover. No gradients, glow or skeuomorphic chrome.
 
