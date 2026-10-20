@@ -11,8 +11,9 @@ import { readShopLength } from "../../model/size";
 
 /**
  * A text field for one length in `units`. Enter reads it (and so does leaving the field, when
- * `readOnBlur`); a length above zero goes to `onLength`, anything else is said under the field
- * (`notPositive` for zero or less). Escape calls `onCancel`. `focus` puts the caret in it at once.
+ * `readOnBlur` and the text has changed since it was last read); a length above zero goes to
+ * `onLength`, anything else is said under the field (`notPositive` for zero or less). Escape calls
+ * `onCancel`. `focus` puts the caret in it at once.
  */
 export function ShopLengthField({
   label,
@@ -40,12 +41,16 @@ export function ShopLengthField({
   const input = useRef<HTMLInputElement>(null);
   const [text, setText] = useState(start);
   const [problem, setProblem] = useState<string | null>(null);
+  // `start` is shown rounded (0.1 mm, 1/64"), so reading it back would quietly change the length:
+  // tabbing through a field must leave it exactly as it was.
+  const lastRead = useRef(start);
 
   useEffect(() => {
     if (focus) input.current?.focus();
   }, [focus]);
 
   const read = (): void => {
+    lastRead.current = text;
     const reading = readShopLength(text, units, notPositive);
     setProblem(reading.ok ? null : reading.message);
     if (reading.ok) onLength(reading.value);
@@ -63,7 +68,9 @@ export function ShopLengthField({
         aria-invalid={problem !== null}
         aria-describedby={problem === null ? undefined : problemId}
         onChange={(e) => setText(e.target.value)}
-        onBlur={readOnBlur ? read : undefined}
+        onBlur={() => {
+          if (readOnBlur && text !== lastRead.current) read();
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter") read();
           if (e.key === "Escape" && onCancel) {

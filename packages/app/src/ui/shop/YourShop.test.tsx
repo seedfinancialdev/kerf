@@ -167,6 +167,30 @@ describe("<YourShop>", () => {
     expect(store.getState().shop.kerf).toBe(12_700);
   });
 
+  it("keeps an odd blade exactly when its Other field is tabbed through unchanged", async () => {
+    const backing = memoryStorage();
+    // 0.1" = 203200 / 10 = 20,320, which the field shows to the nearest 1/64" as 3/32" (19,050).
+    const odd = { ...STARTER_RECORD, setUp: true, tableSaw: { kerf: 20_320 } };
+    backing.setItem("kerf.shop", JSON.stringify(odd));
+    const store = firstLaunch(backing);
+    onCard("Table saw").getByLabelText("Blade width").focus();
+    await userEvent.tab();
+    fireEvent.click(screen.getByRole("button", { name: "That's my shop" }));
+    expect(store.getState().shopRecord.tableSaw).toEqual({ kerf: 20_320 });
+  });
+
+  it("keeps a 1/8 blade exactly when Other is chosen and tabbed through in metric", async () => {
+    const backing = memoryStorage();
+    backing.setItem("kerf.units", "metric");
+    const store = firstLaunch(backing);
+    // The field shows 1/8" (25,400) to the nearest 0.1 mm: 3.175 mm reads "3.2 mm" (25,600).
+    await userEvent.selectOptions(onCard("Table saw").getByLabelText("Blade"), "Other");
+    expect(onCard("Table saw").getByLabelText("Blade width")).toHaveProperty("value", "3.2 mm");
+    await userEvent.tab();
+    fireEvent.click(screen.getByRole("button", { name: "That's my shop" }));
+    expect(store.getState().shopRecord.tableSaw).toEqual({ kerf: INCH / 8 });
+  });
+
   it("refuses a blade of no width and says why", async () => {
     firstLaunch();
     await userEvent.selectOptions(onCard("Table saw").getByLabelText("Blade"), "Other");
