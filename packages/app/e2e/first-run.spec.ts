@@ -72,6 +72,9 @@ test("the tour shows on the first project, and not after it is skipped", async (
   await page.reload();
   await openCard(page, "Bookcase");
   await modelDrawn(page);
-  // The tour shows with the Workshop, before the model's first picture, so by now it would be up.
+  // The tour shows with the Workshop, before the model's first picture, and holds the keyboard on
+  // its Next button; with no tour, the first Tab reaches the top bar's Home button.
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Home" })).toBeFocused();
   await expect(tour).toHaveCount(0);
 });
