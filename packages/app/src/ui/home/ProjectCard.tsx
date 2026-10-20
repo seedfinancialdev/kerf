@@ -26,17 +26,20 @@ export function ProjectCard({ project, now }: { project: ProjectSummary; now: Da
   const more = useRef<HTMLButtonElement>(null);
   const { id, name } = project;
 
-  /** Closes the name field and gives the keyboard back to the menu's trigger, which stays where the field was. */
-  const stopRenaming = (): void => {
+  /**
+   * Closes the name field; with `refocus` (a key answered it) the keyboard goes back to the menu's
+   * trigger, which stays where the field was.
+   */
+  const stopRenaming = (refocus: boolean): void => {
     setRenaming(false);
-    more.current?.focus();
+    if (refocus) more.current?.focus();
   };
   /** Renames the project to `wanted`; false when the store refused it as blank (and said so). */
-  const keepName = (wanted: string): boolean => {
+  const keepName = (wanted: string, refocus: boolean): boolean => {
     // The same name again is no change, so the card does not move to the top as just edited.
     if (wanted.trim() !== name) void store.getState().renameProject(id, wanted);
     if (wanted.trim() === "") return false;
-    stopRenaming();
+    stopRenaming(refocus);
     return true;
   };
   const actions: ProjectMenuActions = {

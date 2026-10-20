@@ -151,6 +151,16 @@ describe("<TopBar> Kerf button and project menu", () => {
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Bookcase two" }));
   });
 
+  it("leaves the keyboard on what was clicked when the name field is left by a click", async () => {
+    const { user } = await openMenu();
+    await user.click(screen.getByRole("menuitem", { name: "Rename" }));
+    await user.type(screen.getByRole("textbox", { name: "Name" }), " two");
+    const tool = within(screen.getByRole("toolbar", { name: "Tools" })).getAllByRole("button")[1];
+    await user.click(tool as HTMLElement);
+    expect(document.activeElement).toBe(tool);
+    expect(screen.getByRole("button", { name: "Bookcase two" })).toBeTruthy();
+  });
+
   it("makes no History step when the same name is typed again", async () => {
     const { user, store } = await openMenu();
     const rename = vi.fn(async () => undefined);

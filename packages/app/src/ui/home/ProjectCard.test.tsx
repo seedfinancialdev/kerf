@@ -238,6 +238,18 @@ describe("<ProjectCard> menu", () => {
     expect(document.activeElement).toBe(more());
   });
 
+  it("leaves the keyboard on what was clicked when the name field is left by a click", async () => {
+    const { store } = await bookcaseCard();
+    render(<button type="button">Elsewhere</button>);
+    await userEvent.click(more());
+    await userEvent.click(menuItem("Rename"));
+    await userEvent.type(card().getByRole("textbox", { name: "Name" }), " two");
+    await userEvent.click(screen.getByRole("button", { name: "Elsewhere" }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Elsewhere" }));
+    // Leaving the field still keeps what was typed.
+    await waitFor(() => expect(names(store)).toEqual(["Bookcase two"]));
+  });
+
   it("says why when the project cannot be renamed because it has gone", async () => {
     const { store, library } = await bookcaseCard();
     // Another tab deleted it after this list was shown.

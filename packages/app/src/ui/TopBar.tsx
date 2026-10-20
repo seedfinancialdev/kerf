@@ -28,21 +28,25 @@ function ProjectNameMenu({ name }: { name: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
 
-  // Set while the field is open, so the keyboard goes back to the name button once it is shown again.
+  // Set when a key closed the field, so the keyboard goes back to the name button once it is shown
+  // again; a field left by a click leaves the focus on what was clicked.
   const returnFocus = useRef(false);
   useEffect(() => {
     if (!renaming && returnFocus.current) button.current?.focus();
-    returnFocus.current = renaming;
+    returnFocus.current = false;
   }, [renaming]);
 
-  const stopRenaming = (): void => setRenaming(false);
+  const stopRenaming = (refocus: boolean): void => {
+    returnFocus.current = refocus;
+    setRenaming(false);
+  };
   /** Renames the project to `wanted`; false when the store refused it as blank (and said so). */
-  const keepName = (wanted: string): boolean => {
+  const keepName = (wanted: string, refocus: boolean): boolean => {
     const { projectId, renameProject } = store.getState();
     // The same name again is no change, so Undo is not given an empty step.
     if (projectId && wanted.trim() !== name) void renameProject(projectId, wanted);
     if (wanted.trim() === "") return false;
-    stopRenaming();
+    stopRenaming(refocus);
     return true;
   };
   /** Makes a copy on Home and says so; the copy is not opened. */
