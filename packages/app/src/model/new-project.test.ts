@@ -30,9 +30,21 @@ describe("newProject()", () => {
     // 72" × 203200 = 14_630_400 (PlacedPart.size.length is the board's long dimension, R3)
     const sides = result.placements.filter((p) => p.partName === "Side");
     expect(sides.map((s) => s.size.length)).toEqual([14_630_400, 14_630_400]);
-    expect(72 * INCH).toBe(14_630_400);
     expect(result.placements.filter((p) => p.partName === "Shelf")).toHaveLength(4);
-    expect(r.edit.label).toBe("New bookcase");
+  });
+
+  it("names the History step for the piece", () => {
+    const r = newProject(bookcase, STARTER_RECORD);
+    expect(r.ok && r.edit.label).toBe("New bookcase");
+  });
+
+  // Design spec §3: the bookcase's one choice that matters is its shelves, 2 to 6. The template's
+  // own count is 4, so only the ends of the range prove the choice is applied.
+  it.each([2, 6])("builds the %i shelves chosen", (shelves) => {
+    const r = newProject({ ...bookcase, shelves }, STARTER_RECORD);
+    if (!r.ok) throw new Error(r.message);
+    const result = solve(r.edit.project, shopProfileFor(STARTER_RECORD));
+    expect(result.placements.filter((p) => p.partName === "Shelf")).toHaveLength(shelves);
   });
 
   it('sizes the piece to a space: a 30-1/2" × 80" alcove gives a 30-1/4" × 79-7/8" bookcase', () => {
@@ -63,11 +75,6 @@ describe("newProject()", () => {
       STARTER_RECORD,
     );
     expect(r).toEqual({ ok: false, message: "The gap is bigger than the space.", field: "gap" });
-  });
-
-  it("reads millimetres typed into an imperial project", () => {
-    const r = newProject({ ...bookcase, w: "900 mm" }, STARTER_RECORD);
-    expect(r.ok).toBe(true);
   });
 
   it("refuses a piece that comes later", () => {

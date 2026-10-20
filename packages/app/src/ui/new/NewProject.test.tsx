@@ -95,6 +95,17 @@ describe("<NewProject>", () => {
     expect(await library.list()).toHaveLength(1);
   });
 
+  it("builds the shelves pressed: 6 makes a bookcase with six shelves", async () => {
+    const { store } = panel("bookcase");
+    await userEvent.click(choice("Shelves", "6"));
+    await userEvent.click(create());
+    await waitFor(() => expect(store.getState().screen).toBe("workshop"));
+    const shelves = store
+      .getState()
+      .solved?.result.placements.filter((p) => p.partName === "Shelf");
+    expect(shelves).toHaveLength(6);
+  });
+
   it("turns Create off and says why under Width when the width is zero", async () => {
     panel("bookcase");
     await typeIn(field("Width"), '0"');

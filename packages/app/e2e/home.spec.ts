@@ -5,7 +5,8 @@
 // Design spec §2, Home: the projects kept in the browser as cards, newest first, each with its
 // picture and a menu (rename, duplicate, download, delete with Undo); Open file; the browser's Back
 // and Forward between Home and the Workshop; the project older Kerf kept moved in once (ADR 016,
-// D5); and a browser that keeps no projects, which Home says.
+// D5), or opened, not kept, where it cannot be; and a browser that keeps no projects, which Home
+// says.
 
 import { readFile } from "node:fs/promises";
 
@@ -150,6 +151,48 @@ test.describe("after upgrading from M4", () => {
       .getByRole("listitem")
       .filter({ has: page.getByRole("button", { name: /^Table saw/ }) });
     await expect(tableSaw.getByLabel("Blade")).toHaveValue("19050");
+  });
+});
+
+test.describe("after upgrading from M4, in a browser with no database", () => {
+  // The same frozen M4 storage, in a browser whose database cannot be opened: the library refuses
+  // the old project, so it opens for the visit, not kept (final review, I1).
+  test.use({
+    storageState: {
+      cookies: [],
+      origins: [{ origin: "http://localhost:5173", localStorage: m4.localStorage }],
+    },
+  });
+
+  test("the M4 bookcase is still reachable, with its cut list, and can be downloaded", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      delete (window as { indexedDB?: IDBFactory }).indexedDB;
+    });
+    await page.goto("/");
+    await expect(page.getByRole("alert")).toHaveText(
+      "This browser isn't keeping your projects. Download a .kerf file to keep your work.",
+    );
+    await expect(page.getByText(/^Your last project couldn't be moved in/)).toBeVisible();
+    const card = projectCards(page).filter({ hasText: "Open now, not kept" });
+    await expect(card).toHaveCount(1);
+    await card.getByRole("button", { name: /^Bookcase/ }).click();
+    await modelDrawn(page);
+    await page.getByRole("button", { name: "Skip tour" }).click();
+    await page.getByRole("tab", { name: "Cut list" }).click();
+    // The golden bookcase's cut list, as in the upgrade above: 72", 35-1/16", 35-5/16".
+    const lines = page.getByTestId("cutlist-line");
+    await expect(lines).toHaveCount(3);
+    await expect(lines.nth(0)).toContainText('72"');
+    await expect(lines.nth(1)).toContainText('35-1/16"');
+    await expect(lines.nth(2)).toContainText('35-5/16"');
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Bookcase" }).click();
+    await page.getByRole("menuitem", { name: "Download .kerf file" }).click();
+    expect((await download).suggestedFilename()).toBe("Bookcase.kerf");
+    // Still in storage, for a browser that can keep it later.
+    expect(await page.evaluate(() => localStorage.getItem("kerf.project"))).not.toBeNull();
   });
 });
 

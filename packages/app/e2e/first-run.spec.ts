@@ -33,6 +33,12 @@ test("the first visit hangs up the tools, then shows Home, and Home again after 
   await expect(home(page)).toBeVisible();
   await page.reload();
   await expect(home(page)).toBeVisible();
+  // The track saw hung before the reload is still on the wall: the shop was kept as hung.
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.getByRole("button", { name: /^Track saw/ })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
 });
 
 test("a skipped shop is asked about the dado stack once, and the answer is kept", async ({

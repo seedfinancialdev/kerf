@@ -87,7 +87,11 @@ const VERSION = 1;
 const isBytes = (value: unknown): boolean =>
   Object.prototype.toString.call(value) === "[object Uint8Array]";
 
-/** Whether `row` is a whole `LibraryEntry`; a row that is not (damaged, or from elsewhere) is ignored. */
+/**
+ * Whether `row` is a whole `LibraryEntry`; a row that is not (damaged, or from elsewhere) is
+ * ignored. A field it does not know is allowed and carried: rows come only from Kerf's own
+ * database, and one a newer Kerf added must not hide the project (test review, M6).
+ */
 export function isLibraryEntry(row: unknown): row is LibraryEntry {
   if (typeof row !== "object" || row === null) return false;
   const r = row as Record<string, unknown>;

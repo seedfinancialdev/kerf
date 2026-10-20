@@ -390,6 +390,18 @@ describe("the library", () => {
     expect(shownProject(store.getState())?.name).toBe("Alcove bookcase");
   });
 
+  it("renames the open project as a change, so Undo takes the name back everywhere", async () => {
+    const store = storeWith();
+    await store.getState().createProject(bookcase(), "");
+    await store.getState().renameProject(store.getState().projectId as string, "Alcove");
+    expect(store.getState().history?.entries.at(-1)?.label).toBe('Name "Bookcase" → "Alcove"');
+    store.getState().undo();
+    expect(shownProject(store.getState())?.name).toBe("Bookcase");
+    await vi.waitFor(() =>
+      expect(store.getState().projects.map((p) => p.name)).toEqual(["Bookcase"]),
+    );
+  });
+
   it("renames a project that is not open, inside the project too", async () => {
     const library = memoryLibrary();
     const store = storeWith(library);

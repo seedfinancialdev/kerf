@@ -4,9 +4,9 @@
 
 // Design spec §3: New project shows "a live 3D preview of the real model, drawn by the engine". A
 // preview that cannot be drawn never stops the piece being created: it says so in its place.
-// jsdom has no WebGL, so the canvas here never starts drawing (the e2e tests see the picture); the
-// geometry engine's load is stood in for so its failure can be tested (a real one cannot be made
-// to fail on purpose).
+// jsdom has no WebGL, so the canvas here never starts drawing (e2e/new-project.spec.ts sees it
+// drawn, with a size and no stand-in note, in a real browser); the geometry engine's load is stood
+// in for so its failure can be tested (a real one cannot be made to fail on purpose).
 
 import { solve } from "@kerf/core";
 import { render, screen } from "@testing-library/react";

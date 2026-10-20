@@ -245,6 +245,16 @@ describe("openLibrary() when the browser fails", () => {
     expect(library.notKept).toBe(LIBRARY_NEWER);
   });
 
+  it("reads a row with a field it does not know, as a newer Kerf may write, and keeps that field", async () => {
+    // Rows come only from Kerf's own database: a field added later is carried, not a reason to
+    // hide the project from Home.
+    const factory = new IDBFactory();
+    const library = await openLibrary(factory);
+    await putRaw(factory, { ...entry("A", "2026-10-14T10:00:00.000Z"), colour: "walnut" });
+    expect((await library.list())?.map((p) => p.id)).toEqual(["A"]);
+    expect(await library.read("A")).toMatchObject({ id: "A", colour: "walnut" });
+  });
+
   it("holds a damaged row it will not read", async () => {
     const factory = new IDBFactory();
     const library = await openLibrary(factory);
