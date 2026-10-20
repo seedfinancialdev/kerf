@@ -105,13 +105,16 @@ describe("the Joinery step", () => {
       ]);
     });
 
-    it("gives the engine's missing-tool sentence for dados wider than the stack chosen", () => {
+    it("says the dado stack chosen is too narrow for the dados, and what would cut them", () => {
       const store = setup();
-      // 1/2" (101,600) is narrower than the shelves' 23/32" dados.
+      // 1/2" (101,600) is narrower than the shelves' 23/32" dados (Task 11 review: say so, rather
+      // than "You'd need a dado stack" to a shop that has one).
       fireEvent.change(screen.getByLabelText("Widest cut"), { target: { value: "101600" } });
       fireEvent.click(screen.getByRole("button", { name: "Yes, I have one" }));
       expect(store.getState().shopRecord.dadoStack).toEqual({ maxWidth: 101_600 });
-      expect(shelfSentences()).toEqual([NOTHING_CUTS, NOTHING_CUTS]);
+      const tooNarrow =
+        'Your dado stack cuts up to 1/2" wide. This joint is 23/32" wide; it needs a router with a straight bit no wider than 23/32".';
+      expect(shelfSentences()).toEqual([tooNarrow, tooNarrow]);
     });
 
     it("gives the engine's missing-tool sentence once the woodworker has no dado stack", () => {

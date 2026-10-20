@@ -146,4 +146,26 @@ describe("<AskAboutTool>", () => {
     expect(screen.queryByText(/What do you cut with\?/)).toBeNull();
     expect(status()).toBe(says);
   });
+
+  it("names the blade of the saw just chosen, though the shop also has another saw", () => {
+    const store = newStore();
+    // A skipped pegboard that assumes a table saw with a thin-kerf blade: 3/32" = 19,050.
+    store.getState().setShopRecord({ ...STARTER_RECORD, tableSaw: { kerf: 19_050 } });
+    ask(store, "saw");
+    fireEvent.click(screen.getByRole("button", { name: "Track saw" }));
+    // The new track saw starts on a standard 1/8" blade.
+    expect(status()).toBe(`Kerf will plan for your track saw's 1/8" blade.`);
+  });
+
+  it("keeps the saw answered and never asks again, even after a reload", () => {
+    const saved = memoryStorage();
+    ask(newStore(saved), "saw");
+    fireEvent.click(screen.getByRole("button", { name: "Track saw" }));
+    cleanup();
+    const reloaded = newStore(saved);
+    expect(reloaded.getState().shopRecord.trackSaw).toEqual({ kerf: 25_400 }); // 1/8" = 203200 / 8
+    expect(reloaded.getState().shopRecord.told).toEqual(["saw"]);
+    ask(reloaded, "saw");
+    expect(screen.queryByText(/What do you cut with\?/)).toBeNull();
+  });
 });

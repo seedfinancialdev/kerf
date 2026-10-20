@@ -74,8 +74,13 @@ const answer = (
 
 const NO_OTHER_WAY = "No, show me another way";
 
+/** The blade Kerf plans every cut with (the table saw's, when the shop has both saws). */
 const blade = (record: ShopRecord, units: Units) =>
   formatLength(shopProfileFor(record).kerf, units);
+
+/** The blade of the saw just named, which is not always the one planned with when the shop has both. */
+const bladeOf = (saw: ShopRecord["tableSaw"], units: Units) =>
+  formatLength(saw?.kerf ?? DEFAULT_KERF, units);
 
 /**
  * A handheld saw run along a guide cuts like a track saw, so a circular saw is kept on the track saw's
@@ -100,13 +105,13 @@ export const TOOL_QUESTIONS: Readonly<Record<ToolTopic, ToolQuestion>> = {
         "saw",
         "Table saw",
         (r) => ({ tableSaw: r.tableSaw ?? { kerf: DEFAULT_KERF } }),
-        (r, units) => `Kerf will plan for your table saw's ${blade(r, units)} blade.`,
+        (r, units) => `Kerf will plan for your table saw's ${bladeOf(r.tableSaw, units)} blade.`,
       ),
       answer(
         "saw",
         "Track saw",
         (r) => ({ trackSaw: r.trackSaw ?? { kerf: DEFAULT_KERF } }),
-        (r, units) => `Kerf will plan for your track saw's ${blade(r, units)} blade.`,
+        (r, units) => `Kerf will plan for your track saw's ${bladeOf(r.trackSaw, units)} blade.`,
       ),
       guidedSaw("Circular saw"),
       guidedSaw('Not sure, use 1/8"'),

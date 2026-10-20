@@ -6,7 +6,7 @@
 // words, its cut sizes, and whether the user's tools can make it, or what they would need.
 
 import { formatLength, type Id, type JointCut, type JointSummary, type Project } from "@kerf/core";
-import type { ToolTopic } from "./shop-record";
+import type { ShopRecord, ToolTopic } from "./shop-record";
 
 /**
  * One line of the Joinery step: a joint, in shop words, with its cut sizes and whether the shop can
@@ -38,12 +38,18 @@ const KIND = {
   dovetail: "dovetails",
 } as const;
 
-function shopSentence(cut: JointCut, units: Project["units"]): string {
+/** What `record`'s shop can do about `cut`, in `units`. */
+function shopSentence(cut: JointCut, units: Project["units"], record: ShopRecord): string {
   if (cut.kind === "dovetail") {
     return cut.missing ? "You'd need hand tools for dovetails." : "Cut by hand.";
   }
   if (cut.missing) {
-    return `You'd need a dado stack, or a router with a straight bit no wider than ${formatLength(cut.width, units)}.`;
+    const width = formatLength(cut.width, units);
+    const router = `a router with a straight bit no wider than ${width}`;
+    // A shop that has a dado stack is told why it is not enough, not that it needs one.
+    return record.dadoStack
+      ? `Your dado stack cuts up to ${formatLength(record.dadoStack.maxWidth, units)} wide. This joint is ${width} wide; it needs ${router}.`
+      : `You'd need a dado stack, or ${router}.`;
   }
   return cut.tool === "dadoStack"
     ? "Your dado stack cuts this."
@@ -51,10 +57,14 @@ function shopSentence(cut: JointCut, units: Project["units"]): string {
 }
 
 /**
- * One row per kind and size of cut in each joint. A joint that failed has no cuts and so no row;
- * its reason is in the problems list.
+ * One row per kind and size of cut in each joint, in `units`, saying what `record`'s shop can do
+ * about it. A joint that failed has no cuts and so no row; its reason is in the problems list.
  */
-export function joineryRows(joints: JointSummary[], units: Project["units"]): JoineryRow[] {
+export function joineryRows(
+  joints: JointSummary[],
+  units: Project["units"],
+  record: ShopRecord,
+): JoineryRow[] {
   return joints.flatMap((j) =>
     j.cuts.map((cut) => ({
       joint: j.joint,
@@ -65,7 +75,7 @@ export function joineryRows(joints: JointSummary[], units: Project["units"]): Jo
           ? `${j.pairs} corner${j.pairs === 1 ? "" : "s"}`
           : `${formatLength(cut.width, units)} wide, ${formatLength(cut.depth, units)} deep`,
       missing: cut.missing,
-      shop: shopSentence(cut, units),
+      shop: shopSentence(cut, units, record),
       topic: cut.tool,
     })),
   );
