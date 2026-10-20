@@ -362,7 +362,8 @@ export function createKerfStore(deps: {
         if (h) moveHistory(jumpTo(h, index));
       },
       setShopRecord: (shopRecord) => {
-        const kept = saveShop(deps.storage, shopRecord);
+        // A saved shop that could not be set aside is the only copy: it is never written over.
+        const kept = !loaded.keepOff && saveShop(deps.storage, shopRecord);
         show({ shopRecord, shop: shopProfileFor(shopRecord) });
         if (kept || toldShopNotKept) return;
         toldShopNotKept = true;

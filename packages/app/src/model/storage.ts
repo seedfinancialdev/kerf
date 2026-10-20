@@ -20,7 +20,10 @@ export type StorageKey =
   | "kerf.toured"
   | "kerf.project.setAside"
   /** A later rejected project, set aside without overwriting the earlier ones (persist.ts). */
-  | `kerf.project.setAside.${number}`;
+  | `kerf.project.setAside.${number}`
+  /** A saved shop that could not be used, set aside before anything writes over it (shop.ts). */
+  | "kerf.shop.setAside"
+  | `kerf.shop.setAside.${number}`;
 
 /** Browser storage as the app sees it: it never throws, and says when a value could not be kept. */
 export interface AppStorage {

@@ -41,7 +41,7 @@ export function AskAboutTool({ topic }: { topic: ToolTopic }) {
       text={question.text(record, units)}
       peers={question.peers ?? false}
       answers={question.answers.map((a) => ({
-        label: a.label,
+        label: a.label(units),
         onPick: () => {
           const s = store.getState();
           const next = a.record(s.shopRecord, width);

@@ -68,7 +68,68 @@ describe("loadShop()", () => {
     expect(loaded.record).toEqual(STARTER_RECORD);
     expect(loaded.firstLaunch).toBe(false);
     expect(loaded.problem).toBe(
-      "Your saved shop could not be used (it was damaged), so the starter shop is in use.",
+      "Your saved shop could not be used (it was damaged), so the starter shop is in use. It " +
+        "was set aside in this browser.",
+    );
+  });
+
+  it("sets an unusable shop aside before anything can write over it, once however often it loads", () => {
+    const backing = memoryStorage();
+    backing.setItem("kerf.shop", "{not json");
+    loadShop(createStorage(backing));
+    loadShop(createStorage(backing));
+    expect(backing.getItem("kerf.shop.setAside")).toBe("{not json");
+    expect(backing.getItem("kerf.shop.setAside.2")).toBeNull();
+  });
+
+  it("keeps an earlier shop set aside when a different one is set aside later", () => {
+    const backing = memoryStorage();
+    backing.setItem("kerf.shop.setAside", "{earlier");
+    backing.setItem("kerf.shop", "{later");
+    loadShop(createStorage(backing));
+    expect(backing.getItem("kerf.shop.setAside")).toBe("{earlier");
+    expect(backing.getItem("kerf.shop.setAside.2")).toBe("{later");
+  });
+
+  it("says the shop is left as it was, and must not be written over, when it cannot be set aside", () => {
+    const backing = memoryStorage();
+    backing.setItem("kerf.shop", "{not json");
+    const refusingAside: Storage = {
+      ...backing,
+      getItem: (k) => backing.getItem(k),
+      setItem: (k, v) => {
+        if (k.startsWith("kerf.shop.setAside"))
+          throw new DOMException("full", "QuotaExceededError");
+        backing.setItem(k, v);
+      },
+    };
+    const loaded = loadShop(createStorage(refusingAside));
+    expect(loaded.problem).toBe(
+      "Your saved shop could not be used (it was damaged), so the starter shop is in use. It " +
+        "is left as it was, and changes to your shop won't be kept until it can be set aside.",
+    );
+    expect(loaded.keepOff).toBe(true);
+  });
+
+  it("says a shop from a newer Kerf is newer, not damaged", () => {
+    const s = store();
+    s.write("kerf.shop", JSON.stringify({ ...STARTER_RECORD, version: 3 }));
+    expect(loadShop(s).problem).toBe(
+      "Your saved shop could not be used (it was made by a newer version of Kerf; update Kerf to " +
+        "use it), so the starter shop is in use. It was set aside in this browser.",
+    );
+  });
+
+  it.each([
+    ["the wood", { ...STARTER_RECORD, stock: "oak" }],
+    ["the table saw", { ...STARTER_RECORD, tableSaw: 5 }],
+    ["the router", { ...STARTER_RECORD, router: {} }],
+    ["the tools Kerf was told about", { ...STARTER_RECORD, told: ["lathe"] }],
+  ])("names %s as the damaged part", (part, value) => {
+    const s = store();
+    s.write("kerf.shop", JSON.stringify(value));
+    expect(loadShop(s).problem).toMatch(
+      new RegExp(`^Your saved shop could not be used \\(${part} was damaged\\)`),
     );
   });
 
@@ -86,8 +147,6 @@ describe("loadShop()", () => {
   });
 
   describe("a saved record that was damaged", () => {
-    const DAMAGED =
-      "Your saved shop could not be used (it was damaged), so the starter shop is in use.";
     const saved = (value: unknown) => {
       const s = store();
       s.write("kerf.shop", JSON.stringify(value));
@@ -173,11 +232,13 @@ describe("loadShop()", () => {
       ],
       ["a topic nobody asks about", { ...STARTER_RECORD, told: ["lathe"] }],
       ["a version Kerf does not know", { ...STARTER_RECORD, version: 3 }],
-    ])("falls back to the starter record for %s", (_name, value) => {
+    ])("falls back to the starter record for %s, having set it aside", (_name, value) => {
       const loaded = saved(value);
       expect(loaded.record).toEqual(STARTER_RECORD);
       expect(loaded.firstLaunch).toBe(false);
-      expect(loaded.problem).toBe(DAMAGED);
+      expect(loaded.problem).toMatch(
+        /^Your saved shop could not be used \(.+\), so the starter shop is in use\. It was set aside in this browser\.$/,
+      );
     });
 
     it("keeps well-formed stock of each kind", () => {

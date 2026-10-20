@@ -8,6 +8,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { startProject } from "../model/commands";
 import { STARTER_RECORD, type ToolTopic } from "../model/shop-record";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
@@ -127,14 +128,31 @@ describe("<AskAboutTool>", () => {
     expect(bannedWordsIn(document.body.textContent ?? "")).toEqual([]);
   });
 
-  // A circular saw is a handheld saw run along a guide, so it is kept as a track saw; "not sure" is
-  // the common 1/8" blade on the same card. The words say only what the woodworker chose (R24).
+  // A circular saw is a handheld saw run along a guide, so it is kept as a track saw. The words say
+  // only what the woodworker chose (R24).
   const SAW_ANSWERS = [
     ["Table saw", "tableSaw", `Kerf will plan for your table saw's 1/8" blade.`],
     ["Track saw", "trackSaw", `Kerf will plan for your track saw's 1/8" blade.`],
     ["Circular saw", "trackSaw", 'Kerf will plan for a 1/8" blade.'],
-    ['Not sure, use 1/8"', "trackSaw", 'Kerf will plan for a 1/8" blade.'],
   ] as const;
+
+  it('records "not sure" as told without hanging a saw the woodworker never claimed', () => {
+    const store = newStore();
+    ask(store, "saw");
+    fireEvent.click(screen.getByRole("button", { name: 'Not sure, use 1/8"' }));
+    const record = store.getState().shopRecord;
+    expect([record.tableSaw, record.trackSaw]).toEqual([STARTER_RECORD.tableSaw, null]);
+    expect(record.told).toEqual(["saw"]);
+    expect(status()).toBe('Kerf will plan for a 1/8" blade.');
+  });
+
+  it('offers "not sure" in the project\'s units', () => {
+    const store = newStore();
+    store.getState().apply(startProject("Bookcase", "metric"));
+    ask(store, "saw");
+    // 1/8" = 3.175 mm, shown to 0.1 mm: 3.2 mm.
+    expect(screen.getByRole("button", { name: "Not sure, use 3.2 mm" })).toBeTruthy();
+  });
 
   it.each(SAW_ANSWERS)('"%s" keeps a %s with a 1/8" blade and says "%s"', (label, saw, says) => {
     const store = newStore();

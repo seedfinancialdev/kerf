@@ -14,7 +14,7 @@ import { type ShopRecord, STARTER_RECORD, type ToolTopic } from "./shop-record";
 import { asksAbout, TOOL_QUESTIONS } from "./tool-questions";
 
 const answer = (topic: ToolTopic, label: string) => {
-  const found = TOOL_QUESTIONS[topic].answers.find((a) => a.label === label);
+  const found = TOOL_QUESTIONS[topic].answers.find((a) => a.label("imperial") === label);
   if (!found) throw new Error(`no answer "${label}" to the ${topic} question`);
   return found;
 };

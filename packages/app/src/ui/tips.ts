@@ -34,7 +34,7 @@ export const TIPS = {
     key: "J",
     text: "Click two boards to join them with a joint your tools can cut.",
   },
-  edge: { name: "Edge profile", key: "F", text: "Round over or chamfer the edge of a board." },
+  edge: { name: "Edge profile", key: "F", text: "Round over the edges of a board." },
   tape: { name: "Tape", key: "T", text: "Measure the distance between two points on the model." },
 
   Shopping: {

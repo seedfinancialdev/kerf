@@ -349,6 +349,30 @@ describe("section open state that storage holds damaged", () => {
   });
 });
 
+describe("a saved shop that could not be used or set aside at start", () => {
+  it("is never written over by a later change, which is said not to be kept", () => {
+    const backing = memoryStorage();
+    backing.setItem("kerf.shop", "{not json");
+    const refusingAside: Storage = {
+      ...backing,
+      getItem: (k) => backing.getItem(k),
+      setItem: (k, v) => {
+        if (k.startsWith("kerf.shop.setAside"))
+          throw new DOMException("full", "QuotaExceededError");
+        backing.setItem(k, v);
+      },
+    };
+    const s = createKerfStore({ storage: createStorage(refusingAside), library: memoryLibrary() });
+    s.getState().dismissNotice();
+    s.getState().setShopRecord({ ...STARTER_RECORD, setUp: true, drill: true });
+    expect(backing.getItem("kerf.shop")).toBe("{not json");
+    expect(s.getState().shopRecord.drill).toBe(true);
+    expect(s.getState().notice?.text).toBe(
+      "Your shop couldn't be kept in this browser; it applies until you close the page.",
+    );
+  });
+});
+
 describe("a saved shop the browser could not read at start", () => {
   it("is said, the starter shop is used, and it is never written over", () => {
     const backing = unreadable(["kerf.shop"]);

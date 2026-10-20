@@ -21,8 +21,8 @@ type Units = Project["units"];
 
 /** One answer to a tool question. */
 export interface ToolAnswer {
-  /** The button's words. */
-  label: string;
+  /** The button's words, in the project's units. */
+  label: (units: Units) => string;
   /**
    * The record after this answer, marked told. `widest` is the dado stack's widest cut chosen with the
    * question (project units); other answers ignore it.
@@ -63,11 +63,11 @@ export function startingWidest(record: ShopRecord): Len {
 /** An answer that changes the record with `change`, then marks `topic` told. */
 const answer = (
   topic: ToolTopic,
-  label: string,
+  label: string | ToolAnswer["label"],
   change: (record: ShopRecord, widest: Len) => Partial<ShopRecord>,
   says: ToolAnswer["says"],
 ): ToolAnswer => ({
-  label,
+  label: typeof label === "string" ? () => label : label,
   record: (record, widest) => answered({ ...record, ...change(record, widest) }, topic),
   says,
 });
@@ -82,18 +82,20 @@ const blade = (record: ShopRecord, units: Units) =>
 const bladeOf = (saw: ShopRecord["tableSaw"], units: Units) =>
   formatLength(saw?.kerf ?? DEFAULT_KERF, units);
 
+/** What Kerf says once a saw answer names no saw of its own: only the blade it plans with. */
+const plansBlade: ToolAnswer["says"] = (r, units) =>
+  `Kerf will plan for a ${blade(r, units)} blade.`;
+
 /**
- * A handheld saw run along a guide cuts like a track saw, so a circular saw is kept on the track saw's
- * card; "not sure" assumes the common 1/8" blade on the same card. What Kerf says names only the blade,
- * never a saw the woodworker did not pick.
+ * "Not sure" hangs no saw the woodworker did not claim: it only marks the saw told, and a shop with
+ * no saw plans with the common blade (`DEFAULT_KERF`, through `shopProfileFor`).
  */
-const guidedSaw = (label: string): ToolAnswer =>
-  answer(
-    "saw",
-    label,
-    (r) => ({ trackSaw: r.trackSaw ?? { kerf: DEFAULT_KERF } }),
-    (r, units) => `Kerf will plan for a ${blade(r, units)} blade.`,
-  );
+const notSure: ToolAnswer = answer(
+  "saw",
+  (units) => `Not sure, use ${formatLength(DEFAULT_KERF, units)}`,
+  () => ({}),
+  plansBlade,
+);
 
 /** The question for every topic. A tool kept on Yes keeps its own settings when the record has it. */
 export const TOOL_QUESTIONS: Readonly<Record<ToolTopic, ToolQuestion>> = {
@@ -113,8 +115,14 @@ export const TOOL_QUESTIONS: Readonly<Record<ToolTopic, ToolQuestion>> = {
         (r) => ({ trackSaw: r.trackSaw ?? { kerf: DEFAULT_KERF } }),
         (r, units) => `Kerf will plan for your track saw's ${bladeOf(r.trackSaw, units)} blade.`,
       ),
-      guidedSaw("Circular saw"),
-      guidedSaw('Not sure, use 1/8"'),
+      // A handheld saw run along a guide cuts like a track saw, so it is kept on that card.
+      answer(
+        "saw",
+        "Circular saw",
+        (r) => ({ trackSaw: r.trackSaw ?? { kerf: DEFAULT_KERF } }),
+        plansBlade,
+      ),
+      notSure,
     ],
   },
   dadoStack: {

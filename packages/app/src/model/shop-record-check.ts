@@ -46,25 +46,50 @@ const isStock = (v: unknown): boolean =>
 const isToolOrNull = (v: unknown, check: (tool: Record<string, unknown>) => boolean): boolean =>
   v === null || (isObject(v) && check(v));
 
+const optionalLength = (v: unknown): boolean => v === undefined || isWhole(v, 0);
+
+/** Each part of a version-2 record, in the shop's words, with its check. */
+const PARTS: readonly (readonly [string, (r: Record<string, unknown>) => boolean])[] = [
+  ["whether the shop was set up", (r) => typeof r.setUp === "boolean"],
+  ["the drill", (r) => typeof r.drill === "boolean"],
+  ["the chisels", (r) => typeof r.chisels === "boolean"],
+  ["the dovetail saw", (r) => typeof r.dovetailSaw === "boolean"],
+  ["the table saw", (r) => isToolOrNull(r.tableSaw, (t) => isWhole(t.kerf, 0))],
+  ["the track saw", (r) => isToolOrNull(r.trackSaw, (t) => isWhole(t.kerf, 0))],
+  ["the dado stack", (r) => isToolOrNull(r.dadoStack, (t) => isWhole(t.maxWidth, 1))],
+  [
+    "the router",
+    (r) => isToolOrNull(r.router, (t) => Array.isArray(t.bits) && t.bits.every(isBit)),
+  ],
+  ["the wood", (r) => Array.isArray(r.stock) && r.stock.every(isStock)],
+  [
+    "the tools Kerf was told about",
+    (r) =>
+      Array.isArray(r.told) && r.told.every((t) => (TOOL_TOPICS as readonly unknown[]).includes(t)),
+  ],
+  [
+    "the trims",
+    (r) =>
+      optionalLength(r.sheetTrim) && optionalLength(r.solidTrim) && optionalLength(r.minOffcut),
+  ],
+];
+
+/**
+ * Why `value` is not a version-2 shop record, in shop words for the sentence "Your saved shop
+ * could not be used (…)": the first part that is missing or malformed, or that a newer Kerf made
+ * it. Undefined when it is a complete record.
+ */
+export function shopRecordProblem(value: unknown): string | undefined {
+  if (!isObject(value)) return "it was damaged";
+  if (typeof value.version === "number" && value.version > 2) {
+    return "it was made by a newer version of Kerf; update Kerf to use it";
+  }
+  if (value.version !== 2) return "it was damaged";
+  const bad = PARTS.find(([, check]) => !check(value));
+  return bad && `${bad[0]} was damaged`;
+}
+
 /** True when `value` is a complete version-2 shop record: every field present and well formed. */
 export function isShopRecord(value: unknown): value is ShopRecord {
-  if (!isObject(value) || value.version !== 2) return false;
-  const optionalLength = (v: unknown) => v === undefined || isWhole(v, 0);
-  return (
-    typeof value.setUp === "boolean" &&
-    typeof value.drill === "boolean" &&
-    typeof value.chisels === "boolean" &&
-    typeof value.dovetailSaw === "boolean" &&
-    isToolOrNull(value.tableSaw, (t) => isWhole(t.kerf, 0)) &&
-    isToolOrNull(value.trackSaw, (t) => isWhole(t.kerf, 0)) &&
-    isToolOrNull(value.dadoStack, (t) => isWhole(t.maxWidth, 1)) &&
-    isToolOrNull(value.router, (t) => Array.isArray(t.bits) && t.bits.every(isBit)) &&
-    Array.isArray(value.stock) &&
-    value.stock.every(isStock) &&
-    Array.isArray(value.told) &&
-    value.told.every((t) => (TOOL_TOPICS as readonly unknown[]).includes(t)) &&
-    optionalLength(value.sheetTrim) &&
-    optionalLength(value.solidTrim) &&
-    optionalLength(value.minOffcut)
-  );
+  return shopRecordProblem(value) === undefined;
 }
