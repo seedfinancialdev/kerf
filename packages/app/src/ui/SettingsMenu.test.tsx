@@ -12,6 +12,7 @@ import { setOption, startProject } from "../model/commands";
 import { STOCK_IDS } from "../model/starter";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
+import type { Screen } from "../model/store-types";
 import { KerfProvider } from "../state/useKerf";
 import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
@@ -20,9 +21,10 @@ import { SettingsMenu } from "./SettingsMenu";
 type Fixture = "none" | "bookcase" | "quarter-inch-bookcase";
 
 /**
- * A bookcase on the starter 3/4 plywood, or one whose only stock is 1/4 plywood (50800 = 635 × 80).
+ * Settings on `on`, the Workshop unless said, over a bookcase on the starter 3/4 plywood, or one
+ * whose only stock is 1/4 plywood (50800 = 635 × 80), or no project.
  */
-function setup(fixture: Fixture = "quarter-inch-bookcase") {
+function setup(fixture: Fixture = "quarter-inch-bookcase", on: Screen = "workshop") {
   const store = createKerfStore({
     storage: createStorage(memoryStorage()),
     library: memoryLibrary(),
@@ -35,6 +37,7 @@ function setup(fixture: Fixture = "quarter-inch-bookcase") {
   if (fixture === "quarter-inch-bookcase" && project && structure) {
     store.getState().apply(setOption(project, structure.id, "carcaseStock", STOCK_IDS.plywood14));
   }
+  store.getState().setScreen(on);
   render(
     <KerfProvider store={store}>
       <SettingsMenu />
@@ -76,6 +79,23 @@ describe("<SettingsMenu>", () => {
     fireEvent.click(screen.getByLabelText("Millimetres"));
     expect(store.getState().unitsForNew).toBe("metric");
     expect((screen.getByLabelText("Millimetres") as HTMLInputElement).checked).toBe(true);
+  });
+
+  it("on Home, sets only the units for new projects, leaving the open project it does not show", () => {
+    // ADR 015, rule 4: Settings' units are the open project's only while that project is shown.
+    const store = setup("quarter-inch-bookcase", "home");
+    const before = store.getState().history;
+    fireEvent.click(screen.getByLabelText("Millimetres"));
+    expect(store.getState().history).toBe(before);
+    expect(shownProject(store.getState())?.units).toBe("imperial");
+    expect(store.getState().unitsForNew).toBe("metric");
+    expect(store.getState().notice).toBeNull();
+    expect((screen.getByLabelText("Millimetres") as HTMLInputElement).checked).toBe(true);
+  });
+
+  it("offers the tour only in the Workshop, where it is shown", () => {
+    setup("bookcase", "home");
+    expect(screen.queryByRole("button", { name: "Take the tour" })).toBeNull();
   });
 
   it("opens Your shop", () => {

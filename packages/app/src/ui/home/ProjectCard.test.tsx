@@ -169,6 +169,16 @@ describe("<ProjectCard>", () => {
     expect(urls.made).toEqual([]);
   });
 
+  it("draws the kind of piece instead when the picture cannot be shown, as damaged bytes cannot", async () => {
+    await bookcaseCard(PNG);
+    fireEvent.error(screen.getByRole("listitem").querySelector("img") as HTMLImageElement);
+    const { container } = render(<Drawing name="bookcase" />);
+    expect(screen.getAllByRole("listitem")[0]?.querySelector("img")).toBeNull();
+    expect(screen.getAllByRole("listitem")[0]?.querySelector("svg")?.innerHTML).toBe(
+      container.querySelector("svg")?.innerHTML,
+    );
+  });
+
   it("opens the project in the Workshop when clicked", async () => {
     const { store } = await bookcaseCard();
     fireEvent.click(card().getByRole("button", { name: /^Bookcase Edited/ }));
@@ -315,7 +325,7 @@ describe("<ProjectCard> menu", () => {
     await userEvent.click(more());
     await userEvent.click(menuItem("Delete"));
     const ask = screen.getByRole("alertdialog", {
-      name: 'Delete "Bookcase"? You can undo this for a few seconds.',
+      name: 'Delete "Bookcase"? You can undo this from the notice line.',
     });
     await userEvent.click(within(ask).getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("alertdialog")).toBeNull();

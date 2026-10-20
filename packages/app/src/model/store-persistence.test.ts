@@ -11,7 +11,9 @@ import { describe, expect, it, vi } from "vitest";
 import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage, unreadable } from "../testing/memory-storage";
 import { type Edit, setSize, startProject } from "./commands";
+import { startHistory } from "./history";
 import { LIBRARY_NOT_KEPT, type Library, type LibraryEntry } from "./library";
+import { LAST_PROJECT_NOT_KEPT, type MigrationResult } from "./library-migration";
 import { STARTER_RECORD } from "./shop-record";
 import { STARTER_SHOP } from "./starter";
 import { type AppStorage, createStorage } from "./storage";
@@ -21,6 +23,8 @@ const renamed = (p: Project): Edit => ({ project: { ...p, name: "Renamed" }, lab
 const memory = (): AppStorage => createStorage(memoryStorage());
 const full = (): AppStorage => createStorage(memoryStorage(true));
 const bookcase = () => startProject("Bookcase", "imperial");
+/** The migration's answer when the library would not take the old project, a bookcase. */
+const refused = (): MigrationResult => ({ outcome: "refused", history: startHistory(bookcase()) });
 
 /** A store over `library` with one project created in it, and that project's id. */
 async function withProject(library: Library = memoryLibrary(), edit: Edit = bookcase()) {
@@ -182,10 +186,12 @@ describe("when a project began", () => {
 describe("warnings that must not be lost (ADR 015, rule 11: the app says so once)", () => {
   const SET_ASIDE = "Your last project could not be opened. It was set aside in this browser.";
 
-  it("says once that work will not survive a reload when the browser has no storage", () => {
+  it("says once that the shop and settings will not survive a reload when the browser has no storage", () => {
+    // The projects live in the library, which this browser still has: they are kept.
     const s = createKerfStore({ storage: createStorage(undefined), library: memoryLibrary() });
     expect(s.getState().notice?.text).toBe(
-      `This browser won't keep your work between visits. Click the project's name, then "Download .kerf file", to keep a copy.`,
+      "This browser won't keep your shop, units or theme between visits; they apply until you " +
+        "close the page.",
     );
   });
 
@@ -224,20 +230,42 @@ describe("warnings that must not be lost (ADR 015, rule 11: the app says so once
     expect(s.getState().notice?.text).toBe(SET_ASIDE);
   });
 
-  it("says projects are not kept when the old project stayed because the library refused it", () => {
+  it("opens the old project the library refused, not kept, and says where it is", () => {
     const s = createKerfStore({
       storage: memory(),
       library: memoryLibrary({ failWrites: true }),
-      migration: { outcome: "kept" },
+      migration: refused(),
     });
-    expect(s.getState().notice).toEqual({ text: LIBRARY_NOT_KEPT, kind: "warning" });
+    expect(s.getState().notice).toEqual({ text: LAST_PROJECT_NOT_KEPT, kind: "warning" });
+    expect(shownProject(s.getState())?.name).toBe("Bookcase");
+    expect(s.getState().projectId).toBeNull();
+  });
+
+  it("says once, beside Home's banner, that the old project is not kept when the browser has no library", () => {
+    const s = createKerfStore({
+      storage: memory(),
+      library: memoryLibrary({ available: false }),
+      migration: refused(),
+    });
+    expect(s.getState().projectsNotKept).toBe(LIBRARY_NOT_KEPT);
+    expect(s.getState().notice?.text).toBe(LAST_PROJECT_NOT_KEPT);
+    s.getState().dismissNotice();
+    expect(s.getState().notice).toBeNull();
+  });
+
+  it("never writes the old project it opened for the visit, though it changes", async () => {
+    const library = memoryLibrary();
+    const s = createKerfStore({ storage: memory(), library, migration: refused() });
+    s.getState().apply(renamed(shownProject(s.getState()) as Project));
+    await s.getState().refreshProjects();
+    expect(await library.list()).toEqual([]);
   });
 
   it("does not say again that projects are not kept after start-up said so", async () => {
     const s = createKerfStore({
       storage: memory(),
       library: memoryLibrary({ failWrites: true }),
-      migration: { outcome: "kept" },
+      migration: refused(),
     });
     s.getState().dismissNotice();
     await s.getState().createProject(bookcase(), "");
@@ -249,7 +277,7 @@ describe("warnings that must not be lost (ADR 015, rule 11: the app says so once
     const s = createKerfStore({
       storage: memory(),
       library: memoryLibrary(),
-      migration: { outcome: "kept", problem: unreadableOld },
+      migration: { outcome: "unreadable", problem: unreadableOld },
     });
     expect(s.getState().notice?.text).toBe(unreadableOld);
     s.getState().dismissNotice();

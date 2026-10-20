@@ -10,6 +10,7 @@ import { INCH } from "@kerf/core";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { startProject } from "../../model/commands";
 import { STARTER_RECORD } from "../../model/shop-record";
 import { createStorage } from "../../model/storage";
 import { createKerfStore } from "../../model/store";
@@ -151,6 +152,36 @@ describe("<YourShop>", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(store.getState().shopRecord).toEqual(mine);
     expect(store.getState().screen).toBe("home");
+  });
+
+  describe("entered from the Workshop", () => {
+    /** Your shop, reached from Settings in the Workshop with a bookcase open. */
+    async function fromWorkshop() {
+      const backing = memoryStorage();
+      backing.setItem("kerf.shop", JSON.stringify({ ...STARTER_RECORD, setUp: true }));
+      const store = createKerfStore({ storage: createStorage(backing), library: memoryLibrary() });
+      await store.getState().createProject(startProject("Bookcase", "imperial"), "");
+      act(() => store.getState().setScreen("shop"));
+      render(
+        <KerfProvider store={store}>
+          <YourShop />
+        </KerfProvider>,
+      );
+      return store;
+    }
+
+    it("goes back to the Workshop, and the project, with That's my shop", async () => {
+      const store = await fromWorkshop();
+      fireEvent.click(screen.getByRole("button", { name: "That's my shop" }));
+      expect(store.getState().screen).toBe("workshop");
+      expect(store.getState().history?.entries[0]?.project.name).toBe("Bookcase");
+    });
+
+    it("goes back to the Workshop with Cancel", async () => {
+      const store = await fromWorkshop();
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      expect(store.getState().screen).toBe("workshop");
+    });
   });
 
   it("cuts to a thin-kerf blade's width", async () => {

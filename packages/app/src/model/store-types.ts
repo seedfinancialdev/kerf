@@ -51,12 +51,20 @@ export type Screen = "shop" | "home" | "workshop";
 export interface KerfState {
   /** Your shop at first launch, Home on every launch after (design spec, "The flow"). */
   screen: Screen;
-  /** The library entry the open project is kept in; null when none is open or it is not kept. */
+  /** The screen Your shop was entered from, which leaving it goes back to; Home at first launch. */
+  shopReturn: Exclude<Screen, "shop">;
+  /**
+   * The library entry the open project is kept in; null when none is open, or when it is the
+   * project older Kerf kept, opened for the visit because the library would not take it.
+   */
   projectId: Id | null;
   /** Every kept project, newest change first, as Home lists them; see `refreshProjects`. */
   projects: ProjectSummary[];
-  /** False when this browser has no library to keep projects in (design spec §2). */
-  projectsKept: boolean;
+  /**
+   * Why projects are not being kept, or could not be read just now, in shop words (Home's banner,
+   * design spec §2); null while they are kept and listed.
+   */
+  projectsNotKept: string | null;
   history: History | null;
   previewed: Project | null;
   solved: Solved | null;
@@ -141,6 +149,8 @@ export interface KerfActions {
    * whatever the active tool had started.
    */
   setScreen(screen: Screen): void;
+  /** Leaves Your shop for the screen it was entered from (`shopReturn`). */
+  leaveShop(): void;
   /**
    * Starts `edit`'s project as a new kept project with the idea `note`, and opens it in the
    * Workshop on Shape with its form picked. Resolves once the library has answered; a library
@@ -158,11 +168,16 @@ export interface KerfActions {
    */
   addFile(bytes: Uint8Array, fileName: string): Promise<void>;
   /**
-   * Renames the kept project `id`, in its entry and inside the project. A blank name is refused
-   * on the notice line; so is a project that is gone or damaged.
+   * Renames the kept project `id`, in its entry and inside the project; `null` names the open
+   * project that is not kept. The open project is renamed as a change, so Undo takes the name
+   * back. A blank name is refused on the notice line; so is a project that is gone or damaged, or
+   * a name the library would not keep.
    */
-  renameProject(id: Id, name: string): Promise<void>;
-  /** Keeps a copy of project `id` named "<name> copy", changed now so it lists first. */
+  renameProject(id: Id | null, name: string): Promise<void>;
+  /**
+   * Keeps a copy of project `id` named "<name> copy", changed now so it lists first. A project
+   * that is gone or damaged, or a copy the library would not keep, is said on the notice line.
+   */
   duplicateProject(id: Id): Promise<void>;
   /**
    * Deletes the kept project `id`, closing it if it is open, and offers Undo on the notice line

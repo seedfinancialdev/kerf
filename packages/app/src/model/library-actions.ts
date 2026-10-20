@@ -37,6 +37,8 @@ export interface LibraryContext {
   closeProject: () => void;
   /** Shows `text` on the notice line with an Undo that runs `undo`. */
   offerUndo: (text: string, undo: () => Promise<void>) => void;
+  /** True when the library already refused a write at start-up (the old project's move). */
+  refusedAtStart: boolean;
 }
 
 /** The names of the actions here. */
@@ -56,6 +58,10 @@ type LibraryAction =
  * the words fit either.
  */
 const NOT_FOUND = "This project could not be found in this browser.";
+
+/** Home's banner when the library could not list the projects (silent-failure review, I3). */
+export const PROJECTS_UNREADABLE =
+  "Your projects couldn't be read just now. Reload the page; they are still in this browser.";
 
 /** Said when a kept project's text no longer reads as a project. */
 const damaged = (done: "opened" | "renamed" | "copied" | "downloaded"): string =>
@@ -80,16 +86,26 @@ const renamedText = (project: Project, name: string): string =>
 
 /**
  * Builds the library's actions over `ctx`, with `keep`, which the store calls whenever History
- * moves and as the Workshop is left. `keep` writes a changed project to its entry with the view's
- * picture; a project only opened is not written, so Home never says it was edited when it was only
- * looked at. With `pictureNow`, the view's picture is started at once, before the view goes, and
- * written even for an unchanged project (Ruling R17). A picture is never replaced with none. A
- * refused write is said once (`LIBRARY_NOT_KEPT`).
+ * moves and as the Workshop is left, and `notKept`, Home's banner as things stand. `keep` writes a
+ * changed project to its entry with the view's picture; a project only opened is not written, so
+ * Home never says it was edited when it was only looked at. With `pictureNow`, the view's picture
+ * is started at once, before the view goes, and written even for an unchanged project (Ruling
+ * R17). A picture is never replaced with none. A refused write in the background is said once (the
+ * banner's words); one the user asked for (rename, copy) is said every time.
  */
-export function libraryActions(
-  ctx: LibraryContext,
-): Pick<KerfActions, LibraryAction> & { keep(pictureNow?: boolean): void } {
+export function libraryActions(ctx: LibraryContext): Pick<KerfActions, LibraryAction> & {
+  keep(pictureNow?: boolean): void;
+  notKept(): string | null;
+} {
   const { library, get, set, now } = ctx;
+  // What the last write and the last list found, for Home's banner.
+  let writeRefused = ctx.refusedAtStart;
+  let listFailed = false;
+  const notKept = (): string | null => {
+    if (!library.available) return library.notKept;
+    if (writeRefused) return LIBRARY_NOT_KEPT;
+    return listFailed ? PROJECTS_UNREADABLE : null;
+  };
   // The library call last asked for; each new one waits for it, whether it worked or not.
   let queue: Promise<unknown> = Promise.resolve();
   const inTurn = <T>(job: () => Promise<T>): Promise<T> => {
@@ -97,9 +113,22 @@ export function libraryActions(
     queue = run.catch(() => undefined);
     return run;
   };
-  const list = async (): Promise<void> => set({ projects: await library.list() });
-  const write = async (entry: LibraryEntry): Promise<void> => {
-    if (!(await library.write(entry))) get().warnOnce(LIBRARY_NOT_KEPT);
+  /** Lists the projects again; a list that fails keeps the last one and says so on Home. */
+  const list = async (): Promise<void> => {
+    const listed = await library.list();
+    listFailed = listed === undefined;
+    set(listed ? { projects: listed, projectsNotKept: notKept() } : { projectsNotKept: notKept() });
+  };
+  /** Writes `entry`; true when it was kept. Home's banner follows the answer. */
+  const write = async (entry: LibraryEntry): Promise<boolean> => {
+    const kept = await library.write(entry);
+    writeRefused = !kept;
+    set({ projectsNotKept: notKept() });
+    return kept;
+  };
+  /** Writes `entry` in the background: a refusal is said once, in the banner's words. */
+  const writeQuietly = async (entry: LibraryEntry): Promise<void> => {
+    if (!(await write(entry))) get().warnOnce(notKept() ?? LIBRARY_NOT_KEPT);
   };
   // The open project's idea, and each project's picture, as last read or written: a change written
   // while its entry cannot be read back still carries them. Pictures are by project, so a write
@@ -132,7 +161,7 @@ export function libraryActions(
       if (unchanged && picture === null) return;
       const kept = picture ?? before?.thumbnail ?? pictures.get(projectId) ?? null;
       pictures.set(projectId, kept);
-      await write({
+      await writeQuietly({
         id: projectId,
         name: project.name,
         project: text,
@@ -147,7 +176,7 @@ export function libraryActions(
 
   const putBack = (entry: LibraryEntry): Promise<void> =>
     inTurn(async () => {
-      if (!(await library.write(entry))) {
+      if (!(await write(entry))) {
         get().say(`"${entry.name}" could not be put back in this browser.`);
       }
       await list();
@@ -155,6 +184,7 @@ export function libraryActions(
 
   return {
     keep,
+    notKept,
     refreshProjects: () => inTurn(list),
 
     createProject: async (edit, note) => {
@@ -163,7 +193,7 @@ export function libraryActions(
       const { project } = edit;
       // Written before it is shown, so the change `keep` writes next finds the note to carry on.
       void inTurn(() =>
-        write({
+        writeQuietly({
           id: projectId,
           name: project.name,
           project: serializeProject(project),
@@ -219,7 +249,7 @@ export function libraryActions(
         return;
       }
       const { history } = get();
-      if (id === get().projectId && history) {
+      if ((id === null || id === get().projectId) && history) {
         // The open project is renamed as a change, so Undo takes the name back.
         const project = currentProject(history);
         get().apply({
@@ -229,6 +259,7 @@ export function libraryActions(
         await inTurn(list);
         return;
       }
+      if (id === null) return;
       await inTurn(async () => {
         const entry = await entryFor(id);
         const project = entry && projectIn(entry);
@@ -237,7 +268,9 @@ export function libraryActions(
           return;
         }
         const text = renamedText(project, wanted);
-        await write({ ...entry, name: wanted, project: text, modified: now() });
+        if (!(await write({ ...entry, name: wanted, project: text, modified: now() }))) {
+          get().say(`"${entry.name}" could not be renamed in this browser.`);
+        }
         await list();
       });
     },
@@ -252,7 +285,7 @@ export function libraryActions(
         }
         const name = `${entry.name} copy`;
         const time = now();
-        await write({
+        const copied = await write({
           ...entry,
           id: ctx.newProjectId(),
           name,
@@ -260,6 +293,7 @@ export function libraryActions(
           created: time,
           modified: time,
         });
+        if (!copied) get().say(`"${entry.name}" could not be copied in this browser.`);
         await list();
       }),
 

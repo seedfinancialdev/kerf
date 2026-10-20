@@ -17,11 +17,15 @@ import type { AppStorage, StorageKey } from "./storage";
 export const UNITS_NOT_KEPT =
   "Your choice of units couldn't be kept in this browser; it applies until you close the page.";
 
-/** The start-up warning when this browser keeps nothing at all, or undefined when it keeps work. */
+/**
+ * The start-up warning when this browser has no storage, or undefined when it has. Only the shop
+ * and settings live there; the projects live in the library, whose banner speaks for them.
+ */
 export function storageNotice(storage: AppStorage): string | undefined {
   return storage.available
     ? undefined
-    : `This browser won't keep your work between visits. Click the project's name, then "Download .kerf file", to keep a copy.`;
+    : "This browser won't keep your shop, units or theme between visits; they apply until you " +
+        "close the page.";
 }
 
 /**
@@ -36,7 +40,7 @@ const OPEN_STORED_FAULT = "Kerf hit a problem opening your last project; please 
  */
 const PROJECT_UNREADABLE =
   "Your last project could not be read from this browser, so Kerf started without it. It is " +
-  'left as it was; click the project\'s name, then "Download .kerf file", to keep new work.';
+  "left as it was; reload the page to try again.";
 
 /**
  * The stored project as the first History entry, or why it could not be opened. A stored project

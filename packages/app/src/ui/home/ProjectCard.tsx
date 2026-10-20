@@ -6,9 +6,11 @@
 // when it was last changed. Clicking it opens the project; its ⋯ menu renames it in place,
 // duplicates, downloads or deletes it.
 
+import type { Project } from "@kerf/core";
 import { type ReactNode, useRef, useState } from "react";
 import { editedAgo } from "../../model/edited-ago";
 import type { ProjectSummary } from "../../model/library";
+import { kindOf } from "../../model/piece-kind";
 import { useKerfStore } from "../../state/useKerf";
 import { Drawing } from "../art/drawings";
 import { focusNotice } from "../Notice";
@@ -23,6 +25,8 @@ export function ProjectCard({ project, now }: { project: ProjectSummary; now: Da
   const picture = usePictureUrl(project.id, project.thumbnail);
   const [renaming, setRenaming] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // A picture the browser could not show (damaged bytes); a new picture is tried afresh.
+  const [unshown, setUnshown] = useState<string | null>(null);
   const more = useRef<HTMLButtonElement>(null);
   const { id, name } = project;
 
@@ -66,11 +70,12 @@ export function ProjectCard({ project, now }: { project: ProjectSummary; now: Da
     },
   };
 
-  const art = picture ? (
-    <img className="project-picture" src={picture} alt="" />
-  ) : (
-    <Drawing name={project.kind} className="project-drawing" />
-  );
+  const art =
+    picture && picture !== unshown ? (
+      <img className="project-picture" src={picture} alt="" onError={() => setUnshown(picture)} />
+    ) : (
+      <Drawing name={project.kind} className="project-drawing" />
+    );
   const edited = (
     <span className="project-edited">
       Edited {editedAgo(project.modified, now, navigator.language)}
@@ -114,6 +119,35 @@ export function ProjectCard({ project, now }: { project: ProjectSummary; now: Da
         </button>
         {menuOpen && <ProjectMenu name={name} actions={actions} />}
       </div>
+    </li>
+  );
+}
+
+/** Said on the card of the open project the library does not keep. */
+export const OPEN_NOT_KEPT = "Open now, not kept";
+
+/**
+ * The open project that the library does not keep (`openProjectNotKept`), as a card that goes back
+ * to it in the Workshop, where its menu downloads it. It has no menu here: there is no entry to
+ * rename, copy or delete.
+ */
+export function NotKeptCard({ project }: { project: Project }) {
+  const store = useKerfStore();
+  return (
+    <li className="project-card">
+      <button
+        type="button"
+        className="project-open"
+        onClick={() => store.getState().setScreen("workshop")}
+      >
+        <span className="project-art">
+          <Drawing name={kindOf(project)} className="project-drawing" />
+        </span>
+        <span className="project-meta">
+          <span className="project-name">{project.name}</span>{" "}
+          <span className="project-edited">{OPEN_NOT_KEPT}</span>
+        </span>
+      </button>
     </li>
   );
 }

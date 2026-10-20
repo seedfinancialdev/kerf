@@ -2,29 +2,38 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Settings in the top bar: Your shop (design spec, §1: "reached later from Settings"), the tour (§4), the theme (a
-// browser preference) and the units. Units are both the
-// preference for new projects and, when the open project's stock fits the new grid, that project's
-// own field, so the change is an undoable History entry (ADR 015, rule 4).
+// Settings in the top bar: Your shop (design spec §1: "reached later from Settings"), the tour (§4,
+// in the Workshop, which it shows), the theme (a browser preference) and the units. Units are the
+// preference for new projects and, in the Workshop, when the shown project's stock fits the new
+// grid, that project's own field, so the change is an undoable History entry (ADR 015, rule 4).
 
 import type { Project } from "@kerf/core";
 import { useEffect, useRef, useState } from "react";
 import { switchUnits } from "../model/commands";
 import { shownProject } from "../model/store";
+import type { KerfState } from "../model/store-types";
 import { useKerf, useKerfStore } from "../state/useKerf";
 import { Tip } from "./Tip";
 import { TIPS } from "./tips";
 
 const UNITS_NAME = { imperial: "inches", metric: "millimetres" } as const;
 
-/** Your shop, the tour, theme and units. */
+/**
+ * The project Settings speaks for: the one shown in the Workshop. A project left open behind Home
+ * or Your shop is not on screen, so its units are not changed from there (final review, I2).
+ */
+const projectOnScreen = (state: KerfState): Project | null =>
+  state.screen === "workshop" ? shownProject(state) : null;
+
+/** Your shop, the tour (in the Workshop), theme and units. */
 export function SettingsMenu() {
   const store = useKerfStore();
   const [open, setOpen] = useState(false);
   const opener = useRef<HTMLButtonElement>(null);
   const forNew = useKerf((s) => s.unitsForNew);
   const theme = useKerf((s) => s.theme);
-  const projectUnits = useKerf((s) => shownProject(s)?.units);
+  const inWorkshop = useKerf((s) => s.screen === "workshop");
+  const projectUnits = useKerf((s) => projectOnScreen(s)?.units);
   const units = projectUnits ?? forNew;
 
   useEffect(() => {
@@ -39,7 +48,7 @@ export function SettingsMenu() {
   const chooseUnits = (chosen: Project["units"]): void => {
     const state = store.getState();
     state.setUnitsForNew(chosen);
-    const project = shownProject(state);
+    const project = projectOnScreen(state);
     if (!project || project.units === chosen) return;
     const result = switchUnits(project, chosen);
     if (result.ok) state.apply(result.edit);
@@ -58,17 +67,19 @@ export function SettingsMenu() {
           <button type="button" onClick={() => store.getState().setScreen("shop")}>
             Your shop
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              // The tour gives the keyboard back to what had it when it began.
-              opener.current?.focus();
-              store.getState().startTour();
-            }}
-          >
-            Take the tour
-          </button>
+          {inWorkshop && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                // The tour gives the keyboard back to what had it when it began.
+                opener.current?.focus();
+                store.getState().startTour();
+              }}
+            >
+              Take the tour
+            </button>
+          )}
           <fieldset>
             <legend>Theme</legend>
             <label className="check">

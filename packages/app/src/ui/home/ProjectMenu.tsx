@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // A project's menu (design spec §2, "Project card menu"): Rename, Duplicate, Download .kerf
-// file and, on its Home card, Delete (which asks first; the store then offers Undo for a few
-// seconds). In the workshop's top bar the menu ends with Back to Home instead of Delete.
+// file and, on its Home card, Delete (which asks first; the store then offers Undo on the notice
+// line). In the workshop's top bar the menu ends with Back to Home instead of Delete.
 
 import { type KeyboardEvent, type RefObject, useEffect, useId, useRef, useState } from "react";
 import { Tip } from "../Tip";
@@ -69,7 +69,7 @@ function usePopup(
   };
 }
 
-/** "Delete …? You can undo this for a few seconds." with Cancel, focused first, and Delete. */
+/** "Delete …? You can undo this from the notice line." with Cancel, focused first, and Delete. */
 function DeleteQuestion({
   name,
   remove,
@@ -90,7 +90,7 @@ function DeleteQuestion({
       className="card-menu card-ask"
       onKeyDown={onKeyDown}
     >
-      <p id={question}>Delete "{name}"? You can undo this for a few seconds.</p>
+      <p id={question}>Delete "{name}"? You can undo this from the notice line.</p>
       <div className="card-ask-actions">
         <button type="button" className="quiet" onClick={() => actions.close(true)}>
           Cancel

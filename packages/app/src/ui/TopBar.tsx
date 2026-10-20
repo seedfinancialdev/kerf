@@ -23,7 +23,9 @@ import { stepTip, TIPS } from "./tips";
  */
 function ProjectNameMenu({ name }: { name: string }) {
   const store = useKerfStore();
-  const projectsKept = useKerf((s) => s.projectsKept);
+  // A copy is made from the library's entry, so the open project must be kept, and the library
+  // keeping projects (Ruling R28).
+  const canCopy = useKerf((s) => s.projectsNotKept === null && s.projectId !== null);
   const [renaming, setRenaming] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
@@ -44,22 +46,22 @@ function ProjectNameMenu({ name }: { name: string }) {
   const keepName = (wanted: string, refocus: boolean): boolean => {
     const { projectId, renameProject } = store.getState();
     // The same name again is no change, so Undo is not given an empty step.
-    if (projectId && wanted.trim() !== name) void renameProject(projectId, wanted);
+    if (wanted.trim() !== name) void renameProject(projectId, wanted);
     if (wanted.trim() === "") return false;
     stopRenaming(refocus);
     return true;
   };
-  /** Makes a copy on Home and says so; the copy is not opened. */
+  /**
+   * Makes a copy on Home and says so; the copy is not opened. When none is made, the library has
+   * already said why, in words more exact than any said here.
+   */
   const duplicate = async (): Promise<void> => {
     const { projectId, duplicateProject, projects } = store.getState();
     if (!projectId) return;
     const before = new Set(projects.map((p) => p.id));
     await duplicateProject(projectId);
     const made = store.getState().projects.find((p) => !before.has(p.id));
-    // The library's own words are about a project Home listed; this one is on screen.
-    store
-      .getState()
-      .say(made ? `Made "${made.name}" on Home.` : `The copy of ${name} could not be made.`);
+    if (made) store.getState().say(`Made "${made.name}" on Home.`);
   };
   const actions: ProjectMenuActions = {
     close: (refocus) => {
@@ -99,7 +101,7 @@ function ProjectNameMenu({ name }: { name: string }) {
           {name} <span aria-hidden="true">▾</span>
         </button>
       </Tip>
-      {menuOpen && <ProjectMenu name={name} actions={actions} canCopy={projectsKept} />}
+      {menuOpen && <ProjectMenu name={name} actions={actions} canCopy={canCopy} />}
     </div>
   );
 }

@@ -10,8 +10,10 @@
 // Upgrade policy: a new version only adds stores or indexes, branching on the old version in
 // `upgrade`; stored projects are never dropped or rewritten by an upgrade.
 //
-// Nothing here throws: a browser that cannot keep projects says so through `available` and `write`.
-// A write is reported kept only once its transaction has committed.
+// Nothing here throws: a browser that cannot keep projects says so through `available`, `notKept`
+// and `write`, and a list that fails says so apart from listing nothing. A write is reported kept
+// only once its transaction has committed. Every failure is logged: the browser's own (a full disk,
+// a closed connection) as a warning, anything else, a fault in Kerf, as an error.
 
 import type { Id } from "@kerf/core";
 import { type PieceKind, pieceKinds } from "./piece-kind";
@@ -37,12 +39,22 @@ export type ProjectSummary = Omit<LibraryEntry, "project"> & { kind: PieceKind }
 
 /** The browser's store of projects. */
 export interface Library {
-  /** False when the browser has no database or refused to open it. */
+  /**
+   * False when the browser has no database, refused or blocked opening it, or has since closed
+   * it (another tab upgraded it, or the site's data was cleared).
+   */
   readonly available: boolean;
-  /** Every project, newest change first; empty when unavailable or unreadable. */
-  list(): Promise<ProjectSummary[]>;
+  /** While not `available`: why, and what to do, in shop words. */
+  readonly notKept: string;
+  /** Every project, newest change first; undefined when they could not be read. */
+  list(): Promise<ProjectSummary[] | undefined>;
   /** The project kept under `id`; undefined when there is none or it could not be read. */
   read(id: Id): Promise<LibraryEntry | undefined>;
+  /**
+   * Whether anything at all is kept under `id`, a damaged row too; undefined when that could not
+   * be read, so a caller never writes over what it could not see.
+   */
+  holds(id: Id): Promise<boolean | undefined>;
   /** True when the entry was kept. */
   write(entry: LibraryEntry): Promise<boolean>;
   /** True when the entry is gone. */
@@ -52,6 +64,20 @@ export interface Library {
 /** Shown on Home while projects cannot be kept (design spec §2, "Keeping projects"). */
 export const LIBRARY_NOT_KEPT =
   "This browser isn't keeping your projects. Download a .kerf file to keep your work.";
+
+/** Shown instead when another tab holds the database at an older version, blocking the open. */
+export const LIBRARY_BLOCKED =
+  "Kerf is open in another tab, so your projects can't be reached here. Close the other tab, " +
+  "then reload this page.";
+
+/** Shown instead when a newer Kerf has upgraded the database, which this page cannot open. */
+export const LIBRARY_NEWER =
+  "A newer Kerf has updated your projects in this browser. Reload the page to use it.";
+
+/** Shown instead when the browser let go of the database while Kerf was open. */
+export const LIBRARY_LOST =
+  "Kerf lost hold of your projects (Kerf was updated in another tab, or this site's data was " +
+  "cleared). Reload the page to keep working.";
 
 const DATABASE = "kerf";
 const STORE = "projects";
@@ -125,6 +151,9 @@ function upgrade(db: IDBDatabase, oldVersion: number): void {
   }
 }
 
+/** The name `openDatabase` gives the error when another tab blocks the open. */
+const BLOCKED = "BlockedError";
+
 /**
  * Opens the database; rejects when it cannot be opened or opening is blocked by another tab. A
  * connection that opens after the open was given up is closed, so it cannot block an upgrade.
@@ -136,7 +165,6 @@ function openDatabase(factory: IDBFactory): Promise<IDBDatabase> {
     opening.onupgradeneeded = (event) => upgrade(opening.result, event.oldVersion);
     opening.onsuccess = () => {
       const db = opening.result;
-      db.onversionchange = () => db.close();
       if (settled) db.close();
       else resolve(db);
       settled = true;
@@ -147,49 +175,92 @@ function openDatabase(factory: IDBFactory): Promise<IDBDatabase> {
     };
     opening.onblocked = () => {
       settled = true;
-      reject(new DOMException("Another tab is using the database.", "InvalidStateError"));
+      reject(new DOMException("Another tab is using the database.", BLOCKED));
     };
   });
 }
 
 /** Whether `error` is a DOMException; a database from another realm throws its own kind. */
-const isDomException = (error: unknown): boolean =>
+const isDomException = (error: unknown): error is DOMException =>
   error instanceof DOMException ||
   (typeof error === "object" &&
     error !== null &&
     Object.prototype.toString.call(error) === "[object DOMException]");
 
-const unavailable: Library = {
+/**
+ * The browser's own failures: a full disk, a cancelled write, a damaged, refused or closed
+ * database. Any other error (a value that cannot be stored, a bad key, a missing store) is a fault
+ * in Kerf (silent-failure review, M1).
+ */
+const BROWSER_FAILURES: ReadonlySet<string> = new Set([
+  "QuotaExceededError",
+  "AbortError",
+  "UnknownError",
+  "InvalidStateError",
+  "VersionError",
+  "SecurityError",
+  "NotReadableError",
+  BLOCKED,
+]);
+
+/** Logs `error` for a bug report: a warning when the browser failed, an error when Kerf did. */
+function logFailure(error: unknown): void {
+  if (isDomException(error) && BROWSER_FAILURES.has(error.name)) console.warn(error);
+  else console.error(error);
+}
+
+/** Why opening failed with `error`, in shop words. */
+function whyNotOpened(error: unknown): string {
+  if (isDomException(error) && error.name === BLOCKED) return LIBRARY_BLOCKED;
+  if (isDomException(error) && error.name === "VersionError") return LIBRARY_NEWER;
+  return LIBRARY_NOT_KEPT;
+}
+
+/** A library that keeps nothing, for the reason `notKept`. */
+const unavailable = (notKept: string): Library => ({
   available: false,
-  list: async () => [],
+  notKept,
+  list: async () => undefined,
   read: async () => undefined,
+  holds: async () => undefined,
   write: async () => false,
   remove: async () => false,
-};
+});
 
 /**
  * Opens the library in `factory` (the browser's `indexedDB`). Never rejects: a missing, refusing or
- * blocked database gives a library that is not `available` and keeps nothing. Rows that are not
- * whole entries are skipped by `list` and not returned by `read`, so one damaged row never blanks
- * Home. `remove` is true for an id that holds nothing: it is gone either way. When another tab
- * upgrades the database this connection is given up, and every call then fails soft.
+ * blocked database gives a library that is not `available`, keeps nothing, and says why in
+ * `notKept`. Rows that are not whole entries are skipped by `list` and not returned by `read`, so
+ * one damaged row never blanks Home. `remove` is true for an id that holds nothing: it is gone
+ * either way. When another tab upgrades the database, or the browser closes it, the connection is
+ * given up: the library is no longer `available`, and every call then fails soft.
  */
 export async function openLibrary(factory: IDBFactory | undefined): Promise<Library> {
-  if (!factory) return unavailable;
+  if (!factory) return unavailable(LIBRARY_NOT_KEPT);
   let db: IDBDatabase;
   try {
     db = await openDatabase(factory);
-  } catch {
-    return unavailable;
+  } catch (error) {
+    logFailure(error);
+    return unavailable(whyNotOpened(error));
   }
+  let open = true;
+  db.onversionchange = () => {
+    open = false;
+    db.close();
+  };
+  db.onclose = () => {
+    open = false;
+  };
   const attempt = async <T>(work: () => Promise<T>, otherwise: T): Promise<T> => {
     try {
       return await work();
     } catch (error) {
-      if (!isDomException(error)) console.error(error);
+      logFailure(error);
       return otherwise;
     }
   };
+  const row = (id: Id): Promise<unknown> => done(db.transaction(STORE).objectStore(STORE).get(id));
   const kinds = pieceKinds();
   const change = (work: (store: IDBObjectStore) => void): Promise<boolean> =>
     attempt(async () => {
@@ -199,17 +270,21 @@ export async function openLibrary(factory: IDBFactory | undefined): Promise<Libr
       return true;
     }, false);
   return {
-    available: true,
+    get available() {
+      return open;
+    },
+    notKept: LIBRARY_LOST,
     list: () =>
       attempt(async () => {
         const rows: unknown[] = await done(db.transaction(STORE).objectStore(STORE).getAll());
         return summariesOf(rows, kinds);
-      }, []),
+      }, undefined),
     read: (id) =>
       attempt(async () => {
-        const row: unknown = await done(db.transaction(STORE).objectStore(STORE).get(id));
-        return isLibraryEntry(row) ? row : undefined;
+        const found = await row(id);
+        return isLibraryEntry(found) ? found : undefined;
       }, undefined),
+    holds: (id) => attempt(async () => (await row(id)) !== undefined, undefined),
     write: (entry) => change((store) => store.put(entry)),
     remove: (id) => change((store) => store.delete(id)),
   };

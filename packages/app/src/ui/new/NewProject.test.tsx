@@ -155,7 +155,7 @@ describe("<NewProject>", () => {
     await userEvent.click(create());
     await waitFor(() => expect(store.getState().screen).toBe("workshop"));
     expect(shownProject(store.getState())?.structures).toEqual([]);
-    const [summary] = await library.list();
+    const [summary] = (await library.list()) ?? [];
     expect((await library.read(summary?.id ?? ""))?.note).toBe("A round dining table");
   });
 

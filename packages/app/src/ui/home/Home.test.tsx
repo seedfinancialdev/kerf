@@ -12,7 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type Edit, startProject } from "../../model/commands";
 import { saveKerfBytes } from "../../model/files";
-import { LIBRARY_NOT_KEPT } from "../../model/library";
+import { LIBRARY_BLOCKED, LIBRARY_NOT_KEPT } from "../../model/library";
 import { STARTER_RECORD } from "../../model/shop-record";
 import { createStorage } from "../../model/storage";
 import { createKerfStore } from "../../model/store";
@@ -341,6 +341,40 @@ describe("<Home> on a browser that cannot keep projects", () => {
   it("shows no banner where projects are kept", async () => {
     await home();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("gives the library's own reason in the banner, such as another tab blocking it", async () => {
+    await home([], memoryLibrary({ available: false, notKept: LIBRARY_BLOCKED }));
+    expect(screen.getByRole("alert").textContent).toBe(LIBRARY_BLOCKED);
+  });
+
+  it("shows the open project, which is not kept, as a card that opens it again", async () => {
+    const { store } = await home([bookcase("Hall shelf")], memoryLibrary({ available: false }));
+    const before = store.getState().history;
+    expect(cardNames()).toEqual(["Hall shelf"]);
+    const card = main().getByRole("button", { name: /Hall shelf/ });
+    expect(card.textContent).toContain("Open now, not kept");
+    fireEvent.click(card);
+    expect(store.getState().screen).toBe("workshop");
+    expect(store.getState().history).toBe(before);
+  });
+
+  it("brings the tour back with Learn on the open project that is not kept", async () => {
+    const { store } = await home([bookcase("Hall shelf")], memoryLibrary({ available: false }));
+    const before = store.getState().history;
+    act(() => store.getState().finishTour());
+    fireEvent.click(sidebar().getByRole("button", { name: "Learn" }));
+    await waitFor(() => expect(store.getState().screen).toBe("workshop"));
+    expect(store.getState().history).toBe(before);
+    expect(store.getState().toured).toBe(false);
+  });
+});
+
+describe("<Home> with the open project kept", () => {
+  it("shows its card once, as kept", async () => {
+    await home([bookcase("Hall shelf")]);
+    expect(cardNames()).toEqual(["Hall shelf"]);
+    expect(main().queryByText("Open now, not kept")).toBeNull();
   });
 });
 

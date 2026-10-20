@@ -9,6 +9,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { App } from "../App";
 import { startProject } from "../model/commands";
+import { startHistory } from "../model/history";
+import type { LibraryEntry } from "../model/library";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { memoryLibrary } from "../testing/memory-library";
@@ -163,11 +165,10 @@ describe("<TopBar> Kerf button and project menu", () => {
 
   it("makes no History step when the same name is typed again", async () => {
     const { user, store } = await openMenu();
-    const rename = vi.fn(async () => undefined);
-    act(() => store.setState({ renameProject: rename }));
+    const before = store.getState().history?.entries.length;
     await user.click(screen.getByRole("menuitem", { name: "Rename" }));
     await user.keyboard("{Enter}");
-    expect(rename).not.toHaveBeenCalled();
+    expect(store.getState().history?.entries.length).toBe(before);
   });
 
   it("shows the name button as a menu, with a tip", async () => {
@@ -249,7 +250,7 @@ describe("<TopBar> Kerf button and project menu", () => {
     expect(name.getAttribute("aria-expanded")).toBe("false");
   });
 
-  it("says plainly that the copy could not be made when the library cannot be read", async () => {
+  it("lets the library's own words say why no copy was made, when it cannot be read", async () => {
     const user = userEvent.setup();
     const library = { ...memoryLibrary(), read: async () => undefined };
     const store = createKerfStore({ storage: createStorage(memoryStorage()), library });
@@ -258,8 +259,51 @@ describe("<TopBar> Kerf button and project menu", () => {
     await user.click(screen.getByRole("button", { name: "Bookcase" }));
     await user.click(screen.getByRole("menuitem", { name: "Duplicate" }));
     await waitFor(() =>
-      expect(store.getState().notice?.text).toBe("The copy of Bookcase could not be made."),
+      expect(store.getState().notice?.text).toBe(
+        "This project could not be found in this browser.",
+      ),
     );
+  });
+
+  it("lets the library's own words say why no copy was made, when it will not keep one", async () => {
+    const user = userEvent.setup();
+    const inner = memoryLibrary();
+    let full = false;
+    const library = {
+      ...inner,
+      write: (e: LibraryEntry) => (full ? Promise.resolve(false) : inner.write(e)),
+    };
+    const store = createKerfStore({ storage: createStorage(memoryStorage()), library });
+    await store.getState().createProject(startProject("Bookcase", "imperial"), "");
+    full = true;
+    render(<App store={store} model={null} />);
+    await user.click(screen.getByRole("button", { name: "Bookcase" }));
+    await user.click(screen.getByRole("menuitem", { name: "Duplicate" }));
+    await waitFor(() =>
+      expect(store.getState().notice?.text).toBe('"Bookcase" could not be copied in this browser.'),
+    );
+  });
+
+  it("renames the open project the library did not take, as a change Undo takes back", async () => {
+    const user = userEvent.setup();
+    const store = createKerfStore({
+      storage: createStorage(memoryStorage()),
+      library: memoryLibrary({ available: false }),
+      migration: {
+        outcome: "refused",
+        history: startHistory(startProject("Bookcase", "imperial")),
+      },
+    });
+    store.getState().setScreen("workshop");
+    render(<App store={store} model={null} />);
+    await user.click(screen.getByRole("button", { name: "Bookcase" }));
+    await user.click(screen.getByRole("menuitem", { name: "Rename" }));
+    const field = screen.getByRole("textbox", { name: "Name" });
+    await user.clear(field);
+    await user.type(field, "Alcove{Enter}");
+    expect(screen.getByRole("button", { name: "Alcove" })).toBeTruthy();
+    act(() => store.getState().undo());
+    expect(screen.getByRole("button", { name: "Bookcase" })).toBeTruthy();
   });
 
   it("goes Home from Back to Home", async () => {

@@ -12,7 +12,8 @@ import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { setSize, startProject } from "./commands";
 import { saveKerfBytes } from "./files";
-import { LIBRARY_NOT_KEPT, type Library, type LibraryEntry } from "./library";
+import { LIBRARY_BLOCKED, LIBRARY_NOT_KEPT, type Library, type LibraryEntry } from "./library";
+import { PROJECTS_UNREADABLE } from "./library-actions";
 import { STARTER_RECORD } from "./shop-record";
 import { lengthOf } from "./size";
 import { createStorage } from "./storage";
@@ -72,8 +73,8 @@ const countingLibrary = () => {
 
 const PICTURE = new Uint8Array([137, 80, 78, 71]);
 
-/** A library whose writes can be refused from a point on, as a disk that fills up does. */
-const fillingLibrary = (): Library & { fill(): void } => {
+/** A library whose writes are refused while it is full, as a disk that fills up does. */
+const fillingLibrary = (): Library & { fill(): void; empty(): void } => {
   const inner = memoryLibrary();
   let full = false;
   return {
@@ -81,6 +82,9 @@ const fillingLibrary = (): Library & { fill(): void } => {
     write: (entry: LibraryEntry) => (full ? Promise.resolve(false) : inner.write(entry)),
     fill: () => {
       full = true;
+    },
+    empty: () => {
+      full = false;
     },
   };
 };
@@ -138,7 +142,7 @@ describe("the library", () => {
     await store.getState().createProject(bookcase(), "");
     const s = store.getState();
     expect([s.screen, s.step]).toEqual(["workshop", "Shape"]);
-    expect((await library.list()).map((p) => p.name)).toEqual(["Bookcase"]);
+    expect((await library.list())?.map((p) => p.name)).toEqual(["Bookcase"]);
     expect(s.projects).toHaveLength(1);
     const form = s.history?.entries[0]?.project.structures[0]?.id;
     expect(s.selection).toEqual({ kind: "structure", structure: form });
@@ -493,9 +497,124 @@ describe("the Undo for a deleted project", () => {
 });
 
 describe("whether projects are kept", () => {
-  it("is false when the browser has no library, and true when it has one", () => {
-    expect(storeWith(memoryLibrary({ available: false })).getState().projectsKept).toBe(false);
-    expect(storeWith().getState().projectsKept).toBe(true);
+  it("says why not when the browser has no library, and nothing when it has one", () => {
+    expect(storeWith(memoryLibrary({ available: false })).getState().projectsNotKept).toBe(
+      LIBRARY_NOT_KEPT,
+    );
+    expect(storeWith().getState().projectsNotKept).toBeNull();
+  });
+
+  it("gives the library's own reason, such as another tab blocking it", () => {
+    const blocked = memoryLibrary({ available: false, notKept: LIBRARY_BLOCKED });
+    expect(storeWith(blocked).getState().projectsNotKept).toBe(LIBRARY_BLOCKED);
+  });
+
+  it("says projects are not kept once a write fails, and no longer once one works", async () => {
+    const library = fillingLibrary();
+    const store = storeWith(library);
+    await store.getState().createProject(bookcase(), "");
+    library.fill();
+    await store.getState().createProject(startProject("Blank box", "imperial"), "");
+    expect(store.getState().projectsNotKept).toBe(LIBRARY_NOT_KEPT);
+    library.empty();
+    await store.getState().createProject(startProject("Keepsake box", "imperial"), "");
+    expect(store.getState().projectsNotKept).toBeNull();
+  });
+});
+
+describe("when the library cannot be read", () => {
+  /** A library whose list fails once `fail` is called, as a database the browser closed does. */
+  const failingList = (): Library & { fail(): void } => {
+    const inner = memoryLibrary();
+    let failing = false;
+    return {
+      ...inner,
+      list: () => (failing ? Promise.resolve(undefined) : inner.list()),
+      fail: () => {
+        failing = true;
+      },
+    };
+  };
+
+  it("keeps the projects already listed, rather than showing none", async () => {
+    const library = failingList();
+    const store = storeWith(library);
+    await store.getState().createProject(bookcase(), "");
+    library.fail();
+    await store.getState().refreshProjects();
+    expect(store.getState().projects.map((p) => p.name)).toEqual(["Bookcase"]);
+  });
+
+  it("says the projects could not be read just now", async () => {
+    const library = failingList();
+    const store = storeWith(library);
+    library.fail();
+    await store.getState().refreshProjects();
+    expect(store.getState().projectsNotKept).toBe(PROJECTS_UNREADABLE);
+  });
+});
+
+describe("a write the library refuses for a project not open", () => {
+  /** A store with the bookcase kept and not open (a box is open), over a library that then fills. */
+  const withBookcaseKept = async () => {
+    const library = fillingLibrary();
+    const store = storeWith(library);
+    await store.getState().createProject(bookcase(), "");
+    const id = store.getState().projectId as string;
+    await store.getState().createProject(startProject("Blank box", "imperial"), "");
+    library.fill();
+    return { store, id };
+  };
+
+  it("says the rename failed, each time it is asked for", async () => {
+    const { store, id } = await withBookcaseKept();
+    await store.getState().renameProject(id, "Alcove");
+    store.getState().dismissNotice();
+    await store.getState().renameProject(id, "Hall bookcase");
+    expect(store.getState().notice?.text).toBe('"Bookcase" could not be renamed in this browser.');
+    expect(store.getState().projects.map((p) => p.name)).toContain("Bookcase");
+  });
+
+  it("says the copy failed, each time it is asked for", async () => {
+    const { store, id } = await withBookcaseKept();
+    await store.getState().duplicateProject(id);
+    store.getState().dismissNotice();
+    await store.getState().duplicateProject(id);
+    expect(store.getState().notice?.text).toBe('"Bookcase" could not be copied in this browser.');
+    expect(store.getState().projects).toHaveLength(2);
+  });
+});
+
+describe("a damaged kept project", () => {
+  const BROKEN = "01K7M4AP000000000000000000";
+  const brokenRow: LibraryEntry = {
+    id: BROKEN,
+    name: "Broken",
+    project: "{ not a project",
+    thumbnail: null,
+    created: "2026-10-14T09:00:00.000Z",
+    modified: "2026-10-14T09:00:00.000Z",
+    note: "",
+  };
+
+  it.each([
+    [
+      "renamed",
+      (store: ReturnType<typeof storeWith>) => store.getState().renameProject(BROKEN, "Fixed"),
+    ],
+    ["copied", (store: ReturnType<typeof storeWith>) => store.getState().duplicateProject(BROKEN)],
+    [
+      "downloaded",
+      (store: ReturnType<typeof storeWith>) => store.getState().readKeptProject(BROKEN),
+    ],
+  ])("cannot be %s: it says so and the library is unchanged", async (done, act) => {
+    const library = memoryLibrary();
+    await library.write(brokenRow);
+    const store = storeWith(library);
+    expect(await act(store)).toBeUndefined();
+    expect(store.getState().notice?.text).toBe(`This project could not be ${done}: it is damaged.`);
+    expect(await library.list()).toHaveLength(1);
+    expect(await library.read(BROKEN)).toEqual(brokenRow);
   });
 });
 

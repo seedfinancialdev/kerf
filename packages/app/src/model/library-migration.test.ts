@@ -6,11 +6,12 @@
 
 import { parseProject, serializeProject } from "@kerf/core";
 import { IDBFactory } from "fake-indexeddb";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage, unreadable } from "../testing/memory-storage";
 import { startProject } from "./commands";
-import { type LibraryEntry, openLibrary } from "./library";
+import { currentProject } from "./history";
+import { type Library, type LibraryEntry, openLibrary } from "./library";
 import { MIGRATED_PROJECT_ID, migrateStoredProject } from "./library-migration";
 import { createStorage } from "./storage";
 
@@ -30,7 +31,7 @@ describe("migrateStoredProject()", () => {
     const { backing, storage } = withStoredProject({ "kerf.created": "2026-10-01T08:00:00.000Z" });
     const library = memoryLibrary();
     expect(await migrateStoredProject(storage, library, NOW)).toEqual({ outcome: "moved" });
-    const [summary] = await library.list();
+    const [summary] = (await library.list()) ?? [];
     expect(summary).toMatchObject({
       name: storedName,
       created: "2026-10-01T08:00:00.000Z",
@@ -46,7 +47,7 @@ describe("migrateStoredProject()", () => {
     const { storage } = withStoredProject();
     const library = memoryLibrary();
     await migrateStoredProject(storage, library, NOW);
-    expect((await library.list())[0]?.created).toBe(NOW.toISOString());
+    expect((await library.list())?.[0]?.created).toBe(NOW.toISOString());
   });
 
   it("does nothing when nothing is stored", async () => {
@@ -60,14 +61,30 @@ describe("migrateStoredProject()", () => {
   it("keeps the stored project where it is when the library cannot keep it", async () => {
     const { backing, storage } = withStoredProject();
     const library = memoryLibrary({ failWrites: true });
-    expect(await migrateStoredProject(storage, library, NOW)).toMatchObject({ outcome: "kept" });
+    expect(await migrateStoredProject(storage, library, NOW)).toMatchObject({ outcome: "refused" });
     expect(backing.getItem("kerf.project")).toBe(stored);
   });
 
   it("keeps the stored project when the library is unavailable", async () => {
     const { backing, storage } = withStoredProject();
     const library = memoryLibrary({ available: false });
-    expect(await migrateStoredProject(storage, library, NOW)).toMatchObject({ outcome: "kept" });
+    expect(await migrateStoredProject(storage, library, NOW)).toMatchObject({ outcome: "refused" });
+    expect(backing.getItem("kerf.project")).toBe(stored);
+  });
+
+  it("hands back the refused project, so it can still be opened this visit", async () => {
+    const { storage } = withStoredProject();
+    const result = await migrateStoredProject(storage, memoryLibrary({ available: false }), NOW);
+    if (result.outcome !== "refused") throw new Error(`expected refused, got ${result.outcome}`);
+    expect(serializeProject(currentProject(result.history))).toBe(stored);
+  });
+
+  it("writes nothing when it cannot tell whether the library already has the project", async () => {
+    const { backing, storage } = withStoredProject();
+    const library = memoryLibrary({ failReads: true });
+    const write = vi.spyOn(library, "write");
+    expect((await migrateStoredProject(storage, library, NOW)).outcome).toBe("refused");
+    expect(write).not.toHaveBeenCalled();
     expect(backing.getItem("kerf.project")).toBe(stored);
   });
 
@@ -84,7 +101,7 @@ describe("migrateStoredProject()", () => {
     backing.setItem("kerf.project", stored);
     const library = memoryLibrary();
     expect(await migrateStoredProject(createStorage(backing), library, NOW)).toMatchObject({
-      outcome: "kept",
+      outcome: "unreadable",
     });
     expect(await library.list()).toEqual([]);
     backing.readable(true);
@@ -96,8 +113,7 @@ describe("migrateStoredProject()", () => {
     backing.setItem("kerf.project", "{ not a project");
     const library = memoryLibrary();
     const result = await migrateStoredProject(createStorage(backing), library, NOW);
-    expect(result.outcome).toBe("none");
-    expect(result.problem).toMatch(/set aside/);
+    expect(result).toMatchObject({ outcome: "none", problem: expect.stringMatching(/set aside/) });
     expect(await library.list()).toEqual([]);
     expect(backing.getItem("kerf.project")).toBeNull();
     expect(backing.getItem("kerf.project.setAside")).toBe("{ not a project");
@@ -107,7 +123,7 @@ describe("migrateStoredProject()", () => {
     const backing = unreadable(["kerf.project"]);
     backing.setItem("kerf.project", stored);
     const result = await migrateStoredProject(createStorage(backing), memoryLibrary(), NOW);
-    expect(result.problem).toMatch(/could not be read/);
+    expect(result).toMatchObject({ problem: expect.stringMatching(/could not be read/) });
   });
 
   it("leaves work done since untouched when it moves again because storage would not let go", async () => {
@@ -154,11 +170,12 @@ describe("migrateStoredProject()", () => {
   it("keeps the stored project when the library (a fake with a failing write) refuses it", async () => {
     const { backing, storage } = withStoredProject();
     const refusing = { ...memoryLibrary(), write: async () => false };
-    expect((await migrateStoredProject(storage, refusing, NOW)).outcome).toBe("kept");
+    expect((await migrateStoredProject(storage, refusing, NOW)).outcome).toBe("refused");
     expect(backing.getItem("kerf.project")).toBe(stored);
   });
 
   it("repairs a damaged row at the fixed id by writing the project over it", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const factory = new IDBFactory();
     const library = await openLibrary(factory);
     const opening = factory.open("kerf", 1);
@@ -175,5 +192,70 @@ describe("migrateStoredProject()", () => {
     expect((await migrateStoredProject(storage, library, NOW)).outcome).toBe("moved");
     expect((await library.read(MIGRATED_PROJECT_ID))?.project).toBe(stored);
     expect(backing.getItem("kerf.project")).toBeNull();
+  });
+});
+
+/** A library holding the migrated project, edited since as `edited`, as a reload after the move finds it. */
+async function movedAndEdited(edited: string): Promise<Library> {
+  const library = memoryLibrary();
+  await library.write({
+    id: MIGRATED_PROJECT_ID,
+    name: storedName,
+    project: edited,
+    thumbnail: null,
+    created: NOW.toISOString(),
+    modified: NOW.toISOString(),
+    note: "",
+  });
+  return library;
+}
+
+describe("migrateStoredProject() after an older Kerf tab saved again", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+  // The library has the move; an M4 tab left open wrote its own later change to storage.
+  const fromOlderTab = serializeProject(startProject("Keepsake box", "imperial").project);
+  const olderTabName = `${parseProject(fromOlderTab).name} (older tab)`;
+
+  it("keeps the older tab's change as a project of its own, and leaves the moved one as it was", async () => {
+    const library = await movedAndEdited(stored);
+    const { backing, storage } = withStoredProject();
+    backing.setItem("kerf.project", fromOlderTab);
+    const result = await migrateStoredProject(storage, library, NOW);
+    expect(result).toEqual({
+      outcome: "moved",
+      problem: `Changes made in an older Kerf tab were kept as a project of their own, "${olderTabName}".`,
+    });
+    const names = (await library.list())?.map((p) => p.name);
+    expect(names?.sort()).toEqual([olderTabName, storedName].sort());
+    expect((await library.read(MIGRATED_PROJECT_ID))?.project).toBe(stored);
+    expect(backing.getItem("kerf.project")).toBeNull();
+  });
+
+  it("keeps the older tab's change once, though storage will not let it go", async () => {
+    const library = await movedAndEdited(stored);
+    const backing = memoryStorage();
+    backing.setItem("kerf.project", fromOlderTab);
+    const holding: Storage = {
+      ...backing,
+      removeItem: () => undefined,
+      getItem: (k) => backing.getItem(k),
+    };
+    await migrateStoredProject(createStorage(holding), library, NOW);
+    expect(await migrateStoredProject(createStorage(holding), library, NOW)).toEqual({
+      outcome: "moved",
+    });
+    expect(await library.list()).toHaveLength(2);
+  });
+
+  it("leaves the older tab's change in storage, and hands it back, when the library will not take the copy", async () => {
+    const library = await movedAndEdited(stored);
+    vi.spyOn(library, "write").mockResolvedValue(false);
+    const { backing, storage } = withStoredProject();
+    backing.setItem("kerf.project", fromOlderTab);
+    const result = await migrateStoredProject(storage, library, NOW);
+    expect(result.outcome).toBe("refused");
+    expect(backing.getItem("kerf.project")).toBe(fromOlderTab);
   });
 });

@@ -11,7 +11,7 @@ import { type Id, type Project, ProjectFormatError, parseProject } from "@kerf/c
 export type PieceKind = "bookcase" | "cabinet" | "box" | "blank";
 
 /** The kind of `project`, from its first form: a case divided into shelves is a bookcase. */
-function kindOf(project: Project): PieceKind {
+export function kindOf(project: Project): PieceKind {
   const form = project.structures[0];
   if (!form) return "blank";
   if (form.type === "box") return "box";

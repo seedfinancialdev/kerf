@@ -3,8 +3,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Your shop, the pegboard (design spec, §1; ADR 016, D3): the first screen at first launch and reached
-// later from Settings. The wall is a draft until "That's my shop" saves it; "Skip for now" keeps the
-// starter shop and Kerf asks about a tool only when a project needs it.
+// later from Home or Settings, and left for the screen it was reached from. The wall is a draft
+// until "That's my shop" saves it; "Skip for now" keeps the starter shop and Kerf asks about a tool
+// only when a project needs it.
 
 import { useState } from "react";
 import { hungCount, recordOf, wallFrom } from "../../model/pegboard";
@@ -23,7 +24,7 @@ export function YourShop() {
 
   const keep = (record: ShopRecord): void => {
     store.getState().setShopRecord(record);
-    store.getState().setScreen("home");
+    store.getState().leaveShop();
   };
 
   return (
@@ -48,11 +49,7 @@ export function YourShop() {
         </p>
         {saved.setUp ? (
           // A shop already set up is never put back to the starter shop by leaving.
-          <button
-            type="button"
-            className="quiet"
-            onClick={() => store.getState().setScreen("home")}
-          >
+          <button type="button" className="quiet" onClick={() => store.getState().leaveShop()}>
             Cancel
           </button>
         ) : (

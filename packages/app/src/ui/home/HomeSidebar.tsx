@@ -8,6 +8,7 @@
 import type { Stock } from "@kerf/core";
 import { useId } from "react";
 import { isHung, PEG_TOOLS, type PegTool, wallFrom } from "../../model/pegboard";
+import { openProjectNotKept } from "../../model/store";
 import { useKerf, useKerfStore } from "../../state/useKerf";
 import { Drawing } from "../art/drawings";
 import { TOOL_CARDS } from "../shop/Pegboard";
@@ -92,12 +93,18 @@ function RecentFiles() {
 const NO_PROJECT_FOR_TOUR = "Make a project first, then the tour will show you around.";
 
 /**
- * Brings the tour back (design spec §4, "reopened from Learn"): it shows the Workshop, so it opens
- * the newest project and starts there, or says that a project is needed first.
+ * Brings the tour back (design spec §4, "reopened from Learn"): it shows the Workshop, so it starts
+ * there on the open project the library does not keep (opening another would lose it), else on the
+ * newest project, or says that a project is needed first.
  */
 function useLearn(): () => Promise<void> {
   const store = useKerfStore();
   return async () => {
+    if (openProjectNotKept(store.getState())) {
+      store.getState().setScreen("workshop");
+      store.getState().startTour();
+      return;
+    }
     const newest = store.getState().projects[0];
     if (!newest) {
       store.getState().say(NO_PROJECT_FOR_TOUR);

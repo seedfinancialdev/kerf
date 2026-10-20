@@ -106,7 +106,7 @@ describe("restoreProject()", () => {
       history: null,
       problem:
         "Your last project could not be read from this browser, so Kerf started without it. It " +
-        'is left as it was; click the project\'s name, then "Download .kerf file", to keep new work.',
+        "is left as it was; reload the page to try again.",
     });
     backing.readable(true);
     expect(backing.getItem("kerf.project")).toBe("the last project");

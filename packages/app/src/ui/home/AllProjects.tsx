@@ -5,22 +5,29 @@
 // All projects (design spec §2): every project, newest change first, and those whose names hold
 // what is typed in Find a project.
 
+import type { Project } from "@kerf/core";
 import type { ProjectSummary } from "../../model/library";
-import { ProjectCard } from "./ProjectCard";
+import { NotKeptCard, ProjectCard } from "./ProjectCard";
 
 /** Said where cards will be, before any project is kept. */
 export const NO_PROJECTS_YET = "Projects you start will show here.";
 
-/** `projects` as cards, in the order given; `now` is when their "Edited …" lines count from. */
+/**
+ * `projects` as cards, in the order given, after the open project that is not kept (`notKept`), if
+ * any; `now` is when their "Edited …" lines count from.
+ */
 export function ProjectCards({
   projects,
+  notKept = null,
   now,
 }: {
   projects: readonly ProjectSummary[];
+  notKept?: Project | null;
   now: Date;
 }) {
   return (
     <ul className="project-cards">
+      {notKept && <NotKeptCard project={notKept} />}
       {projects.map((p) => (
         <ProjectCard key={p.id} project={p} now={now} />
       ))}
