@@ -9,10 +9,9 @@
 
 import { readFile } from "node:fs/promises";
 
-import { serializeProject } from "@kerf/core";
-import { loadProject, loadShopProfile } from "@kerf/fixtures";
 import { expect, type Page, test } from "@playwright/test";
 import { openCard, openFromHome, projectCard, projectCards } from "./support/home";
+import m4 from "./support/m4-storage.json" with { type: "json" };
 import { modelDrawn, startBookcase } from "./support/start";
 
 /** Makes a Bookcase, then a Box, each from New project, and goes back Home. */
@@ -98,21 +97,14 @@ test("the browser's Back goes Home from the Workshop, and Forward goes back to i
 });
 
 test.describe("after upgrading from M4", () => {
-  // What M4 kept in browser storage: one project (`kerf.project`, as serializeProject writes it)
-  // and the shop as a version-1 ShopProfile. The project is the golden bookcase built as a form,
-  // and the shop the reference shop it is golden for.
+  // What the merged M4 build kept in browser storage, captured from it and frozen
+  // (support/m4-storage.json says how): one project (`kerf.project`: the golden bookcase's design,
+  // packages/fixtures/bookcase/structure.json, built in M4 with its own ids) and the shop as a
+  // version-1 ShopProfile, with a 3/4" dado stack and a 3/32" blade.
   test.use({
     storageState: {
       cookies: [],
-      origins: [
-        {
-          origin: "http://localhost:5173",
-          localStorage: [
-            { name: "kerf.project", value: serializeProject(loadProject("bookcase", "structure")) },
-            { name: "kerf.shop", value: JSON.stringify(loadShopProfile()) },
-          ],
-        },
-      ],
+      origins: [{ origin: "http://localhost:5173", localStorage: m4.localStorage }],
     },
   });
 
@@ -136,6 +128,28 @@ test.describe("after upgrading from M4", () => {
     await page.reload();
     await expect(page.getByRole("heading", { name: "What's on the bench?" })).toBeVisible();
     await expect(projectCards(page)).toHaveCount(1);
+  });
+
+  test("the M4 shop is carried over: Kerf asks nothing about it and keeps its blade", async ({
+    page,
+  }) => {
+    // A shop M4 kept is a set-up pegboard (ADR 016, D3), so Home opens, not Your shop.
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "What's on the bench?" })).toBeVisible();
+    await openCard(page, "Bookcase");
+    await modelDrawn(page);
+    await page.getByRole("button", { name: "Skip tour" }).click();
+    // M4's dado stack (3/4") cuts the 23/32" shelf dados, so Joinery says so and asks nothing.
+    await page.getByRole("button", { name: "Joinery" }).click();
+    await expect(page.getByText("Your dado stack cuts this.").first()).toBeVisible();
+    await expect(page.getByText("Do you have one?")).toHaveCount(0);
+    // And the pegboard hangs M4's table saw with its own thin-kerf blade: 3/32" = 19,050.
+    await page.getByRole("button", { name: "Home" }).click();
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    const tableSaw = page
+      .getByRole("listitem")
+      .filter({ has: page.getByRole("button", { name: /^Table saw/ }) });
+    await expect(tableSaw.getByLabel("Blade")).toHaveValue("19050");
   });
 });
 
