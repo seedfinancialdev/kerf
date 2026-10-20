@@ -60,7 +60,7 @@ function withPiece(choice: NewProjectChoice, next: PieceId, record: ShopRecord):
 }
 
 /**
- * `choice` in `units`: each size it can read typed again in them (30" becomes 762mm), the piece's
+ * `choice` in `units`: each size it can read typed again in them (30" becomes 762 mm), the piece's
  * usual one for any it cannot; its options, and its wood if offered, stay.
  */
 function inUnits(
@@ -125,7 +125,8 @@ function useFocusWhileOpen(panel: RefObject<HTMLDivElement | null>): void {
 
 /**
  * Escape closes the panel wherever the keyboard is while it is open, on the page as well as in the
- * panel. A form inside it that Escape shuts first (the wood form) stops the key there.
+ * panel. A form inside it that Escape shuts first (the wood form) stops the key there; so must any
+ * popover or menu added inside the panel later, or its Escape closes the whole panel too.
  */
 function useEscapeToClose(onClose: () => void): void {
   useEffect(() => {

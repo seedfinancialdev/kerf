@@ -1896,7 +1896,11 @@ button.project-open {
   padding: 6px var(--space-3);
 }
 
+/* Sticky, so a notice raised after the gallery has scrolled stays in view on a short window. */
 .new-project-gallery .notice {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   border: 0;
   border-radius: var(--radius-1);
 }
