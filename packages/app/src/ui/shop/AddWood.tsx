@@ -6,7 +6,7 @@
 // stock does not have — its name, whether it comes in sheets or boards, and its thickness.
 
 import type { Project, Stock } from "@kerf/core";
-import { type FormEvent, useId, useState } from "react";
+import { type FormEvent, useId, useRef, useState } from "react";
 import { newId } from "../../model/ids";
 import { ownWood, type WoodKind } from "../../model/pegboard";
 import { readShopLength } from "../../model/size";
@@ -40,7 +40,7 @@ export function WoodForm({
 
   const add = (e: FormEvent): void => {
     e.preventDefault();
-    const read = readShopLength(thickness, units, "Thickness must be more than zero.");
+    const read = readShopLength(thickness, units, "Thickness", "Thickness must be more than zero.");
     if (name.trim() === "") setProblem("Give the wood a name.");
     else if (!read.ok) setProblem(read.message);
     else {
@@ -114,10 +114,17 @@ export function AddWood({
   onAdd: (stock: Stock) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const opener = useRef<HTMLButtonElement>(null);
+  // The form's buttons go when it closes; the focus goes back to the card that opened it.
+  const close = (): void => {
+    setOpen(false);
+    opener.current?.focus();
+  };
   return (
     <li className={open ? "peg-card add-wood open" : "peg-card add-wood"}>
       <Tip tip={TIPS.addWood}>
         <button
+          ref={opener}
           type="button"
           className="tool-card"
           aria-expanded={open}
@@ -130,7 +137,7 @@ export function AddWood({
           <span className="tool-card-use">A sheet or board</span>
         </button>
       </Tip>
-      {open && <WoodForm units={units} onAdd={onAdd} onClose={() => setOpen(false)} />}
+      {open && <WoodForm units={units} onAdd={onAdd} onClose={close} />}
     </li>
   );
 }

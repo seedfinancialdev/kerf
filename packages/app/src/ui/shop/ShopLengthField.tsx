@@ -51,7 +51,7 @@ export function ShopLengthField({
 
   const read = (): void => {
     lastRead.current = text;
-    const reading = readShopLength(text, units, notPositive);
+    const reading = readShopLength(text, units, label, notPositive);
     setProblem(reading.ok ? null : reading.message);
     if (reading.ok) onLength(reading.value);
   };

@@ -160,6 +160,10 @@ export function RouterSettings({
         className="link-button"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
+        onKeyDown={(e) => {
+          // A click leaves the focus here, outside the panel, so Escape is heard here too.
+          if (e.key === "Escape" && open) close();
+        }}
       >
         Edit bits
       </button>

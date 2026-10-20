@@ -33,7 +33,8 @@ export function ToolCard({
 }) {
   return (
     <li className={hung ? "peg-card hung" : "peg-card"}>
-      <Tip tip={tip}>
+      {/* A hung tool's settings sit below its card, so its tip goes above them. */}
+      <Tip tip={tip} placement={hung && children ? "above" : "below"}>
         <button type="button" className="tool-card" aria-pressed={hung} onClick={onToggle}>
           <Drawing name={drawing} className="tool-card-drawing" />
           <span className="tool-card-name">{name}</span>{" "}

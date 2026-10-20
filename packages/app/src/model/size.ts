@@ -106,15 +106,20 @@ const noProject = (units: Project["units"]): Project => ({
 
 /**
  * A length typed on the pegboard (a blade, a bit, a wood's thickness), read like any size field in
- * `units` but outside any project, and snapped to that grid. Zero or less is refused with `notPositive`,
- * which names the thing being sized.
+ * `units` but outside any project, and snapped to that grid. Text that is not a length is refused in
+ * words that name the field called `label` (`explainSize`); zero or less is refused with
+ * `notPositive`, which names the thing being sized.
  */
 export function readShopLength(
   text: string,
   units: Project["units"],
+  label: string,
   notPositive: string,
 ): Reading {
   const read = readLength(text, noProject(units));
+  if (!read.ok && text.trim() !== "") {
+    return { ok: false, message: explainSize(label, text, read.message) };
+  }
   if (read.ok && read.value <= 0) return { ok: false, message: notPositive };
   return read;
 }

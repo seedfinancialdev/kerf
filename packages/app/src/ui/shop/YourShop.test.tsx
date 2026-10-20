@@ -7,7 +7,7 @@
 // shop" (ADR 016, D3). Nothing is saved until one of the two is pressed.
 
 import { INCH } from "@kerf/core";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { STARTER_RECORD } from "../../model/shop-record";
@@ -69,7 +69,11 @@ const pressed = (name: string): boolean => card(name).getAttribute("aria-pressed
 const countLine = (): string =>
   screen.getByText((_, el) => el?.className === "shop-count").textContent ?? "";
 
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe("<YourShop>", () => {
   it("makes every card a toggle button, and Add your own a button that opens its form", () => {
@@ -245,6 +249,95 @@ describe("<YourShop>", () => {
     await userEvent.type(screen.getByLabelText("Thickness"), '0"');
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
     expect(screen.getByText("Thickness must be more than zero.")).toBeTruthy();
+  });
+
+  it("closes the bits panel on Escape while Edit bits has the focus", async () => {
+    firstLaunch();
+    await userEvent.click(onCard("Router").getByRole("button", { name: "Edit bits" }));
+    expect(screen.getByRole("dialog", { name: "Router bits" })).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Router bits" })).toBeNull();
+  });
+
+  it("says plainly when a bit size typed under + Add a size cannot be read", async () => {
+    firstLaunch();
+    fireEvent.click(onCard("Router").getByRole("button", { name: "Edit bits" }));
+    const roundover = within(screen.getByRole("group", { name: "Roundover" }));
+    fireEvent.click(roundover.getByRole("button", { name: "+ Add a size" }));
+    await userEvent.type(roundover.getByLabelText("Roundover size"), "big{Enter}");
+    // The wording every size field uses (model/size.ts, explainSize; Task 10 review).
+    expect(
+      roundover.getByText('Roundover size: "big" isn\'t a length; type one like 30" or 762 mm.'),
+    ).toBeTruthy();
+  });
+
+  it("says plainly when a wood's thickness cannot be read", async () => {
+    firstLaunch();
+    fireEvent.click(card("Add your own"));
+    await userEvent.type(screen.getByLabelText("Name"), "Baltic birch");
+    await userEvent.type(screen.getByLabelText("Thickness"), "thick");
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getByRole("alert").textContent).toBe(
+      'Thickness: "thick" isn\'t a length; type one like 30" or 762 mm.',
+    );
+  });
+
+  it("gives the focus back to Add your own when the wood form closes", async () => {
+    firstLaunch();
+    await userEvent.click(card("Add your own"));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(document.activeElement).toBe(card("Add your own"));
+    await userEvent.click(card("Add your own"));
+    await userEvent.type(screen.getByLabelText("Name"), "Oak");
+    await userEvent.keyboard("{Escape}");
+    expect(document.activeElement).toBe(card("Add your own"));
+  });
+
+  it("keeps a wood of your own after That's my shop, on the next launch", async () => {
+    const backing = memoryStorage();
+    firstLaunch(backing);
+    fireEvent.click(card("Add your own"));
+    await userEvent.type(screen.getByLabelText("Name"), "8/4 maple");
+    fireEvent.click(screen.getByRole("button", { name: "Board" }));
+    await userEvent.type(screen.getByLabelText("Thickness"), '1-3/4"');
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.click(screen.getByRole("button", { name: "That's my shop" }));
+    cleanup();
+    const nextLaunch = firstLaunch(backing);
+    // 1-3/4" = 7 × 203200 / 4 = 355,600.
+    expect(nextLaunch.getState().shopRecord.stock.at(-1)).toMatchObject({
+      name: "8/4 maple",
+      kind: "solid",
+      thickness: 355_600,
+    });
+    expect(pressed("8/4 maple")).toBe(true);
+  });
+
+  it("puts a hung card's tip above it, off the settings below the card", () => {
+    vi.useFakeTimers();
+    // A 1000 x 700 window, a 200 x 50 tip, and every other box at 300-400 px down the window.
+    vi.stubGlobal("innerWidth", 1000);
+    vi.stubGlobal("innerHeight", 700);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const box = this.classList.contains("tip")
+        ? { left: 0, top: 0, width: 200, height: 50 }
+        : { left: 100, top: 300, width: 160, height: 100 };
+      return { ...box, right: box.left + box.width, bottom: box.top + box.height } as DOMRect;
+    });
+    firstLaunch();
+    const tipTop = (name: string): string => {
+      fireEvent.pointerEnter(card(name));
+      act(() => vi.advanceTimersByTime(500));
+      const top = screen.getByRole("tooltip").style.top;
+      fireEvent.pointerLeave(card(name));
+      return top;
+    };
+    // Hung, with its blade below: above the card, 300 - 6 - 50 = 244.
+    expect(tipTop("Table saw")).toBe("244px");
+    // Not hung, nothing below it: below the card, 400 + 6 = 406.
+    expect(tipTop("Track saw")).toBe("406px");
   });
 
   it("speaks shop language", () => {
