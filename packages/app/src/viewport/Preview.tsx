@@ -62,6 +62,30 @@ function Turntable({
   );
 }
 
+/**
+ * Calls `drawn` with `mark` once a frame showing it is up: on the frame after the one it first
+ * reached, since a frame's callbacks run before it is drawn.
+ */
+function MarkDrawn({ mark, drawn }: { mark: string; drawn: (mark: string) => void }) {
+  const seen = useRef<string | null>(null);
+  const told = useRef<string | null>(null);
+  useFrame(() => {
+    if (seen.current === mark && told.current !== mark) {
+      told.current = mark;
+      drawn(mark);
+    }
+    seen.current = mark;
+  });
+  return null;
+}
+
+/**
+ * What the preview has drawn, for a test to wait on (`data-drawn`): the piece's width in scene
+ * inches, which changes when the width typed does.
+ */
+const widthMark = ([min, max]: ReturnType<typeof sceneBounds>): string =>
+  String(Math.round((max[0] - min[0]) * 1000) / 1000);
+
 /** True when the user asks the system for less motion; the piece then stands still. */
 function prefersStill(): boolean {
   return globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -74,10 +98,13 @@ function PreviewCanvas({ project, result }: { project: Project; result: SolveRes
   const [pointerOver, setPointerOver] = useState(false);
   const still = useMemo(prefersStill, []);
   const looks = boardLooks(result, project);
-  const view = useMemo(() => fitView(...sceneBounds(result.placements)), [result]);
+  const bounds = useMemo(() => sceneBounds(result.placements), [result]);
+  const view = useMemo(() => fitView(...bounds), [bounds]);
+  const [drawn, setDrawn] = useState<string | null>(null);
   return (
     <div
       className="preview-canvas"
+      data-drawn={drawn ?? undefined}
       onPointerEnter={() => setPointerOver(true)}
       onPointerLeave={() => setPointerOver(false)}
     >
@@ -86,6 +113,7 @@ function PreviewCanvas({ project, result }: { project: Project; result: SolveRes
           <hemisphereLight intensity={0.9} groundColor={palette.ground} />
           <directionalLight position={[60, 120, -80]} intensity={1.4} />
           <Aim view={view} />
+          <MarkDrawn mark={widthMark(bounds)} drawn={setDrawn} />
           <Turntable centre={view.target} turning={!pointerOver && !still}>
             {looks.map((look) => (
               <BoardMesh
@@ -116,9 +144,9 @@ export function Preview({ project, result }: { project: Project; result: SolveRe
       {failed ? (
         note
       ) : (
-        // Not ThreeDGuard: that also warns on the notice line, which would outlast the panel; the
-        // words in the preview's place say all there is to say. The fault is logged for a bug
-        // report.
+        // Not ThreeDGuard: that also warns on the notice line, which would outlast the
+        // panel; the words in the preview's place say all there is to say. The fault is
+        // logged for a bug report.
         <Boundary fallback={() => note} onFailure={(error) => console.error(error)}>
           <PreviewCanvas project={project} result={result} />
         </Boundary>

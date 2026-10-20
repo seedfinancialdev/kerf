@@ -13,7 +13,7 @@ import { memoryStorage, unreadable } from "../testing/memory-storage";
 import { type Edit, setSize, startProject } from "./commands";
 import { startHistory } from "./history";
 import { LIBRARY_NOT_KEPT, type Library, type LibraryEntry } from "./library";
-import { LAST_PROJECT_NOT_KEPT, type MigrationResult } from "./library-migration";
+import type { MigrationResult } from "./library-migration";
 import { STARTER_RECORD } from "./shop-record";
 import { STARTER_SHOP } from "./starter";
 import { type AppStorage, createStorage } from "./storage";
@@ -236,7 +236,13 @@ describe("warnings that must not be lost (ADR 015, rule 11: the app says so once
       library: memoryLibrary({ failWrites: true }),
       migration: refused(),
     });
-    expect(s.getState().notice).toEqual({ text: LAST_PROJECT_NOT_KEPT, kind: "warning" });
+    expect(s.getState().notice).toEqual({
+      text:
+        "Your last project couldn't be moved in with your projects, so it is open but not kept. Open " +
+        'it from Home ("Open now, not kept"), then click the project\'s name and choose "Download ' +
+        '.kerf file" to keep it.',
+      kind: "warning",
+    });
     expect(shownProject(s.getState())?.name).toBe("Bookcase");
     expect(s.getState().projectId).toBeNull();
   });
@@ -248,7 +254,7 @@ describe("warnings that must not be lost (ADR 015, rule 11: the app says so once
       migration: refused(),
     });
     expect(s.getState().projectsNotKept).toBe(LIBRARY_NOT_KEPT);
-    expect(s.getState().notice?.text).toBe(LAST_PROJECT_NOT_KEPT);
+    expect(s.getState().notice?.text).toMatch(/^Your last project couldn't be moved in/);
     s.getState().dismissNotice();
     expect(s.getState().notice).toBeNull();
   });

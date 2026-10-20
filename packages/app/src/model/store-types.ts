@@ -67,6 +67,11 @@ export interface KerfState {
    * design spec §2); null while they are kept and listed.
    */
   projectsNotKept: string | null;
+  /**
+   * Kept projects whose last write the library refused: their newest changes are kept nowhere
+   * (final re-review, M3).
+   */
+  writesRefused: readonly Id[];
   history: History | null;
   previewed: Project | null;
   solved: Solved | null;
@@ -179,10 +184,11 @@ export interface KerfActions {
    */
   renameProject(id: Id | null, name: string): Promise<void>;
   /**
-   * Keeps a copy of project `id` named "<name> copy", changed now so it lists first. A project
-   * that is gone or damaged, or a copy the library would not keep, is said on the notice line.
+   * Keeps a copy of project `id` named "<name> copy", changed now so it lists first, and resolves
+   * to the copy's name once the library has it. A project that is gone or damaged, or a copy the
+   * library would not keep, is said on the notice line and resolves undefined.
    */
-  duplicateProject(id: Id): Promise<void>;
+  duplicateProject(id: Id): Promise<string | undefined>;
   /**
    * Deletes the kept project `id`, closing it if it is open, and offers Undo on the notice line
    * to put it back. A library that will not delete it is said, and the project stays.

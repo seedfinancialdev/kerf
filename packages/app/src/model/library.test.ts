@@ -229,7 +229,10 @@ describe("openLibrary() when the browser fails", () => {
     } as unknown as IDBFactory;
     const library = await openLibrary(blocked);
     expect(library.available).toBe(false);
-    expect(library.notKept).toBe(LIBRARY_BLOCKED);
+    expect(library.notKept).toBe(
+      "Kerf is open in another tab, so your projects can't be reached here. Close the other tab, " +
+        "then reload this page.",
+    );
   });
 
   it("says to reload when a newer Kerf has upgraded the database", async () => {
@@ -242,7 +245,9 @@ describe("openLibrary() when the browser fails", () => {
     newer.result.close();
     const library = await openLibrary(factory);
     expect(library.available).toBe(false);
-    expect(library.notKept).toBe(LIBRARY_NEWER);
+    expect(library.notKept).toBe(
+      "A newer Kerf has updated your projects in this browser. Reload the page to use it.",
+    );
   });
 
   it("reads a row with a field it does not know, as a newer Kerf may write, and keeps that field", async () => {
@@ -286,7 +291,10 @@ describe("openLibrary() when the browser fails", () => {
       upgrading.onsuccess = resolve;
     });
     expect(library.available).toBe(false);
-    expect(library.notKept).toBe(LIBRARY_LOST);
+    expect(library.notKept).toBe(
+      "Kerf lost hold of your projects (Kerf was updated in another tab, or this site's data was " +
+        "cleared). Reload the page to keep working.",
+    );
     expect(await library.read("A")).toBeUndefined();
     expect(await library.write(entry("B", "2026-10-14T10:00:00.000Z"))).toBe(false);
     upgrading.result.close();
@@ -298,7 +306,10 @@ describe("openLibrary() when the browser fails", () => {
     expect(library.available).toBe(true);
     (factory.database.onclose as () => void)();
     expect(library.available).toBe(false);
-    expect(library.notKept).toBe(LIBRARY_LOST);
+    expect(library.notKept).toBe(
+      "Kerf lost hold of your projects (Kerf was updated in another tab, or this site's data was " +
+        "cleared). Reload the page to keep working.",
+    );
   });
 
   it("reports a missing project as removed, since it is gone either way", async () => {

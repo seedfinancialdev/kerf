@@ -39,8 +39,9 @@ export type MigrationResult =
  * not kept, so where to find it and how to keep it are said on every screen (final review, I1).
  */
 export const LAST_PROJECT_NOT_KEPT =
-  "Your last project couldn't be moved in with your projects, so it is open but not kept. Find " +
-  'it on Home as "Open now, not kept", and use "Download .kerf file" in its menu to keep it.';
+  "Your last project couldn't be moved in with your projects, so it is open but not kept. Open " +
+  'it from Home ("Open now, not kept"), then click the project\'s name and choose "Download ' +
+  '.kerf file" to keep it.';
 
 /** The name of the project an older tab changed, kept beside the one already moved. */
 const olderTabName = (project: Project): string => `${project.name} (older tab)`;

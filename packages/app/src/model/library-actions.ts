@@ -60,7 +60,7 @@ type LibraryAction =
 const NOT_FOUND = "This project could not be found in this browser.";
 
 /** Home's banner when the library could not list the projects (silent-failure review, I3). */
-export const PROJECTS_UNREADABLE =
+const PROJECTS_UNREADABLE =
   "Your projects couldn't be read just now. Reload the page; they are still in this browser.";
 
 /** Said when a kept project's text no longer reads as a project. */
@@ -119,11 +119,15 @@ export function libraryActions(ctx: LibraryContext): Pick<KerfActions, LibraryAc
     listFailed = listed === undefined;
     set(listed ? { projects: listed, projectsNotKept: notKept() } : { projectsNotKept: notKept() });
   };
-  /** Writes `entry`; true when it was kept. Home's banner follows the answer. */
+  /**
+   * Writes `entry`; true when it was kept. Home's banner, and whether the entry's newest change is
+   * kept, follow the answer.
+   */
   const write = async (entry: LibraryEntry): Promise<boolean> => {
     const kept = await library.write(entry);
     writeRefused = !kept;
-    set({ projectsNotKept: notKept() });
+    const others = get().writesRefused.filter((id) => id !== entry.id);
+    set({ projectsNotKept: notKept(), writesRefused: kept ? others : [...others, entry.id] });
     return kept;
   };
   /** Writes `entry` in the background: a refusal is said once, in the banner's words. */
@@ -135,11 +139,15 @@ export function libraryActions(ctx: LibraryContext): Pick<KerfActions, LibraryAc
   // still waiting when another project opens carries its own.
   let openNote = "";
   const pictures = new Map<Id, Uint8Array | null>();
-  /** The entry `id`, or undefined having said it cannot be found and listed what is left. */
+  /**
+   * The entry `id`, or undefined having said why not and listed what is left. A read that failed
+   * is not a project that is gone: then the library's own reason is said (final re-review, M4).
+   */
   const entryFor = async (id: Id): Promise<LibraryEntry | undefined> => {
     const entry = await library.read(id);
     if (entry) return entry;
-    get().say(NOT_FOUND);
+    const unreadable = !library.available || (await library.holds(id)) === undefined;
+    get().say(unreadable ? (notKept() ?? PROJECTS_UNREADABLE) : NOT_FOUND);
     await list();
     return undefined;
   };
@@ -281,7 +289,7 @@ export function libraryActions(ctx: LibraryContext): Pick<KerfActions, LibraryAc
         const project = entry && projectIn(entry);
         if (!entry || !project) {
           if (entry) get().say(damaged("copied"));
-          return;
+          return undefined;
         }
         const name = `${entry.name} copy`;
         const time = now();
@@ -295,6 +303,7 @@ export function libraryActions(ctx: LibraryContext): Pick<KerfActions, LibraryAc
         });
         if (!copied) get().say(`"${entry.name}" could not be copied in this browser.`);
         await list();
+        return copied ? name : undefined;
       }),
 
     readKeptProject: (id) =>

@@ -12,12 +12,17 @@ import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { setSize, startProject } from "./commands";
 import { saveKerfBytes } from "./files";
-import { LIBRARY_BLOCKED, LIBRARY_NOT_KEPT, type Library, type LibraryEntry } from "./library";
-import { PROJECTS_UNREADABLE } from "./library-actions";
+import {
+  LIBRARY_BLOCKED,
+  LIBRARY_LOST,
+  LIBRARY_NOT_KEPT,
+  type Library,
+  type LibraryEntry,
+} from "./library";
 import { STARTER_RECORD } from "./shop-record";
 import { lengthOf } from "./size";
 import { createStorage } from "./storage";
-import { createKerfStore, shownProject } from "./store";
+import { createKerfStore, openProjectNotKept, shownProject } from "./store";
 
 /** A clock that moves on a minute each time it is read, so every write has a time of its own. */
 const ticking = (): (() => number) => {
@@ -562,7 +567,73 @@ describe("when the library cannot be read", () => {
     const store = storeWith(library);
     library.fail();
     await store.getState().refreshProjects();
-    expect(store.getState().projectsNotKept).toBe(PROJECTS_UNREADABLE);
+    expect(store.getState().projectsNotKept).toBe(
+      "Your projects couldn't be read just now. Reload the page; they are still in this browser.",
+    );
+  });
+
+  it("still counts the open project kept when only the list fails", async () => {
+    // The library took the write; only reading the list back failed (final re-review, M3).
+    const library = failingList();
+    library.fail();
+    const store = storeWith(library);
+    await store.getState().createProject(bookcase(), "");
+    expect(openProjectNotKept(store.getState())).toBeNull();
+  });
+
+  it("answers a copy with its name though the list cannot be read back", async () => {
+    const library = failingList();
+    const store = storeWith(library);
+    await store.getState().createProject(bookcase(), "");
+    library.fail();
+    expect(await store.getState().duplicateProject(store.getState().projectId as string)).toBe(
+      "Bookcase copy",
+    );
+  });
+});
+
+describe("a project asked for while the library cannot be read", () => {
+  // Final re-review, M4: a read that failed is not a project that is gone.
+  it("says the library's own reason, not that the project could not be found, once it is lost", async () => {
+    const inner = memoryLibrary();
+    let lost = false;
+    const library: Library = {
+      ...inner,
+      get available() {
+        return !lost;
+      },
+      notKept: LIBRARY_LOST,
+      read: (id) => (lost ? Promise.resolve(undefined) : inner.read(id)),
+    };
+    const store = storeWith(library);
+    await store.getState().createProject(bookcase(), "");
+    const id = store.getState().projectId as string;
+    await store.getState().createProject(startProject("Blank box", "imperial"), "");
+    lost = true;
+    expect(await store.getState().openProject(id)).toBe(false);
+    expect(store.getState().notice?.text).toBe(
+      "Kerf lost hold of your projects (Kerf was updated in another tab, or this site's data was " +
+        "cleared). Reload the page to keep working.",
+    );
+  });
+
+  it("says the projects could not be read when the library cannot tell whether it holds one", async () => {
+    const inner = memoryLibrary();
+    let failing = false;
+    const library: Library = {
+      ...inner,
+      read: (id) => (failing ? Promise.resolve(undefined) : inner.read(id)),
+      holds: (id) => (failing ? Promise.resolve(undefined) : inner.holds(id)),
+    };
+    const store = storeWith(library);
+    await store.getState().createProject(bookcase(), "");
+    const id = store.getState().projectId as string;
+    await store.getState().createProject(startProject("Blank box", "imperial"), "");
+    failing = true;
+    await store.getState().renameProject(id, "Alcove");
+    expect(store.getState().notice?.text).toBe(
+      "Your projects couldn't be read just now. Reload the page; they are still in this browser.",
+    );
   });
 });
 

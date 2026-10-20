@@ -36,15 +36,18 @@ export function ProjectCards({
 }
 
 /**
- * The All projects view: `projects` (already narrowed to those matching `query`, newest change
- * first, as the store lists them) or, when there are none, why not.
+ * The All projects view: `projects` and the open project that is not kept (`notKept`), both
+ * already narrowed to those matching `query`, newest change first, as the store lists them; or,
+ * when there are none, why not.
  */
 export function AllProjects({
   projects,
+  notKept,
   query,
   now,
 }: {
   projects: readonly ProjectSummary[];
+  notKept: Project | null;
   query: string;
   now: Date;
 }) {
@@ -52,8 +55,8 @@ export function AllProjects({
   return (
     <>
       <h1 className="home-title">All projects</h1>
-      {projects.length > 0 ? (
-        <ProjectCards projects={projects} now={now} />
+      {projects.length > 0 || notKept ? (
+        <ProjectCards projects={projects} notKept={notKept} now={now} />
       ) : (
         <p className="home-empty">{none}</p>
       )}

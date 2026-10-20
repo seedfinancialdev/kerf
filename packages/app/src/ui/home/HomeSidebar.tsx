@@ -58,18 +58,33 @@ function ShopSummary() {
   );
 }
 
-/** The newest projects, each a button that opens it. */
+/**
+ * The newest projects, each a button that opens it, after the open project the library does not
+ * keep, which goes back to the Workshop.
+ */
 function RecentFiles() {
   const store = useKerfStore();
   const recent = useKerf((s) => s.projects).slice(0, RECENT);
+  const notKept = useKerf(openProjectNotKept);
   const heading = useId();
   return (
     <section className="home-recent" aria-labelledby={heading}>
       <h2 id={heading} className="home-label">
         Recent files
       </h2>
-      {recent.length > 0 ? (
+      {recent.length > 0 || notKept ? (
         <ul>
+          {notKept && (
+            <li>
+              <button
+                type="button"
+                className="home-link"
+                onClick={() => store.getState().setScreen("workshop")}
+              >
+                {notKept.name}
+              </button>
+            </li>
+          )}
           {recent.map((p) => (
             <li key={p.id}>
               <button

@@ -27,7 +27,7 @@ import { LaterBadge, Templates } from "./Templates";
 const RECENT_CARDS = 8;
 
 /** `projects` whose names hold `query`, in any case; all of them when nothing is typed. */
-const matching = (projects: readonly ProjectSummary[], query: string): readonly ProjectSummary[] =>
+const matching = <T extends { name: string }>(projects: readonly T[], query: string): T[] =>
   projects.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()));
 
 /** A section of the bench with its heading, and what goes at the heading's right. */
@@ -93,7 +93,7 @@ function Bench({
           </p>
         </div>
       </BenchSection>
-      <BenchSection title="Recent files" aside={projects.length > 0 && seeAllButton}>
+      <BenchSection title="Recent files" aside={(projects.length > 0 || notKept) && seeAllButton}>
         {projects.length > 0 || notKept ? (
           <ProjectCards projects={projects.slice(0, RECENT_CARDS)} notKept={notKept} now={now} />
         ) : (
@@ -156,7 +156,12 @@ export function Home() {
           />
           <main className="home-main">
             {shown === "all" ? (
-              <AllProjects projects={matching(projects, typed)} query={typed} now={now} />
+              <AllProjects
+                projects={matching(projects, typed)}
+                notKept={notKept && (matching([notKept], typed)[0] ?? null)}
+                query={typed}
+                now={now}
+              />
             ) : (
               <Bench
                 projects={projects}

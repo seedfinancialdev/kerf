@@ -50,13 +50,13 @@ export function shownProject(state: KerfState): Project | null {
 }
 
 /**
- * The open project when the library does not keep it (it is not among the projects listed): the
- * old project the library refused, or one made in a browser that keeps no projects. Home shows it
- * so it can be reached again (final review, I3). Null when none is open or it is kept.
+ * The open project when the library does not keep it: the old project the library refused (no
+ * id), or one whose last write the library refused, as in a browser that keeps no projects. Home
+ * shows it so it can be reached again (final review, I3). Null when none is open or it is kept.
  */
 export function openProjectNotKept(state: KerfState): Project | null {
-  const { history, projects, projectId } = state;
-  if (!history || projects.some((p) => p.id === projectId)) return null;
+  const { history, projectId, writesRefused } = state;
+  if (!history || (projectId !== null && !writesRefused.includes(projectId))) return null;
   return currentProject(history);
 }
 
@@ -107,6 +107,7 @@ function startingState(
     projectId: null,
     projects: [],
     projectsNotKept,
+    writesRefused: [],
     history,
     previewed: null,
     solved: null,
@@ -202,8 +203,8 @@ export function createKerfStore(deps: {
       // A joint proposed for the project as it was is stale once History moves (ADR 015, ruling C).
       const moved = patch.history !== undefined;
       const pending = moved && next.pending?.tool === "join" ? null : next.pending;
-      // An edit's own Undo offer comes in `patch`; otherwise the last change's offer goes (ADR 015,
-      // ruling A).
+      // An edit's own Undo offer comes in `patch`; otherwise the last change's offer goes (ADR
+      // 015, ruling A).
       const notices = moved && patch.notice === undefined ? afterHistoryMoved(line()) : {};
       set({
         ...patch,

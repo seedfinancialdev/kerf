@@ -345,7 +345,10 @@ describe("<Home> on a browser that cannot keep projects", () => {
 
   it("gives the library's own reason in the banner, such as another tab blocking it", async () => {
     await home([], memoryLibrary({ available: false, notKept: LIBRARY_BLOCKED }));
-    expect(screen.getByRole("alert").textContent).toBe(LIBRARY_BLOCKED);
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Kerf is open in another tab, so your projects can't be reached here. Close the other tab, " +
+        "then reload this page.",
+    );
   });
 
   it("shows the open project, which is not kept, as a card that opens it again", async () => {
@@ -357,6 +360,29 @@ describe("<Home> on a browser that cannot keep projects", () => {
     fireEvent.click(card);
     expect(store.getState().screen).toBe("workshop");
     expect(store.getState().history).toBe(before);
+  });
+
+  it("lists the open project that is not kept first under the sidebar's Recent files", async () => {
+    const { store } = await home([bookcase("Hall shelf")], memoryLibrary({ available: false }));
+    const before = store.getState().history;
+    fireEvent.click(sidebar().getByRole("button", { name: "Hall shelf" }));
+    expect(store.getState().screen).toBe("workshop");
+    expect(store.getState().history).toBe(before);
+  });
+
+  it("lists the open project that is not kept in All projects", async () => {
+    await home([bookcase("Hall shelf")], memoryLibrary({ available: false }));
+    fireEvent.click(sidebar().getByRole("button", { name: "All projects" }));
+    expect(cardNames()).toEqual(["Hall shelf"]);
+  });
+
+  it("finds the open project that is not kept by its name, and only by its name", async () => {
+    await home([bookcase("Hall shelf")], memoryLibrary({ available: false }));
+    const find = sidebar().getByRole("searchbox", { name: "Find a project" });
+    fireEvent.change(find, { target: { value: "hall" } });
+    expect(cardNames()).toEqual(["Hall shelf"]);
+    fireEvent.change(find, { target: { value: "Garage" } });
+    expect(cardNames()).toEqual([]);
   });
 
   it("brings the tour back with Learn on the open project that is not kept", async () => {

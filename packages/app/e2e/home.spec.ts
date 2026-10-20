@@ -5,8 +5,7 @@
 // Design spec §2, Home: the projects kept in the browser as cards, newest first, each with its
 // picture and a menu (rename, duplicate, download, delete with Undo); Open file; the browser's Back
 // and Forward between Home and the Workshop; the project older Kerf kept moved in once (ADR 016,
-// D5), or opened, not kept, where it cannot be; and a browser that keeps no projects, which Home
-// says.
+// D5), or opened, not kept, where it cannot be; and a browser that keeps no projects.
 
 import { readFile } from "node:fs/promises";
 
@@ -174,7 +173,13 @@ test.describe("after upgrading from M4, in a browser with no database", () => {
     await expect(page.getByRole("alert")).toHaveText(
       "This browser isn't keeping your projects. Download a .kerf file to keep your work.",
     );
-    await expect(page.getByText(/^Your last project couldn't be moved in/)).toBeVisible();
+    await expect(
+      page.getByText(
+        "Your last project couldn't be moved in with your projects, so it is open but not kept. " +
+          'Open it from Home ("Open now, not kept"), then click the project\'s name and choose ' +
+          '"Download .kerf file" to keep it.',
+      ),
+    ).toBeVisible();
     const card = projectCards(page).filter({ hasText: "Open now, not kept" });
     await expect(card).toHaveCount(1);
     await card.getByRole("button", { name: /^Bookcase/ }).click();

@@ -52,16 +52,14 @@ function ProjectNameMenu({ name }: { name: string }) {
     return true;
   };
   /**
-   * Makes a copy on Home and says so; the copy is not opened. When none is made, the library has
-   * already said why, in words more exact than any said here.
+   * Makes a copy on Home and says so, from the library's own answer; the copy is not opened. When
+   * none is made, the library has already said why, in words more exact than any said here.
    */
   const duplicate = async (): Promise<void> => {
-    const { projectId, duplicateProject, projects } = store.getState();
+    const { projectId, duplicateProject } = store.getState();
     if (!projectId) return;
-    const before = new Set(projects.map((p) => p.id));
-    await duplicateProject(projectId);
-    const made = store.getState().projects.find((p) => !before.has(p.id));
-    if (made) store.getState().say(`Made "${made.name}" on Home.`);
+    const made = await duplicateProject(projectId);
+    if (made) store.getState().say(`Made "${made}" on Home.`);
   };
   const actions: ProjectMenuActions = {
     close: (refocus) => {
