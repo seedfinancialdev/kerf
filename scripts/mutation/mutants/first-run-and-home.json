@@ -128,29 +128,29 @@
   {
     "id": "migration-removes-after-refusal",
     "file": "packages/app/src/model/library-migration.ts",
-    "find": "if (!kept) return { outcome: \"kept\" };",
-    "replace": "",
+    "find": "return kept ? letGo(storage) : { outcome: \"refused\", history };",
+    "replace": "return letGo(storage);",
     "why": "The old stored project is removed even though the library refused it, losing the user's work."
   },
   {
     "id": "migration-overwrites-existing-entry",
     "file": "packages/app/src/model/library-migration.ts",
-    "find": "if (await library.read(MIGRATED_PROJECT_ID)) {",
-    "replace": "if ((await library.read(MIGRATED_PROJECT_ID)) && false) {",
+    "find": "  if (moved) {\n",
+    "replace": "  if (moved && false) {\n",
     "why": "A migration run again writes over the library's copy, losing work done on it since."
   },
   {
     "id": "migration-retry-keeps-storage",
     "file": "packages/app/src/model/library-migration.ts",
-    "find": "{\n    storage.remove(\"kerf.project\");",
-    "replace": "{\n    ",
+    "find": "if (moved.project === serializeProject(project)) return letGo(storage);",
+    "replace": "if (moved.project === serializeProject(project)) return { outcome: \"moved\" };",
     "why": "When the library already has the project, the old copy in storage is never removed, so it moves again every start."
   },
   {
     "id": "migration-unreadable-reads-as-nothing",
     "file": "packages/app/src/model/library-migration.ts",
-    "find": "storage.couldNotRead(\"kerf.project\") ? \"kept\" : \"none\"",
-    "replace": "storage.couldNotRead(\"kerf.project\") ? \"none\" : \"kept\"",
+    "find": "if (storage.couldNotRead(\"kerf.project\") && problem !== undefined) {",
+    "replace": "if (!storage.couldNotRead(\"kerf.project\") && problem !== undefined) {",
     "why": "A stored project the browser would not let be read is reported as nothing to move, and the other way round."
   },
   {

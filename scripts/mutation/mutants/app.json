@@ -226,9 +226,9 @@
   {
     "id": "tool-change-keeps-preview",
     "file": "packages/app/src/model/store.ts",
-    "find": "// that is not in History.\n        if (get().previewed) show({ ...dropped, previewed: null });",
-    "replace": "// that is not in History.\n        if (get().previewed) show({ ...dropped });",
-    "why": "A tool change leaves the last tool's preview on screen and in Save."
+    "find": "// downloaded file, a change that is not in History.\n        if (get().previewed) show({ ...dropped, previewed: null });",
+    "replace": "// downloaded file, a change that is not in History.\n        if (get().previewed) show({ ...dropped });",
+    "why": "A tool change leaves the last tool's preview on screen and in a downloaded file."
   },
   {
     "id": "tool-change-keeps-pending",
