@@ -54,7 +54,7 @@ export function MoreEdgeShapes({
               <Tip
                 key={`${offer.shape}${offer.size}`}
                 placement="left"
-                anchorTo=".panel"
+                besidePanel
                 tip={{
                   name: SHAPE_NAMES[offer.shape],
                   text: `Needs a ${size(offer.size)} roundover bit. Add it to your shop?`,
@@ -77,7 +77,7 @@ export function MoreEdgeShapes({
               <Tip
                 key={`${offer.shape}${offer.size}`}
                 placement="left"
-                anchorTo=".panel"
+                besidePanel
                 tip={{
                   name: SHAPE_NAMES[offer.shape],
                   text: `${SHAPE_NAMES[offer.shape]}s are coming later.`,

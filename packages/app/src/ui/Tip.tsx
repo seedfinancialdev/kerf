@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// One tooltip for the whole app (design spec, "Tooltips"): the control's name, its key, and one line on what
-// it does. SketchUp users expect a tip on every tool; keyboard users get it on focus, touch users on a long
-// press.
+// One tooltip for the whole app (design spec, "Tooltips"): the control's name, its key, and one
+// line on what it does. SketchUp users expect a tip on every tool; keyboard users get it on focus,
+// touch users on a long press.
 
 import {
   cloneElement,
@@ -29,15 +29,15 @@ export type TipPlacement = "below" | "above" | "left" | "right";
 
 /** How long the pointer rests before the first tip shows, in milliseconds. */
 const DELAY_MS = 500;
-/** A tip shown within this long of another one hiding appears at once (moving along a row of tools). */
+/** A tip shown this soon after another one hid appears at once (moving along a row of tools). */
 const SWEEP_MS = 300;
 /** Gap between a control and its tip, and between a tip and the window's edge, in pixels. */
 const GAP = 6;
 const EDGE = 8;
 
 /**
- * When any tip last hid. Module-wide on purpose: the sweep along a row of tools spans separate `Tip`
- * instances, one per control (design spec, "Tooltips").
+ * When any tip last hid. Module-wide on purpose: the sweep along a row of tools spans separate
+ * `Tip` instances, one per control (design spec, "Tooltips").
  */
 let lastHidden = Number.NEGATIVE_INFINITY;
 
@@ -56,7 +56,7 @@ type Trigger = ReactElement<{
 /** The part of a control's box a tip is placed by, in pixels from the window's top left. */
 export type Box = Pick<DOMRect, "left" | "right" | "top" | "bottom">;
 
-/** Where a tip was put: its top-left corner in pixels, and the side of its control it ended up on. */
+/** Where a tip was put: its top-left corner in pixels, and the side of its control it is on. */
 export interface Placed {
   left: number;
   top: number;
@@ -99,23 +99,23 @@ export function placeTip(
 }
 
 /**
- * Shows `tip` for its one child control, on the side `placement` names (below unless told). A
- * disabled control gets no pointer events from the browser, so wrap it in an element that does (a
- * span) and give that to `Tip`.
+ * Shows `tip` for its one child control, on the side `placement` names (below unless told). Mark
+ * a control that cannot be used yet `aria-disabled` rather than `disabled`: it keeps its pointer
+ * events and focus, so its tip still shows (Ruling R26).
  */
 export function Tip({
   tip,
   placement = "below",
-  anchorTo,
+  besidePanel = false,
   children,
 }: {
   tip: TipText;
   placement?: TipPlacement;
   /**
-   * A selector for the control's container (its panel) whose left edge the tip lines up with instead of
-   * the control's, so a tip placed left covers none of the panel's controls.
+   * Lines a tip placed left up with the left edge of the panel around the control (the nearest
+   * element marked `data-tip-panel`), so it covers none of the panel's controls.
    */
-  anchorTo?: string;
+  besidePanel?: boolean;
   children: Trigger;
 }) {
   const id = useId();
@@ -133,7 +133,9 @@ export function Tip({
   const show = () => {
     visible.current = true;
     const box = target.current?.getBoundingClientRect();
-    const outer = anchorTo ? target.current?.closest(anchorTo)?.getBoundingClientRect() : undefined;
+    const outer = besidePanel
+      ? target.current?.closest("[data-tip-panel]")?.getBoundingClientRect()
+      : undefined;
     setAnchor(
       box
         ? { left: outer?.left ?? box.left, right: box.right, top: box.top, bottom: box.bottom }
@@ -163,7 +165,8 @@ export function Tip({
     }
   }, [shown, anchor, placement]);
 
-  // A scroll or resize leaves the tip pointing at the wrong place; a touch tip also goes at the next tap.
+  // A scroll or resize leaves the tip pointing at the wrong place; a touch tip also goes at the
+  // next tap.
   useEffect(() => {
     if (!shown) return;
     const away = () => hide();
@@ -198,8 +201,8 @@ export function Tip({
       children.props.onPointerLeave?.(e);
     },
     onFocus: (e) => {
-      // Mouse focus follows a press, and the tip would sit over what was just pressed. `target` is the
-      // focused element: a wrapper around a control has the focus inside it, not on itself.
+      // Mouse focus follows a press, and the tip would sit over what was just pressed. `target` is
+      // the focused element: a wrapper around a control has the focus inside it, not on itself.
       if (e.target instanceof Element && e.target.matches(":focus-visible")) show();
       children.props.onFocus?.(e);
     },

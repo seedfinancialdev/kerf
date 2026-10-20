@@ -274,7 +274,7 @@ describe("Tip", () => {
       ) {
         const box = this.classList.contains("tip")
           ? { left: 0, top: 0, width: 200, height: 50 }
-          : this.classList.contains("panel")
+          : this.hasAttribute("data-tip-panel")
             ? { left: 800, top: 0, width: 200, height: 700 }
             : { left: 900, top: 300, width: 40, height: 30 };
         return {
@@ -287,8 +287,8 @@ describe("Tip", () => {
         } as DOMRect;
       });
       render(
-        <div className="panel">
-          <Tip tip={pushPull} placement="left" anchorTo=".panel">
+        <div data-tip-panel>
+          <Tip tip={pushPull} placement="left" besidePanel>
             <button type="button">Push/Pull</button>
           </Tip>
         </div>,

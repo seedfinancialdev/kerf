@@ -76,7 +76,7 @@ function Window({ model }: { model: ReactNode }) {
           <ToolRow />
           <Drawer />
         </main>
-        <aside aria-label="Inspector" className="panel panel-right">
+        <aside aria-label="Inspector" className="panel panel-right" data-tip-panel>
           <Inspector />
         </aside>
       </div>
