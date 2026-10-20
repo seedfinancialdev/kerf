@@ -52,8 +52,8 @@ export function matrixOf(frame: PlacedPart["frame"]): number[] {
 }
 
 /**
- * The corners (least, greatest) of the box around every board's box, in scene inches, for fitting the
- * camera. With no boards both corners are the origin.
+ * The corners (least, greatest) of the box around every board's box, in scene inches, for fitting
+ * the camera. With no boards both corners are the origin.
  */
 export function sceneBounds(
   boards: ReadonlyArray<Pick<PlacedPart, "box">>,

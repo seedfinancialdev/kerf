@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // The Workshop's Board and New project's preview draw a board the same way: Board draws through
-// BoardMesh and only adds the pointer, the pick and the badge. Each is drawn into a scene by R3F's own
-// renderer with a stand-in for WebGL (jsdom has none; nothing here is drawn to a screen), and the
-// board's triangles, place and paint are compared.
+// BoardMesh and only adds the pointer, the pick and the badge. Each is drawn into a scene by R3F's
+// own renderer with a stand-in for WebGL (jsdom has none; nothing here is drawn to a screen), and
+// the board's triangles, place and paint are compared.
 
 import { solve } from "@kerf/core";
 import { act, createRoot, extend } from "@react-three/fiber";
@@ -23,8 +23,8 @@ import { Board } from "./Board";
 import { BoardMesh } from "./BoardMesh";
 import { boardLooks } from "./board-looks";
 
-// <Canvas> teaches R3F the three.js classes; a root made by hand must be taught the ones a board uses.
-// React's act is used here outside Testing Library, which otherwise tells React so.
+// <Canvas> teaches R3F the three.js classes; a root made by hand must be taught the ones a board
+// uses. React's act is used here outside Testing Library, which otherwise tells React so.
 extend({ Group, Mesh, MeshStandardMaterial });
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 

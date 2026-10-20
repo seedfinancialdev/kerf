@@ -67,8 +67,8 @@ describe("the Joinery step", () => {
     expect(shownProject(store.getState())?.structures[0]?.options.cornerJoint).toBe("rabbet");
   });
 
-  // Design spec, "Ask when it matters"; ADR 016, D4; Ruling R25. A fresh store's shop is the starter
-  // record, as a skipped pegboard leaves it: not told about any tool.
+  // Design spec, "Ask when it matters"; ADR 016, D4; Ruling R25. A fresh store's shop is the
+  // starter record, as a skipped pegboard leaves it: not told about any tool.
   describe("with a shop never told about its tools", () => {
     const DADO_QUESTION = "Dados, grooves and rabbets need a dado stack. Do you have one?";
     const ASKING = "Asking about your tools above.";

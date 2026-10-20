@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The pegboard while it is being changed (design spec, §1 "Your shop"; ADR 016, D3): which tools and
-// woods are hung, and each tool's settings, kept while it is taken down so hanging it again brings them
-// back. Nothing is saved until the screen turns the wall into a record.
+// The pegboard while it is being changed (design spec, §1 "Your shop"; ADR 016, D3): which tools
+// and woods are hung, and each tool's settings, kept while it is taken down so hanging it again
+// brings them back. Nothing is saved until the screen turns the wall into a record.
 
 import { type Id, INCH, type Len, type Stock } from "@kerf/core";
 import { DEFAULT_KERF, type ShopRecord } from "./shop-record";
@@ -37,7 +37,9 @@ export type SetTool = keyof ToolSettings;
 
 /** The pegboard: what is hung, every tool's settings, and every wood card shown. */
 export interface Wall {
-  /** The record the wall came from; what the wall does not show (answers, trims) is kept as it was. */
+  /**
+   * The record the wall came from; what the wall does not show (answers, trims) is kept as it was.
+   */
   from: ShopRecord;
   tools: ReadonlySet<PegTool>;
   settings: ToolSettings;
@@ -124,8 +126,8 @@ export type WoodKind = "sheet" | "board";
 
 /**
  * A wood of the woodworker's own, `thickness` thick (project units), in the starter stock's sizes:
- * 4x8 sheets with the grain along their length, or boards in 8' lengths up to 8" wide with 1/4" left
- * to straighten an edge (model/starter.ts, the walnut).
+ * 4x8 sheets with the grain along their length, or boards in 8' lengths up to 8" wide with 1/4"
+ * left to straighten an edge (model/starter.ts, the walnut).
  */
 export function ownWood(id: Id, name: string, kind: WoodKind, thickness: Len): Stock {
   return kind === "sheet"

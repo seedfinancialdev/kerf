@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// "+ Add your own" on the wood row (design spec, §1 "Your shop"): a small form for a wood the starter
-// stock does not have — its name, whether it comes in sheets or boards, and its thickness.
+// "+ Add your own" on the wood row (design spec, §1 "Your shop"): a small form for a wood the
+// starter stock does not have — its name, whether it comes in sheets or boards, and its thickness.
 
 import type { Project, Stock } from "@kerf/core";
 import { type FormEvent, useId, useRef, useState } from "react";

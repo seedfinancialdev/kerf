@@ -2,8 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// A tool's one size setting on its card (design spec, §1: the table saw's blade "standard 1/8", thin
-// 3/32", other"; the dado stack's widest cut "1/2", 3/4", 13/16", other"): the usual sizes, or one typed.
+// A tool's one size setting on its card (design spec, §1: the table saw's blade "standard 1/8",
+// thin 3/32", other"; the dado stack's widest cut "1/2", 3/4", 13/16", other"): the usual sizes, or
+// one typed.
 
 import { formatLength, type Len, type Project } from "@kerf/core";
 import { useId, useState } from "react";
@@ -18,8 +19,8 @@ export interface UsualSize {
 const OTHER = "other";
 
 /**
- * Chooses `value` from the `usual` sizes, or "Other", which opens a field (named `otherLabel`) for a
- * size typed in `units`. A size that is not one of the usual ones opens on "Other".
+ * Chooses `value` from the `usual` sizes, or "Other", which opens a field (named `otherLabel`) for
+ * a size typed in `units`. A size that is not one of the usual ones opens on "Other".
  */
 export function SizeChoice({
   label,

@@ -2,11 +2,12 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// New project (design spec §3; the look is 2026-10-14-first-run-and-home/3-new-project.png): a large
-// panel over Home with the gallery on the left (PieceGallery) and the chosen piece's settings on the
-// right (PieceSettings). It holds the choice; newProject (model/new-project.ts) decides on every
-// change whether Create is on and what the preview shows. It is a modal dialog: the keyboard starts
-// on the chosen piece and stays inside, Escape closes it, and Create or Enter starts at once.
+// New project (design spec §3; the look is 2026-10-14-first-run-and-home/3-new-project.png): a
+// large panel over Home with the gallery on the left (PieceGallery) and the chosen piece's settings
+// on the right (PieceSettings). It holds the choice; newProject (model/new-project.ts) decides on
+// every change whether Create is on and what the preview shows. It is a modal dialog: the keyboard
+// starts on the chosen piece and stays inside, Escape closes it, and Create or Enter starts at
+// once.
 
 import { type Id, type Project, type SolveResult, type Stock, solve } from "@kerf/core";
 import {
@@ -49,7 +50,9 @@ function withWood(
   return wood !== undefined && offered ? { ...choice, wood } : choice;
 }
 
-/** `choice` moved to piece `next`, at its usual size; the units, the wood and how it is sized stay. */
+/**
+ * `choice` moved to piece `next`, at its usual size; the units, the wood and how it is sized stay.
+ */
 function withPiece(choice: NewProjectChoice, next: PieceId, record: ShopRecord): NewProjectChoice {
   const { sizeMode, note } = choice;
   return withWood(
@@ -60,8 +63,9 @@ function withPiece(choice: NewProjectChoice, next: PieceId, record: ShopRecord):
 }
 
 /**
- * `choice` in `units`: each size it can read typed again in them (30" becomes 762 mm), the piece's
- * usual one for any it cannot; its options, and its wood if offered, stay.
+ * `choice` in `units`: each size it can read typed again in them (`retype`: 30" becomes 762 mm
+ * exactly; millimetres become the nearest 1/64"), the piece's usual one for any it cannot; its
+ * options, and its wood if offered, stay.
  */
 function inUnits(
   choice: NewProjectChoice,
@@ -92,7 +96,9 @@ function startingChoice(piece: PieceId | undefined, state: KerfState): NewProjec
   return withWood(choice, lastChoice.wood, shopRecord);
 }
 
-/** Moves Tab from the last thing in `panel` to the first, and Shift+Tab from the first to the last. */
+/**
+ * Moves Tab from the last thing in `panel` to the first, and Shift+Tab from the first to the last.
+ */
 function keepTabInside(panel: HTMLElement, e: KeyboardEvent): void {
   const reachable = [...panel.querySelectorAll<HTMLElement>(REACHABLE)];
   const first = reachable[0];

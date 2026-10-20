@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Ask when it matters (design spec; ADR 016, D4): one shared way for any screen to ask about a tool the
-// shop record was never told about, in context and once. The answer is written to the shop record, and
-// what Kerf will now plan for is said in its place (Rulings R24, R25).
+// Ask when it matters (design spec; ADR 016, D4): one shared way for any screen to ask about a tool
+// the shop record was never told about, in context and once. The answer is written to the shop
+// record, and what Kerf will now plan for is said in its place (Rulings R24, R25).
 
 import type { Len } from "@kerf/core";
 import { useState } from "react";

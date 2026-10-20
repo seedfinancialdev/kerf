@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// How one placed board looks in 3D, and nothing else: its cuts (or its plain blank), where the engine
-// places it, in its wood's colour. It reads no store and hears no pointer, so the Workshop's model
-// (Board.tsx) and New project's preview (Preview.tsx) draw boards the same way.
+// How one placed board looks in 3D, and nothing else: its cuts (or its plain blank), where the
+// engine places it, in its wood's colour. It reads no store and hears no pointer, so the Workshop's
+// model (Board.tsx) and New project's preview (Preview.tsx) draw boards the same way.
 
 import { useEffect, useMemo } from "react";
 import { Matrix4 } from "three";

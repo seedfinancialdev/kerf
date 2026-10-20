@@ -24,7 +24,10 @@ import { RouterSettings } from "./RouterBits";
 import { SizeChoice, type UsualSize } from "./SizeChoice";
 import { ToolCard } from "./ToolCard";
 
-/** What each tool's card shows: its drawing, its name and what it is for; Home's shop summary uses them too. */
+/**
+ * What each tool's card shows: its drawing, its name and what it is for; Home's shop summary uses
+ * them too.
+ */
 export const TOOL_CARDS: Record<
   PegTool,
   { drawing: DrawingName; name: string; use: string; tip: TipText }
@@ -132,8 +135,8 @@ function PegRow({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /**
- * The wall of cards for `wall`. Each tap or setting goes through `change`, so nothing is saved until
- * the screen says so; lengths are typed and shown in `units`.
+ * The wall of cards for `wall`. Each tap or setting goes through `change`, so nothing is saved
+ * until the screen says so; lengths are typed and shown in `units`.
  */
 export function Pegboard({
   wall,

@@ -2,10 +2,10 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// New project's right side (design spec §3, "The settings panel"): the live preview, the piece's name,
-// Inches or Millimetres, Outside size or Space to fill with the gap, the sizes, shelves or a back, the
-// wood from the shop, and Cancel / Create. Every refusal is said in plain words where it belongs, and
-// Create stays off until the piece can be built.
+// New project's right side (design spec §3, "The settings panel"): the live preview, the piece's
+// name, Inches or Millimetres, Outside size or Space to fill with the gap, the sizes, shelves or a
+// back, the wood from the shop, and Cancel / Create. Every refusal is said in plain words where it
+// belongs, and Create stays off until the piece can be built.
 
 import { formatLength, type Project, type SolveResult, type Stock } from "@kerf/core";
 import { type KeyboardEvent, type ReactNode, useId, useState } from "react";
@@ -23,7 +23,9 @@ import { WoodForm } from "../shop/AddWood";
 /** The fewest and most shelves New project offers a bookcase (design spec §3). */
 const SHELF_COUNTS = [2, 3, 4, 5, 6] as const;
 
-/** A choice of one among a few, as Kerf's segmented control; `label` names it (shown, or read out). */
+/**
+ * A choice of one among a few, as Kerf's segmented control; `label` names it (shown, or read out).
+ */
 function Choices<T extends string | number | boolean>({
   label,
   labelShown = true,
@@ -222,7 +224,9 @@ function WoodChoice({
   );
 }
 
-/** The one or two choices that matter for the piece: shelves for a bookcase, a back for a cabinet. */
+/**
+ * The one or two choices that matter for the piece: shelves for a bookcase, a back for a cabinet.
+ */
 function PieceOptions({
   choice,
   update,
@@ -259,7 +263,8 @@ function PieceOptions({
 /**
  * The settings for `choice`, as `made` (newProject's answer) finds them. `shown` is the last piece
  * that could be built, drawn while a size is being typed; `offered` the wood the shop has in these
- * units. `update` and `setUnits` change the choice; `onAddWood` adds a wood to the shop and picks it.
+ * units. `update` and `setUnits` change the choice; `onAddWood` adds a wood to the shop and picks
+ * it.
  */
 export function PieceSettings({
   choice,

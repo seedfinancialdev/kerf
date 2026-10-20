@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // ADR 015, rule 11: a fault in Kerf never ends the session silently. When the window cannot be
-// drawn, the download still writes the recorded project; a fault in an action is said once and logged.
+// drawn, the download still writes the recorded project; a fault in an action is said once and
+// logged.
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";

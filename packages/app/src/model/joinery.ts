@@ -25,8 +25,8 @@ export interface JoineryRow {
   /** What the shop can do about it, as a sentence. */
   shop: string;
   /**
-   * The tool the cut is made with, or the one it needs: what to ask about when the shop was never told
-   * (ADR 016, D4). The engine names a dado stack for a cut nothing in the shop can make.
+   * The tool the cut is made with, or the one it needs: what to ask about when the shop was never
+   * told (ADR 016, D4). The engine names a dado stack for a cut nothing in the shop can make.
    */
   topic: ToolTopic;
 }

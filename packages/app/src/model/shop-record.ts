@@ -2,8 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The shop as hung on the pegboard (ADR 016, D3). It keeps every tool and bit the woodworker owns, so Kerf
-// already knows when later joinery needs them; the engine is given only what it understands today.
+// The shop as hung on the pegboard (ADR 016, D3). It keeps every tool and bit the woodworker owns,
+// so Kerf already knows when later joinery needs them; the engine is given only what it understands
+// today.
 
 import { INCH, type Len, type ShopProfile, type Stock } from "@kerf/core";
 import { STARTER_DADO_WIDTH, STARTER_STOCK } from "./starter";
@@ -24,8 +25,8 @@ export type BitShape = (typeof BIT_SHAPES)[number];
 const eighths = (...n: number[]): Len[] => n.map((k) => (k * INCH) / 8);
 
 /**
- * The sizes the router card offers to tap for each shape: the common bits sold in sets (radius for edge
- * shapes, cutting width for a straight bit). Any other size is typed on the card.
+ * The sizes the router card offers to tap for each shape: the common bits sold in sets (radius for
+ * edge shapes, cutting width for a straight bit). Any other size is typed on the card.
  */
 export const USUAL_BIT_SIZES: Readonly<Record<BitShape, readonly Len[]>> = {
   roundover: eighths(1, 2, 3, 4),
@@ -65,7 +66,9 @@ export interface ShopRecord {
   stock: Stock[];
   /** Topics answered one at a time after a skipped pegboard. */
   told: ToolTopic[];
-  /** Carried from a saved version-1 shop (no editor yet): the engine's sheet trim, in project units. */
+  /**
+   * Carried from a saved version-1 shop (no editor yet): the engine's sheet trim, in project units.
+   */
   sheetTrim?: Len;
   /** Carried from a saved version-1 shop: the engine's board end trim, in project units. */
   solidTrim?: Len;
@@ -94,7 +97,9 @@ export const STARTER_RECORD: ShopRecord = {
 const sizesOf = (bits: readonly RouterBit[], shape: BitShape): Len[] =>
   bits.filter((b) => b.shape === shape).map((b) => b.size);
 
-/** The engine's view of the shop: cut width, dado stack, router bits and hand-cut dovetails only. */
+/**
+ * The engine's view of the shop: cut width, dado stack, router bits and hand-cut dovetails only.
+ */
 export function shopProfileFor(record: ShopRecord): ShopProfile {
   const tools: ShopProfile["tools"] = [];
   if (record.dadoStack) tools.push({ type: "dadoStack", maxWidth: record.dadoStack.maxWidth });
@@ -114,7 +119,9 @@ export function shopProfileFor(record: ShopRecord): ShopProfile {
   };
 }
 
-/** A version-1 saved shop (a `ShopProfile`) read as a set-up pegboard, so nothing it said is lost. */
+/**
+ * A version-1 saved shop (a `ShopProfile`) read as a set-up pegboard, so nothing it said is lost.
+ */
 export function recordFromProfile(profile: ShopProfile, stock: readonly Stock[]): ShopRecord {
   const dado = profile.tools.find((t) => t.type === "dadoStack");
   const router = profile.tools.find((t) => t.type === "router");
@@ -141,7 +148,9 @@ export function recordFromProfile(profile: ShopProfile, stock: readonly Stock[])
   };
 }
 
-/** True when the woodworker has said whether they have this tool (on the pegboard, or when asked). */
+/**
+ * True when the woodworker has said whether they have this tool (on the pegboard, or when asked).
+ */
 export function toldAbout(record: ShopRecord, topic: ToolTopic): boolean {
   return record.setUp || record.told.includes(topic);
 }

@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // The user's shop (Domain model, ShopProfile: "per user, not per project"), kept in the browser
-// (ADR 015, D4; the pegboard record is ADR 016, D3) and checked by the engine's own rule before use.
+// (ADR 015, D4; the pegboard record is ADR 016, D3) and checked by the engine's own rule before
+// use.
 
 import { type ShopProfile, shopProblem } from "@kerf/core";
 import { recordFromProfile, type ShopRecord, STARTER_RECORD, shopProfileFor } from "./shop-record";

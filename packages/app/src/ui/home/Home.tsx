@@ -2,11 +2,11 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Home (design spec §2; ADR 016, D1): where every visit after the first starts. The sidebar finds and
-// opens projects; the main area is "What's on the bench?" with the templates, Inspiration (later)
-// and the recent projects, or All projects. A browser that cannot keep projects is told so, and the
-// banner stays; the open project it does not keep is the first recent card, so it is never out of
-// reach. New project opens over Home, which is hidden and out of reach while it is open.
+// Home (design spec §2; ADR 016, D1): where every visit after the first starts. The sidebar finds
+// and opens projects; the main area is "What's on the bench?" with the templates, Inspiration
+// (later) and the recent projects, or All projects. A browser that cannot keep projects is told so,
+// and the banner stays; the open project it does not keep is the first recent card, so it is never
+// out of reach. New project opens over Home, which is hidden and out of reach while it is open.
 
 import type { Project } from "@kerf/core";
 import { type ReactNode, useId, useRef, useState } from "react";

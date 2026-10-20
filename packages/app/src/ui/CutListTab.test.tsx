@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Design spec, "Ask when it matters"; Ruling R24: every cut is planned with the saw's blade width, so the
-// cut list asks what the woodworker cuts with when the pegboard was skipped, or saved with no saw on it,
-// and the saw was never asked about.
+// Design spec, "Ask when it matters"; Ruling R24: every cut is planned with the saw's blade width,
+// so the cut list asks what the woodworker cuts with when the pegboard was skipped, or saved with
+// no saw on it, and the saw was never asked about.
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
@@ -16,7 +16,10 @@ import { CutListTab } from "./CutListTab";
 
 const QUESTION = 'Your cut list assumes a 1/8" blade. What do you cut with?';
 
-/** The cut list of a new bookcase, its shop as the skipped pegboard leaves it unless `record` is given. */
+/**
+ * The cut list of a new bookcase, its shop as the skipped pegboard leaves it unless `record` is
+ * given.
+ */
 async function cutList(record?: ShopRecord) {
   const store = await workshopStore();
   if (record) store.getState().setShopRecord(record);

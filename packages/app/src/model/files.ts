@@ -91,8 +91,9 @@ export function openKerfBytes(
 }
 
 /**
- * A plain reason a download failed, for "The file could not be downloaded: <reason>", or undefined when
- * the failure is not in the project or its details but a fault in Kerf, to be logged and reported.
+ * A plain reason a download failed, for "The file could not be downloaded: <reason>", or undefined
+ * when the failure is not in the project or its details but a fault in Kerf, to be logged and
+ * reported.
  */
 export function saveFailureReason(error: unknown): string | undefined {
   if (error instanceof KerfFormatError) return "its dates or version could not be written.";

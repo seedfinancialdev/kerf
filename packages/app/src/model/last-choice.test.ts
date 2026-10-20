@@ -2,10 +2,10 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Design spec §3: New project "remembers the last piece, wood and units", so Create or Enter starts at
-// once. The piece and wood are kept here; the units are the units for new projects (kerf.units), which
-// Settings also sets, so there is one answer to "which units". What was kept is checked when read back:
-// damaged text gives nothing, never a crash.
+// Design spec §3: New project "remembers the last piece, wood and units", so Create or Enter starts
+// at once. The piece and wood are kept here; the units are the units for new projects (kerf.units),
+// which Settings also sets, so there is one answer to "which units". What was kept is checked when
+// read back: damaged text gives nothing, never a crash.
 
 import { describe, expect, it } from "vitest";
 import { memoryStorage, unreadable } from "../testing/memory-storage";

@@ -2,10 +2,10 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// ADR 016, D4: a step that needs a tool the record was never told about asks once, in place, and the
-// answer is kept in the record. Rulings R24 (when the saw is asked about) and R25 (nothing assumed on Yes).
-// The questions on screen are tested in ui/AskAboutTool.test.tsx, ui/JoineryStep.test.tsx and
-// ui/CutListTab.test.tsx.
+// ADR 016, D4: a step that needs a tool the record was never told about asks once, in place, and
+// the answer is kept in the record. Rulings R24 (when the saw is asked about) and R25 (nothing
+// assumed on Yes). The questions on screen are tested in ui/AskAboutTool.test.tsx,
+// ui/JoineryStep.test.tsx and ui/CutListTab.test.tsx.
 
 import { INCH } from "@kerf/core";
 import { describe, expect, it } from "vitest";
@@ -19,7 +19,10 @@ const answer = (topic: ToolTopic, label: string) => {
   return found;
 };
 
-/** The pegboard saved with "That's my shop" after taking both saws down (the starter has a table saw). */
+/**
+ * The pegboard saved with "That's my shop" after taking both saws down (the starter has a table
+ * saw).
+ */
 const SET_UP_WITHOUT_SAWS: ShopRecord = recordOf(
   toggleTool(wallFrom(STARTER_RECORD), "tableSaw"),
   true,

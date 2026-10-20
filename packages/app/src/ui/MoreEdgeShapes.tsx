@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The edge shapes the shop cannot use yet (design spec, "Router bits and edge shapes"; ADR 016, D7): the
-// common roundovers it has no bit for, greyed with the reason and an offer to add the bit, and the shapes
-// the engine cannot cut yet, marked Later.
+// The edge shapes the shop cannot use yet (design spec, "Router bits and edge shapes"; ADR 016,
+// D7): the common roundovers it has no bit for, greyed with the reason and an offer to add the bit,
+// and the shapes the engine cannot cut yet, marked Later.
 
 import { formatLength, type Len, type Project } from "@kerf/core";
 import { useState } from "react";
@@ -24,9 +24,9 @@ const SHAPE_NAMES: Record<BitShape, string> = {
 };
 
 /**
- * The `noBit` and `later` offers as greyed buttons. Pressing a roundover without a bit asks whether to
- * add it; `onAdd` gets its radius (project units) on Yes. A later shape cannot be pressed; its tip says
- * why; one whose bit is among `bits` (the router card) is shown with its size.
+ * The `noBit` and `later` offers as greyed buttons. Pressing a roundover without a bit asks whether
+ * to add it; `onAdd` gets its radius (project units) on Yes. A later shape cannot be pressed; its
+ * tip says why; one whose bit is among `bits` (the router card) is shown with its size.
  */
 export function MoreEdgeShapes({
   offers,

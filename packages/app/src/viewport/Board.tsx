@@ -20,7 +20,9 @@ import { meshFor } from "./meshes";
 interface BoardProps {
   look: BoardLook;
   ready: boolean;
-  /** True when drawing this board failed, so it is drawn plain with the badge (ADR 015, rule 10). */
+  /**
+   * True when drawing this board failed, so it is drawn plain with the badge (ADR 015, rule 10).
+   */
   faulted?: boolean;
   color: string;
   selected: boolean;

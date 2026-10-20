@@ -3,8 +3,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Unmounts what each screen test rendered, so tests never see each other's screens; and gives jsdom
-// the ResizeObserver every browser Kerf runs in has. The 3D canvas measures itself with one; this one
-// never reports a size, so a canvas in a screen test stays blank instead of asking jsdom for WebGL.
+// the ResizeObserver every browser Kerf runs in has. The 3D canvas measures itself with one; this
+// one never reports a size, so a canvas in a screen test stays blank instead of asking jsdom for
+// WebGL.
 
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";

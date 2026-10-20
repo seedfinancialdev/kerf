@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Design spec, §1 "Your shop (the pegboard)": tap a card to hang it, a hung tool shows its settings,
-// a count of what is hung, and "Skip for now" (the starter shop, asked about later) or "That's my
-// shop" (ADR 016, D3). Nothing is saved until one of the two is pressed.
+// Design spec, §1 "Your shop (the pegboard)": tap a card to hang it, a hung tool shows its
+// settings, a count of what is hung, and "Skip for now" (the starter shop, asked about later) or
+// "That's my shop" (ADR 016, D3). Nothing is saved until one of the two is pressed.
 
 import { INCH } from "@kerf/core";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";

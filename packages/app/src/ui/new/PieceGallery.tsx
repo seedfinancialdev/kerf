@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // New project's left side (design spec §3, "Tabs"): Templates (the pieces, with Table and Dresser
-// marked Later and "Something else"), Blank (an empty project, a plain case, a plain box), Open file
-// (a .kerf file, added as a new project) and Inspiration, which comes later.
+// marked Later and "Something else"), Blank (an empty project, a plain case, a plain box), Open
+// file (a .kerf file, added as a new project) and Inspiration, which comes later.
 
 import { useId, useRef } from "react";
 import { BLANKS, PIECES, type Piece, type PieceId } from "../../model/new-project";

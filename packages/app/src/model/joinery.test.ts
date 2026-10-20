@@ -40,7 +40,8 @@ describe("joineryRows()", () => {
     expect(rows[0]?.shop).toBe(
       "You'd need a dado stack, or a router with a straight bit no wider than 23/32\".",
     );
-    // The engine names the dado stack for a cut nothing in the shop makes (core outputs/machining.ts).
+    // The engine names the dado stack for a cut nothing in the shop makes (core
+    // outputs/machining.ts).
     expect(rows[0]?.topic).toBe("dadoStack");
   });
 

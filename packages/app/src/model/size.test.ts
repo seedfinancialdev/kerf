@@ -228,7 +228,8 @@ describe("readShopLength()", () => {
   });
 
   it("knows no project's names, and says so in words that name the field", () => {
-    // Task 8 review: the engine's `Unknown name "width"` says neither what is wrong nor what to type.
+    // Task 8 review: the engine's `Unknown name "width"` says neither what is wrong nor what to
+    // type.
     expect(readShopLength("width", "imperial", LABEL, ZERO)).toEqual({
       ok: false,
       message: 'Roundover size: "width" isn\'t a length; type one like 30" or 762 mm.',
@@ -254,7 +255,8 @@ describe("explainSize()", () => {
   it.each(["tall", "30-", "30-1/", "30#", "30 x", '36""', '1/0"'])(
     "names the field and says what to type for the half-typed or mistyped %s",
     (text) => {
-      // Task 10 review: the engine's words ("Expected a value", "Unexpected character", …) say neither.
+      // Task 10 review: the engine's words ("Expected a value", "Unexpected character", …) say
+      // neither.
       expect(said(text)).toBe(`Width: "${text}" isn't a length; type one like 30" or 762 mm.`);
     },
   );
@@ -283,6 +285,11 @@ describe("retype()", () => {
 
   it('types 1/8" as 3.175 mm, which is exact (1/8 × 25.4)', () => {
     expect(retype('1/8"', "imperial", "metric")).toBe("3.175 mm");
+  });
+
+  it('types 900 mm in inches to the nearest 1/64", which is not exact', () => {
+    // 900 ÷ 25.4 = 35.4331"; × 64 = 2267.72 → 2268/64 = 35-28/64 = 35-7/16".
+    expect(retype("900 mm", "metric", "imperial")).toBe('35-7/16"');
   });
 
   it("gives nothing for text that is not a length", () => {

@@ -27,7 +27,10 @@ function download(bytes: Uint8Array, name: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-/** Said when a download is asked for with no project open (the window's fallback offers it regardless). */
+/**
+ * Said when a download is asked for with no project open (the window's fallback offers it
+ * regardless).
+ */
 const NOTHING_TO_DOWNLOAD = "There is no project to download yet.";
 
 /**
@@ -43,8 +46,8 @@ export async function saveShownProject(store: KerfStore, now: Date): Promise<voi
     return;
   }
   const stamp = now.toISOString();
-  // A view that cannot draw its picture, or not in time, must not stop the download: the file just has
-  // no thumbnail.
+  // A view that cannot draw its picture, or not in time, must not stop the download: the file just
+  // has no thumbnail.
   const thumbnail = await pictureInTime(s.thumbnail);
   downloadKerf(store, { project, created: s.created ?? stamp, modified: stamp, thumbnail });
 }

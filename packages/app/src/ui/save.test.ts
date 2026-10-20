@@ -148,7 +148,9 @@ describe("saveShownProject()", () => {
 describe("downloadKeptProject()", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  /** A library with the bookcase kept at `CREATED`, then the box made and left open an hour later. */
+  /**
+   * A library with the bookcase kept at `CREATED`, then the box made and left open an hour later.
+   */
   async function twoKept() {
     let time = Date.parse(CREATED);
     const store = createKerfStore({

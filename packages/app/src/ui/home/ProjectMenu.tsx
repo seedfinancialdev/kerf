@@ -31,9 +31,9 @@ function focusNext(items: HTMLElement[], step: number): void {
 }
 
 /**
- * Wires the box `box` as a popup over its parent (which holds the menu's trigger too): its first button
- * takes the focus when it opens; arrow keys, Home and End move between its buttons; Escape, or a
- * press anywhere outside the parent, closes it. Returns the box's key handler.
+ * Wires the box `box` as a popup over its parent (which holds the menu's trigger too): its first
+ * button takes the focus when it opens; arrow keys, Home and End move between its buttons; Escape,
+ * or a press anywhere outside the parent, closes it. Returns the box's key handler.
  */
 function usePopup(
   box: RefObject<HTMLDivElement | null>,

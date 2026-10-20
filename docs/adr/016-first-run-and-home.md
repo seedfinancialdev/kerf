@@ -2,7 +2,10 @@
 
 Status: accepted (maintainer, 2026-10-14). Design: `docs/superpowers/specs/2026-10-14-first-run-and-home-design.md`.
 
-Outcomes: the reviews of the milestone and of the pull request are pending; the controller completes this line when they are done.
+Outcomes: Final review (code, silent failure, tests, whole branch): Critical 0, Important 14 (code 1, silent
+failure 5, tests 5, branch 3, several the same M4-upgrade finding), Minor 28 (code 4, silent failure 6, tests 6,
+branch 12); fixed in 696d50e, 83fb282, c632e3a and the documentation commit that records this line; the rest are
+known limits 19 to 30. The review of the pull request is pending.
 
 ## Context
 
@@ -80,3 +83,26 @@ building because the spec is silent.
     in words are later.
 17. A damaged row in the library at the migrated project's fixed id is overwritten by the migration.
 18. The tour's click-outside rule ends it on any press outside the current tip's part.
+19. The "Something else" idea is kept with the project (and carried by Duplicate), but no screen shows it yet,
+    and a downloaded .kerf file leaves it out.
+20. M4 wrote `kerf.shop` only when the shop card was edited, so most M4 users have a project but no saved shop.
+    After upgrading they see the first-launch pegboard (and later the tour) before Home lists the moved project;
+    skipping it asks the saw and dado questions about a project M4 had already planned (maintainer to confirm).
+21. Every recorded change re-reads the whole library, pictures included, to refresh Home's list, and encodes a
+    picture of the model; no benchmark covers this path.
+22. A wood of your own has no upper limit on its thickness and no check for a name already on the wall.
+23. The 3D lights are set up twice (`Preview.tsx`, `Viewport.tsx`), and `.three` is a global class.
+24. Tour: tip 1's arrow is short and points at the hint line's lower edge; only a selection of boards is cleared
+    before tip 2; any mouse button on the model, not only the one that orbits, keeps the tour during tip 3.
+25. A new metric project's gap starts at 3 mm, the round size nearest 1/8"; D6 gives only the imperial default
+    (maintainer to confirm).
+26. If storage will not let the old project go and the moved project is edited, the next start keeps the stored
+    copy once as "<name> (older tab)": storage cannot tell an older tab's change from the original it still
+    holds.
+27. New project, Open file or opening another project replaces an open project the library does not keep without
+    asking; Home's "Open now, not kept" card and banner are the warning (final review ruling on branch I3).
+28. Home's empty line "Projects you start will show here." also shows under the banner of a browser that keeps
+    no projects.
+29. The start-up fault's words (`main.tsx`) have no automated test: the entry point cannot be loaded in a test.
+30. A database closed while Kerf is open (another tab upgraded it, or the site's data was cleared) is noticed at
+    the library's next call, not at once.

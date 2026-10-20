@@ -26,8 +26,8 @@ export function JoineryStep() {
   if (!project || !joints) return null;
   const rows = joineryRows(joints, project.units, shopRecord);
   // Ask when it matters (ADR 016, D4): a tool the shop was never told about is asked about once, on
-  // the first joint that needs it, where the answer then stays; until it is answered no row claims what
-  // the shop can or cannot cut.
+  // the first joint that needs it, where the answer then stays; until it is answered no row claims
+  // what the shop can or cannot cut.
   const firstOfTool = rows
     .filter((r, i) => rows.findIndex((o) => o.topic === r.topic) === i)
     .map((r) => r.key);

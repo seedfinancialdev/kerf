@@ -2,8 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// When a project was last changed, as a person says it (design spec §2, "Recent files": "the name and
-// when it was last changed"): minutes and hours today, "yesterday", days this week, then the date.
+// When a project was last changed, as a person says it (design spec §2, "Recent files": "the name
+// and when it was last changed"): minutes and hours today, "yesterday", days this week, then the
+// date.
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -13,7 +14,9 @@ const DAYS_COUNTED = 6;
 /** "1 minute ago", "5 minutes ago": `n` of `unit`, plural unless one. */
 const count = (n: number, unit: string): string => `${n} ${unit}${n === 1 ? "" : "s"} ago`;
 
-/** Local calendar days from `earlier` to `later`; whole days, so a change of clocks does not count. */
+/**
+ * Local calendar days from `earlier` to `later`; whole days, so a change of clocks does not count.
+ */
 function daysBetween(earlier: Date, later: Date): number {
   const midnight = (d: Date): number =>
     new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();

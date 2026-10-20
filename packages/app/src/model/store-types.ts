@@ -30,7 +30,9 @@ export interface Solved {
 /** A tool of the tool row. */
 export type ToolId = "select" | "board" | "pushPull" | "move" | "join" | "edge" | "tape";
 
-/** A kept project as a .kerf file holds it: the project, its times (ISO strings) and its picture. */
+/**
+ * A kept project as a .kerf file holds it: the project, its times (ISO strings) and its picture.
+ */
 export interface KeptProject {
   project: Project;
   created: string;
@@ -111,7 +113,9 @@ export interface KerfState {
    * 015, rule 4).
    */
   unitsForNew: Project["units"];
-  /** The piece and wood New project last created, which it starts from next time (design spec §3). */
+  /**
+   * The piece and wood New project last created, which it starts from next time (design spec §3).
+   */
   lastChoice: Partial<LastChoice>;
   /** Open state by section title; a title not listed has its own default. */
   sections: Record<string, boolean>;

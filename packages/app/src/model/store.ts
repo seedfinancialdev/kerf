@@ -202,7 +202,8 @@ export function createKerfStore(deps: {
       // A joint proposed for the project as it was is stale once History moves (ADR 015, ruling C).
       const moved = patch.history !== undefined;
       const pending = moved && next.pending?.tool === "join" ? null : next.pending;
-      // An edit's own Undo offer comes in `patch`; otherwise the last change's offer goes (ADR 015, ruling A).
+      // An edit's own Undo offer comes in `patch`; otherwise the last change's offer goes (ADR 015,
+      // ruling A).
       const notices = moved && patch.notice === undefined ? afterHistoryMoved(line()) : {};
       set({
         ...patch,
@@ -377,8 +378,8 @@ export function createKerfStore(deps: {
       startTour: () => set({ toured: false }),
       setTool: (tool) => {
         const dropped = { tool, pending: null, proposal: null };
-        // A preview belongs to the tool that drew it; leaving it would show, and put in a downloaded file, a change
-        // that is not in History.
+        // A preview belongs to the tool that drew it; leaving it would show, and put in a
+        // downloaded file, a change that is not in History.
         if (get().previewed) show({ ...dropped, previewed: null });
         else set(dropped);
       },

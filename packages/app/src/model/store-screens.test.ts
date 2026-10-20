@@ -567,7 +567,9 @@ describe("when the library cannot be read", () => {
 });
 
 describe("a write the library refuses for a project not open", () => {
-  /** A store with the bookcase kept and not open (a box is open), over a library that then fills. */
+  /**
+   * A store with the bookcase kept and not open (a box is open), over a library that then fills.
+   */
   const withBookcaseKept = async () => {
     const library = fillingLibrary();
     const store = storeWith(library);

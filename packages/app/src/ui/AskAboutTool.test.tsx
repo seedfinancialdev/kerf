@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Design spec, "Ask when it matters"; ADR 016, D4: a step that needs a tool the shop record was never
-// told about asks once, in place, and the answer is written to the shop record. Rulings R24 and R25:
-// nothing is assumed silently, and each answer says what Kerf will plan for.
+// Design spec, "Ask when it matters"; ADR 016, D4: a step that needs a tool the shop record was
+// never told about asks once, in place, and the answer is written to the shop record. Rulings R24
+// and R25: nothing is assumed silently, and each answer says what Kerf will plan for.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";

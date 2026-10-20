@@ -31,7 +31,9 @@ const isSolid = (v: unknown): boolean =>
 const isAllowance = (v: unknown): boolean =>
   isObject(v) && isWhole(v.length, 0) && isWhole(v.width, 0);
 
-/** Core's `Stock`: nesting reads the sheet or solid size and the allowance without checking them. */
+/**
+ * Core's `Stock`: nesting reads the sheet or solid size and the allowance without checking them.
+ */
 const isStock = (v: unknown): boolean =>
   isObject(v) &&
   typeof v.id === "string" &&

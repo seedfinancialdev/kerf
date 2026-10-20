@@ -2,11 +2,11 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// New project's preview (design spec §3: "a live 3D preview of the real model, drawn by the engine"):
-// the solved piece in a small canvas of its own, turning slowly so its depth reads, and still while the
-// pointer is over it. It is only a picture: no navigation, no picking, no thumbnail for the download, and it
-// never changes the store. If it cannot be drawn it says so in its place, and the piece can still be
-// created.
+// New project's preview (design spec §3: "a live 3D preview of the real model, drawn by the
+// engine"): the solved piece in a small canvas of its own, turning slowly so its depth reads, and
+// still while the pointer is over it. It is only a picture: no navigation, no picking, no thumbnail
+// for the download, and it never changes the store. If it cannot be drawn it says so in its place,
+// and the piece can still be created.
 
 import type { Project, SolveResult } from "@kerf/core";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -117,7 +117,8 @@ export function Preview({ project, result }: { project: Project; result: SolveRe
         note
       ) : (
         // Not ThreeDGuard: that also warns on the notice line, which would outlast the panel; the
-        // words in the preview's place say all there is to say. The fault is logged for a bug report.
+        // words in the preview's place say all there is to say. The fault is logged for a bug
+        // report.
         <Boundary fallback={() => note} onFailure={(error) => console.error(error)}>
           <PreviewCanvas project={project} result={result} />
         </Boundary>

@@ -74,10 +74,10 @@ export function readLength(text: string, project: Project, self?: string, label?
 
 /**
  * A refusal of the size typed as `text` into the field called `label`, in words that name the field
- * and say what to type. Kerf's own refusals are already plain and come back unchanged: a bare number
- * (add a unit), a length too large, and one that ends "must be more than zero." Anything else is the
- * expression reader's ("Expected a value" for a half-typed `30-`, `Unknown name "tall"`, …) and
- * becomes `Width: "30-" isn't a length; type one like 30" or 762 mm.`
+ * and say what to type. Kerf's own refusals are already plain and come back unchanged: a bare
+ * number (add a unit), a length too large, and one that ends "must be more than zero." Anything
+ * else is the expression reader's ("Expected a value" for a half-typed `30-`, `Unknown name
+ * "tall"`, …) and becomes `Width: "30-" isn't a length; type one like 30" or 762 mm.`
  */
 export function explainSize(label: string, text: string, message: string): string {
   const plain =
@@ -106,8 +106,8 @@ const noProject = (units: Project["units"]): Project => ({
 
 /**
  * A length typed on the pegboard (a blade, a bit, a wood's thickness), read like any size field in
- * `units` but outside any project, and snapped to that grid. Text that is not a length is refused in
- * words that name the field called `label` (`explainSize`); zero or less is refused with
+ * `units` but outside any project, and snapped to that grid. Text that is not a length is refused
+ * in words that name the field called `label` (`explainSize`); zero or less is refused with
  * `notPositive`, which names the thing being sized.
  */
 export function readShopLength(
@@ -185,9 +185,10 @@ export function literalFor(len: Len, units: Project["units"]): Expr {
 }
 
 /**
- * A length typed in `from` units, typed again for `to` units, exactly, as the usual sizes are written
- * (30" becomes "762 mm", beside the usual "900 mm"), so a change of units keeps what was typed.
- * Undefined for text that is not a length.
+ * A length typed in `from` units, typed again for `to` units as the usual sizes are written, so a
+ * change of units keeps what was typed. Inches to millimetres is exact (30" becomes "762 mm", beside
+ * the usual "900 mm"); millimetres to inches is the nearest 1/64", the inch grid ("900 mm" becomes
+ * 35-7/16", 0.0044" short). Undefined for text that is not a length.
  */
 export function retype(
   text: string,

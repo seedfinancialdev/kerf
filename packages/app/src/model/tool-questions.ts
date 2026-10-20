@@ -2,9 +2,10 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// What "ask when it matters" asks about each tool, what each answer writes to the shop record, and what
-// Kerf then says it will plan for (design spec, "Ask when it matters"; ADR 016, D4). Every answer marks
-// its topic told, so it is asked once; nothing is assumed without saying so (Rulings R24, R25).
+// What "ask when it matters" asks about each tool, what each answer writes to the shop record, and
+// what Kerf then says it will plan for (design spec, "Ask when it matters"; ADR 016, D4). Every
+// answer marks its topic told, so it is asked once; nothing is assumed without saying so (Rulings
+// R24, R25).
 
 import { formatLength, type Len, type Project } from "@kerf/core";
 import {
@@ -24,8 +25,8 @@ export interface ToolAnswer {
   /** The button's words, in the project's units. */
   label: (units: Units) => string;
   /**
-   * The record after this answer, marked told. `widest` is the dado stack's widest cut chosen with the
-   * question (project units); other answers ignore it.
+   * The record after this answer, marked told. `widest` is the dado stack's widest cut chosen with
+   * the question (project units); other answers ignore it.
    */
   record: (record: ShopRecord, widest: Len) => ShopRecord;
   /** What Kerf will plan for now, said once the answer is given, from the record it left. */
@@ -45,9 +46,10 @@ export interface ToolQuestion {
 }
 
 /**
- * True when a screen should ask about `topic`. A saw is asked about once, even on a skipped pegboard that
- * assumes a table saw, because every cut is planned with its blade; and on a pegboard saved without one
- * (Ruling R24). Any other tool is asked about until the shop is set up or told (ADR 016, D4).
+ * True when a screen should ask about `topic`. A saw is asked about once, even on a skipped
+ * pegboard that assumes a table saw, because every cut is planned with its blade; and on a pegboard
+ * saved without one (Ruling R24). Any other tool is asked about until the shop is set up or told
+ * (ADR 016, D4).
  */
 export function asksAbout(record: ShopRecord, topic: ToolTopic): boolean {
   if (topic !== "saw") return !toldAbout(record, topic);
@@ -55,7 +57,9 @@ export function asksAbout(record: ShopRecord, topic: ToolTopic): boolean {
   return !record.setUp || (!record.tableSaw && !record.trackSaw);
 }
 
-/** The widest cut the dado question starts at: the record's own dado stack, else 3/4" (Ruling R25). */
+/**
+ * The widest cut the dado question starts at: the record's own dado stack, else 3/4" (Ruling R25).
+ */
 export function startingWidest(record: ShopRecord): Len {
   return record.dadoStack?.maxWidth ?? STARTER_DADO_WIDTH;
 }
@@ -78,7 +82,9 @@ const NO_OTHER_WAY = "No, show me another way";
 const blade = (record: ShopRecord, units: Units) =>
   formatLength(shopProfileFor(record).kerf, units);
 
-/** The blade of the saw just named, which is not always the one planned with when the shop has both. */
+/**
+ * The blade of the saw just named, which is not always the one planned with when the shop has both.
+ */
 const bladeOf = (saw: ShopRecord["tableSaw"], units: Units) =>
   formatLength(saw?.kerf ?? DEFAULT_KERF, units);
 
@@ -97,7 +103,9 @@ const notSure: ToolAnswer = answer(
   plansBlade,
 );
 
-/** The question for every topic. A tool kept on Yes keeps its own settings when the record has it. */
+/**
+ * The question for every topic. A tool kept on Yes keeps its own settings when the record has it.
+ */
 export const TOOL_QUESTIONS: Readonly<Record<ToolTopic, ToolQuestion>> = {
   saw: {
     text: (r, units) => `Your cut list assumes a ${blade(r, units)} blade. What do you cut with?`,

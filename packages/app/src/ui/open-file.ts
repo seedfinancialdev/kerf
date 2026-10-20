@@ -2,8 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Open file (design spec §2 and §3): a .kerf file picked on Home or in New project is added as a new
-// project and opens. Both places pick through a file chooser and hand the file over the same way.
+// Open file (design spec §2 and §3): a .kerf file picked on Home or in New project is added as a
+// new project and opens. Both places pick through a file chooser and hand the file over the same
+// way.
 
 import type { ChangeEvent } from "react";
 import type { KerfStore } from "../model/store-types";

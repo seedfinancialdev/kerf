@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Design spec §2, "Recent files" and "Project card menu (⋯)": a card shows the picture of the model,
-// the name and when it was last changed; its menu renames, duplicates, downloads and deletes, and
-// Delete asks first, then offers Undo.
+// Design spec §2, "Recent files" and "Project card menu (⋯)": a card shows the picture of the
+// model, the name and when it was last changed; its menu renames, duplicates, downloads and
+// deletes, and Delete asks first, then offers Undo.
 
 import { serializeProject } from "@kerf/core";
 import { readKerf } from "@kerf/io";

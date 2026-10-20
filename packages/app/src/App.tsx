@@ -27,9 +27,9 @@ import { WindowGuard } from "./ui/WindowGuard";
 import { ThreeDGuard, viewFailure } from "./viewport/ThreeDGuard";
 
 /**
- * The Kerf window, on the screen `store` is on; the Workshop has the top bar, the project tree,
- * the model, the inspector and the build-plan drawer, with the tour on a first visit. `model` is the 3D view, passed in so tests
- * can leave WebGL out.
+ * The Kerf window, on the screen `store` is on; the Workshop has the top bar, the project tree, the
+ * model, the inspector and the build-plan drawer, with the tour on a first visit. `model` is the 3D
+ * view, passed in so tests can leave WebGL out.
  */
 export function App({ store, model }: { store: KerfStore; model: ReactNode }) {
   return (

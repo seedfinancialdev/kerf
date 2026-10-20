@@ -2,11 +2,12 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The tour (design spec §4): four tips, one at a time, each a small card by the part of the Workshop
-// it is about, shown the first time the Workshop opens and again from Learn. A card never covers its
-// own part, another tip's part, or a control a tip names (Ruling R29); it sits on the model as a note
-// sits on a drawing. It never blocks the screen: Escape, or a press outside both the card and the
-// part it is about, ends it (Ruling R30), so the model can be orbited during its own tip.
+// The tour (design spec §4): four tips, one at a time, each a small card by the part of the
+// Workshop it is about, shown the first time the Workshop opens and again from Learn. A card never
+// covers its own part, another tip's part, or a control a tip names (Ruling R29); it sits on the
+// model as a note sits on a drawing. It never blocks the screen: Escape, or a press outside both
+// the card and the part it is about, ends it (Ruling R30), so the model can be orbited during its
+// own tip.
 
 import {
   type CSSProperties,
@@ -24,7 +25,9 @@ import { keptInside, placeTip, type TipPlacement } from "./Tip";
 /** Where a card sits: on a side of its anchor, or inside the anchor's top-left corner. */
 type CardPlacement = TipPlacement | "inside";
 
-/** One tip: the part of the Workshop it points at (its `data-tour` name), its words, and its place. */
+/**
+ * One tip: the part of the Workshop it points at (its `data-tour` name), its words, and its place.
+ */
 interface TourTip {
   anchor: "steps" | "sizes" | "model" | "drawer";
   text: string;
@@ -66,7 +69,8 @@ const TOUR: readonly [TourTip, ...TourTip[]] = [
     text: "Your shopping list, cut list, sheets and assembly steps live here, always up to date.",
     placement: "above",
     clear: ".tool-row",
-    // Above the tool row, an arrow would point at a tool, not at the drawer's tabs (Task 13 review).
+    // Above the tool row, an arrow would point at a tool, not at the drawer's tabs (Task 13
+    // review).
     arrow: false,
   },
 ];
@@ -76,12 +80,17 @@ const TOUR: readonly [TourTip, ...TourTip[]] = [
  * corner when inside it, in pixels.
  */
 const INSET = 16;
-/** How far along its part of the screen the card's arrow points, from that part's start, in pixels. */
+/**
+ * How far along its part of the screen the card's arrow points, from that part's start, in pixels.
+ */
 const ARROW_INSET = 20;
 /** The nearest the arrow comes to the card's corners, in pixels, so it clears their rounding. */
 const ARROW_CLEAR = 14;
 
-/** Where the card is drawn: its top-left corner, and the side and offset of its arrow (none when unanchored). */
+/**
+ * Where the card is drawn: its top-left corner, and the side and offset of its arrow (none when
+ * unanchored).
+ */
 interface CardPlace {
   left: number;
   top: number;
@@ -108,8 +117,8 @@ function reaching(target: DOMRect, clear: DOMRect | undefined, placement: TipPla
 
 /**
  * Where a card of size `card` (pixels) goes for `tip`: by its anchor, with the arrow (unless the
- * tip has none) pointing a little way into it; inside the anchor, with no arrow; or, when the anchor is not on screen, in
- * the middle of the window.
+ * tip has none) pointing a little way into it; inside the anchor, with no arrow; or, when the
+ * anchor is not on screen, in the middle of the window.
  */
 function placeCard(tip: TourTip, card: DOMRect): CardPlace {
   const target = anchorOf(tip)?.getBoundingClientRect();
@@ -171,7 +180,9 @@ function useBringOutSizes(): () => void {
   };
 }
 
-/** The card for the tip shown, from the first; it ends the tour through the store's `finishTour`. */
+/**
+ * The card for the tip shown, from the first; it ends the tour through the store's `finishTour`.
+ */
 function TourCard() {
   const store = useKerfStore();
   const [tip, setTip] = useState<TourTip>(TOUR[0]);

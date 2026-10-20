@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// One card on the pegboard (design spec, §1 "Your shop"): a line drawing, a name and what the thing is
-// for. Tapping hangs it, and a hung tool shows its settings on the card.
+// One card on the pegboard (design spec, §1 "Your shop"): a line drawing, a name and what the thing
+// is for. Tapping hangs it, and a hung tool shows its settings on the card.
 
 import type { ReactNode } from "react";
 import { Drawing, type DrawingName } from "../art/drawings";

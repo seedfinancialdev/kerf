@@ -2,8 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Design spec, §1 "Your shop": the pegboard while it is being changed. A tool's settings appear once
-// it is hung and are what the record keeps (ADR 016, D3); nothing else in the record is touched.
+// Design spec, §1 "Your shop": the pegboard while it is being changed. A tool's settings appear
+// once it is hung and are what the record keeps (ADR 016, D3); nothing else in the record is
+// touched.
 
 import { INCH } from "@kerf/core";
 import { describe, expect, it } from "vitest";

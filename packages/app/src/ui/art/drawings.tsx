@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Line drawings of tools, wood and pieces (design spec, "The look"): thin strokes in the current colour,
-// so a chosen card turns them amber. Decorative only; every drawing sits beside its name.
+// Line drawings of tools, wood and pieces (design spec, "The look"): thin strokes in the current
+// colour, so a chosen card turns them amber. Decorative only; every drawing sits beside its name.
 
 import type { ReactNode } from "react";
 

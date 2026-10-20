@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The Edge profile panel: a radius from the roundover bits on the router card, then both front edges or
-// the edges ticked by name. Router bits are edge shapes (ADR 016, D7): the roundovers owned are in the
-// Radius list; the others, and the shapes coming later, are offered beneath it.
+// The Edge profile panel: a radius from the roundover bits on the router card, then both front
+// edges or the edges ticked by name. Router bits are edge shapes (ADR 016, D7): the roundovers
+// owned are in the Radius list; the others, and the shapes coming later, are offered beneath it.
 
 import { type EdgeRef, edgeName, formatLength, type PlacedPart } from "@kerf/core";
 import { useId, useState } from "react";

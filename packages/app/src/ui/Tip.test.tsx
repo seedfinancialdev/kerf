@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Design spec, "Tooltips": after about half a second of hover; at once when moving straight to a neighbour;
-// on keyboard focus; the tip names the control, its key and what it does.
+// Design spec, "Tooltips": after about half a second of hover; at once when moving straight to a
+// neighbour; on keyboard focus; the tip names the control, its key and what it does.
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -106,7 +106,8 @@ describe("Tip", () => {
         <button type="button">Push/Pull</button>
       </Tip>,
     );
-    // jsdom reports every focus() as keyboard focus, so say what a browser says after a mouse press.
+    // jsdom reports every focus() as keyboard focus, so say what a browser says after a mouse
+    // press.
     const matches = Element.prototype.matches;
     vi.spyOn(Element.prototype, "matches").mockImplementation(function (
       this: Element,
@@ -295,7 +296,8 @@ describe("Tip", () => {
       );
       tabTo(screen.getByRole("button"));
       const tip = screen.getByRole("tooltip");
-      // The panel's left edge, 800, less 6 and the tip's 200: 594; level with the control's top, 300.
+      // The panel's left edge, 800, less 6 and the tip's 200: 594; level with the control's top,
+      // 300.
       expect([tip.style.left, tip.style.top]).toEqual(["594px", "300px"]);
     });
 

@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Design spec §3: the template, its size (outside or space to fill), its piece options and the wood become one
-// new project; anything that cannot be built is refused in plain words before Create.
+// Design spec §3: the template, its size (outside or space to fill), its piece options and the wood
+// become one new project; anything that cannot be built is refused in plain words before Create.
 
 import { INCH, MM, parseLength, solve } from "@kerf/core";
 import { describe, expect, it } from "vitest";
@@ -118,9 +118,9 @@ describe("newProject()", () => {
   });
 
   it("sizes a box by length, height and width", () => {
-    // Walnut 4/4 walls are 1/2" thick (Tw). Dovetailed corners (the default) run the front and back the full
-    // length: Front, Back = 12" long × 6" wide. Sides = depth 8" long × 6" wide. Bottom (box.ts seatBottom) =
-    // (L − 2Tw) × (D − 2Tw) = 11" × 7", cut from 1/4" plywood.
+    // Walnut 4/4 walls are 1/2" thick (Tw). Dovetailed corners (the default) run the front and back
+    // the full length: Front, Back = 12" long × 6" wide. Sides = depth 8" long × 6" wide. Bottom
+    // (box.ts seatBottom) = (L − 2Tw) × (D − 2Tw) = 11" × 7", cut from 1/4" plywood.
     const choice = {
       ...defaultChoice("box", "imperial", STARTER_RECORD),
       wood: STOCK_IDS.walnut44,
@@ -200,7 +200,8 @@ describe("newProject()", () => {
   });
 
   it('stores 900 mm in an imperial project on the 1/64" grid', () => {
-    // 900 mm = 7_200_000 units; 1/64" = 3_175 units; 7_200_000 / 3_175 = 2267.7 → 2268 steps = 7_200_900
+    // 900 mm = 7_200_000 units; 1/64" = 3_175 units;
+    // 7_200_000 / 3_175 = 2267.7 → 2268 steps = 7_200_900
     const r = newProject({ ...bookcase, w: "900 mm" }, STARTER_RECORD);
     if (!r.ok) throw new Error(r.message);
     const width = r.edit.project.params.find((p) => p.name === "width");

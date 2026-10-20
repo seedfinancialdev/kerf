@@ -2,8 +2,9 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// New project (design spec §3, ADR 016): what the New project panel asks, turned into one project. The panel
-// only gathers choices; everything that can be wrong with them is found here, in plain words, before Create.
+// New project (design spec §3, ADR 016): what the New project panel asks, turned into one project.
+// The panel only gathers choices; everything that can be wrong with them is found here, in plain
+// words, before Create.
 
 import {
   formatLength,
@@ -39,7 +40,10 @@ export type PieceId =
   | "plainCase"
   | "plainBox";
 
-/** One thing the panel can start. `template` is null for a piece with no form; `later` pieces are not built yet. */
+/**
+ * One thing the panel can start. `template` is null for a piece with no form; `later` pieces are
+ * not built yet.
+ */
 export interface Piece {
   id: PieceId;
   name: string;
@@ -107,7 +111,10 @@ export const BLANKS: readonly Piece[] = [
   },
 ];
 
-/** Everything the New project panel gathers. Sizes are text as typed, so they can be wrong until Create. */
+/**
+ * Everything the New project panel gathers. Sizes are text as typed, so they can be wrong until
+ * Create.
+ */
 export interface NewProjectChoice {
   piece: PieceId;
   units: Project["units"];
@@ -133,8 +140,8 @@ export interface NewProjectChoice {
 export type ChoiceField = "w" | "h" | "d" | "gap" | "wood";
 
 /**
- * What `newProject` makes: the project as an edit, the outside size when it came from a space, the idea;
- * or why not, with the `field` it is about when it is about one.
+ * What `newProject` makes: the project as an edit, the outside size when it came from a space, the
+ * idea; or why not, with the `field` it is about when it is about one.
  */
 export type NewProjectResult =
   | { ok: true; edit: Edit; outside: Size3 | null; note: string }
@@ -182,8 +189,8 @@ function thickestSheet(stock: readonly Stock[]): Stock | undefined {
 }
 
 /**
- * The panel's starting choices for `piece`: the usual size for the piece in `units`, four shelves, a back,
- * and the thickest sheet in the shop's stock.
+ * The panel's starting choices for `piece`: the usual size for the piece in `units`, four shelves,
+ * a back, and the thickest sheet in the shop's stock.
  */
 export function defaultChoice(
   piece: PieceId,
@@ -208,9 +215,10 @@ export function defaultChoice(
 }
 
 /**
- * The wood a new project in `units` can be built from: the shop's stock first, then any starter stock the
- * shop lacks, so the templates' own stock ids always resolve. A metric project keeps only wood whose thickness
- * is a whole number of 0.01 mm steps (the 3/4 plywood is not), since every length there sits on that grid.
+ * The wood a new project in `units` can be built from: the shop's stock first, then any starter
+ * stock the shop lacks, so the templates' own stock ids always resolve. A metric project keeps only
+ * wood whose thickness is a whole number of 0.01 mm steps (the 3/4 plywood is not), since every
+ * length there sits on that grid.
  */
 export function woodOffered(units: Project["units"], record: ShopRecord): Stock[] {
   const fits = (s: Stock): boolean =>
@@ -255,7 +263,9 @@ function readSize(
   return { ok: true, value: read.value };
 }
 
-/** The outside size the choice asks for, typed or worked out from the space; or why it cannot be. */
+/**
+ * The outside size the choice asks for, typed or worked out from the space; or why it cannot be.
+ */
 function outsideOf(
   choice: NewProjectChoice,
   project: Project,
@@ -288,10 +298,11 @@ function withSizes(project: Project, size: Size3): Project | string {
 }
 
 /**
- * The project the panel's choices describe, named after the piece. A piece that is not built yet, a size that
- * is empty, zero or not a length, a gap that eats the space, or wood the shop does not stock comes back as
- * `ok: false` with a message to show and the field it is about. "Something else" and the empty project start
- * with no form; the idea comes back as `note` because a project has nowhere to keep it.
+ * The project the panel's choices describe, named after the piece. A piece that is not built yet, a
+ * size that is empty, zero or not a length, a gap that eats the space, or wood the shop does not
+ * stock comes back as `ok: false` with a message to show and the field it is about. "Something
+ * else" and the empty project start with no form; the idea comes back as `note` because a project
+ * has nowhere to keep it.
  */
 export function newProject(choice: NewProjectChoice, record: ShopRecord): NewProjectResult {
   const piece = pieceFor(choice.piece);
@@ -337,7 +348,8 @@ export function newProject(choice: NewProjectChoice, record: ShopRecord): NewPro
     project = shelves.edit.project;
   }
   if (choice.piece === "cabinet") {
-    // The case's back option: "none", "inset-rabbet" or "applied" (core/src/structures/case.ts, line 56).
+    // The case's back option: "none", "inset-rabbet" or "applied" (core/src/structures/case.ts,
+    // line 56).
     project = setOption(
       project,
       structure.id,

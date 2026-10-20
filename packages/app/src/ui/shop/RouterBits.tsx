@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // The router's bits (design spec, §1 "Your shop": "bits, by the shape they cut: roundover, chamfer,
-// cove, ogee, straight, rabbeting; sizes tapped on"). The record keeps every bit; the engine reads the
-// roundover and straight ones (model/shop-record.ts).
+// cove, ogee, straight, rabbeting; sizes tapped on"). The record keeps every bit; the engine reads
+// the roundover and straight ones (model/shop-record.ts).
 
 import { formatLength, type Len, type Project } from "@kerf/core";
 import { useEffect, useRef, useState } from "react";
@@ -89,7 +89,10 @@ function ShapeSizes({
   );
 }
 
-/** Every shape a bit can cut, each with its sizes to tap on or off; `onChange` gets the new bit list. */
+/**
+ * Every shape a bit can cut, each with its sizes to tap on or off; `onChange` gets the new bit
+ * list.
+ */
 export function RouterBits({
   bits,
   units,
@@ -119,8 +122,8 @@ function bitsLine(bits: readonly RouterBit[], units: Project["units"]): string {
 }
 
 /**
- * The router card's settings: its bits in a line and "Edit bits", which opens the bit list beside the
- * card. Escape, "Done" or a tap elsewhere closes it.
+ * The router card's settings: its bits in a line and "Edit bits", which opens the bit list beside
+ * the card. Escape, "Done" or a tap elsewhere closes it.
  */
 export function RouterSettings({
   bits,

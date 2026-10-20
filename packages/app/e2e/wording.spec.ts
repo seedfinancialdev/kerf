@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // CLAUDE.md: banned in UI: mesh, vertex, face (geometry), component, instance, material, extrude,
-// boolean. Checked on every step, every plan tab and every tool panel of the core flow, the Settings
-// menu, a Join answer and a notice; on Home, Your shop, every tab of New project, the tour, the
-// tool row's tips, and the questions a skipped shop is asked; in the words shown and in the
-// placeholders, tooltips and labels a screen reader announces.
+// boolean. Checked on every step, every plan tab and every tool panel of the core flow, the
+// Settings menu, a Join answer and a notice; on Home, Your shop, every tab of New project, the
+// tour, the tool row's tips, and the questions a skipped shop is asked; in the words shown and in
+// the placeholders, tooltips and labels a screen reader announces.
 
 import { expect, type Page, test } from "@playwright/test";
 import { bannedWordsIn } from "../src/testing/banned-words";

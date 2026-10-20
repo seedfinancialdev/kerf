@@ -85,7 +85,7 @@ Between consumer and utilitarian, modeled on Lightroom more than Photoshop: a ca
 
 **Borrow from Lightroom and Photoshop**
 
-- **Workflow modules:** Lightroom's Library → Develop → Print maps onto Shape → Divide → Joinery → Build plan, shown as named modules in the top bar; Home plays Lightroom's Library (ADR 016, D2). Each module rearranges the panels for its job.
+- **Workflow modules:** Lightroom's Library → Develop → Print becomes Home, then the work on the piece (Shape → Divide → Joinery, as Develop), then Build plan (as Print). The four workshop steps are named modules in the top bar; Home is a screen of its own, not a module (ADR 016, D2). Each module rearranges the panels for its job.
 - **Non-destructive by design:** like Lightroom, edits are instructions, not baked changes. Our part graph already works this way; the UI should make that felt (change anything, any time, nothing breaks).
 - **Neutral chrome, content first:** dark gray UI by default so the wood-toned model stands out; a light theme as a setting. Color only for selection, active state and errors.
 - **Accordion panels:** the right panel stacks collapsible sections (Size, Construction, Back, Joinery), like Lightroom's Develop panel. Sections remember their open state.

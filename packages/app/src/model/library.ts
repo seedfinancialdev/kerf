@@ -83,7 +83,10 @@ const DATABASE = "kerf";
 const STORE = "projects";
 const VERSION = 1;
 
-/** Whether `value` is a Uint8Array, wherever it was made (one read back from the database may come from another realm). */
+/**
+ * Whether `value` is a Uint8Array, wherever it was made (one read back from the database may come
+ * from another realm).
+ */
 const isBytes = (value: unknown): boolean =>
   Object.prototype.toString.call(value) === "[object Uint8Array]";
 
@@ -294,7 +297,9 @@ export async function openLibrary(factory: IDBFactory | undefined): Promise<Libr
   };
 }
 
-/** The page's database, or undefined where reading it throws (a sandboxed page, blocked site data). */
+/**
+ * The page's database, or undefined where reading it throws (a sandboxed page, blocked site data).
+ */
 export function browserDatabase(): IDBFactory | undefined {
   try {
     return globalThis.indexedDB ?? undefined;

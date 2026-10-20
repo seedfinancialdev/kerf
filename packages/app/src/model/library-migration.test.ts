@@ -195,7 +195,10 @@ describe("migrateStoredProject()", () => {
   });
 });
 
-/** A library holding the migrated project, edited since as `edited`, as a reload after the move finds it. */
+/**
+ * A library holding the migrated project, edited since as `edited`, as a reload after the move
+ * finds it.
+ */
 async function movedAndEdited(edited: string): Promise<Library> {
   const library = memoryLibrary();
   await library.write({

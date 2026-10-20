@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Home's Templates (design spec §2): tiles for Bookcase, Cabinet and Box, which open New project with
-// that piece chosen, and Table and Dresser, marked Later, whose tips say they are coming.
+// Home's Templates (design spec §2): tiles for Bookcase, Cabinet and Box, which open New project
+// with that piece chosen, and Table and Dresser, marked Later, whose tips say they are coming.
 
 import { PIECES, type Piece, type PieceId } from "../../model/new-project";
 import { Drawing, type DrawingName } from "../art/drawings";

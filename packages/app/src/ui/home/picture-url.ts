@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 // Addresses an `<img>` can show for the PNG pictures of kept projects (design spec §2, "Recent
-// files"). The library hands back fresh copies of the bytes every time Home lists the projects, so an
-// address is shared by everything showing the same picture, made the first time it is drawn (no
+// files"). The library hands back fresh copies of the bytes every time Home lists the projects, so
+// an address is shared by everything showing the same picture, made the first time it is drawn (no
 // frame without it), and let go only once nothing shows it.
 
 import { useLayoutEffect, useMemo } from "react";

@@ -2,13 +2,13 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Keeps a fault in Kerf from ending the session silently (CODE_QUALITY rule 9; ADR 015, rule 11).
-// A fault while the window is drawn would leave a blank page, so the window is replaced by a few
-// words and a download, which needs only the store. A fault in a click, a key or a typed size happens
-// outside drawing, where no boundary sees it: React and the browser hand it to the page's `error`
-// and `unhandledrejection` events, the one place every such fault reaches. There it is logged
-// for a bug report, the half-done action is dropped and the user is told. The 3D view keeps its
-// own guard (ThreeDGuard), so the rest of the window outlives it.
+// Keeps a fault in Kerf from ending the session silently (CODE_QUALITY rule 9; ADR 015, rule 11). A
+// fault while the window is drawn would leave a blank page, so the window is replaced by a few
+// words and a download, which needs only the store. A fault in a click, a key or a typed size
+// happens outside drawing, where no boundary sees it: React and the browser hand it to the page's
+// `error` and `unhandledrejection` events, the one place every such fault reaches. There it is
+// logged for a bug report, the half-done action is dropped and the user is told. The 3D view keeps
+// its own guard (ThreeDGuard), so the rest of the window outlives it.
 
 import { type ReactNode, useEffect } from "react";
 import type { KerfStore } from "../model/store-types";
@@ -106,7 +106,9 @@ function windowFailed(store: KerfStore, error: unknown): void {
   }
 }
 
-/** What the window becomes after a fault while drawing it: what to do, the download, and the notice. */
+/**
+ * What the window becomes after a fault while drawing it: what to do, the download, and the notice.
+ */
 function WindowLost({ store }: { store: KerfStore }) {
   return (
     <div className="window-lost">

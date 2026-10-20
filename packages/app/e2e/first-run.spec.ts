@@ -10,7 +10,8 @@ import { expect, type Page, test } from "@playwright/test";
 import { openCard } from "./support/home";
 import { modelDrawn, startBookcase } from "./support/start";
 
-// A first visit: nothing in browser storage (the config seeds a returning user for every other spec).
+// A first visit: nothing in browser storage (the config seeds a returning user for every other
+// spec).
 test.use({ storageState: { cookies: [], origins: [] } });
 
 /**

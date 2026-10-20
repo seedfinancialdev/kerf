@@ -139,8 +139,8 @@ describe("boardBetween()", () => {
     const r = between(base());
     if (!r.ok) throw new Error(r.message);
     expect(r.edit.label).toBe("Added Board 1 between Right side and Left side");
-    // Flush with the sides' fronts (ADR 015, rule 7): the sides are 12" deep (2438400), so 11" wide starts 1"
-    // in.
+    // Flush with the sides' fronts (ADR 015, rule 7): the sides are 12" deep (2438400), so 11" wide
+    // starts 1" in.
     expect(placed(r.edit.project, "Board 1").box.min[1]).toBe(203_200);
   });
 
@@ -154,9 +154,9 @@ describe("boardBetween()", () => {
     expect(box.max[0]).toBe(7_169_150);
   });
 
-  // Hand calculation (ADR 015, rule 7): the inset back is 1/4" (50800) thick against the rear edges and spans
-  // the gap, so a board with no typed width reaches back to it. Its front is the sides' front,
-  // 12" = 2438400. Depth = 2438400 - 50800 = 2387600.
+  // Hand calculation (ADR 015, rule 7): the inset back is 1/4" (50800) thick against the rear edges
+  // and spans the gap, so a board with no typed width reaches back to it. Its front is the sides'
+  // front, 12" = 2438400. Depth = 2438400 - 50800 = 2387600.
   it("reaches back to the back panel and forward to the sides' fronts when no width is given", () => {
     const r = between(base(), null);
     if (!r.ok) throw new Error(r.message);
@@ -287,8 +287,8 @@ describe("the Board tool", () => {
   it("starts a board where the sight line meets the floor", async () => {
     const s = await started();
     down(s, null, floorRay);
-    // Straight down from scene (40, 10, 4) in, the line meets the floor (scene y = 0) at (40, 0, 4).
-    // Scene (x, y, z) is project (x, −z, y) (scene/frames.ts), so project (40in, −4in, 0).
+    // Straight down from scene (40, 10, 4) in, the line meets the floor (scene y = 0) at (40, 0,
+    // 4). Scene (x, y, z) is project (x, −z, y) (scene/frames.ts), so project (40in, −4in, 0).
     expect(s.getState().pending).toEqual({
       tool: "board",
       from: { placed: null, point: [40 * IN, -4 * IN, 0] },
