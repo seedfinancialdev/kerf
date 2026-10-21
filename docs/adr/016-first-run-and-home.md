@@ -69,11 +69,14 @@ building because the spec is silent.
    (maintainer to confirm).
 7. A router straight bit as an alternative to the dado stack for dados is later.
 8. When a shop has both saws, the cut list uses the table saw's blade (R33). A skipped pegboard assumes a table
-   saw at 1/8".
+   saw at 1/8". Maintainer decision (2026-10-21): this is right; a power tool is the default and the woodworker
+   overrides it with a hand tool.
 9. "Applies the shape" in Edge profile means the bit becomes the chosen Radius; the user still presses Both
    front edges or Round the ticked edges.
 10. The wording of the router and hand-tool questions, and of their confirmations, was written by the
-    implementer (maintainer to confirm).
+    implementer. Maintainer decision (2026-10-21): the wording is fine as long as each question shows a picture of
+    the tool. The pegboard cards have drawings; the in-context questions (`AskAboutTool`) show none yet, so
+    that is the open work here.
 11. The saw question appears once for a skipped pegboard, and a click on a saw answer while tips 1 to 3 of the
     tour show ends the tour.
 12. The tour's Size section stays open for the session and is never saved.
@@ -88,7 +91,8 @@ building because the spec is silent.
     and a downloaded .kerf file leaves it out.
 20. M4 wrote `kerf.shop` only when the shop card was edited, so most M4 users have a project but no saved shop.
     After upgrading they see the first-launch pegboard (and later the tour) before Home lists the moved project;
-    skipping it asks the saw and dado questions about a project M4 had already planned (maintainer to confirm).
+    skipping it asks the saw and dado questions about a project M4 had already planned. Maintainer decision
+    (2026-10-21): accepted; M4 users are not a concern.
 21. Every recorded change re-reads the whole library, pictures included, to refresh Home's list, and encodes a
     picture of the model; no benchmark covers this path.
 22. A wood of your own has no upper limit on its thickness and no check for a name already on the wall.
