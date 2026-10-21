@@ -9,21 +9,19 @@ import { loadShopProfile } from "@kerf/fixtures";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
-import { createStorage } from "../model/storage";
-import { createKerfStore, shownProject } from "../model/store";
+import { shownProject } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
 import { bookcaseWithShelf } from "../testing/bookcase-with-shelf";
-import { memoryStorage } from "../testing/memory-storage";
+import { workshopStore } from "../testing/workshop-store";
 import { drawBoard } from "../tools/board";
 import { propose } from "../tools/join";
 import { JoinPanel } from "./JoinPanel";
 
 afterEach(cleanup);
 
-function setup() {
+async function setup() {
   const project = bookcaseWithShelf();
-  const store = createKerfStore({ storage: createStorage(memoryStorage()) });
-  store.getState().begin({ label: "Start", project });
+  const store = await workshopStore({ label: "New project", project });
   store.getState().setTool("join");
   render(
     <KerfProvider store={store}>
@@ -39,13 +37,13 @@ function setup() {
 }
 
 describe("<JoinPanel>", () => {
-  it("asks for two boards before there is a proposal", () => {
-    setup();
+  it("asks for two boards before there is a proposal", async () => {
+    await setup();
     expect(screen.getByText("Click two touching boards.")).toBeTruthy();
   });
 
-  it("shows the reason as a note when the boards cannot be joined", () => {
-    const { store, project, named } = setup();
+  it("shows the reason as a note when the boards cannot be joined", async () => {
+    const { store, project, named } = await setup();
     act(() =>
       store
         .getState()
@@ -56,8 +54,8 @@ describe("<JoinPanel>", () => {
     );
   });
 
-  it("Accept records the joint as one named change", () => {
-    const { store, project, named } = setup();
+  it("Accept records the joint as one named change", async () => {
+    const { store, project, named } = await setup();
     act(() =>
       store
         .getState()
@@ -70,9 +68,8 @@ describe("<JoinPanel>", () => {
   });
 
   describe("with a form-made bookcase", () => {
-    const formSetup = () => {
-      const store = createKerfStore({ storage: createStorage(memoryStorage()) });
-      store.getState().begin(startProject("Bookcase", "imperial"));
+    const formSetup = async () => {
+      const store = await workshopStore(startProject("Bookcase", "imperial"));
       store.getState().setTool("join");
       render(
         <KerfProvider store={store}>
@@ -88,8 +85,8 @@ describe("<JoinPanel>", () => {
       return { store, project, named };
     };
 
-    it("tells the user only the form's boards are now custom when the other was drawn by hand", () => {
-      const { store, project } = formSetup();
+    it("tells the user only the form's boards are now custom when the other was drawn by hand", async () => {
+      const { store, project } = await formSetup();
       const ply = project.stock.find((s) => s.name === "3/4 plywood")?.id ?? "";
       const IN = 203_200;
       store
@@ -118,8 +115,8 @@ describe("<JoinPanel>", () => {
       );
     });
 
-    it("says before Accept which boards will become custom, showing a changed name", () => {
-      const { store, project, named } = formSetup();
+    it("says before Accept which boards will become custom, showing a changed name", async () => {
+      const { store, project, named } = await formSetup();
       const proposed = propose(project, loadShopProfile(), named("Right side"), named("Back"));
       act(() =>
         store.getState().setProposal({
@@ -142,8 +139,8 @@ describe("<JoinPanel>", () => {
       ).toBeTruthy();
     });
 
-    it("shows the reason when a form shelf is joined to the thinner back", () => {
-      const { store, project, named } = formSetup();
+    it("shows the reason when a form shelf is joined to the thinner back", async () => {
+      const { store, project, named } = await formSetup();
       act(() =>
         store
           .getState()
@@ -154,8 +151,8 @@ describe("<JoinPanel>", () => {
       );
     });
 
-    it("a refused Accept leaves History and the project as they were", () => {
-      const { store, project } = formSetup();
+    it("a refused Accept leaves History and the project as they were", async () => {
+      const { store, project } = await formSetup();
       const ply = project.stock.find((s) => s.name === "3/4 plywood")?.id ?? "";
       store
         .getState()
@@ -190,8 +187,8 @@ describe("<JoinPanel>", () => {
     });
   });
 
-  it("says nothing about taking over when both boards were made by hand", () => {
-    const { store, project, named } = setup();
+  it("says nothing about taking over when both boards were made by hand", async () => {
+    const { store, project, named } = await setup();
     act(() =>
       store
         .getState()
@@ -202,8 +199,8 @@ describe("<JoinPanel>", () => {
     expect(store.getState().notice).toBeNull();
   });
 
-  it("says the boards changed, and clears the proposal, when one is no longer there", () => {
-    const { store, project, named } = setup();
+  it("says the boards changed, and clears the proposal, when one is no longer there", async () => {
+    const { store, project, named } = await setup();
     const proposed = propose(project, loadShopProfile(), named("Right side"), named("Board 1"));
     act(() => store.getState().setProposal({ ...proposed, b: "gone" }));
     fireEvent.click(screen.getByRole("button", { name: "Accept" }));
@@ -212,8 +209,8 @@ describe("<JoinPanel>", () => {
     expect(store.getState().history?.entries).toHaveLength(1);
   });
 
-  it("says the boards changed when asked for the other type with one gone", () => {
-    const { store, project, named } = setup();
+  it("says the boards changed when asked for the other type with one gone", async () => {
+    const { store, project, named } = await setup();
     const proposed = propose(project, loadShopProfile(), named("Right side"), named("Board 1"));
     act(() => store.getState().setProposal({ ...proposed, a: "gone" }));
     fireEvent.click(screen.getByRole("button", { name: "Use a rabbet instead" }));

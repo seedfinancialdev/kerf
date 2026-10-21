@@ -45,12 +45,11 @@ h2 {
 }
 
 .brand {
+  padding: 0;
+  border: 0;
+  background: none;
   font-weight: var(--font-weight-strong);
   color: var(--color-text);
-}
-
-.project-name {
-  color: var(--color-text-muted);
 }
 
 .steps-nav {
@@ -145,7 +144,8 @@ h2 {
   color: var(--color-text-muted);
 }
 
-/* The window's place after a fault while drawing it (ui/WindowGuard.tsx): the words, Save. */
+/* The window's place after a fault while drawing it (ui/WindowGuard.tsx): the words and a
+   download. */
 .window-lost {
   display: grid;
   gap: var(--space-3);
@@ -435,6 +435,60 @@ button[aria-pressed="true"] {
 .joint.missing .joint-shop {
   color: var(--color-warning);
 }
+/* A question asked in place (ui/InlineQuestion.tsx): a sentence, then its answers in a row. */
+.ask {
+  margin: var(--space-1) 0 var(--space-2);
+  padding: var(--space-2);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+}
+/* Floated, the legend sits inside the box instead of on its border. */
+.ask legend {
+  float: left;
+  width: 100%;
+  margin-bottom: var(--space-2);
+  padding: 0;
+  color: var(--color-text);
+}
+.ask-answers {
+  clear: both;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+/* Edge profile's other shapes (ui/MoreEdgeShapes.tsx): greyed roundovers and shapes coming
+   later. */
+.edge-shapes {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.edge-shapes legend {
+  margin-bottom: var(--space-1);
+  padding: 0;
+  color: var(--color-text-muted);
+}
+/* What Kerf will plan for, once a question is answered. */
+.ask-said {
+  margin: var(--space-1) 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+/* Shapes coming later: they cannot be pressed, but stay focusable so their tip can be read. */
+.bit-size.later {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* Greyed, not disabled: pressing it offers to add the bit. */
+.bit-size.no-bit {
+  color: var(--color-text-muted);
+  border-style: dashed;
+}
+
 .ok {
   margin: 0;
   color: var(--color-text-muted);
@@ -673,4 +727,1355 @@ button[aria-pressed="true"] {
   border: var(--border-width) solid var(--color-border-strong);
   border-radius: var(--radius-1);
   font: inherit;
+}
+
+.tip {
+  position: fixed;
+  z-index: 50;
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 2px var(--space-2);
+  max-width: 260px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+  font-size: var(--font-size-small);
+  pointer-events: none;
+}
+
+.tip kbd {
+  justify-self: end;
+  color: var(--color-text-muted);
+  font: inherit;
+}
+
+.tip span {
+  grid-column: 1 / -1;
+  color: var(--color-text-muted);
+}
+
+.drawing {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tip-anchor {
+  display: inline-flex;
+}
+
+/* The tour's card (ui/Tour.tsx, design spec §4): a small card beside what it is about, with an
+   arrow pointing into it from the side named by data-arrow, --arrow along that side. */
+.tour {
+  position: fixed;
+  z-index: 60;
+  display: grid;
+  gap: var(--space-2);
+  width: 280px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius-2);
+  font-size: var(--font-size-panel);
+}
+
+.tour[data-arrow]::before {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  border: inherit;
+  border-radius: 0;
+  transform: rotate(45deg);
+}
+
+.tour[data-arrow="below"]::before {
+  top: -6px;
+  left: calc(var(--arrow, 50%) - 5px);
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.tour[data-arrow="above"]::before {
+  bottom: -6px;
+  left: calc(var(--arrow, 50%) - 5px);
+  border-top: 0;
+  border-left: 0;
+}
+
+.tour[data-arrow="left"]::before {
+  right: -6px;
+  top: calc(var(--arrow, 50%) - 5px);
+  border-bottom: 0;
+  border-left: 0;
+}
+
+.tour[data-arrow="right"]::before {
+  left: -6px;
+  top: calc(var(--arrow, 50%) - 5px);
+  border-top: 0;
+  border-right: 0;
+}
+
+.tour-count {
+  margin: 0;
+  color: var(--color-accent);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-strong);
+}
+
+.tour-text {
+  margin: 0;
+}
+
+.tour-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.tour-skip {
+  margin-right: auto;
+  padding-left: 0;
+}
+
+/* Buttons that step back from the main choice (design spec, §1: "Skip for now" beside "That's my
+   shop"). */
+.quiet {
+  background: none;
+  border-color: transparent;
+  color: var(--color-text-muted);
+}
+
+.quiet:hover {
+  color: var(--color-text);
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.link-button:hover {
+  color: var(--color-text);
+}
+
+/* Kerf's segmented control, as the steps switcher in the top bar. */
+.seg {
+  display: inline-flex;
+  padding: 3px;
+  background: var(--color-bg);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+}
+
+.seg button {
+  padding: var(--space-1) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-1);
+  background: none;
+  color: var(--color-text-muted);
+}
+
+.seg button[aria-pressed="true"] {
+  background: var(--color-accent);
+  color: var(--color-step-active-text);
+  font-weight: var(--font-weight-strong);
+}
+
+/* Your shop: the pegboard (design spec, §1; the look is
+   2026-10-14-first-run-and-home/1-your-shop.png). */
+.shop-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.shop-screen .topbar {
+  flex: 0 0 var(--topbar-height);
+}
+
+.shop-page {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 32px 32px 40px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.shop-content {
+  max-width: 1056px;
+  margin: 0 auto;
+}
+
+.shop-content h1 {
+  margin: 26px 0 6px;
+  font-size: 32px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.lede {
+  max-width: 46em;
+  margin: 0 0 22px;
+  color: var(--color-text-muted);
+  font-size: 15px;
+}
+
+/* The board: dots on a 26 px grid, as holes in a pegboard. */
+.pegboard {
+  padding: var(--space-5);
+  background-color: var(--color-viewport);
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--color-text) 7%, transparent) 2.2px,
+    transparent 2.6px
+  );
+  background-size: 26px 26px;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: 14px;
+}
+
+.peg-row-title {
+  margin: 4px 4px 14px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-strong);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.peg-row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.peg-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: 12px;
+  color: var(--color-text-muted);
+  top: 0;
+  transition:
+    border-color 0.15s,
+    top 0.15s,
+    box-shadow 0.15s;
+}
+
+/* The peg the card hangs from: hollow until the card is hung. */
+.peg-card::before {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border: 2px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-viewport);
+}
+
+/* Lifted by its offset, not a transform: a transform would become the frame of the card's fixed
+   tip. */
+.peg-card:hover {
+  top: -2px;
+  border-color: color-mix(in srgb, var(--color-text-muted) 45%, var(--color-border));
+}
+
+.peg-card.hung {
+  border-color: var(--color-accent);
+  background: linear-gradient(180deg, var(--color-surface-raised), var(--color-surface));
+  box-shadow: 0 10px 30px -18px var(--color-accent);
+}
+
+.peg-card.hung::before {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.tool-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 18px 12px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+/* A hung tool's drawing and what it is for turn amber; its name stays in the text colour. */
+.tool-card[aria-pressed="true"] {
+  color: var(--color-accent);
+}
+
+.tool-card-drawing {
+  height: 62px;
+}
+
+.tool-card-name {
+  margin-top: var(--space-3);
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: var(--font-weight-strong);
+}
+
+.tool-card-use {
+  font-size: var(--font-size-small);
+}
+
+.tool-settings {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: center;
+  margin-top: -6px;
+  padding: 0 12px 14px;
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.tool-settings .field {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  width: 100%;
+}
+
+.tool-settings .field select,
+.tool-settings .field input {
+  width: 100%;
+  padding: 2px var(--space-1);
+  font-size: var(--font-size-small);
+}
+
+.tool-settings .field input {
+  text-align: right;
+}
+
+.size-choice {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+}
+
+.bits-line {
+  margin: 0;
+}
+
+/* Beside the router card, over the cards to its right, so the whole list shows without
+   scrolling. */
+.bits-panel {
+  position: absolute;
+  top: -1.5px;
+  left: calc(100% + var(--space-2));
+  z-index: 5;
+  display: grid;
+  gap: var(--space-3);
+  width: 400px;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  background: var(--color-surface-raised);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+  box-shadow: 0 16px 40px -16px color-mix(in srgb, var(--color-bg) 80%, transparent);
+  color: var(--color-text);
+  text-align: left;
+}
+
+.bits-panel > .primary {
+  justify-self: end;
+}
+
+.router-bits {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.bit-shape {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* A floated legend sits in the row like any label, so each shape and its sizes share one line. */
+.bit-shape legend {
+  float: left;
+  width: 96px;
+  padding: 3px 0 0;
+  color: var(--color-text-muted);
+}
+
+.bit-sizes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.bit-size {
+  padding: 2px var(--space-2);
+  font-size: var(--font-size-small);
+}
+
+.bit-size[aria-pressed="true"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-step-active-text);
+  font-weight: var(--font-weight-strong);
+}
+
+.bit-shape .shop-length {
+  clear: both;
+  margin: var(--space-1) 0 0 96px;
+}
+
+.bit-shape .shop-length input {
+  width: 96px;
+  text-align: right;
+}
+
+/* The last wood card: a dashed outline until its form is open. */
+.peg-card.add-wood {
+  border-style: dashed;
+  background: none;
+}
+
+.peg-card.add-wood::before {
+  display: none;
+}
+
+/* The open form is taller than a card; the other wood cards keep their own height beside it. */
+.peg-row:has(.add-wood.open) > .peg-card {
+  align-self: start;
+}
+
+.peg-card.add-wood.open {
+  grid-column: span 2;
+  border-style: solid;
+  background: var(--color-surface);
+}
+
+.add-wood-mark {
+  display: grid;
+  place-items: center;
+  height: 62px;
+  font-size: 36px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.wood-form {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-4);
+  font-size: var(--font-size-small);
+}
+
+.wood-form .field {
+  display: grid;
+  gap: 2px;
+}
+
+.wood-kind {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.wood-kind legend {
+  margin-bottom: 2px;
+  padding: 0;
+  color: var(--color-text-muted);
+}
+
+.wood-form .seg {
+  justify-self: start;
+}
+
+.wood-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.shop-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--space-3) 32px;
+  background: var(--color-surface);
+  border-top: var(--border-width) solid var(--color-border);
+  font-size: 14px;
+}
+
+.shop-bar button {
+  padding: 6px var(--space-3);
+}
+
+.shop-count {
+  margin: 0 auto 0 0;
+  color: var(--color-text-muted);
+}
+
+.shop-count b {
+  color: var(--color-accent);
+}
+
+/* Home (design spec, §2; the look is 2026-10-14-first-run-and-home/2-home.png). */
+.home-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.home-screen .topbar {
+  flex: 0 0 var(--topbar-height);
+}
+
+.home-actions {
+  margin-left: auto;
+}
+
+.home-actions button {
+  padding: 6px var(--space-3);
+}
+
+.home {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: var(--panel-left-width) minmax(0, 1fr);
+}
+
+.home-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px var(--space-3);
+  background: var(--color-surface);
+  border-right: var(--border-width) solid var(--color-border);
+}
+
+.home-new {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+}
+
+.home-search {
+  width: 100%;
+  margin: var(--space-3) 0 10px;
+  padding: 6px 10px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-1);
+  font: inherit;
+}
+
+.home-nav,
+.home-recent ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The sidebar's entries read as links: plain until pointed at, raised for the view shown. */
+.home-link {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-1);
+  background: none;
+  color: var(--color-text-muted);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.home-link:hover:not(:disabled),
+.home-link[aria-current="page"] {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+}
+
+.home-link:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.home-label {
+  margin: var(--space-4) 10px var(--space-1);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: var(--font-weight-normal);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.home-label-empty {
+  margin: 0 10px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.home-learn {
+  margin-top: var(--space-3);
+}
+
+/* Your shop at the sidebar's foot: the hung tools drawn small, then what is hung. */
+.home-shop {
+  margin-top: auto;
+  padding: 10px var(--space-3);
+  background: var(--color-bg);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-panel);
+}
+
+.home-shop h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: inherit;
+  font-weight: var(--font-weight-strong);
+}
+
+.home-shop-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 6px 0;
+  color: var(--color-accent);
+}
+
+.home-shop-tools .drawing {
+  width: 30px;
+  height: 24px;
+}
+
+.home-shop p {
+  margin: 0;
+}
+
+.home-shop button {
+  margin-top: 6px;
+  padding: 2px var(--space-2);
+}
+
+.home-banner {
+  background: var(--color-surface-raised);
+}
+
+.home-main {
+  min-height: 0;
+  overflow: auto;
+  padding: 28px 36px 60px;
+}
+
+.home-title {
+  margin: 0 0 2px;
+  font-size: 26px;
+  font-weight: 650;
+}
+
+.home-lede,
+.home-empty {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.bench-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 28px 0 var(--space-3);
+}
+
+.bench-heading h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: var(--font-weight-strong);
+}
+
+.bench-heading button {
+  padding: var(--space-1) 10px;
+}
+
+.template-tiles {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.template-tiles > .tip-anchor {
+  display: flex;
+}
+
+.template-tile {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.template-tile:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+
+/* A piece that is coming later is dimmed as a whole, as in the mockup, not greyed word by word. */
+.template-tile:disabled {
+  color: var(--color-text);
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* The drawing sits in a warm glow rising from the tile's foot. */
+.tile-picture {
+  display: grid;
+  place-items: center;
+  height: 140px;
+  background: radial-gradient(
+    120% 90% at 50% 100%,
+    var(--color-surface-raised) 0%,
+    var(--color-surface-raised) 62%
+  );
+  color: var(--color-wood-sheet);
+}
+
+.tile-picture .drawing {
+  height: 100px;
+}
+
+.tile-text {
+  display: block;
+  padding: 10px var(--space-3) var(--space-3);
+}
+
+.tile-name {
+  display: block;
+  font-weight: var(--font-weight-strong);
+}
+
+.tile-blurb {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+/* The mark on what Kerf cannot do yet. */
+.later-badge {
+  margin-left: 2px;
+  padding: 0 6px;
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: 999px;
+  color: var(--color-accent);
+  font-size: 10px;
+  font-weight: var(--font-weight-strong);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: 2px;
+}
+
+.inspiration {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+  padding: 14px var(--space-4);
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: var(--radius-2);
+  color: var(--color-text-muted);
+}
+
+.inspiration-art {
+  flex: none;
+  width: 54px;
+  height: 40px;
+  color: var(--color-accent);
+}
+
+.inspiration p {
+  margin: 0;
+}
+
+.inspiration b {
+  display: block;
+  color: var(--color-text);
+  font-weight: var(--font-weight-strong);
+}
+
+.project-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-card {
+  position: relative;
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+}
+
+.project-card:hover {
+  border-color: color-mix(in srgb, var(--color-text-muted) 45%, var(--color-border));
+}
+
+.project-open {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-2);
+  background: none;
+  color: var(--color-text);
+  text-align: left;
+}
+
+button.project-open {
+  cursor: pointer;
+}
+
+.project-art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 120px;
+  overflow: hidden;
+  background: var(--color-viewport);
+  color: var(--color-text);
+}
+
+.project-drawing {
+  height: 84px;
+}
+
+.project-picture {
+  width: 100%;
+  height: 120px;
+  object-fit: contain;
+}
+
+.project-meta {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3) 10px;
+}
+
+.project-name {
+  display: block;
+  overflow: hidden;
+  font-weight: var(--font-weight-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-edited {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.project-rename {
+  width: 100%;
+  padding: 0 var(--space-1);
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: var(--border-width) solid var(--color-focus);
+  border-radius: var(--radius-1);
+  font: inherit;
+  font-weight: var(--font-weight-strong);
+}
+
+/* The ⋯ button shows where a pointer or the keyboard is on the card, and always on touch
+   screens. */
+.card-more {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.project-more {
+  padding: 0 var(--space-2);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.project-more:hover,
+.project-more[aria-expanded="true"] {
+  color: var(--color-text);
+}
+
+@media (hover: hover) {
+  .project-card:not(:hover, :focus-within) .project-more {
+    opacity: 0;
+  }
+}
+
+.card-menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: 3;
+  display: grid;
+  min-width: 180px;
+  padding: var(--space-1);
+  background: var(--color-surface-raised);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+}
+
+.card-menu [role="menuitem"] {
+  padding: 6px 10px;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.card-menu [role="menuitem"]:hover,
+.card-menu [role="menuitem"]:focus {
+  background: var(--color-surface-raised);
+}
+
+.card-menu [role="menuitem"][aria-disabled="true"] {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+/* The workshop's top bar holds the open project's name and its menu (ui/TopBar.tsx). */
+.project-menu-holder {
+  position: relative;
+}
+
+.project-menu-holder .project-name {
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+}
+
+.project-menu-holder .project-name:hover,
+.project-menu-holder .project-name[aria-expanded="true"] {
+  color: var(--color-text);
+}
+
+.topbar > .project-rename {
+  width: 14em;
+}
+
+.project-menu-holder .card-menu {
+  right: auto;
+  left: 0;
+}
+
+.card-ask {
+  gap: 10px;
+  width: 250px;
+  padding: var(--space-3);
+}
+
+.card-ask p {
+  margin: 0;
+}
+
+.card-ask-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.danger {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: var(--color-step-active-text);
+  font-weight: var(--font-weight-strong);
+}
+
+/* New project (design spec §3; the look is 2026-10-14-first-run-and-home/3-new-project.png). */
+.new-project-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--color-viewport) 72%, transparent);
+}
+
+.new-project {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  width: min(1100px, 94vw);
+  height: min(720px, 92vh);
+  overflow: hidden;
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 40px 120px -30px color-mix(in srgb, var(--color-viewport) 90%, transparent);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.new-project:focus {
+  outline: none;
+}
+
+.new-project-gallery {
+  min-height: 0;
+  overflow: auto;
+  padding: 22px var(--space-5);
+}
+
+.new-project-gallery h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.new-project-lede {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.new-project-tabs {
+  margin: 14px 0 var(--space-4);
+  padding: 0;
+}
+
+.new-project-tabs [role="tab"] {
+  font-size: 14px;
+}
+
+.new-project-tabs [role="tab"]:disabled {
+  opacity: 0.6;
+}
+
+.new-project-close {
+  position: absolute;
+  top: var(--space-4);
+  right: calc(340px + var(--space-4));
+  padding: var(--space-1) var(--space-2);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.preview {
+  flex: none;
+  height: 190px;
+  overflow: hidden;
+  background: var(--color-viewport);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+}
+
+.preview-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.preview-note {
+  margin: 0;
+  padding: var(--space-4);
+  color: var(--color-text-muted);
+}
+
+.preview-art {
+  display: grid;
+  place-items: center;
+  color: var(--color-wood-sheet);
+}
+
+.preview-art .drawing {
+  height: 150px;
+}
+
+.piece-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.piece-tile .tile-picture {
+  height: 120px;
+}
+
+.piece-tile .tile-picture .drawing {
+  height: 88px;
+}
+
+.piece-tile[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent) inset;
+}
+
+/* A piece that comes later is dimmed as on Home, but can still be pressed to say so. */
+.piece-tile[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.piece-tile[aria-disabled="true"]:hover {
+  border-color: var(--color-border);
+}
+
+.new-project-later {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: var(--radius-2);
+  color: var(--color-text-muted);
+}
+
+/* Kept on the page when empty, so what it later says is announced; it just takes no room. */
+.new-project-later:empty {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.open-file {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: var(--radius-2);
+  color: var(--color-text-muted);
+}
+
+.open-file-art {
+  width: 54px;
+  height: 54px;
+  color: var(--color-accent);
+}
+
+.open-file p {
+  max-width: 34em;
+  margin: 0;
+}
+
+.open-file b {
+  display: block;
+  color: var(--color-text);
+}
+
+.open-file .primary {
+  padding: 6px var(--space-3);
+}
+
+/* Sticky, so a notice raised after the gallery has scrolled stays in view on a short window. */
+.new-project-gallery .notice {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border: 0;
+  border-radius: var(--radius-1);
+}
+
+.new-project-gallery .notice:not(:empty) {
+  margin-top: var(--space-3);
+}
+
+.piece-settings {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--color-bg);
+  border-left: var(--border-width) solid var(--color-border);
+}
+
+.piece-settings-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  overflow: auto;
+  padding: 18px 18px var(--space-2);
+}
+
+.settings-choice {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.settings-label {
+  margin-bottom: 3px;
+  padding: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.settings-choice .seg {
+  flex-wrap: wrap;
+}
+
+.piece-settings .seg button {
+  padding: var(--space-1) 14px;
+}
+
+.piece-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.piece-heading h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: var(--font-weight-strong);
+}
+
+.piece-heading p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.piece-heading > div {
+  min-width: 0;
+}
+
+/* The units stay one control on one line; the blurb beside them wraps instead. */
+.piece-heading .settings-choice {
+  flex: none;
+}
+
+.piece-heading .seg {
+  flex-wrap: nowrap;
+}
+
+.piece-heading .seg button {
+  padding: 2px var(--space-2);
+  font-size: var(--font-size-small);
+}
+
+.piece-settings .field label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: var(--font-size-small);
+}
+
+.piece-settings .field input {
+  width: 100%;
+  padding: 6px var(--space-2);
+  text-align: right;
+}
+
+.three {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.piece-settings .settings-idea input {
+  text-align: left;
+}
+
+.piece-settings input[aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+
+.piece-settings .field-problem {
+  margin-top: var(--space-1);
+}
+
+/* The gap takes one size field's width; the outside size it gives is read under it. */
+.settings-gap {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: var(--space-2);
+}
+
+.settings-gap .field-problem,
+.settings-outside {
+  grid-column: 1 / -1;
+}
+
+.settings-outside {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.settings-wood .wood-form {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-2);
+}
+
+.piece-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) 18px 18px;
+}
+
+.piece-settings-actions .field-problem {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.piece-settings-actions .quiet,
+.piece-settings-actions .primary {
+  padding: 6px var(--space-3);
+}
+
+/* Create stays off until the piece can be built; it reads as off in both themes. */
+.piece-settings-actions .primary:disabled {
+  color: var(--color-step-active-text);
+  opacity: 0.45;
+  cursor: default;
 }

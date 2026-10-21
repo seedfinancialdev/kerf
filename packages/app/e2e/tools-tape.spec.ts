@@ -5,14 +5,11 @@
 // Interaction spec, "Tape: Measure, add guide lines": two clicks on the model give a reading.
 
 import { expect, test } from "@playwright/test";
+import { startBookcase } from "./support/start";
 
 test("two clicks on the model show what was measured", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "New" }).click();
-  await page.getByRole("button", { name: "Bookcase" }).click();
+  await startBookcase(page);
   const model = page.getByRole("region", { name: "Model" });
-  await expect(model.locator("canvas")).toBeVisible();
-  await expect(model.getByText("Drawing the model…")).toBeHidden();
   await page.keyboard.press("t");
   const box = await model.boundingBox();
   if (!box) throw new Error("no model area");

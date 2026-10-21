@@ -91,8 +91,9 @@ export function openKerfBytes(
 }
 
 /**
- * A plain reason a save failed, for "The file could not be saved: <reason>.", or undefined when
- * the failure is not in the project or its details but a fault in Kerf, to be logged and reported.
+ * A plain reason a download failed, for "The file could not be downloaded: <reason>", or
+ * undefined when the failure is not in the project or its details but a fault in Kerf, to be
+ * logged and reported.
  */
 export function saveFailureReason(error: unknown): string | undefined {
   if (error instanceof KerfFormatError) return "its dates or version could not be written.";
@@ -100,13 +101,9 @@ export function saveFailureReason(error: unknown): string | undefined {
   return undefined;
 }
 
-/** Said when saving fails through a fault in Kerf rather than in the project. */
-export const SAVE_FAULT =
-  "Kerf hit a problem saving this project, so nothing was saved. Please report it.";
-
-/** Said when opening a file that was read fails through a fault in Kerf rather than in the file. */
-export const OPEN_FAULT =
-  "Kerf hit a problem opening this file. Please report it; your project is unchanged.";
+/** Said when a download fails through a fault in Kerf rather than in the project. */
+export const DOWNLOAD_FAULT =
+  "Kerf hit a problem preparing this file, so nothing was downloaded. Please report it.";
 
 /** A file name from the project name, with characters file systems reject replaced. */
 export function fileNameFor(project: Project): string {

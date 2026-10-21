@@ -13,11 +13,15 @@ import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { Inspector } from "./Inspector";
 
 function setup(template: "Bookcase" | "Keepsake box" | "Blank case" = "Bookcase") {
-  const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+  const store = createKerfStore({
+    storage: createStorage(memoryStorage()),
+    library: memoryLibrary(),
+  });
   store.getState().apply(startProject(template, "imperial"));
   store.getState().setStep("Shape");
   render(
@@ -33,6 +37,21 @@ const select = (label: string) =>
 const optionText = (s: HTMLSelectElement) => s.options[s.selectedIndex]?.textContent;
 
 describe("the Shape step", () => {
+  it("says there is nothing to shape for a project of boards drawn by hand", () => {
+    const store = createKerfStore({
+      storage: createStorage(memoryStorage()),
+      library: memoryLibrary(),
+    });
+    const bookcase = startProject("Bookcase", "imperial").project;
+    store.getState().apply({ label: "Boards only", project: { ...bookcase, structures: [] } });
+    render(
+      <KerfProvider store={store}>
+        <Inspector />
+      </KerfProvider>,
+    );
+    expect(screen.getByText("This project has no case or box to shape.")).toBeTruthy();
+  });
+
   it("shows the bookcase's form as the template set it", () => {
     setup();
     expect(optionText(select("Carcase stock"))).toBe("3/4 plywood");

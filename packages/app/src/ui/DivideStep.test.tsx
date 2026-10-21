@@ -12,11 +12,15 @@ import { startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { Inspector } from "./Inspector";
 
 function setup(template: "Bookcase" | "Blank case" = "Bookcase") {
-  const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+  const store = createKerfStore({
+    storage: createStorage(memoryStorage()),
+    library: memoryLibrary(),
+  });
   store.getState().apply(startProject(template, "imperial"));
   const p = shownProject(store.getState());
   const s = p?.structures[0];

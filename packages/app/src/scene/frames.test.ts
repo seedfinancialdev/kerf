@@ -9,7 +9,7 @@ import { INCH, solve } from "@kerf/core";
 import { loadShopProfile } from "@kerf/fixtures";
 import { describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
-import { matrixOf, toScene } from "./frames";
+import { matrixOf, sceneBounds, toScene } from "./frames";
 
 const placements = solve(
   startProject("Bookcase", "imperial").project,
@@ -64,5 +64,19 @@ describe("matrixOf()", () => {
       );
       expect(corners).toEqual(box);
     }
+  });
+});
+
+describe("sceneBounds()", () => {
+  it("gives the corners of the box around every board, in scene inches", () => {
+    // Project (x, y, z) → scene (x, z, −y). Board A: x 0..36, y 2..14, z 0..72 → scene x 0..36,
+    // y 0..72, z −14..−2. Board B: x −2..0, y 4..6, z 0..80 → scene x −2..0, y 0..80, z −6..−4.
+    // Together: x −2..36, y 0..80, z −14..−2.
+    const a = { box: { min: [0, 2 * INCH, 0], max: [36 * INCH, 14 * INCH, 72 * INCH] } } as const;
+    const b = { box: { min: [-2 * INCH, 4 * INCH, 0], max: [0, 6 * INCH, 80 * INCH] } } as const;
+    expect(sceneBounds([a, b])).toEqual([
+      [-2, 0, -14],
+      [36, 80, -2],
+    ]);
   });
 });

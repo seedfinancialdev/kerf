@@ -226,9 +226,9 @@
   {
     "id": "tool-change-keeps-preview",
     "file": "packages/app/src/model/store.ts",
-    "find": "// that is not in History.\n        if (get().previewed) show({ ...dropped, previewed: null });",
-    "replace": "// that is not in History.\n        if (get().previewed) show({ ...dropped });",
-    "why": "A tool change leaves the last tool's preview on screen and in Save."
+    "find": "// downloaded file, a change that is not in History.\n        if (get().previewed) show({ ...dropped, previewed: null });",
+    "replace": "// downloaded file, a change that is not in History.\n        if (get().previewed) show({ ...dropped });",
+    "why": "A tool change leaves the last tool's preview on screen and in a downloaded file."
   },
   {
     "id": "tool-change-keeps-pending",
@@ -338,14 +338,14 @@
   {
     "id": "notice-history-drops-warning",
     "file": "packages/app/src/model/notices.ts",
-    "find": "return line.notice?.kind === \"undo\" ? dismiss(unheld) : unheld;",
+    "find": "return stale(line.notice) ? dismiss(unheld) : unheld;",
     "replace": "return line.notice?.kind !== \"said\" ? dismiss(unheld) : unheld;",
     "why": "Moving through History takes a warning away before it is dismissed."
   },
   {
     "id": "notice-history-keeps-undo",
     "file": "packages/app/src/model/notices.ts",
-    "find": "return line.notice?.kind === \"undo\" ? dismiss(unheld) : unheld;",
+    "find": "return stale(line.notice) ? dismiss(unheld) : unheld;",
     "replace": "return unheld;",
     "why": "An Undo offer stays after History moves, for a change that is no longer the latest."
   },
@@ -471,9 +471,9 @@
   {
     "id": "save-silent-without-project",
     "file": "packages/app/src/ui/save.ts",
-    "find": "    s.say(NOTHING_TO_SAVE);\n",
+    "find": "    s.say(NOTHING_TO_DOWNLOAD);\n",
     "replace": "",
-    "why": "Save with no project open does nothing and says nothing."
+    "why": "Download with no project open does nothing and says nothing."
   },
   {
     "id": "proposal-keeps-scratch-joint",

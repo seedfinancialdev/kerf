@@ -7,17 +7,14 @@
 // unit tests hold the numbers; this checks the flow end to end at the default view.
 
 import { expect, test } from "@playwright/test";
+import { startBookcase } from "./support/start";
 
 test("two clicks with Join refuse a shelf of a row against the thinner back, and change nothing", async ({
   page,
 }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "New" }).click();
-  await page.getByRole("button", { name: "Bookcase" }).click();
+  await startBookcase(page);
   await page.getByRole("button", { name: "Shape" }).click();
   const model = page.getByRole("region", { name: "Model" });
-  await expect(model.locator("canvas")).toBeVisible();
-  await expect(model.getByText("Drawing the model…")).toBeHidden();
   await page.keyboard.press("j");
   const box = await model.boundingBox();
   if (!box) throw new Error("no model");

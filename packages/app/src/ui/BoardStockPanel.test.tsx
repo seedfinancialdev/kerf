@@ -12,11 +12,15 @@ import { STOCK_IDS } from "../model/starter";
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { Inspector } from "./Inspector";
 
 function setup(tool: "board" | "select" = "board") {
-  const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+  const store = createKerfStore({
+    storage: createStorage(memoryStorage()),
+    library: memoryLibrary(),
+  });
   store.getState().apply(startProject("Bookcase", "imperial"));
   store.getState().setStep("Shape");
   store.getState().setTool(tool);

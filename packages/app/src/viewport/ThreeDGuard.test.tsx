@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } fr
 import { createStorage } from "../model/storage";
 import { createKerfStore } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { BOARD_FAULT, ThreeDGuard, VIEW_NOT_STARTED } from "./ThreeDGuard";
 
@@ -20,7 +21,8 @@ function Broken(): never {
   throw fault;
 }
 
-const fresh = () => createKerfStore({ storage: createStorage(memoryStorage()) });
+const fresh = () =>
+  createKerfStore({ storage: createStorage(memoryStorage()), library: memoryLibrary() });
 
 describe("<ThreeDGuard>", () => {
   let console_: MockInstance;
@@ -53,7 +55,7 @@ describe("<ThreeDGuard>", () => {
 
   it("gives each cause its own advice in shop words", () => {
     expect(VIEW_NOT_STARTED).toBe(
-      "The 3D view could not start in this browser. The cut list, plans and Save still work; " +
+      "The 3D view could not start in this browser. The cut list, plans and downloading a .kerf file still work; " +
         "to see the model, turn on hardware acceleration or try another browser.",
     );
     expect(BOARD_FAULT).toBe(

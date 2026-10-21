@@ -8,15 +8,12 @@
 // edge sits under a fixed pixel reliably enough for a browser test.
 
 import { expect, test } from "@playwright/test";
+import { startBookcase } from "./support/start";
 
 test("Push/Pull on a board's broad face says the thickness is the stock's", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "New" }).click();
-  await page.getByRole("button", { name: "Bookcase" }).click();
+  await startBookcase(page);
   await page.getByRole("button", { name: "Shape" }).click();
   const model = page.getByRole("region", { name: "Model" });
-  await expect(model.locator("canvas")).toBeVisible();
-  await expect(model.getByText("Drawing the model…")).toBeHidden();
   await page.keyboard.press("p");
   const box = await model.boundingBox();
   if (!box) throw new Error("no model area");

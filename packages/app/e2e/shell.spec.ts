@@ -2,15 +2,17 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The only end-to-end test that passes at M0: the empty dark window with the five module names.
+// The Workshop's frame: the four workflow steps in the top bar (ADR 016, D2: Start leaves the top
+// bar), on a dark background.
 
 import { expect, test } from "@playwright/test";
+import { startBookcase } from "./support/start";
 
-test("shows the five workflow modules in the top bar, on a dark background", async ({ page }) => {
-  await page.goto("/");
+test("shows the four workflow steps in the top bar, on a dark background", async ({ page }) => {
+  await startBookcase(page);
 
-  const modules = page.getByRole("navigation", { name: "Workflow" }).getByRole("listitem");
-  await expect(modules).toHaveText(["Start", "Shape", "Divide", "Joinery", "Build plan"]);
+  const steps = page.getByRole("navigation", { name: "Workflow" }).getByRole("listitem");
+  await expect(steps).toHaveText(["Shape", "Divide", "Joinery", "Build plan"]);
 
   const [r, g, b] = await page
     .locator("body")

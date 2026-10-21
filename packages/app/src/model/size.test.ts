@@ -6,7 +6,16 @@
 
 import { describe, expect, it } from "vitest";
 import { startProject } from "./commands";
-import { exactLiteral, literalFor, readCount, readLength, readPosition } from "./size";
+import {
+  exactLiteral,
+  explainSize,
+  literalFor,
+  readCount,
+  readLength,
+  readPosition,
+  readShopLength,
+  retype,
+} from "./size";
 
 const bookcase = startProject("Bookcase", "imperial").project;
 const metric = startProject("Bookcase", "metric").project;
@@ -189,5 +198,103 @@ describe("literalFor()", () => {
 
   it("writes a metric value exactly, never rounded to 0.1 mm", () => {
     expect(literalFor(80, "metric")).toBe("0.01mm");
+  });
+});
+
+describe("readShopLength()", () => {
+  const LABEL = "Roundover size";
+  const ZERO = "A bit must be bigger than zero.";
+
+  it("reads a length typed for the shop, outside any project", () => {
+    // 5/16" = 5 × 203200 / 16 = 63,500.
+    expect(readShopLength('5/16"', "imperial", LABEL, ZERO)).toEqual({
+      ok: true,
+      expr: '5/16"',
+      value: 63_500,
+    });
+  });
+
+  it("snaps to the grid of the units it is read in", () => {
+    // 2.2 mm = 2.2 × 8000 = 17,600, on the 0.01 mm grid (80 units).
+    expect(readShopLength("2.2mm", "metric", LABEL, ZERO)).toMatchObject({
+      ok: true,
+      value: 17_600,
+    });
+  });
+
+  it("refuses zero and less with the message it is given", () => {
+    expect(readShopLength('0"', "imperial", LABEL, ZERO)).toEqual({ ok: false, message: ZERO });
+    expect(readShopLength('-1/4"', "imperial", LABEL, ZERO)).toEqual({ ok: false, message: ZERO });
+  });
+
+  it("knows no project's names, and says so in words that name the field", () => {
+    // Task 8 review: the engine's `Unknown name "width"` says neither what is wrong nor
+    // what to type.
+    expect(readShopLength("width", "imperial", LABEL, ZERO)).toEqual({
+      ok: false,
+      message: 'Roundover size: "width" isn\'t a length; type one like 30" or 762 mm.',
+    });
+  });
+
+  it("asks for a length when nothing is typed", () => {
+    expect(readShopLength(" ", "imperial", LABEL, ZERO)).toEqual({
+      ok: false,
+      message: 'Type a length, like 30" or 762mm.',
+    });
+  });
+});
+
+describe("explainSize()", () => {
+  /** What a New project size field says for `text`, typed into the field called Width. */
+  const said = (text: string): string => {
+    const read = readLength(text, bookcase);
+    if (read.ok) throw new Error(`"${text}" was read as a length`);
+    return explainSize("Width", text, read.message);
+  };
+
+  it.each(["tall", "30-", "30-1/", "30#", "30 x", '36""', '1/0"'])(
+    "names the field and says what to type for the half-typed or mistyped %s",
+    (text) => {
+      // Task 10 review: the engine's words ("Expected a value", "Unexpected character",
+      // …) say neither.
+      expect(said(text)).toBe(`Width: "${text}" isn't a length; type one like 30" or 762 mm.`);
+    },
+  );
+
+  it("quotes the text as typed, without the spaces around it", () => {
+    expect(said(" wide ")).toBe('Width: "wide" isn\'t a length; type one like 30" or 762 mm.');
+  });
+
+  it("passes on the refusals that are already plain: a bare number, a length too large, zero", () => {
+    expect(said("30")).toBe('"30" is not a length; add a unit (in, " or mm).');
+    expect(said('100001"')).toBe("Length is too large: the limit is 100,000 inches");
+    expect(explainSize("Width", '0"', "Width must be more than zero.")).toBe(
+      "Width must be more than zero.",
+    );
+  });
+});
+
+describe("retype()", () => {
+  it('types 30" again in millimetres, exactly and spaced as the usual sizes: 30 × 25.4 = 762 mm', () => {
+    expect(retype('30"', "imperial", "metric")).toBe("762 mm");
+  });
+
+  it('types 762 mm again in inches: 762 ÷ 25.4 = 30"', () => {
+    expect(retype("762 mm", "metric", "imperial")).toBe('30"');
+  });
+
+  it('types 1/8" as 3.175 mm, which is exact (1/8 × 25.4)', () => {
+    expect(retype('1/8"', "imperial", "metric")).toBe("3.175 mm");
+  });
+
+  it('types 900 mm in inches to the nearest 1/64", which is not exact', () => {
+    // 900 ÷ 25.4 = 35.4331"; × 64 = 2267.72 → 2268/64 = 35-28/64 = 35-7/16" = 35.4375", which
+    // reads back as 2268 × 3,175 = 7,200,900 units: 0.0044" (0.1125 mm) over 900 mm.
+    expect(retype("900 mm", "metric", "imperial")).toBe('35-7/16"');
+  });
+
+  it("gives nothing for text that is not a length", () => {
+    expect(retype("tall", "imperial", "metric")).toBeUndefined();
+    expect(retype("30", "imperial", "metric")).toBeUndefined();
   });
 });

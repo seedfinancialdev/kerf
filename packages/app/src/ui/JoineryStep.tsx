@@ -9,7 +9,9 @@ import { acceptJoinery, setOption } from "../model/commands";
 import { joineryRows } from "../model/joinery";
 import { CHOICES, DEFAULT_CORNER_JOINT } from "../model/labels";
 import { shownProject } from "../model/store";
+import { asksAbout } from "../model/tool-questions";
 import { useKerf, useKerfStore } from "../state/useKerf";
+import { AskAboutTool } from "./AskAboutTool";
 import { Choice } from "./Choice";
 import { Section } from "./Section";
 
@@ -18,10 +20,17 @@ export function JoineryStep() {
   const store = useKerfStore();
   const project = useKerf((s) => shownProject(s));
   const joints = useKerf((s) => s.solved?.result.joints);
-  if (!project || !joints) {
-    return <p className="empty">Start a project first: go to Start and click New.</p>;
-  }
-  const rows = joineryRows(joints, project.units);
+  const shopRecord = useKerf((s) => s.shopRecord);
+  // The Workshop shows only with a project open (App.tsx; Ruling R27),
+  // so the no-project state renders nothing rather than words nobody can reach.
+  if (!project || !joints) return null;
+  const rows = joineryRows(joints, project.units, shopRecord);
+  // Ask when it matters (ADR 016, D4): a tool the shop was never told about is asked about once, on
+  // the first joint that needs it, where the answer then stays; until it is answered no row claims
+  // what the shop can or cannot cut.
+  const firstOfTool = rows
+    .filter((r, i) => rows.findIndex((o) => o.topic === r.topic) === i)
+    .map((r) => r.key);
   const reviewed =
     project.structures.length > 0 &&
     project.structures.every((s) => s.options.joineryReviewed === true);
@@ -34,7 +43,14 @@ export function JoineryStep() {
             <li key={row.key} className={row.missing ? "joint missing" : "joint"}>
               <span className="joint-text">{row.text}</span>
               <span className="joint-detail">{row.detail}</span>
-              <span className="joint-shop">{row.shop}</span>
+              {firstOfTool.includes(row.key) && <AskAboutTool topic={row.topic} />}
+              {!asksAbout(shopRecord, row.topic) ? (
+                <span className="joint-shop">{row.shop}</span>
+              ) : (
+                !firstOfTool.includes(row.key) && (
+                  <span className="joint-shop">Asking about your tools above.</span>
+                )
+              )}
             </li>
           ))}
         </ul>

@@ -6,14 +6,17 @@
 // a drag previews and records once (ADR 015, rule 2). Numbers: Operation specs, bookcase.
 
 import { describe, expect, it } from "vitest";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { setShelves, setSize, startProject } from "./commands";
 import { saveKerfBytes } from "./files";
-import { STARTER_SHOP } from "./starter";
+import { STARTER_RECORD } from "./shop-record";
+import { STARTER_SHOP, STARTER_STOCK } from "./starter";
 import { createStorage } from "./storage";
 import { createKerfStore, shownProject } from "./store";
 
-const fresh = () => createKerfStore({ storage: createStorage(memoryStorage()) });
+const fresh = () =>
+  createKerfStore({ storage: createStorage(memoryStorage()), library: memoryLibrary() });
 const shelfCut = (s: ReturnType<typeof fresh>) =>
   s.getState().solved?.result.cutList.lines.find((l) => l.parts.some((p) => p.name === "Shelf"))
     ?.length;
@@ -21,14 +24,29 @@ const shelfCut = (s: ReturnType<typeof fresh>) =>
 describe("createKerfStore()", () => {
   it("remembers which sections are open across a reload", () => {
     const storage = createStorage(memoryStorage());
-    createKerfStore({ storage }).getState().toggleSection("Your shop");
-    expect(createKerfStore({ storage }).getState().sections["Your shop"]).toBe(false);
+    createKerfStore({ storage, library: memoryLibrary() }).getState().toggleSection("Your shop");
+    expect(
+      createKerfStore({ storage, library: memoryLibrary() }).getState().sections["Your shop"],
+    ).toBe(false);
   });
 
-  it("starts with no project, on the Start step", () => {
+  it("shows a section for now without remembering it, and a toggle then closes and remembers it", () => {
+    const backing = memoryStorage();
+    backing.setItem("kerf.sections", JSON.stringify({ Size: false }));
+    const store = createKerfStore({ storage: createStorage(backing), library: memoryLibrary() });
+    store.getState().showSection("Size");
+    expect(store.getState().sectionsShown).toEqual(["Size"]);
+    expect(backing.getItem("kerf.sections")).toBe('{"Size":false}');
+    // Shown, so the user's press closes it, and that choice is kept.
+    store.getState().toggleSection("Size");
+    expect(store.getState().sectionsShown).toEqual([]);
+    expect(store.getState().sections.Size).toBe(false);
+    expect(backing.getItem("kerf.sections")).toBe('{"Size":false}');
+  });
+
+  it("starts with no project open", () => {
     const s = fresh().getState();
-    expect(s.history).toBeNull();
-    expect(s.step).toBe("Start");
+    expect([s.history, s.projectId]).toEqual([null, null]);
   });
 
   it("solves the bookcase as soon as it is started: shelves 35-1/16 cut", () => {
@@ -188,20 +206,40 @@ describe("createKerfStore()", () => {
 
   it("solves again with a new shop and saves it: with no tools every cut is missing", () => {
     const storage = createStorage(memoryStorage());
-    const s = createKerfStore({ storage });
+    const s = createKerfStore({ storage, library: memoryLibrary() });
     s.getState().apply(startProject("Bookcase", "imperial"));
     const cuts = () => s.getState().solved?.result.joints.flatMap((j) => j.cuts) ?? [];
     expect(cuts().some((c) => !c.missing)).toBe(true);
-    s.getState().setShop({ kerf: 0, tools: [] });
+    s.getState().setShopRecord({
+      ...STARTER_RECORD,
+      setUp: true,
+      tableSaw: { kerf: 0 },
+      dadoStack: null,
+      router: null,
+      chisels: false,
+      dovetailSaw: false,
+    });
     expect(cuts().length).toBeGreaterThan(0);
     expect(cuts().every((c) => c.missing)).toBe(true);
-    expect(storage.read("kerf.shop")).toBe(JSON.stringify({ kerf: 0, tools: [] }));
+    // Saved as a pegboard: a saw with no cut width, no other tool, and the starter stock kept.
+    expect(JSON.parse(storage.read("kerf.shop") ?? "null")).toMatchObject({
+      version: 2,
+      setUp: true,
+      tableSaw: { kerf: 0 },
+      dadoStack: null,
+      router: null,
+      chisels: false,
+      stock: STARTER_STOCK,
+    });
   });
 
   it("falls back to the starter shop with a plain notice when the saved shop is invalid", () => {
     const backing = memoryStorage();
     backing.setItem("kerf.shop", JSON.stringify({ kerf: 0 }));
-    const s = createKerfStore({ storage: createStorage(backing) }).getState();
+    const s = createKerfStore({
+      storage: createStorage(backing),
+      library: memoryLibrary(),
+    }).getState();
     expect(s.shop).toEqual(STARTER_SHOP);
     expect(s.notice?.kind).toBe("warning");
     expect(s.notice?.text.startsWith("Your saved shop could not be used")).toBe(true);
@@ -209,7 +247,7 @@ describe("createKerfStore()", () => {
 
   it("saves the theme", () => {
     const storage = createStorage(memoryStorage());
-    const s = createKerfStore({ storage });
+    const s = createKerfStore({ storage, library: memoryLibrary() });
     s.getState().setTheme("light");
     expect(s.getState().theme).toBe("light");
     expect(storage.read("kerf.theme")).toBe("light");
@@ -219,6 +257,7 @@ describe("createKerfStore()", () => {
     const ticks = [10, 25];
     const s = createKerfStore({
       storage: createStorage(memoryStorage()),
+      library: memoryLibrary(),
       clock: () => ticks.shift() ?? 0,
     });
     s.getState().apply(startProject("Bookcase", "imperial"));
@@ -443,7 +482,7 @@ describe("a tool action under way", () => {
   /** The bookcase recorded, then Width 30" recorded, so there is an entry to undo. */
   const resized = () => {
     const s = fresh();
-    s.getState().begin(startProject("Bookcase", "imperial"));
+    s.getState().apply(startProject("Bookcase", "imperial"));
     const p = shownProject(s.getState());
     if (!p) throw new Error("no project");
     const r = setSize(p, p.structures[0]?.id ?? "", "w", '30"');
@@ -474,14 +513,15 @@ describe("a tool action under way", () => {
     ],
     ["jumpTo", (s: ReturnType<typeof fresh>) => s.getState().jumpTo(0)],
     [
-      "begin",
-      (s: ReturnType<typeof fresh>) => s.getState().begin(startProject("Bookcase", "imperial")),
+      "opening another project",
+      (s: ReturnType<typeof fresh>) =>
+        s.getState().createProject(startProject("Bookcase", "imperial"), ""),
     ],
-  ])("is dropped for every tool when History moves by %s", (_, move) => {
+  ])("is dropped for every tool when History moves by %s", async (_, move) => {
     const { s } = resized();
     s.getState().setTool("board");
     s.getState().setPending({ tool: "board", from: { placed: null, point: [0, 0, 0] } });
-    move(s);
+    await move(s);
     expect(s.getState().pending).toBeNull();
   });
 });
@@ -545,7 +585,7 @@ describe("abandonAction()", () => {
 describe("the tape and guide lines", () => {
   const measured = () => {
     const s = fresh();
-    s.getState().begin(startProject("Bookcase", "imperial"));
+    s.getState().apply(startProject("Bookcase", "imperial"));
     s.getState().setTape({ from: [0, 0, 0], to: [203_200, 0, 0] });
     s.getState().addGuide([0, 0, 0], [203_200, 0, 0]);
     return s;
@@ -559,10 +599,10 @@ describe("the tape and guide lines", () => {
     expect(s.getState().guides).toEqual([]);
   });
 
-  it("are gone when another project is started or opened", () => {
+  it("are gone when another project is started or opened", async () => {
     const s = measured();
     s.getState().setPending({ tool: "tape", from: [0, 0, 0] });
-    s.getState().begin(startProject("Blank case", "imperial"));
+    await s.getState().createProject(startProject("Blank case", "imperial"), "");
     expect(s.getState().guides).toEqual([]);
     expect(s.getState().tape).toBeNull();
     expect(s.getState().pending).toBeNull();
@@ -572,7 +612,7 @@ describe("the tape and guide lines", () => {
     const times = { created: "2026-10-12T10:00:00.000Z", modified: "2026-10-12T11:00:00.000Z" };
     const withGuides = measured();
     const without = fresh();
-    without.getState().begin(startProject("Bookcase", "imperial"));
+    without.getState().apply(startProject("Bookcase", "imperial"));
     const save = (s: typeof fresh extends () => infer S ? S : never) => {
       const project = shownProject(s.getState());
       if (!project) throw new Error("no project");
@@ -583,9 +623,9 @@ describe("the tape and guide lines", () => {
 
   it("are not written to browser storage", () => {
     const storage = createStorage(memoryStorage());
-    const s = createKerfStore({ storage });
-    s.getState().begin(startProject("Bookcase", "imperial"));
+    const s = createKerfStore({ storage, library: memoryLibrary() });
+    s.getState().apply(startProject("Bookcase", "imperial"));
     s.getState().addGuide([0, 0, 0], [203_200, 0, 0]);
-    expect(createKerfStore({ storage }).getState().guides).toEqual([]);
+    expect(createKerfStore({ storage, library: memoryLibrary() }).getState().guides).toEqual([]);
   });
 });

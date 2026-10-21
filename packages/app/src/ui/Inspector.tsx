@@ -12,7 +12,6 @@ import { JoineryStep } from "./JoineryStep";
 import { JoinPanel } from "./JoinPanel";
 import { Problems } from "./Problems";
 import { ShapeStep } from "./ShapeStep";
-import { StartStep } from "./StartStep";
 import { TapePanel } from "./TapePanel";
 
 /**
@@ -34,12 +33,10 @@ export function Inspector() {
 function StepPanel() {
   const step = useKerf((s) => s.step);
   const selection = useKerf((s) => s.selection);
-  if (step !== "Start" && selection.kind === "boards") {
+  if (selection.kind === "boards") {
     return <BoardInspector instances={selection.instances} />;
   }
   switch (step) {
-    case "Start":
-      return <StartStep />;
     case "Shape":
       return <ShapeStep />;
     case "Divide":

@@ -10,10 +10,8 @@ import { loadProject, loadShopProfile } from "@kerf/fixtures";
 import { describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
 import { newId } from "../model/ids";
-import { createStorage } from "../model/storage";
-import { createKerfStore } from "../model/store";
 import { bookcaseWithShelf } from "../testing/bookcase-with-shelf";
-import { memoryStorage } from "../testing/memory-storage";
+import { workshopStore } from "../testing/workshop-store";
 import { drawBoard } from "./board";
 import { acceptProposal, joinTool, propose } from "./join";
 import type { ModelHit } from "./pointer";
@@ -249,28 +247,27 @@ describe("taking over form boards", () => {
 });
 
 describe("the Join tool", () => {
-  const started = () => {
-    const s = createKerfStore({ storage: createStorage(memoryStorage()) });
-    s.getState().begin({ label: "Start", project: bookcaseWithShelf() });
+  const started = async () => {
+    const s = await workshopStore({ label: "New project", project: bookcaseWithShelf() });
     s.getState().setTool("join");
     return s;
   };
-  const click = (s: ReturnType<typeof started>, name: string) => {
+  const click = (s: Awaited<ReturnType<typeof started>>, name: string) => {
     const project = s.getState().history?.entries[0]?.project as Project;
     const hit: ModelHit = { placed: placed(project, name), point: [0, 0, 0], normal: [1, 0, 0] };
     joinTool.pointer?.({ kind: "down", hit, ray: null, shift: false, ctrl: false }, s);
   };
 
-  it("remembers the first board and asks for the second", () => {
-    const s = started();
+  it("remembers the first board and asks for the second", async () => {
+    const s = await started();
     expect(joinTool.prompt?.(s.getState())).toBe("Click the first board");
     click(s, "Right side");
     expect(s.getState().pending).toMatchObject({ tool: "join" });
     expect(joinTool.prompt?.(s.getState())).toBe("Click the second board");
   });
 
-  it("proposes a dado after the second board and changes nothing", () => {
-    const s = started();
+  it("proposes a dado after the second board and changes nothing", async () => {
+    const s = await started();
     click(s, "Right side");
     click(s, "Board 1");
     expect(s.getState().proposal?.result).toMatchObject({ ok: true, type: "dado" });
@@ -278,16 +275,16 @@ describe("the Join tool", () => {
     expect(s.getState().history?.entries).toHaveLength(1);
   });
 
-  it("starts again when the same board is clicked twice", () => {
-    const s = started();
+  it("starts again when the same board is clicked twice", async () => {
+    const s = await started();
     click(s, "Right side");
     click(s, "Right side");
     expect(s.getState().proposal).toBeNull();
     expect(s.getState().pending).toMatchObject({ tool: "join" });
   });
 
-  it("gives the engine's reason for boards that do not touch", () => {
-    const s = started();
+  it("gives the engine's reason for boards that do not touch", async () => {
+    const s = await started();
     click(s, "Top");
     click(s, "Board 1");
     expect(s.getState().proposal?.result).toEqual({

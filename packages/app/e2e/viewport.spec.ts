@@ -10,15 +10,13 @@ import { readFile } from "node:fs/promises";
 
 import { readKerf, writeKerf } from "@kerf/io";
 import { expect, test } from "@playwright/test";
+import { openCard, openFromHome, projectCard } from "./support/home";
+import { openNewProject, startBookcase } from "./support/start";
 
 test("clicking the middle of the bookcase selects the back", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "New" }).click();
-  await page.getByRole("button", { name: "Bookcase" }).click();
+  await startBookcase(page);
   await page.getByRole("button", { name: "Shape" }).click();
   const model = page.getByRole("region", { name: "Model" });
-  await expect(model.locator("canvas")).toBeVisible();
-  await expect(model.getByText("Drawing the model…")).toBeHidden();
   const box = await model.boundingBox();
   if (!box) throw new Error("no model area");
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
@@ -31,12 +29,12 @@ test("clicking the middle of the bookcase selects the back", async ({ page }) =>
 // drawn a click lands on nothing. Holding the page's clock holds the frames, so that wait is seen.
 test("the model area says it is drawing until the first picture is up", async ({ page }) => {
   await page.clock.install();
-  await page.goto("/");
-  await page.getByRole("button", { name: "New" }).click();
-  await page.getByRole("button", { name: "Bookcase" }).click();
-  // Held before Shape is clicked: once clicked, the first frame could be drawn before a later hold.
+  const panel = await openNewProject(page);
+  await panel.getByRole("button", { name: "Bookcase" }).click();
+  // Held before Create is clicked: once clicked, the first frame could be drawn before
+  // a later hold.
   await page.clock.pauseAt(Date.now() + 60_000);
-  await page.getByRole("button", { name: "Shape" }).click();
+  await panel.getByRole("button", { name: "Create" }).click();
   const model = page.getByRole("region", { name: "Model" });
   await expect(model.locator("canvas")).toBeVisible();
   await expect(model.getByText("Drawing the model…")).toBeVisible();
@@ -45,17 +43,14 @@ test("the model area says it is drawing until the first picture is up", async ({
 });
 
 // A project with no boards has nothing to fit, so its first picture is the whole drawing. Such a
-// project is opened from a file, then the page is reloaded so the view starts with it.
+// project is opened from a file, then the page is reloaded and the project opened from Home, so
+// the view starts with it.
 test("a project with no boards does not keep saying it is drawing", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "New" }).click();
-  await page.getByRole("button", { name: "Bookcase" }).click();
-  // Save takes the view's picture for the thumbnail; wait until the view has drawn it.
-  await expect(
-    page.getByRole("region", { name: "Model" }).getByText("Drawing the model…"),
-  ).toBeHidden();
+  // The download takes the view's picture for the thumbnail; startBookcase waits until it is drawn.
+  await startBookcase(page);
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Save" }).click();
+  await page.getByRole("button", { name: "Bookcase" }).click();
+  await page.getByRole("menuitem", { name: "Download .kerf file" }).click();
   const saved = readKerf(await readFile(await (await download).path()));
   const empty = {
     ...saved.project,
@@ -67,13 +62,18 @@ test("a project with no boards does not keep saying it is drawing", async ({ pag
     matchSets: [],
     structures: [],
   };
-  await page.getByLabel("Open a .kerf file").setInputFiles({
+  await page.getByRole("button", { name: "Home" }).click();
+  await openFromHome(page, {
     name: "Empty.kerf",
     mimeType: "application/zip",
     buffer: Buffer.from(writeKerf(empty, saved.meta)),
   });
   await expect(page.getByRole("option", { name: "Opened Empty.kerf" })).toBeVisible();
+  // Home lists the project once the library has it, so the reload cannot lose it.
+  await page.getByRole("button", { name: "Home" }).click();
+  await expect(projectCard(page, "Empty")).toBeVisible();
   await page.reload();
+  await openCard(page, "Empty");
   const model = page.getByRole("region", { name: "Model" });
   await expect(model.locator("canvas")).toBeVisible();
   await expect(model.getByText("Drawing the model…")).toBeHidden();

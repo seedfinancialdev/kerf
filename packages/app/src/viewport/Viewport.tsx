@@ -7,7 +7,6 @@
 // failure inside the pane (ThreeDGuard.tsx). It fits the camera to the boards when they first
 // appear and when the user asks.
 
-import type { PlacedPart } from "@kerf/core";
 import { addAfterEffect, Canvas, useThree } from "@react-three/fiber";
 import {
   type MutableRefObject,
@@ -20,7 +19,7 @@ import {
 } from "react";
 import type { Camera } from "three";
 import { shownProject } from "../model/store";
-import { inches, toScene } from "../scene/frames";
+import { sceneBounds } from "../scene/frames";
 import { HandOn } from "../state/Boundary";
 import { useKerf, useKerfStore } from "../state/useKerf";
 import { Board } from "./Board";
@@ -102,26 +101,6 @@ function ModelCanvas({ framed, missed, children }: ModelCanvasProps) {
   );
 }
 
-/** The corners of the box around every board, in scene inches. */
-function sceneBounds(
-  placements: PlacedPart[],
-): [[number, number, number], [number, number, number]] {
-  const pts = placements.flatMap((p) =>
-    [toScene(p.box.min), toScene(p.box.max)].map((v) => v.map(inches)),
-  );
-  const min = [0, 1, 2].map((i) => Math.min(...pts.map((p) => p[i] ?? 0))) as [
-    number,
-    number,
-    number,
-  ];
-  const max = [0, 1, 2].map((i) => Math.max(...pts.map((p) => p[i] ?? 0))) as [
-    number,
-    number,
-    number,
-  ];
-  return [min, max];
-}
-
 /** The 3D view of the shown project, or what stands in for it while it draws or when it cannot. */
 export function Viewport() {
   const store = useKerfStore();
@@ -152,7 +131,9 @@ export function Viewport() {
     if (boards.length > 0) setView(fitView(...sceneBounds(boards)));
   }, [hasBoards, fitRequest, created, store]);
 
-  if (!project || !result) return <p className="model-empty">Start a project to see it here.</p>;
+  // The Workshop shows only with a project open (App.tsx; Ruling R27),
+  // so the no-project state renders nothing rather than words nobody can reach.
+  if (!project || !result) return null;
   const looks = boardLooks(result, project);
   const selected = new Set(selection.kind === "boards" ? selection.instances : []);
   const hoveredBoard = placements.find((p) => p.instance === hovered);

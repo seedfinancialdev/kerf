@@ -1,0 +1,18 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost:5173",
+      "localStorage": [
+        {
+          "name": "kerf.shop",
+          "value": "{\"version\":2,\"setUp\":true,\"tableSaw\":{\"kerf\":25400},\"trackSaw\":null,\"dadoStack\":{\"maxWidth\":152400},\"router\":{\"bits\":[{\"shape\":\"roundover\",\"size\":25400}]},\"drill\":false,\"chisels\":true,\"dovetailSaw\":true,\"stock\":[{\"id\":\"01K7M4AP000000000000000001\",\"name\":\"3/4 plywood\",\"kind\":\"sheet\",\"thickness\":146050,\"sheet\":{\"length\":19507200,\"width\":9753600,\"grain\":\"along-length\"},\"allowance\":{\"length\":0,\"width\":0}},{\"id\":\"01K7M4AP000000000000000002\",\"name\":\"1/4 plywood\",\"kind\":\"sheet\",\"thickness\":50800,\"sheet\":{\"length\":19507200,\"width\":9753600,\"grain\":\"along-length\"},\"allowance\":{\"length\":0,\"width\":0}},{\"id\":\"01K7M4AP000000000000000003\",\"name\":\"4/4 walnut\",\"kind\":\"solid\",\"thickness\":101600,\"solid\":{\"standardLengths\":[19507200],\"maxWidth\":1625600},\"allowance\":{\"length\":0,\"width\":50800}}],\"told\":[]}"
+        },
+        {
+          "name": "kerf.toured",
+          "value": "yes"
+        }
+      ]
+    }
+  ]
+}

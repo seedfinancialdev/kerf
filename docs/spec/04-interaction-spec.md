@@ -8,18 +8,18 @@ A hobbyist with a table saw and a router who has never used CAD. Everything is i
 
 ## The workflow
 
-1. **Start:** a template or a blank structure, sized by its overall dimensions.
+1. **New project:** from Home, a template or a blank project, sized by its overall dimensions or the space it must fill (ADR 016).
 2. **Shape:** a form sets the construction (materials, how the top meets the sides, back style, corner joints). The form builds the 3D model.
 3. **Divide:** click an empty opening and add shelves, partitions or bays.
 4. **Joinery:** the app proposes joints you can actually make with the tools in your shop profile.
 5. **Tweak:** edit any board directly in 3D when the form doesn't cover it.
 6. **Build plan:** shopping list, cut list, sheet layouts, machining grouped by tool setup, assembly order.
 
-## 1. Start: templates & overall size
+## 1. New project: templates & overall size
 
-- **New project** shows template cards. Prototype set: Bookcase, Keepsake box, Blank case, Blank box.
+- **New project** (from Home) shows template cards: Bookcase, Cabinet, Box, and Blank (an empty project, a plain case, a plain box); Table and Dresser are shown as later. A live 3D preview follows the sizes. Units are chosen per project.
 - **Overall size first:** width, height, depth (or length, width, height for boxes). Every part is defined relative to these, so resizing works from the start.
-- **Fit a space (v1):** enter the opening the piece must fit and a clearance; the overall size fills in.
+- **Space to fill:** type the opening and a gap (default 1/8"); the piece is the space less a gap at each side and at the top (ADR 016, D6).
 - **Known pattern, flagged:** template-plus-form is how cabinet software (Mozaik, Cabinet Vision) works. Bringing it to general furniture for hobbyists, with every board still editable, is the differentiator.
 
 ## 2. Shape: the structure form
@@ -85,7 +85,7 @@ Between consumer and utilitarian, modeled on Lightroom more than Photoshop: a ca
 
 **Borrow from Lightroom and Photoshop**
 
-- **Workflow modules:** Lightroom's Library → Develop → Print maps directly onto Start → Shape → Divide → Joinery → Build plan, shown as named modules in the top bar. Each module rearranges the panels for its job.
+- **Workflow modules:** Lightroom's Library → Develop → Print becomes Home, then the work on the piece (Shape → Divide → Joinery, as Develop), then Build plan (as Print). The four workshop steps are named modules in the top bar; Home is a screen of its own, not a module (ADR 016, D2). Each module rearranges the panels for its job.
 - **Non-destructive by design:** like Lightroom, edits are instructions, not baked changes. Our part graph already works this way; the UI should make that felt (change anything, any time, nothing breaks).
 - **Neutral chrome, content first:** dark gray UI by default so the wood-toned model stands out; a light theme as a setting. Color only for selection, active state and errors.
 - **Accordion panels:** the right panel stacks collapsible sections (Size, Construction, Back, Joinery), like Lightroom's Develop panel. Sections remember their open state.
@@ -108,7 +108,7 @@ Between consumer and utilitarian, modeled on Lightroom more than Photoshop: a ca
 
 ## Screen layout
 
-- **Toolbar:** workflow steps (Start, Shape, Divide, Joinery, Build plan) on the left; the 3D tools grouped on the right.
+- **Toolbar:** workflow steps (Shape, Divide, Joinery, Build plan) on the left; the 3D tools grouped on the right.
 - **Project tree (left):** structures, their openings, then parts with counts. Errors show as badges.
 - **Viewport (center):** the model; click an opening to divide it, click a part to see its joints.
 - **Inspector (right):** the selected structure's form, an opening's divide options, or a part's properties ("Length 34-9/16" · cut 35-1/16"").
@@ -122,7 +122,7 @@ With the case selected, the inspector shows its form; the drawer's Setups tab al
 
 This is the usability-test script for charter question 1 and the build's end-to-end acceptance test.
 
-1. **New →** Bookcase template. Overall size 36" × 72" × 12".
+1. **New project →** Bookcase. Overall size 36" × 72" × 12" → Create.
 2. **Shape:** carcase 3/4" plywood, top and bottom between the sides, back inset in rabbets, 1/4" plywood.
 3. **Divide:** click the opening → Add shelves → 4, evenly spaced.
 4. **Joinery:** the shop profile has a dado stack, so the app proposes dados for the shelves, end rabbets for top and bottom and edge rabbets for the back. Accept all.
@@ -152,6 +152,14 @@ Navigation matches SketchUp: middle-drag orbits, Shift + middle-drag pans, the w
 - **The build plan never lies:** while any error exists, the drawer shows a banner and PDF export is blocked.
 - **Undo** covers every action, including form changes and accepted joint proposals.
 
+## Home, Your shop, tour and tooltips
+
+- **Home** is the screen of every launch after the first: New project, a search box, recent projects as cards with a picture of the model, and templates. Every project is kept in the browser as it changes; Save becomes Download .kerf file, and Open adds a project without replacing one (ADR 016).
+- **Your shop** is a pegboard of the power tools, hand tools and wood you have. Tapping a card hangs it; a tool's settings show only once it is hung. It is asked once on first launch and can be skipped (ADR 016).
+- **Ask when it matters:** a skipped shop is the starter shop; when a step needs a tool Kerf was never told about, it asks once, in place, and keeps the answer (ADR 016).
+- **The tour** shows four tips on the real screen the first time the workshop opens (the steps, sizes, the model, the drawer) and is reopened from Learn (ADR 016).
+- **Tooltips** name every control without an obvious label, with its key and one line on what it does after about half a second; greyed and Later controls say why (ADR 016).
+
 ## Out of the prototype
 
-Drawers, doors, face frames, toe kicks, table bases and frames (v1); fit-a-space sizing (v1); typing a project description in plain words (v2+); user-made templates (v1, alongside the plans marketplace); shop drawings, exploded views and labels (v1).
+Drawers, doors, face frames, toe kicks, table bases and frames (v1); fit-a-space beyond a simple gap (v1); typing a project description in plain words (v2+); user-made templates (v1, alongside the plans marketplace); shop drawings, exploded views and labels (v1).

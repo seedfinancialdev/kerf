@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// A structure's overall size (Interaction spec, "Overall size first"), shown in Start and in Shape.
+// A structure's overall size (Interaction spec, "Overall size first"), shown in Shape.
 // Typing records one change; dragging previews every step and records one change on release.
 
 import { formatLength, type Id, type Len, type Project } from "@kerf/core";
@@ -14,6 +14,7 @@ import { lengthOf, literalFor } from "../model/size";
 import { shownProject } from "../model/store";
 import { useKerf, useKerfStore } from "../state/useKerf";
 import { NumberField } from "./NumberField";
+import { TIPS } from "./tips";
 
 /** The overall-size fields of one structure, in the order a woodworker reads them. */
 export function SizeFields({ structure }: { structure: Id }) {
@@ -21,7 +22,7 @@ export function SizeFields({ structure }: { structure: Id }) {
   const s = project?.structures.find((x) => x.id === structure);
   if (!project || !s) return null;
   return (
-    <div className="fields">
+    <div className="fields" data-tour="sizes">
       {sizeOrder(s.type).map((key) => (
         <SizeField key={key} structure={structure} sizeKey={key} />
       ))}
@@ -50,6 +51,7 @@ function SizeField({ structure, sizeKey }: { structure: Id; sizeKey: SizeKey }) 
   return (
     <NumberField
       label={sizeLabel(s.type, sizeKey)}
+      tip={TIPS.size}
       display={value === undefined ? expr : formatLength(value, project.units)}
       onSubmit={(text) => {
         const r = setSize(recorded(), structure, sizeKey, text);

@@ -109,8 +109,8 @@ export function drawBoard(
 /**
  * Where a board can sit across the gap between boards `a` and `b` (`along` is the gap's axis,
  * `across` the one the board's width runs on): the front edge it lines up with, and the room back
- * from there. The front is the far end of the span the two share (ADR 015, rule 7). The room stops at
- * the nearest other board that crosses the gap at the new board's height behind that front (the
+ * from there. The front is the far end of the span the two share (ADR 015, rule 7). The room stops
+ * at the nearest other board that crosses the gap at the new board's height behind that front (the
  * back panel), or at the boards' own near edge.
  */
 function freeRoomAcross(
@@ -304,7 +304,7 @@ export const boardTool: ToolHandler = {
   measure(text, store) {
     const s = store.getState();
     const project = recordedProject(store);
-    if (!project) return "Start a project first.";
+    if (!project) return "Open a project from Home first.";
     const pending = s.pending?.tool === "board" ? s.pending : null;
     if (!pending) return "Click where the board starts first.";
     const stock = boardStockFor(project, s.boardStock);

@@ -2,13 +2,13 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Keeps a fault in Kerf from ending the session silently (CODE_QUALITY rule 9; ADR 015, rule 11).
-// A fault while the window is drawn would leave a blank page, so the window is replaced by a few
-// words and Save, which needs only the store. A fault in a click, a key or a typed size happens
-// outside drawing, where no boundary sees it: React and the browser hand it to the page's `error`
-// and `unhandledrejection` events, the one place every such fault reaches. There it is logged
-// for a bug report, the half-done action is dropped and the user is told. The 3D view keeps its
-// own guard (ThreeDGuard), so the rest of the window outlives it.
+// Keeps a fault in Kerf from ending the session silently (CODE_QUALITY rule 9; ADR 015, rule 11). A
+// fault while the window is drawn would leave a blank page, so the window is replaced by a few
+// words and a download, which needs only the store. A fault in a click, a key or a typed size
+// happens outside drawing, where no boundary sees it: React and the browser hand it to the page's
+// `error` and `unhandledrejection` events, the one place every such fault reaches. There it is
+// logged for a bug report, the half-done action is dropped and the user is told. The 3D view keeps
+// its own guard (ThreeDGuard), so the rest of the window outlives it.
 
 import { type ReactNode, useEffect } from "react";
 import type { KerfStore } from "../model/store-types";
@@ -23,8 +23,8 @@ export const ACTION_FAULT =
 
 /** Shown in place of the window when it cannot be drawn. */
 export const WINDOW_FAULT =
-  "Kerf hit a problem and can't show its window. Save a copy of your project, then reload the " +
-  "page. Please report the problem.";
+  "Kerf hit a problem and can't show its window. Download a .kerf file of your project with the " +
+  "button below, then reload the page. Please report the problem.";
 
 /**
  * Tells the user, logs `error` and drops the action it stopped. Telling comes first: dropping the
@@ -95,7 +95,7 @@ function useActionFaults(store: KerfStore): void {
 
 /**
  * Logs a fault that took the window down and drops what was half done, the preview included, so
- * Save writes the recorded project: the preview is not in History, and may be what broke.
+ * the download writes the recorded project: the preview is not in History, and may be what broke.
  */
 function windowFailed(store: KerfStore, error: unknown): void {
   console.error(error);
@@ -106,13 +106,15 @@ function windowFailed(store: KerfStore, error: unknown): void {
   }
 }
 
-/** What the window becomes after a fault while drawing it: what to do, Save, and the notice. */
+/**
+ * What the window becomes after a fault while drawing it: what to do, the download, and the notice.
+ */
 function WindowLost({ store }: { store: KerfStore }) {
   return (
     <div className="window-lost">
       <p>{WINDOW_FAULT}</p>
       <button type="button" onClick={() => void saveShownProject(store, new Date())}>
-        Save
+        Download a .kerf file
       </button>
       <Notice />
     </div>

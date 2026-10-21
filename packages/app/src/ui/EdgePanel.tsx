@@ -2,16 +2,19 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The Edge profile panel: a radius from the shop's roundover bits, then both front edges or the
-// edges ticked by name.
+// The Edge profile panel: a radius from the roundover bits on the router card, then both front
+// edges or the edges ticked by name. Router bits are edge shapes (ADR 016, D7): the roundovers
+// owned are in the Radius list; the others, and the shapes coming later, are offered beneath it.
 
 import { type EdgeRef, edgeName, formatLength, type PlacedPart } from "@kerf/core";
 import { useId, useState } from "react";
 import { instanceOf } from "../model/commands";
+import { edgeShapeOffers, withRouterBit } from "../model/edge-shapes";
 import { shownProject } from "../model/store";
 import { useKerf, useKerfStore } from "../state/useKerf";
 import { BOTH_FRONT_EDGES, roundEdges, roundsEveryShelf } from "../tools/edge";
 import { editNotice } from "../tools/edit-outcome";
+import { MoreEdgeShapes } from "./MoreEdgeShapes";
 import { Section } from "./Section";
 
 const ALL_EDGES: EdgeRef[] = [
@@ -29,9 +32,10 @@ const ALL_EDGES: EdgeRef[] = [
 export function EdgePanel({ placed }: { placed: PlacedPart[] }) {
   const store = useKerfStore();
   const radiusId = useId();
-  const shop = useKerf((s) => s.shop);
+  const record = useKerf((s) => s.shopRecord);
   // Built here, not in the selector: a selector that returns a new array each call redraws forever.
-  const bits = shop.tools.flatMap((t) => (t.type === "router" ? t.roundoverBits : []));
+  const offers = edgeShapeOffers(record);
+  const bits = offers.filter((o) => o.state === "owned").map((o) => o.size);
   const units = useKerf((s) => shownProject(s)?.units ?? "imperial");
   // The user's choice: a bit, "none", or not chosen yet. A bit since taken out of the shop is no
   // choice at all, so the shop's first bit is offered instead (Interaction spec: roundovers use
@@ -58,7 +62,7 @@ export function EdgePanel({ placed }: { placed: PlacedPart[] }) {
     s.apply(r.edit, editNotice(project, r.edit.project, s.shop, edited));
   };
   return (
-    <Section title="Roundover">
+    <Section title="Edge profile">
       <div className="field">
         <label htmlFor={radiusId}>Radius</label>
         <select
@@ -74,9 +78,16 @@ export function EdgePanel({ placed }: { placed: PlacedPart[] }) {
           ))}
         </select>
       </div>
-      {bits.length === 0 && (
-        <p className="muted">Your shop has no roundover bits. Add them in Start, Your shop.</p>
-      )}
+      <MoreEdgeShapes
+        offers={offers}
+        units={units}
+        bits={record.router?.bits ?? []}
+        onAdd={(size) => {
+          const s = store.getState();
+          s.setShopRecord(withRouterBit(s.shopRecord, { shape: "roundover", size }));
+          setChosen(size);
+        }}
+      />
       <button type="button" onClick={() => round(BOTH_FRONT_EDGES)}>
         Both front edges
       </button>

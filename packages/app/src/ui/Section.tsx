@@ -8,7 +8,7 @@
 import type { ReactNode } from "react";
 import { useKerf } from "../state/useKerf";
 
-/** An inspector section that remembers whether it was open. */
+/** An inspector section that remembers whether it was open; the tour may show it for now. */
 export function Section({
   title,
   defaultOpen = true,
@@ -18,7 +18,9 @@ export function Section({
   defaultOpen?: boolean;
   children: ReactNode;
 }) {
-  const open = useKerf((s) => s.sections[title] ?? defaultOpen);
+  const open = useKerf(
+    (s) => s.sectionsShown.includes(title) || (s.sections[title] ?? defaultOpen),
+  );
   const toggle = useKerf((s) => s.toggleSection);
   return (
     <section className="section">

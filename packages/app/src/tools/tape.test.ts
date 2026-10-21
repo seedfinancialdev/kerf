@@ -6,12 +6,11 @@
 // is the exact square root snapped once to the grid, half to even (Domain model, "Units &
 // precision").
 
-import type { PlacedPart } from "@kerf/core";
+import { type PlacedPart, solve } from "@kerf/core";
 import { describe, expect, it } from "vitest";
 import { startProject } from "../model/commands";
-import { createStorage } from "../model/storage";
-import { createKerfStore } from "../model/store";
-import { memoryStorage } from "../testing/memory-storage";
+import { STARTER_SHOP } from "../model/starter";
+import { workshopStore } from "../testing/workshop-store";
 import type { ModelPointer } from "./handler";
 import { measureBetween, tapeTool } from "./tape";
 
@@ -60,15 +59,14 @@ describe("measureBetween()", () => {
 });
 
 describe("tapeTool", () => {
-  const started = () => {
-    const store = createKerfStore({ storage: createStorage(memoryStorage()) });
-    store.getState().begin(startProject("Bookcase", "imperial"));
+  const started = async () => {
+    const store = await workshopStore(startProject("Bookcase", "imperial"));
     store.getState().setTool("tape");
     return store;
   };
   // The Tape reads the clicked point only; the board it was on is any of the bookcase's.
   const aBoard = ((): PlacedPart => {
-    const placed = started().getState().solved?.result.placements[0];
+    const placed = solve(startProject("Bookcase", "imperial").project, STARTER_SHOP).placements[0];
     if (!placed) throw new Error("the bookcase has no boards");
     return placed;
   })();
@@ -84,8 +82,8 @@ describe("tapeTool", () => {
     ctrl: false,
   });
 
-  it("measures between two clicks and leaves nothing half done", () => {
-    const s = started();
+  it("measures between two clicks and leaves nothing half done", async () => {
+    const s = await started();
     tapeTool.pointer?.(click([0, 0, 0]), s);
     expect(s.getState().pending).toEqual({ tool: "tape", from: [0, 0, 0] });
     tapeTool.pointer?.(click([36 * IN, 0, 0]), s);
@@ -93,35 +91,35 @@ describe("tapeTool", () => {
     expect(s.getState().pending).toBeNull();
   });
 
-  it("takes a click on the floor from the line of sight", () => {
-    const s = started();
+  it("takes a click on the floor from the line of sight", async () => {
+    const s = await started();
     tapeTool.pointer?.(click(null), s);
     expect(s.getState().pending).toEqual({ tool: "tape", from: [40 * IN, -4 * IN, 0] });
   });
 
-  it("clears the last reading when a new measurement begins", () => {
-    const s = started();
+  it("clears the last reading when a new measurement begins", async () => {
+    const s = await started();
     tapeTool.pointer?.(click([0, 0, 0]), s);
     tapeTool.pointer?.(click([IN, 0, 0]), s);
     tapeTool.pointer?.(click([2 * IN, 0, 0]), s);
     expect(s.getState().tape).toBeNull();
   });
 
-  it("measures nothing from a click on the sky, and says where to click", () => {
-    const s = started();
+  it("measures nothing from a click on the sky, and says where to click", async () => {
+    const s = await started();
     tapeTool.pointer?.({ ...click(null), ray: { origin: [0, 10, 0], dir: [0, 1, 0] } }, s);
     expect(s.getState().pending).toBeNull();
     expect(s.getState().notice?.text).toBe("Click a board, or the floor below the horizon.");
   });
 
-  it("ignores moves and releases", () => {
-    const s = started();
+  it("ignores moves and releases", async () => {
+    const s = await started();
     tapeTool.pointer?.({ ...click([0, 0, 0]), kind: "move" }, s);
     expect(s.getState().pending).toBeNull();
   });
 
-  it("asks for the first point, then the second", () => {
-    const s = started();
+  it("asks for the first point, then the second", async () => {
+    const s = await started();
     expect(tapeTool.prompt?.(s.getState())).toBe("Click the first point");
     tapeTool.pointer?.(click([0, 0, 0]), s);
     expect(tapeTool.prompt?.(s.getState())).toBe("Click the second point");

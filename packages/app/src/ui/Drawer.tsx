@@ -13,6 +13,8 @@ import { CutListTab } from "./CutListTab";
 import { SetupsTab } from "./SetupsTab";
 import { SheetsTab } from "./SheetsTab";
 import { ShoppingTab } from "./ShoppingTab";
+import { Tip } from "./Tip";
+import { TIPS } from "./tips";
 
 const TABS: DrawerTab[] = ["Shopping", "Cut list", "Sheets", "Setups", "Assembly"];
 
@@ -39,22 +41,23 @@ export function Drawer() {
     document.getElementById(`tab-${target}`)?.focus();
   };
   return (
-    <section aria-label="Drawer" className={tall ? "drawer tall" : "drawer"}>
+    <section aria-label="Drawer" className={tall ? "drawer tall" : "drawer"} data-tour="drawer">
       <div role="tablist" aria-label="Plan sections" className="tabs">
         {TABS.map((t) => (
-          <button
-            key={t}
-            type="button"
-            role="tab"
-            id={`tab-${t}`}
-            aria-selected={t === tab}
-            aria-controls="drawer-panel"
-            tabIndex={t === tab ? 0 : -1}
-            onKeyDown={(e) => moveTab(e, t)}
-            onClick={() => setTab(t)}
-          >
-            {t}
-          </button>
+          <Tip key={t} tip={TIPS[t]}>
+            <button
+              type="button"
+              role="tab"
+              id={`tab-${t}`}
+              aria-selected={t === tab}
+              aria-controls="drawer-panel"
+              tabIndex={t === tab ? 0 : -1}
+              onKeyDown={(e) => moveTab(e, t)}
+              onClick={() => setTab(t)}
+            >
+              {t}
+            </button>
+          </Tip>
         ))}
       </div>
       {firstError && (

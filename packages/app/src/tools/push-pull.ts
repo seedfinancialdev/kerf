@@ -207,7 +207,7 @@ export const pushPullTool: ToolHandler = {
     const pending = s.pending?.tool === "pushPull" ? s.pending : null;
     if (!pending) return "Click an end or edge of a board first.";
     const project = recordedProject(store);
-    if (!project) return "Start a project first.";
+    if (!project) return "Open a project from Home first.";
     const read = readLength(text, project);
     if (!read.ok) return read.message;
     const { placed, normal } = pending.hit;

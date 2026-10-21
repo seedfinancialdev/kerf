@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// The view's picture, offered to Save as the file's thumbnail (design spec, "Saving").
+// The view's picture, offered to the download as the file's thumbnail (design spec, "Saving").
 
 import { useThree } from "@react-three/fiber";
 import { useEffect } from "react";
@@ -17,7 +17,8 @@ export function ThumbnailSource() {
       () =>
         new Promise((resolve, reject) => {
           gl.domElement.toBlob((blob) => {
-            // Save leaves the picture out and logs why (ui/save.ts); nothing here is swallowed.
+            // A download leaves the picture out and logs why (ui/save.ts); nothing
+            // here is swallowed.
             if (!blob) {
               reject(new Error("The 3D view gave no picture for the thumbnail."));
               return;

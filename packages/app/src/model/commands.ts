@@ -48,9 +48,9 @@ export interface Edit {
 /** An edit that worked, or why it could not be made, in shop words. */
 export type EditResult = { ok: true; edit: Edit } | { ok: false; message: string };
 
-/** The templates a new project can start from, in the order the Start step lists them. */
-export const TEMPLATE_NAMES = ["Bookcase", "Keepsake box", "Blank case", "Blank box"] as const;
-/** A template the Start step offers. */
+/** The templates a new project can start from. */
+const TEMPLATE_NAMES = ["Bookcase", "Keepsake box", "Blank case", "Blank box"] as const;
+/** A template a new project can start from. */
 export type TemplateName = (typeof TEMPLATE_NAMES)[number];
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;

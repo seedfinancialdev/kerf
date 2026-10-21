@@ -1,0 +1,26 @@
+{
+  "about": [
+    "Frozen: what the merged M4 build kept in localStorage. Never regenerate it from today's code.",
+    "Build: main @ 1ecfb51, \"M4: the app and 3D view (#100)\".",
+    "Captured 2026-10-20 from that commit's dev server, run in a scratch git worktree outside the",
+    "repo and driven by Playwright: New, Bookcase 36\" x 72\" x 12\"; Shape, Divide as M4's",
+    "bookcase.spec.ts steps 1-3 (3/4 plywood, top and bottom between the sides, back inset in",
+    "rabbets of 1/4 plywood, 4 shelves evenly spaced); then Blade kerf 3/32\" on the Start step's shop",
+    "card, so M4 wrote kerf.shop (a version-1 ShopProfile with its 3/4\" dado stack). Every key M4",
+    "wrote is kept, as captured."
+  ],
+  "localStorage": [
+    {
+      "name": "kerf.created",
+      "value": "2026-10-20T19:59:07.403Z"
+    },
+    {
+      "name": "kerf.project",
+      "value": "{\n  \"instances\": [],\n  \"joints\": [],\n  \"matchSets\": [],\n  \"name\": \"Bookcase\",\n  \"params\": [\n    {\n      \"expr\": \"36in\",\n      \"id\": \"01K7M3Q8ZD00000000T1000011\",\n      \"kind\": \"length\",\n      \"name\": \"width\"\n    },\n    {\n      \"expr\": \"72in\",\n      \"id\": \"01K7M3Q8ZD00000000T1000012\",\n      \"kind\": \"length\",\n      \"name\": \"height\"\n    },\n    {\n      \"expr\": \"12in\",\n      \"id\": \"01K7M3Q8ZD00000000T1000013\",\n      \"kind\": \"length\",\n      \"name\": \"depth\"\n    },\n    {\n      \"expr\": \"4\",\n      \"id\": \"01K7M3Q8ZD00000000T1000014\",\n      \"kind\": \"count\",\n      \"name\": \"shelf_count\"\n    }\n  ],\n  \"parts\": [],\n  \"patterns\": [],\n  \"schemaVersion\": 1,\n  \"stock\": [\n    {\n      \"allowance\": {\n        \"length\": 0,\n        \"width\": 0\n      },\n      \"id\": \"01K7M4AP000000000000000001\",\n      \"kind\": \"sheet\",\n      \"name\": \"3/4 plywood\",\n      \"sheet\": {\n        \"grain\": \"along-length\",\n        \"length\": 19507200,\n        \"width\": 9753600\n      },\n      \"thickness\": 146050\n    },\n    {\n      \"allowance\": {\n        \"length\": 0,\n        \"width\": 0\n      },\n      \"id\": \"01K7M4AP000000000000000002\",\n      \"kind\": \"sheet\",\n      \"name\": \"1/4 plywood\",\n      \"sheet\": {\n        \"grain\": \"along-length\",\n        \"length\": 19507200,\n        \"width\": 9753600\n      },\n      \"thickness\": 50800\n    },\n    {\n      \"allowance\": {\n        \"length\": 0,\n        \"width\": 50800\n      },\n      \"id\": \"01K7M4AP000000000000000003\",\n      \"kind\": \"solid\",\n      \"name\": \"4/4 walnut\",\n      \"solid\": {\n        \"maxWidth\": 1625600,\n        \"standardLengths\": [\n          19507200\n        ]\n      },\n      \"thickness\": 101600\n    }\n  ],\n  \"structures\": [\n    {\n      \"id\": \"01K7M3Q8ZD00000000T1000001\",\n      \"openings\": [\n        {\n          \"children\": [],\n          \"division\": {\n            \"count\": \"shelf_count\",\n            \"spacing\": \"even\",\n            \"type\": \"shelves\"\n          },\n          \"id\": \"01K7M3Q8ZD00000000T1000015\"\n        }\n      ],\n      \"options\": {\n        \"back\": \"inset-rabbet\",\n        \"backRabbetDepth\": \"3/8in\",\n        \"backStock\": \"01K7M4AP000000000000000002\",\n        \"carcaseStock\": \"01K7M4AP000000000000000001\",\n        \"dadoDepth\": \"1/4in\",\n        \"rabbetDepth\": \"1/4in\",\n        \"shelfRoundover\": \"1/8in\",\n        \"topBottom\": \"between-sides\"\n      },\n      \"size\": {\n        \"d\": \"depth\",\n        \"h\": \"height\",\n        \"w\": \"width\"\n      },\n      \"type\": \"case\"\n    }\n  ],\n  \"units\": \"imperial\"\n}\n"
+    },
+    {
+      "name": "kerf.shop",
+      "value": "{\"kerf\":19050,\"tools\":[{\"type\":\"dadoStack\",\"maxWidth\":152400},{\"type\":\"router\",\"straightBits\":[],\"roundoverBits\":[25400]},{\"type\":\"handTools\",\"dovetails\":true}]}"
+    }
+  ]
+}

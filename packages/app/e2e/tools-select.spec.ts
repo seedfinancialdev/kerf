@@ -3,9 +3,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import { expect, test } from "@playwright/test";
+import { startBookcase } from "./support/start";
 
 test("tool keys work and E does nothing", async ({ page }) => {
-  await page.goto("/");
+  await startBookcase(page);
   await page.keyboard.press("b");
   await expect(page.getByRole("button", { name: "Board B" })).toHaveAttribute(
     "aria-pressed",

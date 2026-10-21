@@ -1,0 +1,153 @@
+// Kerf — free, open-source woodworking design tool
+// Copyright (C) 2026 Kerf contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
+// One project on Home (design spec §2, "Recent files"): a picture of the actual model, the name and
+// when it was last changed. Clicking it opens the project; its ⋯ menu renames it in place,
+// duplicates, downloads or deletes it.
+
+import type { Project } from "@kerf/core";
+import { type ReactNode, useRef, useState } from "react";
+import { editedAgo } from "../../model/edited-ago";
+import type { ProjectSummary } from "../../model/library";
+import { kindOf } from "../../model/piece-kind";
+import { useKerfStore } from "../../state/useKerf";
+import { Drawing } from "../art/drawings";
+import { focusNotice } from "../Notice";
+import { downloadKeptProject } from "../save";
+import { NameField } from "./NameField";
+import { ProjectMenu, type ProjectMenuActions } from "./ProjectMenu";
+import { usePictureUrl } from "./picture-url";
+
+/** The card for the kept project `project`; `now` is when its "Edited …" line is counted from. */
+export function ProjectCard({ project, now }: { project: ProjectSummary; now: Date }) {
+  const store = useKerfStore();
+  const picture = usePictureUrl(project.id, project.thumbnail);
+  const [renaming, setRenaming] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  // A picture the browser could not show (damaged bytes); a new picture is tried afresh.
+  const [unshown, setUnshown] = useState<string | null>(null);
+  const more = useRef<HTMLButtonElement>(null);
+  const { id, name } = project;
+
+  /**
+   * Closes the name field; with `refocus` (a key answered it) the keyboard goes back to the menu's
+   * trigger, which stays where the field was.
+   */
+  const stopRenaming = (refocus: boolean): void => {
+    setRenaming(false);
+    if (refocus) more.current?.focus();
+  };
+  /** Renames the project to `wanted`; false when the store refused it as blank (and said so). */
+  const keepName = (wanted: string, refocus: boolean): boolean => {
+    // The same name again is no change, so the card does not move to the top as just edited.
+    if (wanted.trim() !== name) void store.getState().renameProject(id, wanted);
+    if (wanted.trim() === "") return false;
+    stopRenaming(refocus);
+    return true;
+  };
+  const actions: ProjectMenuActions = {
+    close: (refocus) => {
+      setMenuOpen(false);
+      if (refocus) more.current?.focus();
+    },
+    rename: () => {
+      setMenuOpen(false);
+      setRenaming(true);
+    },
+    duplicate: () => {
+      actions.close(true);
+      void store.getState().duplicateProject(id);
+    },
+    download: () => {
+      actions.close(true);
+      void downloadKeptProject(store, id, new Date());
+    },
+    remove: () => {
+      setMenuOpen(false);
+      // The card goes; the keyboard goes to the Undo that would bring it back.
+      void store.getState().deleteProject(id).then(focusNotice);
+    },
+  };
+
+  const art =
+    picture && picture !== unshown ? (
+      <img className="project-picture" src={picture} alt="" onError={() => setUnshown(picture)} />
+    ) : (
+      <Drawing name={project.kind} className="project-drawing" />
+    );
+  const edited = (
+    <span className="project-edited">
+      Edited {editedAgo(project.modified, now, navigator.language)}
+    </span>
+  );
+  const cardBody = (title: ReactNode): ReactNode => (
+    <>
+      <span className="project-art">{art}</span>
+      <span className="project-meta">
+        {title} {edited}
+      </span>
+    </>
+  );
+
+  return (
+    <li className="project-card">
+      {renaming ? (
+        <div className="project-open">
+          {cardBody(<NameField name={name} keep={keepName} cancel={stopRenaming} />)}
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="project-open"
+          onClick={() => void store.getState().openProject(id)}
+        >
+          {cardBody(<span className="project-name">{name}</span>)}
+        </button>
+      )}
+      <div className="card-more">
+        <button
+          ref={more}
+          type="button"
+          className="project-more"
+          aria-label={`More for ${name}`}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
+          ⋯
+        </button>
+        {menuOpen && <ProjectMenu name={name} actions={actions} />}
+      </div>
+    </li>
+  );
+}
+
+/** Said on the card of the open project the library does not keep. */
+const OPEN_NOT_KEPT = "Open now, not kept";
+
+/**
+ * The open project that the library does not keep (`openProjectNotKept`), as a card that goes back
+ * to it in the Workshop, where its menu downloads it. It has no menu here: there is no entry to
+ * rename, copy or delete.
+ */
+export function NotKeptCard({ project }: { project: Project }) {
+  const store = useKerfStore();
+  return (
+    <li className="project-card">
+      <button
+        type="button"
+        className="project-open"
+        onClick={() => store.getState().setScreen("workshop")}
+      >
+        <span className="project-art">
+          <Drawing name={kindOf(project)} className="project-drawing" />
+        </span>
+        <span className="project-meta">
+          <span className="project-name">{project.name}</span>{" "}
+          <span className="project-edited">{OPEN_NOT_KEPT}</span>
+        </span>
+      </button>
+    </li>
+  );
+}

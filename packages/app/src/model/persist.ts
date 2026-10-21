@@ -2,36 +2,37 @@
 // Copyright (C) 2026 Kerf contributors
 // SPDX-License-Identifier: GPL-3.0-only
 
-// Reading and writing the open project and the sections' open state in the browser (ADR 015,
-// rule 11 and D4), and the plain words used when it cannot. The store decides when each write
-// happens and when a notice shows, and keeps the theme, units and start date itself (ADR 015,
-// known limits); the shop has its own module (shop.ts).
+// Reading the one project older Kerf kept in the browser, for its move into the library
+// (library-migration.ts), and the sections' open state (ADR 015, rule 11 and D4), with the plain
+// words used when browser storage cannot keep things. The store keeps the theme, units and tour
+// itself (ADR 015, known limits); the shop has its own module (shop.ts), the projects theirs
+// (library.ts).
 
-import { type Project, ProjectFormatError, parseProject, serializeProject } from "@kerf/core";
+import { ProjectFormatError, parseProject } from "@kerf/core";
 import { DAMAGED_CONTENTS, isFromNewerKerf } from "./files";
 import { type History, startHistory } from "./history";
 import type { AppStorage, StorageKey } from "./storage";
-
-/** Shown once when a change could not be written to browser storage (ADR 015, rule 11). */
-export const NOT_KEPT =
-  "Your latest changes couldn't be kept in this browser. Use Save to keep a copy.";
 
 /** Shown once when the choice of units for new projects could not be written (ADR 015, rule 11). */
 export const UNITS_NOT_KEPT =
   "Your choice of units couldn't be kept in this browser; it applies until you close the page.";
 
-/** The start-up warning when this browser keeps nothing at all, or undefined when it keeps work. */
+/**
+ * The start-up warning when this browser has no storage, or undefined when it has. Only the shop
+ * and settings live there; the projects live in the library, whose banner speaks for them.
+ */
 export function storageNotice(storage: AppStorage): string | undefined {
   return storage.available
     ? undefined
-    : "This browser won't keep your work between visits. Use Save to keep a copy.";
+    : "This browser won't keep your shop, units or theme between visits; they apply until you " +
+        "close the page.";
 }
 
 /**
  * Said when Kerf itself fails opening the stored project: the fault is logged for a bug report and
  * never blamed on the project.
  */
-export const OPEN_STORED_FAULT = "Kerf hit a problem opening your last project; please report it.";
+const OPEN_STORED_FAULT = "Kerf hit a problem opening your last project; please report it.";
 
 /**
  * Said when the browser would not let the stored project be read: it is left as it was, and the
@@ -39,7 +40,7 @@ export const OPEN_STORED_FAULT = "Kerf hit a problem opening your last project; 
  */
 const PROJECT_UNREADABLE =
   "Your last project could not be read from this browser, so Kerf started without it. It is " +
-  "left as it was; use Save to keep a copy of new work.";
+  "left as it was; reload the page to try again.";
 
 /**
  * The stored project as the first History entry, or why it could not be opened. A stored project
@@ -82,7 +83,7 @@ function whyNotOpened(error: unknown): string {
  * The stored text may be the only copy, so it is removed only once the set-aside copy exists; if
  * that write fails it is left where it was. Never throws.
  */
-export function setAsideStoredProject(
+function setAsideStoredProject(
   storage: AppStorage,
   told: string,
 ): { history: null; problem: string } {
@@ -101,11 +102,6 @@ function freeSetAsideKey(storage: AppStorage): StorageKey {
   let n = 1;
   while (storage.read(key(n)) !== undefined) n += 1;
   return key(n);
-}
-
-/** Keeps `project` as the one to reopen; false when the browser would not take it. */
-export function writeProject(storage: AppStorage, project: Project): boolean {
-  return storage.write("kerf.project", serializeProject(project));
 }
 
 /**

@@ -10,9 +10,13 @@ import type { AssemblyStep, Id, Project, ShopProfile, SolveResult, Vec3 } from "
 import type { StoreApi } from "zustand/vanilla";
 import type { Edit } from "./commands";
 import type { History } from "./history";
+import type { LastChoice } from "./last-choice";
+import type { ProjectSummary } from "./library";
+import type { NewProjectChoice } from "./new-project";
 import type { Notice } from "./notices";
 import type { Pending, Proposal } from "./pending";
 import type { Selection } from "./selection";
+import type { ShopRecord } from "./shop-record";
 import type { Step } from "./steps";
 
 /** The full solve of the shown project, with the assembly order. */
@@ -26,20 +30,59 @@ export interface Solved {
 /** A tool of the tool row. */
 export type ToolId = "select" | "board" | "pushPull" | "move" | "join" | "edge" | "tape";
 
+/**
+ * A kept project as a .kerf file holds it: the project, its times (ISO strings) and its picture.
+ */
+export interface KeptProject {
+  project: Project;
+  created: string;
+  modified: string;
+  thumbnail: Uint8Array | null;
+}
+
 /** A tab of the build-plan drawer. */
 export type DrawerTab = "Shopping" | "Cut list" | "Sheets" | "Setups" | "Assembly";
 
+/** The app's screens (design spec, "The flow"): Your shop, Home and the Workshop. */
+export type Screen = "shop" | "home" | "workshop";
+
 /**
- * Everything the screens read: History, the shown solve, the pick, the tool and what it has
- * started, and the view.
+ * Everything the screens read: the screen, the projects kept, History, the shown solve, the pick,
+ * the tool and what it has started, and the view.
  */
 export interface KerfState {
+  /** Your shop at first launch, Home on every launch after (design spec, "The flow"). */
+  screen: Screen;
+  /** The screen Your shop was entered from, which leaving it goes back to; Home at first launch. */
+  shopReturn: Exclude<Screen, "shop">;
+  /**
+   * The library entry the open project is kept in; null when none is open, or when it is the
+   * project older Kerf kept, opened for the visit because the library would not take it.
+   */
+  projectId: Id | null;
+  /** Every kept project, newest change first, as Home lists them; see `refreshProjects`. */
+  projects: ProjectSummary[];
+  /**
+   * Why projects are not being kept, or could not be read just now, in shop words (Home's banner,
+   * design spec §2); null while they are kept and listed.
+   */
+  projectsNotKept: string | null;
+  /**
+   * Kept projects whose last write the library refused: their newest changes are kept nowhere
+   * (final re-review, M3).
+   */
+  writesRefused: readonly Id[];
   history: History | null;
   previewed: Project | null;
   solved: Solved | null;
   step: Step;
   selection: Selection;
+  /** Everything hung on the pegboard (ADR 016, D3). */
+  shopRecord: ShopRecord;
+  /** The engine's shop, always `shopProfileFor(shopRecord)`. */
   shop: ShopProfile;
+  /** True once the tour has been seen or skipped (design spec §4). */
+  toured: boolean;
   /** The notice line (notices.ts). */
   notice: Notice | null;
   /** Warnings waiting behind the notice on screen, oldest first (notices.ts). */
@@ -75,9 +118,15 @@ export interface KerfState {
    * 015, rule 4).
    */
   unitsForNew: Project["units"];
+  /**
+   * The piece and wood New project last created, which it starts from next time (design spec §3).
+   */
+  lastChoice: Partial<LastChoice>;
   /** Open state by section title; a title not listed has its own default. */
   sections: Record<string, boolean>;
-  /** When the shown project was first started or opened (meta.json "created"). */
+  /** Sections opened for now, over `sections`, and never saved (the tour's, Ruling R31). */
+  sectionsShown: readonly string[];
+  /** When the shown project was first started (meta.json "created"), as an ISO string. */
   created: string | null;
   /**
    * Draws the model as a PNG for the file's thumbnail, rejecting when it cannot; set by the
@@ -104,10 +153,54 @@ export interface KerfActions {
    */
   apply(edit: Edit, notice?: string): void;
   /**
-   * Records a project that starts afresh (New, Open) as one History entry, even if equal to the
-   * shown one, noting when it began; drops the active tool's action.
+   * Moves to `screen`. The Workshop with no project open goes Home instead. Leaving the Workshop
+   * keeps the open project (it is in the library) and drops the pick, a drag's preview and
+   * whatever the active tool had started.
    */
-  begin(edit: Edit): void;
+  setScreen(screen: Screen): void;
+  /** Leaves Your shop for the screen it was entered from (`shopReturn`). */
+  leaveShop(): void;
+  /**
+   * Starts `edit`'s project as a new kept project with the idea `note`, and opens it in the
+   * Workshop on Shape with its form picked. Resolves once the library has answered; a library
+   * that refuses it is said once (`LIBRARY_NOT_KEPT`), and the project still opens.
+   */
+  createProject(edit: Edit, note: string): Promise<void>;
+  /**
+   * Opens the kept project `id` in the Workshop on Shape, with a History of its own. Resolves
+   * false, having said why on the notice line, when it is gone or damaged.
+   */
+  openProject(id: Id): Promise<boolean>;
+  /**
+   * Adds the .kerf file `bytes` (named `fileName`) as a new project and opens it; it never
+   * replaces one. A file that cannot be opened is said in plain words and nothing is added.
+   */
+  addFile(bytes: Uint8Array, fileName: string): Promise<void>;
+  /**
+   * Renames the kept project `id`, in its entry and inside the project; `null` names the open
+   * project that is not kept. The open project is renamed as a change, so Undo takes the name
+   * back. A blank name is refused on the notice line; so is a project that is gone or damaged, or
+   * a name the library would not keep.
+   */
+  renameProject(id: Id | null, name: string): Promise<void>;
+  /**
+   * Keeps a copy of project `id` named "<name> copy", changed now so it lists first, and resolves
+   * to the copy's name once the library has it. A project that is gone or damaged, or a copy the
+   * library would not keep, is said on the notice line and resolves undefined.
+   */
+  duplicateProject(id: Id): Promise<string | undefined>;
+  /**
+   * Deletes the kept project `id`, closing it if it is open, and offers Undo on the notice line
+   * to put it back. A library that will not delete it is said, and the project stays.
+   */
+  deleteProject(id: Id): Promise<void>;
+  /**
+   * The kept project `id` as the library has it, for a download. Resolves undefined, having said
+   * why on the notice line, when it is gone or damaged.
+   */
+  readKeptProject(id: Id): Promise<KeptProject | undefined>;
+  /** Reads the kept projects again for Home. */
+  refreshProjects(): Promise<void>;
   /** Sets how the model is drawn for a file's thumbnail; null when no view can draw it. */
   setThumbnailSource(source: (() => Promise<Uint8Array>) | null): void;
   /** Marks the board under the pointer, or none. */
@@ -141,8 +234,18 @@ export interface KerfActions {
   setStep(step: Step): void;
   /** Sets what is picked. */
   select(selection: Selection): void;
-  /** Uses and saves the shop, then solves again; says once when the browser cannot keep it. */
-  setShop(shop: ShopProfile): void;
+  /**
+   * Uses and saves the pegboard, and solves again with the shop it gives; says once when the
+   * browser cannot keep it.
+   */
+  setShopRecord(record: ShopRecord): void;
+  /** Notes that the tour was seen or skipped, for this visit and later ones. */
+  finishTour(): void;
+  /**
+   * Shows the tour again from its first tip (Learn, design spec §4). Nothing is written: a browser
+   * closed mid-tour still counts it seen, and finishing it notes so again.
+   */
+  startTour(): void;
   /** Picks the active tool, dropping the last one's action and any preview it drew. */
   setTool(tool: ToolId): void;
   /** Sets or clears the active tool's half-finished action; another tool's action is dropped. */
@@ -167,10 +270,15 @@ export interface KerfActions {
   /** Uses and saves the colour theme. */
   setTheme(theme: "dark" | "light"): void;
   /**
-   * Opens or closes the section `title` (open when never stored unless `defaultOpen` is false) and
-   * remembers it.
+   * Opens or closes the section `title` (open when never stored unless `defaultOpen` is false, or
+   * shown for now) and remembers it.
    */
   toggleSection(title: string, defaultOpen?: boolean): void;
+  /**
+   * Opens the section `title` for now without remembering it: a tour must not change a choice the
+   * woodworker saved (Task 13 review).
+   */
+  showSection(title: string): void;
   /**
    * Shows an answer to the user's last action at once, over any warning (which shows again after).
    * `undo` says whether it offers Undo; without it the notice stays until dismissed.
@@ -189,6 +297,11 @@ export interface KerfActions {
    * cannot keep the choice, says so once.
    */
   setUnitsForNew(units: Project["units"]): void;
+  /**
+   * Remembers `choice` as New project's last (its piece and wood, for this visit and later ones),
+   * and its units as the units for new projects, as `setUnitsForNew` does.
+   */
+  rememberChoice(choice: Pick<NewProjectChoice, "piece" | "units" | "wood">): void;
 }
 
 /** The app's store: its state with its actions. */

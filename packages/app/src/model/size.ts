@@ -50,6 +50,10 @@ function evaluate(
   }
 }
 
+/** Said for a plain number typed where a length belongs. */
+const addAUnit = (text: string): string =>
+  `"${text.trim()}" is not a length; add a unit (in, " or mm).`;
+
 /**
  * A length typed by the user, as the expression to store and its snapped value. Refuses one beyond
  * what a project allows. `self` is the parameter the field edits, which the text may not use;
@@ -59,14 +63,65 @@ export function readLength(text: string, project: Project, self?: string, label?
   if (text.trim() === "") return { ok: false, message: 'Type a length, like 30" or 762mm.' };
   const r = evaluate(text, project, self, label);
   if ("message" in r) return { ok: false, message: r.message };
-  if (r.q.kind !== "length")
-    return { ok: false, message: `"${text.trim()}" is not a length; add a unit (in, " or mm).` };
+  if (r.q.kind !== "length") return { ok: false, message: addAUnit(text) };
   try {
     return { ok: true, expr: text.trim(), value: snapToGrid(r.q.value, project.units) };
   } catch (error) {
     if (error instanceof LengthRangeError) return { ok: false, message: error.message };
     throw error;
   }
+}
+
+/**
+ * A refusal of the size typed as `text` into the field called `label`, in words that name the field
+ * and say what to type. Kerf's own refusals are already plain and come back unchanged: a bare
+ * number (add a unit), a length too large, and one that ends "must be more than zero." Anything
+ * else is the expression reader's ("Expected a value" for a half-typed `30-`, `Unknown name
+ * "tall"`, …) and becomes `Width: "30-" isn't a length; type one like 30" or 762 mm.`
+ */
+export function explainSize(label: string, text: string, message: string): string {
+  const plain =
+    message === addAUnit(text) ||
+    message === new LengthRangeError().message ||
+    message.endsWith(" must be more than zero.");
+  return plain
+    ? message
+    : `${label}: "${text.trim()}" isn't a length; type one like 30" or 762 mm.`;
+}
+
+/** A project with nothing in it, so a length typed for the shop can name no project's sizes. */
+const noProject = (units: Project["units"]): Project => ({
+  schemaVersion: 1,
+  name: "",
+  units,
+  params: [],
+  stock: [],
+  parts: [],
+  instances: [],
+  patterns: [],
+  joints: [],
+  matchSets: [],
+  structures: [],
+});
+
+/**
+ * A length typed on the pegboard (a blade, a bit, a wood's thickness), read like any size field in
+ * `units` but outside any project, and snapped to that grid. Text that is not a length is refused
+ * in words that name the field called `label` (`explainSize`); zero or less is refused with
+ * `notPositive`, which names the thing being sized.
+ */
+export function readShopLength(
+  text: string,
+  units: Project["units"],
+  label: string,
+  notPositive: string,
+): Reading {
+  const read = readLength(text, noProject(units));
+  if (!read.ok && text.trim() !== "") {
+    return { ok: false, message: explainSize(label, text, read.message) };
+  }
+  if (read.ok && read.value <= 0) return { ok: false, message: notPositive };
+  return read;
 }
 
 /**
@@ -127,4 +182,23 @@ export function exactLiteral(len: Len): Expr {
  */
 export function literalFor(len: Len, units: Project["units"]): Expr {
   return units === "imperial" ? formatLength(len, "imperial") : exactLiteral(len);
+}
+
+/**
+ * A length typed in `from` units, typed again for `to` units as the usual sizes are written, so
+ * a change of units keeps what was typed. Inches to millimetres is exact (30" becomes "762 mm",
+ * beside the usual "900 mm"); millimetres to inches is the nearest 1/64", the inch grid, which
+ * can be over or under ("900 mm" becomes 35-7/16", 0.0044" over). Undefined for text that is
+ * not a length.
+ */
+export function retype(
+  text: string,
+  from: Project["units"],
+  to: Project["units"],
+): Expr | undefined {
+  const read = readLength(text, noProject(from));
+  if (!read.ok) return undefined;
+  return to === "metric"
+    ? `${exactLiteral(read.value).slice(0, -"mm".length)} mm`
+    : literalFor(read.value, to);
 }

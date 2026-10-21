@@ -14,6 +14,7 @@ import { addRoundover, detachForEdit, startProject } from "../model/commands";
 import { createStorage } from "../model/storage";
 import { createKerfStore, shownProject } from "../model/store";
 import { KerfProvider } from "../state/useKerf";
+import { memoryLibrary } from "../testing/memory-library";
 import { memoryStorage } from "../testing/memory-storage";
 import { Inspector } from "./Inspector";
 
@@ -30,7 +31,10 @@ const topOf = (store: Store): Id[] =>
     .map((p) => p.instance);
 
 function setup(pick: (store: Store) => Id[]) {
-  const store = createKerfStore({ storage: createStorage(memoryStorage()) });
+  const store = createKerfStore({
+    storage: createStorage(memoryStorage()),
+    library: memoryLibrary(),
+  });
   store.getState().apply(startProject("Bookcase", "imperial"));
   act(() => {
     store.getState().setStep("Shape");

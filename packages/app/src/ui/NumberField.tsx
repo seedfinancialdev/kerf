@@ -9,6 +9,7 @@
 
 import { INCH, type Len, MM, type Project } from "@kerf/core";
 import { type PointerEvent, useEffect, useId, useRef, useState } from "react";
+import { Tip, type TipText } from "./Tip";
 
 /** Pixels of drag per step. */
 const PIXELS_PER_STEP = 4;
@@ -48,10 +49,12 @@ interface Props {
   /** Takes typed text; returns the reason it was refused, or null. */
   onSubmit(text: string): string | null;
   scrub?: Scrub;
+  /** What resting on the label says, if anything. */
+  tip?: TipText;
 }
 
 /** A labelled box that shows a value, takes typed text, and changes by dragging its label. */
-export function NumberField({ label, display, onSubmit, scrub }: Props) {
+export function NumberField({ label, display, onSubmit, scrub, tip }: Props) {
   const id = useId();
   // What the user has typed and not yet had taken; null shows `display`. The box never holds a
   // copy of `display` itself: a copy taken while a change is being recorded would be the value
@@ -144,19 +147,22 @@ export function NumberField({ label, display, onSubmit, scrub }: Props) {
   };
 
   const messageId = `${id}-problem`;
+  const labelElement = (
+    <label
+      htmlFor={id}
+      className={scrub ? "scrub-label" : undefined}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+      onLostPointerCapture={onPointerCancel}
+    >
+      {label}
+    </label>
+  );
   return (
     <div className="number-field">
-      <label
-        htmlFor={id}
-        className={scrub ? "scrub-label" : undefined}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
-        onLostPointerCapture={onPointerCancel}
-      >
-        {label}
-      </label>
+      {tip ? <Tip tip={tip}>{labelElement}</Tip> : labelElement}
       <input
         id={id}
         value={text}
